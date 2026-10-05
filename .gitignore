@@ -1,0 +1,30 @@
+# Private source data and generated transaction-level records
+*.csv
+*.tsv
+*.xls
+*.xlsx
+/report-data.js
+/rawdata/
+/raw-data/
+
+# Reference photos and screenshots
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.heic
+*.gif
+*.bmp
+
+# Local runtimes, caches, and secrets
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+node_modules/
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db

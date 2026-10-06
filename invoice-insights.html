@@ -2310,8 +2310,8 @@ refreshComparisonMonths();
 (function(){
  'use strict';
  const get=id=>document.getElementById(id);
- const exportButton=get('export-taste'),compareButton=get('compare-friends');
- if(!exportButton||!compareButton)return;
+ const exportButton=get('export-taste');
+ if(!exportButton)return;
  const panel=get('taste-export-panel'),output=get('taste-link'),notice=get('taste-export-status');
  function generate(){
   const profile=TasteProfile.fromReport(expenseReportData,get('taste-nickname').value);
@@ -2330,7 +2330,6 @@ refreshComparisonMonths();
   try{await navigator.clipboard.writeText(output.value);notice.textContent='已複製完整連結，可貼到比較頁或傳給朋友。';}
   catch{output.focus();output.select();notice.textContent='已選取連結，請按 Ctrl+C（或長按複製）。';}
  });
- compareButton.addEventListener('click',event=>{event.preventDefault();try{location.href=generate();}catch(error){show();notice.textContent=error.message;}});
 })();
 </script>
 <script data-source="taste-navigation.js">

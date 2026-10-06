@@ -4,7 +4,7 @@
 
 > 最後更新：2026-10-06
 
-[開啟專題網頁](invoice-insights.html)
+[開啟整合示範版：消費洞察＋朋友品味比較](invoice-insights.html)
 
 ![專題網頁預覽：虛構示範資料的消費統計與日期分布](readme_pic.jpg)
 

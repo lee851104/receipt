@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>You are what you buy.</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header><div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>You are what you buy.</div><span class="tag" id="report-tag"></span></header>
+<main>
+<section class="intro"><div><p class="eyebrow">從消費，看見自己</p><h1>You are<br>what you <em>buy.</em></h1><p class="subtitle">不用逐筆記帳。從發票品項，看見消費模式，再跟上個月的自己比。</p></div><div class="period" id="report-period"></div></section>
+<p class="data-notice" id="data-notice" role="note"></p>
+<nav class="flow-links" aria-label="回顧流程">
+  <a href="#items" aria-current="location"><span class="step-number">01</span><span>拆到品項</span></a>
+  <a href="#insights"><span class="step-number">02</span><span>看見消費模式</span></a>
+  <a href="#compare"><span class="step-number">03</span><span>自己跟自己比</span></a>
+</nav>
+<section class="flow-region item-section" id="items" tabindex="-1" aria-labelledby="items-title">
+  <div class="flow-heading"><p class="eyebrow">01 ／ 拆到品項</p><h2 id="items-title">一張發票裡買了什麼，分開看得更清楚。</h2><p>查看商品明細與分類，再往下看消費模式。</p></div>
+<details class="audit" open><summary id="audit-summary"></summary><p class="audit-description" id="audit-description"></p><div class="table-scroll"><table><thead><tr><th>日期</th><th>發票代碼</th><th>賣方</th><th>品項</th><th>分類</th><th class="numeric">數量</th><th class="numeric">金額 NT$</th></tr></thead><tbody id="audit-rows"></tbody></table></div></details>
+</section>
+<section class="flow-region" id="insights" tabindex="-1" aria-labelledby="insights-title">
+  <div class="flow-heading"><p class="eyebrow">02 ／ 看見消費模式</p><h2 id="insights-title">從每筆消費，看見一個月的習慣。</h2></div>
+<div class="month-filter"><div><strong id="insights-source-label">消費洞察</strong><p>切換月份，圖表與下方的前月比較會一起更新。</p></div><label for="insights-month">洞察月份 <select id="insights-month"></select></label></div>
+<section class="stats" aria-label="本期完整統計"><div class="stat"><div class="stat-label">本期發票涵蓋金額</div><div class="stat-value" id="total"></div><div class="stat-note" id="total-change"></div></div><div class="stat"><div class="stat-label">不重複發票</div><div class="stat-value" id="records"></div><div class="stat-note">以發票號碼合併同張明細</div></div><div class="stat"><div class="stat-label">有消費紀錄的日子</div><div class="stat-value" id="active-days"></div><div class="stat-note">僅計入本次資料涵蓋的消費</div></div><div class="stat"><div class="stat-label">本期值得留意</div><div class="stat-value" id="highlight-stat"></div><div class="stat-note" id="drink-stat"></div></div></section>
+<section class="report" aria-label="消費行為動畫播放器">
+<div class="report-top"><nav class="chapters" aria-label="動畫章節"><button class="chapter active" data-chapter="0"><span>01</span>消費節奏</button><button class="chapter" data-chapter="1"><span>02</span>習慣累積</button><button class="chapter" data-chapter="2"><span>03</span>重複足跡</button></nav><button class="full-result" id="finish">直接看本章結果 ↗</button></div>
+<div class="workspace"><div class="visual"><div class="visual-heading"><div><h2 id="scene-title">每一天，都留下一點生活的痕跡。</h2><p id="scene-subtitle">圓的面積代表當日金額，顏色代表當日金額最高的類別。</p></div><div class="date-badge" id="date-badge">03 / 01</div></div>
+<div class="scene" id="scene-0"><div class="calendar" id="calendar"></div></div>
+<div class="scene" id="scene-1" hidden><div class="category-bars" id="stacks"></div></div>
+<div class="scene" id="scene-2" hidden><div class="routine" id="routine"></div></div>
+<div class="legend" id="legend"></div><div class="chart-note" id="chart-note">依日期播放 · 每一個圓是一日消費的加總，並非消費地點。</div></div>
+<aside class="insight" aria-label="本章完整資料解讀"><div class="insight-overline">THE OBSERVATION / 本章完整解讀</div><div class="insight-number" id="insight-number"></div><h3 id="insight-title"></h3><p id="insight-body"></p><div class="insight-bottom" id="insight-bottom"></div></aside></div>
+<div class="controls"><button class="play" id="play" aria-label="暫停動畫">Ⅱ</button><button class="replay" id="replay" aria-label="從頭重播" title="從頭重播">↺</button><span class="control-label" id="play-state">正在播放</span><input class="timeline" id="timeline" type="range" min="0" max="36" step="0.01" value="0" aria-label="動畫播放進度，單位秒"><span class="time" id="time">00:00 / 00:36</span><button class="speed" id="speed" aria-label="播放速度 1 倍">1×</button></div>
+</section>
+<section class="extra-insights" aria-labelledby="extra-title">
+  <div class="section-heading"><h2 id="extra-title">換個角度，看見你的日常。</h2><p>出現得多，字就更大；沿著日期，看見一個月的消費分布。</p></div>
+  <div class="insight-grid">
+    <article class="insight-card">
+      <div class="card-kicker">04 / 消費文字雲</div>
+      <h3>生活裡，哪些字最常出現？</h3>
+      <p class="card-description">字體大小依消費次數排列。點選中文類別，查看消費日期與金額。</p>
+      <div class="cloud" id="category-cloud" aria-label="各類別消費頻率"></div>
+      <div class="selection-detail" id="cloud-detail" aria-live="polite"></div>
+      <p class="card-footnote">同一張發票、同一類別計 1 次，只計付費品項。跨類別發票各計 1 次，因此類別次數合計可能超過發票張數。運動代表票券購買。</p>
+    </article>
+    <article class="insight-card">
+      <div class="card-kicker">05 / 月內消費分布</div>
+      <h3>這個月，哪幾天最常消費？</h3>
+      <p class="card-description" id="rhythm-description">長條越長，當日消費次數越多。</p>
+      <div class="chart-toolbar">
+        <span class="date-badge" id="rhythm-month"></span>
+        <div class="segmented" role="group" aria-label="統計方式"><button data-rhythm-metric="count" aria-pressed="true">次數</button><button data-rhythm-metric="amount" aria-pressed="false">金額</button></div>
+      </div>
+      <div class="radial-wrap"><svg id="rhythm-chart" viewBox="0 0 380 380" role="group" aria-label="消費日期放射圖"></svg></div>
+      <p class="weekend-key">紫色外圈與日期：週末（週六、週日）</p>
+      <div class="radial-detail" id="rhythm-detail" aria-live="polite"></div>
+      <p class="card-footnote" id="rhythm-note"></p>
+      <details class="rhythm-table"><summary>查看日期分布明細</summary><div class="table-scroll"><table><thead><tr><th id="rhythm-table-label">日期</th><th class="numeric">消費次數</th><th class="numeric">金額 NT$</th></tr></thead><tbody id="rhythm-rows"></tbody></table></div></details>
+    </article>
+  </div>
+</section>
+<section class="bottom-row" aria-label="報告閱讀方式"><article class="finding"><span class="finding-number">01</span><div><h3>先看節奏，再看金額</h3><p>把一個月攤開，找到集中消費的日子，以及偶爾出現的大額支出。</p></div></article><article class="finding"><span class="finding-number">02</span><div><h3>讓不易察覺的累積被看見</h3><p>依品項分類，再扣除同類折扣，逐日看見各類別金額的累積。</p></div></article><article class="finding"><span class="finding-number">03</span><div><h3>找到反覆出現的紀錄</h3><p>運動票券在多個日期出現。呈現交易頻率，不把購票直接當成運動次數。</p></div></article></section>
+
+</section>
+<section class="self-compare flow-region" id="compare" tabindex="-1" aria-labelledby="compare-title">
+  <div class="compare-intro"><div class="card-kicker">03 / 自己跟自己比</div><h2 id="compare-title">同一個你，兩個月的日常。</h2><p>選一個消費標籤，看看這個月和上個月有什麼不同。</p></div>
+  <div class="compare-tools"><div class="compare-select"><label for="compare-item">選擇消費標籤 · 10 種</label><select id="compare-item"></select></div><div class="segmented" role="group" aria-label="比較資料來源"><button data-compare-source="actual" aria-pressed="true">我的資料</button><button data-compare-source="demo" aria-pressed="false">示範資料</button></div></div>
+  <p class="compare-source" id="compare-source-note"></p>
+  <div class="month-pair" id="compare-months"></div>
+  <div class="compare-takeaway" id="compare-takeaway" aria-live="polite"></div>
+  <table class="comparison-specs"><caption class="compare-note" id="compare-caption">同一標籤的月度比較</caption><thead><tr><th scope="col">比較指標</th><th scope="col" id="compare-previous-heading">上月</th><th scope="col" id="compare-current-heading">本月</th><th scope="col">本月差異</th></tr></thead><tbody id="compare-specs"></tbody></table>
+  <p class="compare-note" id="compare-period-note"></p>
+</section>
+<footer><div id="report-source"></div><div class="footer-brand">You are what you buy.</div></footer>
+</main>
+<script src="flow-navigation.js"></script>
+<script src="report-data.js"></script>
+<script src="insights-ui.js"></script>
+<script src="monthly-comparison.js"></script>
+<script src="comparison-ui.js"></script>
+</body>
+</html>

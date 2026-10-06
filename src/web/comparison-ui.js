@@ -78,13 +78,13 @@ function renderComparison() {
   $('compare-source-note').className = 'compare-source' + (demo ? ' demo' : '');
   $('compare-source-note').textContent = demo ?
     '示範模式：兩個月皆為模擬資料，僅展示比較功能，不代表你的實際消費。' :
-    '我的資料：' + dataset.current.month + '已載入；' + dataset.previous.month + (dataset.previous.rows ? '已載入。以下為真實發票比較。' : '尚無資料，不計增減。');
+    (isDemoReport ? '本頁示範：' : '我的資料：') + dataset.current.month + '已載入；' + dataset.previous.month + (dataset.previous.rows ? (isDemoReport ? '已載入。以下為虛構示範比較。' : '已載入。以下為真實發票比較。') : '尚無資料，不計增減。');
   $('compare-previous-heading').textContent = '上月 · ' + dataset.previous.monthNumber + ' 月';
   $('compare-current-heading').textContent = '本月 · ' + dataset.current.monthNumber + ' 月';
   $('compare-period-note').textContent = '本次比較：' + dataset.current.month + '對' + dataset.previous.month + '。同一張發票、同一標籤計 1 次付費消費；平均每次金額不等於商品單價。每日平均按各月實際天數計算，類別金額包含同類折抵。缺月不當成零，沒有紀錄不代表沒有消費。';
   $('compare-months').innerHTML = comparisonCard(dataset.previous, result.previous, selection, false) +
     comparisonCard(dataset.current, result.current, selection, true);
-  $('compare-caption').textContent = selection.label + ' · ' + (demo ? '模擬資料比較' : '我的月度比較');
+  $('compare-caption').textContent = selection.label + ' · ' + (demo ? '模擬資料比較' : (isDemoReport ? '示範月度比較' : '我的月度比較'));
   $('compare-specs').innerHTML = comparisonMetrics.map(metric => {
     function value(stats) {
       if (!stats) return '—<small>尚無資料</small>';
@@ -110,6 +110,9 @@ $('compare-item').innerHTML = comparisonSelections.map((selection, i) =>
   '<option value="' + i + '">' + escapeHTML(selection.label) + '</option>').join('');
 $('compare-item').value = String(Math.max(0, comparisonSelections.findIndex(selection => selection.category === 4)));
 $('compare-item').addEventListener('change', renderComparison);
+document.querySelectorAll('[data-compare-source]').forEach(button => {
+  if (isDemoReport) button.textContent = button.dataset.compareSource === 'actual' ? '本頁示範' : '另一組示範';
+});
 document.querySelectorAll('[data-compare-source]').forEach(button => button.addEventListener('click', () => {
   comparisonSource = button.dataset.compareSource;
   renderComparison();

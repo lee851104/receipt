@@ -1,20 +1,8 @@
-"""Build local, anonymized monthly data from the supplied invoice CSV files."""
+"""Parse invoice exports into classified records with coded invoice IDs."""
 
 import calendar
 import csv
-import json
 from datetime import datetime
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent
-CATEGORIES = [
-    ("正餐", "#df646b"), ("飲品", "#d9b078"),
-    ("零食甜點", "#e79681"), ("生鮮食材", "#89b6ed"),
-    ("運動", "#b2a0cf"), ("其他服務", "#a4b8a8"),
-    ("交通", "#7fbfc5"), ("住宿", "#91a1d5"),
-    ("日用品", "#b1bf83"), ("電子產品", "#c993b0"),
-    ("待確認", "#b5b5b5"),
-]
 
 
 def build_month(path, catalog):
@@ -52,20 +40,3 @@ def build_month(path, catalog):
         "days": calendar.monthrange(year, month)[1], "source": path.name,
         "rows": sorted(rows, key=lambda row: row["day"]),
     }
-
-
-def main():
-    catalog = json.loads((ROOT / "item-categories.json").read_text(encoding="utf-8"))
-    months = dict(build_month(ROOT / name, catalog)
-                  for name in ("0301-0331.csv", "0401-0430.csv"))
-    data = {"categories": [{"name": name, "color": color} for name, color in CATEGORIES],
-            "months": months}
-    (ROOT / "report-data.js").write_text(
-        "'use strict';\nconst expenseReportData = "
-        + json.dumps(data, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
-    for key, month in months.items():
-        print(key, len(month["rows"]), "rows; total", sum(row["amount"] for row in month["rows"]))
-
-
-if __name__ == "__main__":
-    main()

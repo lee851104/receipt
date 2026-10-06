@@ -290,9 +290,32 @@ tbody tr:hover { background: #242422; }
 .brand { font-size: 17px; letter-spacing: -.4px; }
 .intro h1 { font-size: clamp(40px, 6vw, 76px); letter-spacing: -2.8px; line-height: 1.07; }
 .intro h1 em { display: inline; max-width: none; }
-.flow-links { display: flex; flex-wrap: wrap; gap: 10px 24px; margin: 24px 0 0; font-size: 12px; }
-.flow-links a { color: var(--ink); text-decoration: none; border-bottom: 1px solid #666; padding-bottom: 5px; }
-.flow-links span { color: var(--muted); }
+html { scroll-behavior: smooth; }
+.flow-links { position: sticky; top: 12px; z-index: 20; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 28px 0 0; padding: 7px; background: rgba(25, 25, 25, .96); border: 1px solid var(--line); border-radius: 17px; box-shadow: 0 10px 30px #0003; backdrop-filter: blur(12px); }
+.flow-links a { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 50px; padding: 10px 14px; color: var(--muted); text-decoration: none; border: 1px solid transparent; border-radius: 11px; font-size: 13px; transition: color .2s, background .2s, border-color .2s; }
+.flow-links a:hover { color: var(--ink); background: #242422; }
+.flow-links .step-number { font-size: 11px; font-variant-numeric: tabular-nums; opacity: .75; }
+.flow-links a[aria-current="location"] { color: var(--ink); background: #382528; border-color: #734449; }
+.flow-links a[aria-current="location"] .step-number { color: var(--accent); opacity: 1; }
+.flow-region { margin-top: 36px; scroll-margin-top: var(--flow-offset, 108px); }
+.flow-region:focus { outline: none; }
+.flow-heading h2 { margin: 0; font-size: 23px; line-height: 1.6; font-weight: 600; }
+.flow-heading > p:last-child:not(.eyebrow) { margin: 9px 0 0; color: var(--muted); font-size: 12px; }
+.flow-heading .eyebrow { margin-bottom: 9px; color: var(--accent); }
+.item-section .audit { margin-top: 18px; }
+.item-section .table-scroll { max-height: 320px; }
+.item-section thead th { position: sticky; top: 0; background: var(--surface); }
+.item-section .table-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.self-compare.flow-region { scroll-margin-top: var(--flow-offset, 108px); }
+@media(max-width:600px) {
+  .flow-links { top: 8px; gap: 3px; padding: 5px; border-radius: 13px; }
+  .flow-links a { flex-direction: column; gap: 3px; padding: 9px 3px; min-height: 58px; font-size: 11px; text-align: center; }
+  .flow-links .step-number { font-size: 10px; }
+  .flow-heading h2 { font-size: 19px; }
+  .flow-region { margin-top: 28px; }
+}
+@media(prefers-reduced-motion:reduce) { html { scroll-behavior: auto; } }
+@media print { .flow-links { position: static; } .item-section .table-scroll { max-height: none; } }
 .self-compare { margin-top: 40px; padding: 32px 28px; background: #151515; color: var(--ink); border: 1px solid var(--line); border-radius: 20px; scroll-margin-top: 20px; }
 .compare-intro { text-align: left; max-width: 680px; }
 .compare-intro .card-kicker { color: var(--accent); }
@@ -365,15 +388,29 @@ tbody tr:hover { background: #242422; }
 .weekend-key:before { content:''; display:inline-block; width:14px; height:4px; background:var(--purple); margin-right:7px; vertical-align:middle; }
 .ticket-strip { overflow-x:auto; grid-template-columns:repeat(7,minmax(40px,1fr)); }
 @media(max-width:520px) { .month-filter { align-items:start; flex-direction:column; gap:12px; padding:18px; } .month-filter select { min-width:155px; } .category-row { grid-template-columns:64px minmax(0,1fr) 48px; gap:8px; font-size:10px; } }
+
+.data-notice { padding: 14px 18px; border: 1px solid #734449; border-radius: 10px; color: #efb7ba; background: #282021; font-size: 14px; }
 </style>
 </head>
 <body>
 <header><div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>You are what you buy.</div><span class="tag" id="report-tag"></span></header>
 <main>
-<section class="intro"><div><p class="eyebrow">從消費，看見自己</p><h1>You are<br>what you <em>buy.</em></h1><p class="subtitle">不用逐筆記帳。從發票品項，看見消費模式，再跟上個月的自己比。</p><nav class="flow-links" aria-label="回顧流程"><span>01 拆到品項</span><a href="#insights">02 看見消費模式 ↓</a><a href="#compare">03 自己跟自己比 ↓</a></nav></div><div class="period" id="report-period"></div></section>
-<div class="month-filter"><div><strong>你的消費洞察</strong><p>切換月份，圖表與下方的前月比較會一起更新。</p></div><label for="insights-month">洞察月份 <select id="insights-month"></select></label></div>
+<section class="intro"><div><p class="eyebrow">從消費，看見自己</p><h1>You are<br>what you <em>buy.</em></h1><p class="subtitle">不用逐筆記帳。從發票品項，看見消費模式，再跟上個月的自己比。</p></div><div class="period" id="report-period"></div></section>
+<p class="data-notice" id="data-notice" role="note"></p>
+<nav class="flow-links" aria-label="回顧流程">
+  <a href="#items" aria-current="location"><span class="step-number">01</span><span>拆到品項</span></a>
+  <a href="#insights"><span class="step-number">02</span><span>看見消費模式</span></a>
+  <a href="#compare"><span class="step-number">03</span><span>自己跟自己比</span></a>
+</nav>
+<section class="flow-region item-section" id="items" tabindex="-1" aria-labelledby="items-title">
+  <div class="flow-heading"><p class="eyebrow">01 ／ 拆到品項</p><h2 id="items-title">一張發票裡買了什麼，分開看得更清楚。</h2><p>查看商品明細與分類，再往下看消費模式。</p></div>
+<details class="audit" open><summary id="audit-summary"></summary><p class="audit-description" id="audit-description"></p><div class="table-scroll"><table><thead><tr><th>日期</th><th>發票代碼</th><th>賣方</th><th>品項</th><th>分類</th><th class="numeric">數量</th><th class="numeric">金額 NT$</th></tr></thead><tbody id="audit-rows"></tbody></table></div></details>
+</section>
+<section class="flow-region" id="insights" tabindex="-1" aria-labelledby="insights-title">
+  <div class="flow-heading"><p class="eyebrow">02 ／ 看見消費模式</p><h2 id="insights-title">從每筆消費，看見一個月的習慣。</h2></div>
+<div class="month-filter"><div><strong id="insights-source-label">消費洞察</strong><p>切換月份，圖表與下方的前月比較會一起更新。</p></div><label for="insights-month">洞察月份 <select id="insights-month"></select></label></div>
 <section class="stats" aria-label="本期完整統計"><div class="stat"><div class="stat-label">本期發票涵蓋金額</div><div class="stat-value" id="total"></div><div class="stat-note" id="total-change"></div></div><div class="stat"><div class="stat-label">不重複發票</div><div class="stat-value" id="records"></div><div class="stat-note">以發票號碼合併同張明細</div></div><div class="stat"><div class="stat-label">有消費紀錄的日子</div><div class="stat-value" id="active-days"></div><div class="stat-note">僅計入本次資料涵蓋的消費</div></div><div class="stat"><div class="stat-label">本期值得留意</div><div class="stat-value" id="highlight-stat"></div><div class="stat-note" id="drink-stat"></div></div></section>
-<section class="report" id="insights" aria-label="消費行為動畫播放器">
+<section class="report" aria-label="消費行為動畫播放器">
 <div class="report-top"><nav class="chapters" aria-label="動畫章節"><button class="chapter active" data-chapter="0"><span>01</span>消費節奏</button><button class="chapter" data-chapter="1"><span>02</span>習慣累積</button><button class="chapter" data-chapter="2"><span>03</span>重複足跡</button></nav><button class="full-result" id="finish">直接看本章結果 ↗</button></div>
 <div class="workspace"><div class="visual"><div class="visual-heading"><div><h2 id="scene-title">每一天，都留下一點生活的痕跡。</h2><p id="scene-subtitle">圓的面積代表當日金額，顏色代表當日金額最高的類別。</p></div><div class="date-badge" id="date-badge">03 / 01</div></div>
 <div class="scene" id="scene-0"><div class="calendar" id="calendar"></div></div>
@@ -410,9 +447,10 @@ tbody tr:hover { background: #242422; }
     </article>
   </div>
 </section>
-<section class="bottom-row" aria-label="報告閱讀方式"><article class="finding"><span class="finding-number">01</span><div><h3>先看節奏，再看金額</h3><p>把一個月攤開，找到集中消費的日子，以及偶爾出現的大額支出。</p></div></article><article class="finding"><span class="finding-number">02</span><div><h3>讓不易察覺的累積被看見</h3><p>依品項分類，再扣除同類折扣，逐日看見各類別金額的累積。</p></div></article><article class="finding"><span class="finding-number">03</span><div><h3>找到反覆出現的紀錄</h3><p>體適能中心票券在多個日期出現。呈現交易頻率，不把購票直接當成運動次數。</p></div></article></section>
-<details class="audit"><summary id="audit-summary"></summary><p class="audit-description" id="audit-description"></p><div class="table-scroll"><table><thead><tr><th>日期</th><th>發票代碼</th><th>賣方</th><th>品項</th><th>分類</th><th class="numeric">數量</th><th class="numeric">金額 NT$</th></tr></thead><tbody id="audit-rows"></tbody></table></div></details>
-<section class="self-compare" id="compare" aria-labelledby="compare-title">
+<section class="bottom-row" aria-label="報告閱讀方式"><article class="finding"><span class="finding-number">01</span><div><h3>先看節奏，再看金額</h3><p>把一個月攤開，找到集中消費的日子，以及偶爾出現的大額支出。</p></div></article><article class="finding"><span class="finding-number">02</span><div><h3>讓不易察覺的累積被看見</h3><p>依品項分類，再扣除同類折扣，逐日看見各類別金額的累積。</p></div></article><article class="finding"><span class="finding-number">03</span><div><h3>找到反覆出現的紀錄</h3><p>運動票券在多個日期出現。呈現交易頻率，不把購票直接當成運動次數。</p></div></article></section>
+
+</section>
+<section class="self-compare flow-region" id="compare" tabindex="-1" aria-labelledby="compare-title">
   <div class="compare-intro"><div class="card-kicker">03 / 自己跟自己比</div><h2 id="compare-title">同一個你，兩個月的日常。</h2><p>選一個消費標籤，看看這個月和上個月有什麼不同。</p></div>
   <div class="compare-tools"><div class="compare-select"><label for="compare-item">選擇消費標籤 · 10 種</label><select id="compare-item"></select></div><div class="segmented" role="group" aria-label="比較資料來源"><button data-compare-source="actual" aria-pressed="true">我的資料</button><button data-compare-source="demo" aria-pressed="false">示範資料</button></div></div>
   <p class="compare-source" id="compare-source-note"></p>
@@ -423,9 +461,1530 @@ tbody tr:hover { background: #242422; }
 </section>
 <footer><div id="report-source"></div><div class="footer-brand">You are what you buy.</div></footer>
 </main>
-<script src="report-data.js"></script>
-<script src="insights-ui.js"></script>
-<script src="monthly-comparison.js"></script>
-<script src="comparison-ui.js"></script>
+<script data-source="flow-navigation.js">
+'use strict';
+
+// Anchors retain native keyboard, URL and back/forward behavior.
+(function () {
+  const links = [...document.querySelectorAll('.flow-links a')];
+  if (!links.length) return;
+  const nav = links[0].closest('nav');
+  const sections = links.map(link => document.querySelector(link.getAttribute('href')));
+  let queued = false;
+
+  function updateCurrent() {
+    queued = false;
+    const readingLine = nav.offsetHeight + 38;
+    let active = 0;
+    sections.forEach((section, index) => {
+      if (section.getBoundingClientRect().top <= readingLine) active = index;
+    });
+    if (window.scrollY > 0 && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+      active = sections.length - 1;
+    }
+    links.forEach((link, index) => {
+      if (index === active) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
+    });
+  }
+
+  function scheduleUpdate() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(updateCurrent);
+  }
+
+  function updateOffset() {
+    document.documentElement.style.setProperty('--flow-offset', `${nav.offsetHeight + 36}px`);
+    scheduleUpdate();
+  }
+
+  links.forEach((link, index) => link.addEventListener('click', () => {
+    const details = sections[index].querySelector('.audit');
+    if (details) details.open = true;
+  }));
+  window.addEventListener('scroll', scheduleUpdate, { passive: true });
+  window.addEventListener('resize', updateOffset);
+  window.addEventListener('hashchange', scheduleUpdate);
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(updateOffset).observe(nav);
+  updateOffset();
+})();
+</script>
+<script data-source="report-data.js">
+'use strict';
+const expenseReportData = {
+  "isDemo": true,
+  "categories": [
+    {
+      "name": "正餐",
+      "color": "#df646b"
+    },
+    {
+      "name": "飲品",
+      "color": "#d9b078"
+    },
+    {
+      "name": "零食甜點",
+      "color": "#e79681"
+    },
+    {
+      "name": "生鮮食材",
+      "color": "#89b6ed"
+    },
+    {
+      "name": "運動",
+      "color": "#b2a0cf"
+    },
+    {
+      "name": "其他服務",
+      "color": "#a4b8a8"
+    },
+    {
+      "name": "交通",
+      "color": "#7fbfc5"
+    },
+    {
+      "name": "住宿",
+      "color": "#91a1d5"
+    },
+    {
+      "name": "日用品",
+      "color": "#b1bf83"
+    },
+    {
+      "name": "電子產品",
+      "color": "#c993b0"
+    },
+    {
+      "name": "待確認",
+      "color": "#b5b5b5"
+    }
+  ],
+  "months": {
+    "2026-03": {
+      "year": 2026,
+      "monthNumber": 3,
+      "month": "2026 年 3 月",
+      "days": 31,
+      "source": "虛構示範資料（3 月）",
+      "rows": [
+        {
+          "day": 1,
+          "invoice": "DEMO-2026-03-019",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 1,
+          "invoice": "DEMO-2026-03-040",
+          "merchant": "示範客運",
+          "name": "示範市區接駁票",
+          "quantity": 1,
+          "amount": 45,
+          "category": 6,
+          "provisional": false
+        },
+        {
+          "day": 2,
+          "invoice": "DEMO-2026-03-013",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 2,
+          "invoice": "DEMO-2026-03-045",
+          "merchant": "示範生活館",
+          "name": "示範環保清潔組",
+          "quantity": 1,
+          "amount": 160,
+          "category": 8,
+          "provisional": false
+        },
+        {
+          "day": 3,
+          "invoice": "DEMO-2026-03-007",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 3,
+          "invoice": "DEMO-2026-03-048",
+          "merchant": "示範選物店",
+          "name": "示範未分類商品",
+          "quantity": 1,
+          "amount": 75,
+          "category": 10,
+          "provisional": true
+        },
+        {
+          "day": 4,
+          "invoice": "DEMO-2026-03-001",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 4,
+          "invoice": "DEMO-2026-03-001",
+          "merchant": "示範餐坊",
+          "name": "示範餐盒折扣",
+          "quantity": 1,
+          "amount": -25,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 4,
+          "invoice": "DEMO-2026-03-001",
+          "merchant": "示範餐坊",
+          "name": "示範隨餐贈品",
+          "quantity": 1,
+          "amount": 0,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 6,
+          "invoice": "DEMO-2026-03-020",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 6,
+          "invoice": "DEMO-2026-03-041",
+          "merchant": "示範客運",
+          "name": "示範市區接駁票",
+          "quantity": 1,
+          "amount": 45,
+          "category": 6,
+          "provisional": false
+        },
+        {
+          "day": 7,
+          "invoice": "DEMO-2026-03-014",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 7,
+          "invoice": "DEMO-2026-03-046",
+          "merchant": "示範生活館",
+          "name": "示範環保清潔組",
+          "quantity": 1,
+          "amount": 160,
+          "category": 8,
+          "provisional": false
+        },
+        {
+          "day": 8,
+          "invoice": "DEMO-2026-03-008",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 9,
+          "invoice": "DEMO-2026-03-002",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 10,
+          "invoice": "DEMO-2026-03-023",
+          "merchant": "示範烘焙店",
+          "name": "示範燕麥餅",
+          "quantity": 1,
+          "amount": 85,
+          "category": 2,
+          "provisional": false
+        },
+        {
+          "day": 11,
+          "invoice": "DEMO-2026-03-021",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 11,
+          "invoice": "DEMO-2026-03-042",
+          "merchant": "示範客運",
+          "name": "示範市區接駁票",
+          "quantity": 1,
+          "amount": 45,
+          "category": 6,
+          "provisional": false
+        },
+        {
+          "day": 12,
+          "invoice": "DEMO-2026-03-015",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 13,
+          "invoice": "DEMO-2026-03-009",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 13,
+          "invoice": "DEMO-2026-03-028",
+          "merchant": "示範蔬果舖",
+          "name": "示範綜合蔬菜箱",
+          "quantity": 1,
+          "amount": 230,
+          "category": 3,
+          "provisional": false
+        },
+        {
+          "day": 14,
+          "invoice": "DEMO-2026-03-003",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 15,
+          "invoice": "DEMO-2026-03-024",
+          "merchant": "示範烘焙店",
+          "name": "示範燕麥餅",
+          "quantity": 1,
+          "amount": 85,
+          "category": 2,
+          "provisional": false
+        },
+        {
+          "day": 16,
+          "invoice": "DEMO-2026-03-022",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 16,
+          "invoice": "DEMO-2026-03-032",
+          "merchant": "示範運動館",
+          "name": "示範體適能體驗票",
+          "quantity": 1,
+          "amount": 90,
+          "category": 4,
+          "provisional": false
+        },
+        {
+          "day": 17,
+          "invoice": "DEMO-2026-03-016",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 18,
+          "invoice": "DEMO-2026-03-010",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 18,
+          "invoice": "DEMO-2026-03-029",
+          "merchant": "示範蔬果舖",
+          "name": "示範綜合蔬菜箱",
+          "quantity": 1,
+          "amount": 230,
+          "category": 3,
+          "provisional": false
+        },
+        {
+          "day": 19,
+          "invoice": "DEMO-2026-03-004",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 19,
+          "invoice": "DEMO-2026-03-036",
+          "merchant": "示範洗衣坊",
+          "name": "示範衣物清潔服務",
+          "quantity": 1,
+          "amount": 180,
+          "category": 5,
+          "provisional": false
+        },
+        {
+          "day": 20,
+          "invoice": "DEMO-2026-03-025",
+          "merchant": "示範烘焙店",
+          "name": "示範燕麥餅",
+          "quantity": 1,
+          "amount": 85,
+          "category": 2,
+          "provisional": false
+        },
+        {
+          "day": 21,
+          "invoice": "DEMO-2026-03-033",
+          "merchant": "示範運動館",
+          "name": "示範體適能體驗票",
+          "quantity": 1,
+          "amount": 90,
+          "category": 4,
+          "provisional": false
+        },
+        {
+          "day": 22,
+          "invoice": "DEMO-2026-03-017",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 22,
+          "invoice": "DEMO-2026-03-038",
+          "merchant": "示範客運",
+          "name": "示範市區接駁票",
+          "quantity": 1,
+          "amount": 45,
+          "category": 6,
+          "provisional": false
+        },
+        {
+          "day": 23,
+          "invoice": "DEMO-2026-03-011",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 23,
+          "invoice": "DEMO-2026-03-030",
+          "merchant": "示範蔬果舖",
+          "name": "示範綜合蔬菜箱",
+          "quantity": 1,
+          "amount": 230,
+          "category": 3,
+          "provisional": false
+        },
+        {
+          "day": 24,
+          "invoice": "DEMO-2026-03-005",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 24,
+          "invoice": "DEMO-2026-03-037",
+          "merchant": "示範洗衣坊",
+          "name": "示範衣物清潔服務",
+          "quantity": 1,
+          "amount": 180,
+          "category": 5,
+          "provisional": false
+        },
+        {
+          "day": 25,
+          "invoice": "DEMO-2026-03-026",
+          "merchant": "示範烘焙店",
+          "name": "示範燕麥餅",
+          "quantity": 1,
+          "amount": 85,
+          "category": 2,
+          "provisional": false
+        },
+        {
+          "day": 25,
+          "invoice": "DEMO-2026-03-043",
+          "merchant": "示範旅宿",
+          "name": "示範旅店雙人房",
+          "quantity": 1,
+          "amount": 2100,
+          "category": 7,
+          "provisional": false
+        },
+        {
+          "day": 26,
+          "invoice": "DEMO-2026-03-034",
+          "merchant": "示範運動館",
+          "name": "示範體適能體驗票",
+          "quantity": 1,
+          "amount": 90,
+          "category": 4,
+          "provisional": false
+        },
+        {
+          "day": 27,
+          "invoice": "DEMO-2026-03-018",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 27,
+          "invoice": "DEMO-2026-03-039",
+          "merchant": "示範客運",
+          "name": "示範市區接駁票",
+          "quantity": 1,
+          "amount": 45,
+          "category": 6,
+          "provisional": false
+        },
+        {
+          "day": 28,
+          "invoice": "DEMO-2026-03-012",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 28,
+          "invoice": "DEMO-2026-03-031",
+          "merchant": "示範蔬果舖",
+          "name": "示範綜合蔬菜箱",
+          "quantity": 1,
+          "amount": 230,
+          "category": 3,
+          "provisional": false
+        },
+        {
+          "day": 28,
+          "invoice": "DEMO-2026-03-044",
+          "merchant": "示範生活館",
+          "name": "示範環保清潔組",
+          "quantity": 1,
+          "amount": 160,
+          "category": 8,
+          "provisional": false
+        },
+        {
+          "day": 29,
+          "invoice": "DEMO-2026-03-006",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 125,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 30,
+          "invoice": "DEMO-2026-03-027",
+          "merchant": "示範烘焙店",
+          "name": "示範燕麥餅",
+          "quantity": 1,
+          "amount": 85,
+          "category": 2,
+          "provisional": false
+        },
+        {
+          "day": 31,
+          "invoice": "DEMO-2026-03-035",
+          "merchant": "示範運動館",
+          "name": "示範體適能體驗票",
+          "quantity": 1,
+          "amount": 90,
+          "category": 4,
+          "provisional": false
+        },
+        {
+          "day": 31,
+          "invoice": "DEMO-2026-03-047",
+          "merchant": "示範數位店",
+          "name": "示範無線滑鼠",
+          "quantity": 1,
+          "amount": 780,
+          "category": 9,
+          "provisional": false
+        }
+      ]
+    },
+    "2026-04": {
+      "year": 2026,
+      "monthNumber": 4,
+      "month": "2026 年 4 月",
+      "days": 30,
+      "source": "虛構示範資料（4 月）",
+      "rows": [
+        {
+          "day": 2,
+          "invoice": "DEMO-2026-04-036",
+          "merchant": "示範運動館",
+          "name": "示範體適能體驗票",
+          "quantity": 1,
+          "amount": 90,
+          "category": 4,
+          "provisional": false
+        },
+        {
+          "day": 2,
+          "invoice": "DEMO-2026-04-050",
+          "merchant": "示範數位店",
+          "name": "示範無線滑鼠",
+          "quantity": 1,
+          "amount": 780,
+          "category": 9,
+          "provisional": false
+        },
+        {
+          "day": 3,
+          "invoice": "DEMO-2026-04-017",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 3,
+          "invoice": "DEMO-2026-04-023",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 3,
+          "invoice": "DEMO-2026-04-042",
+          "merchant": "示範客運",
+          "name": "示範市區接駁票",
+          "quantity": 1,
+          "amount": 45,
+          "category": 6,
+          "provisional": false
+        },
+        {
+          "day": 4,
+          "invoice": "DEMO-2026-04-032",
+          "merchant": "示範蔬果舖",
+          "name": "示範綜合蔬菜箱",
+          "quantity": 1,
+          "amount": 230,
+          "category": 3,
+          "provisional": false
+        },
+        {
+          "day": 4,
+          "invoice": "DEMO-2026-04-049",
+          "merchant": "示範生活館",
+          "name": "示範環保清潔組",
+          "quantity": 1,
+          "amount": 160,
+          "category": 8,
+          "provisional": false
+        },
+        {
+          "day": 5,
+          "invoice": "DEMO-2026-04-001",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 140,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 5,
+          "invoice": "DEMO-2026-04-007",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 140,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 5,
+          "invoice": "DEMO-2026-04-051",
+          "merchant": "示範選物店",
+          "name": "示範未分類商品",
+          "quantity": 1,
+          "amount": 75,
+          "category": 10,
+          "provisional": true
+        },
+        {
+          "day": 5,
+          "invoice": "DEMO-2026-04-001",
+          "merchant": "示範餐坊",
+          "name": "示範餐盒折扣",
+          "quantity": 1,
+          "amount": -25,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 5,
+          "invoice": "DEMO-2026-04-001",
+          "merchant": "示範餐坊",
+          "name": "示範隨餐贈品",
+          "quantity": 1,
+          "amount": 0,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 7,
+          "invoice": "DEMO-2026-04-037",
+          "merchant": "示範運動館",
+          "name": "示範體適能體驗票",
+          "quantity": 1,
+          "amount": 90,
+          "category": 4,
+          "provisional": false
+        },
+        {
+          "day": 8,
+          "invoice": "DEMO-2026-04-012",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 8,
+          "invoice": "DEMO-2026-04-018",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 8,
+          "invoice": "DEMO-2026-04-043",
+          "merchant": "示範客運",
+          "name": "示範市區接駁票",
+          "quantity": 1,
+          "amount": 45,
+          "category": 6,
+          "provisional": false
+        },
+        {
+          "day": 10,
+          "invoice": "DEMO-2026-04-002",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 140,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 10,
+          "invoice": "DEMO-2026-04-008",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 140,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 11,
+          "invoice": "DEMO-2026-04-024",
+          "merchant": "示範烘焙店",
+          "name": "示範燕麥餅",
+          "quantity": 1,
+          "amount": 85,
+          "category": 2,
+          "provisional": false
+        },
+        {
+          "day": 12,
+          "invoice": "DEMO-2026-04-038",
+          "merchant": "示範運動館",
+          "name": "示範體適能體驗票",
+          "quantity": 1,
+          "amount": 90,
+          "category": 4,
+          "provisional": false
+        },
+        {
+          "day": 13,
+          "invoice": "DEMO-2026-04-013",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 13,
+          "invoice": "DEMO-2026-04-019",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 13,
+          "invoice": "DEMO-2026-04-044",
+          "merchant": "示範客運",
+          "name": "示範市區接駁票",
+          "quantity": 1,
+          "amount": 45,
+          "category": 6,
+          "provisional": false
+        },
+        {
+          "day": 14,
+          "invoice": "DEMO-2026-04-028",
+          "merchant": "示範蔬果舖",
+          "name": "示範綜合蔬菜箱",
+          "quantity": 1,
+          "amount": 230,
+          "category": 3,
+          "provisional": false
+        },
+        {
+          "day": 15,
+          "invoice": "DEMO-2026-04-003",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 140,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 15,
+          "invoice": "DEMO-2026-04-009",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 140,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 16,
+          "invoice": "DEMO-2026-04-025",
+          "merchant": "示範烘焙店",
+          "name": "示範燕麥餅",
+          "quantity": 1,
+          "amount": 85,
+          "category": 2,
+          "provisional": false
+        },
+        {
+          "day": 17,
+          "invoice": "DEMO-2026-04-033",
+          "merchant": "示範運動館",
+          "name": "示範體適能體驗票",
+          "quantity": 1,
+          "amount": 90,
+          "category": 4,
+          "provisional": false
+        },
+        {
+          "day": 18,
+          "invoice": "DEMO-2026-04-014",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 18,
+          "invoice": "DEMO-2026-04-020",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 18,
+          "invoice": "DEMO-2026-04-045",
+          "merchant": "示範客運",
+          "name": "示範市區接駁票",
+          "quantity": 1,
+          "amount": 45,
+          "category": 6,
+          "provisional": false
+        },
+        {
+          "day": 19,
+          "invoice": "DEMO-2026-04-029",
+          "merchant": "示範蔬果舖",
+          "name": "示範綜合蔬菜箱",
+          "quantity": 1,
+          "amount": 230,
+          "category": 3,
+          "provisional": false
+        },
+        {
+          "day": 20,
+          "invoice": "DEMO-2026-04-004",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 140,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 20,
+          "invoice": "DEMO-2026-04-010",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 140,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 20,
+          "invoice": "DEMO-2026-04-039",
+          "merchant": "示範洗衣坊",
+          "name": "示範衣物清潔服務",
+          "quantity": 1,
+          "amount": 180,
+          "category": 5,
+          "provisional": false
+        },
+        {
+          "day": 21,
+          "invoice": "DEMO-2026-04-026",
+          "merchant": "示範烘焙店",
+          "name": "示範燕麥餅",
+          "quantity": 1,
+          "amount": 85,
+          "category": 2,
+          "provisional": false
+        },
+        {
+          "day": 22,
+          "invoice": "DEMO-2026-04-034",
+          "merchant": "示範運動館",
+          "name": "示範體適能體驗票",
+          "quantity": 1,
+          "amount": 90,
+          "category": 4,
+          "provisional": false
+        },
+        {
+          "day": 23,
+          "invoice": "DEMO-2026-04-015",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 23,
+          "invoice": "DEMO-2026-04-021",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 23,
+          "invoice": "DEMO-2026-04-040",
+          "merchant": "示範客運",
+          "name": "示範市區接駁票",
+          "quantity": 1,
+          "amount": 45,
+          "category": 6,
+          "provisional": false
+        },
+        {
+          "day": 23,
+          "invoice": "DEMO-2026-04-046",
+          "merchant": "示範客運",
+          "name": "示範市區接駁票",
+          "quantity": 1,
+          "amount": 45,
+          "category": 6,
+          "provisional": false
+        },
+        {
+          "day": 24,
+          "invoice": "DEMO-2026-04-030",
+          "merchant": "示範蔬果舖",
+          "name": "示範綜合蔬菜箱",
+          "quantity": 1,
+          "amount": 230,
+          "category": 3,
+          "provisional": false
+        },
+        {
+          "day": 25,
+          "invoice": "DEMO-2026-04-005",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 140,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 25,
+          "invoice": "DEMO-2026-04-011",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 140,
+          "category": 0,
+          "provisional": false
+        },
+        {
+          "day": 26,
+          "invoice": "DEMO-2026-04-027",
+          "merchant": "示範烘焙店",
+          "name": "示範燕麥餅",
+          "quantity": 1,
+          "amount": 85,
+          "category": 2,
+          "provisional": false
+        },
+        {
+          "day": 26,
+          "invoice": "DEMO-2026-04-047",
+          "merchant": "示範旅宿",
+          "name": "示範旅店雙人房",
+          "quantity": 1,
+          "amount": 2100,
+          "category": 7,
+          "provisional": false
+        },
+        {
+          "day": 27,
+          "invoice": "DEMO-2026-04-035",
+          "merchant": "示範運動館",
+          "name": "示範體適能體驗票",
+          "quantity": 1,
+          "amount": 90,
+          "category": 4,
+          "provisional": false
+        },
+        {
+          "day": 28,
+          "invoice": "DEMO-2026-04-016",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 28,
+          "invoice": "DEMO-2026-04-022",
+          "merchant": "示範茶屋",
+          "name": "示範花果茶",
+          "quantity": 1,
+          "amount": 65,
+          "category": 1,
+          "provisional": false
+        },
+        {
+          "day": 28,
+          "invoice": "DEMO-2026-04-041",
+          "merchant": "示範客運",
+          "name": "示範市區接駁票",
+          "quantity": 1,
+          "amount": 45,
+          "category": 6,
+          "provisional": false
+        },
+        {
+          "day": 29,
+          "invoice": "DEMO-2026-04-031",
+          "merchant": "示範蔬果舖",
+          "name": "示範綜合蔬菜箱",
+          "quantity": 1,
+          "amount": 230,
+          "category": 3,
+          "provisional": false
+        },
+        {
+          "day": 29,
+          "invoice": "DEMO-2026-04-048",
+          "merchant": "示範生活館",
+          "name": "示範環保清潔組",
+          "quantity": 1,
+          "amount": 160,
+          "category": 8,
+          "provisional": false
+        },
+        {
+          "day": 30,
+          "invoice": "DEMO-2026-04-006",
+          "merchant": "示範餐坊",
+          "name": "示範蔬食餐盒",
+          "quantity": 1,
+          "amount": 140,
+          "category": 0,
+          "provisional": false
+        }
+      ]
+    }
+  }
+};
+</script>
+<script data-source="insights-ui.js">
+'use strict';
+
+const isDemoReport = expenseReportData.isDemo === true;
+const reportMonths = expenseReportData.months;
+const categories = expenseReportData.categories;
+let selectedMonthKey = Object.keys(reportMonths).sort().at(-1);
+let current = reportMonths[selectedMonthKey].rows;
+const $ = id => document.getElementById(id);
+const sum = rows => rows.reduce((value, row) => value + row.amount, 0);
+const number = value => Math.round(value).toLocaleString('zh-TW');
+const money = value => 'NT$ ' + number(value);
+const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[char]));
+let insightGeneration = 0;
+let rhythmMetric = 'count';
+
+function renderInsights(key, autoplay = false) {
+  if (!reportMonths[key]) return;
+  selectedMonthKey = key;
+  const month = reportMonths[key];
+  current = month.rows;
+  const generation = ++insightGeneration;
+  const mm = String(month.monthNumber).padStart(2, '0');
+  const dateLabel = day => mm + ' / ' + String(day).padStart(2, '0');
+  const dateInfo = day => {
+    const weekday = new Date(month.year, month.monthNumber - 1, day).getDay();
+    return { weekday: '週' + '日一二三四五六'[weekday], weekend: weekday === 0 || weekday === 6 };
+  };
+  const totals = rows => categories.map((_, index) => sum(rows.filter(row => row.category === index)));
+  const paid = current.filter(row => row.amount > 0);
+  const zeroCount = current.filter(row => row.amount === 0).length;
+  const discounts = -sum(current.filter(row => row.amount < 0));
+  const total = sum(current), daysInMonth = month.days;
+  const currTotals = totals(current);
+  const invoices = [...new Set(current.map(row => row.invoice))];
+  const activeDays = new Set(current.map(row => row.day)).size;
+  const daily = Array.from({ length: daysInMonth }, (_, index) => {
+    const rows = current.filter(row => row.day === index + 1), values = totals(rows);
+    return { day: index + 1, amount: sum(rows), count: new Set(rows.map(row => row.invoice)).size,
+      category: values.indexOf(Math.max(...values)) };
+  });
+  const topDays = daily.filter(day => day.count).sort((a, b) => b.amount - a.amount).slice(0, 3);
+  const peak = topDays[0];
+  const topAmount = topDays.reduce((value, day) => value + day.amount, 0);
+  const topShare = total ? topAmount / total * 100 : 0;
+  const largestCategory = currTotals.indexOf(Math.max(...currTotals));
+  const largestShare = total ? currTotals[largestCategory] / total * 100 : 0;
+  const sports = paid.filter(row => row.category === 4);
+  const sportDays = [...new Set(sports.map(row => row.day))];
+  const sportCount = new Set(sports.map(row => row.invoice)).size;
+  const gaps = sportDays.slice(1).map((day, index) => day - sportDays[index]);
+  const frequency = categories.map((category, index) => {
+    const records = paid.filter(row => row.category === index);
+    return { ...category, index, count: new Set(records.map(row => row.invoice)).size,
+      amount: currTotals[index], days: [...new Set(records.map(row => row.day))] };
+  }).filter(category => category.count > 0).sort((a, b) => b.count - a.count || a.index - b.index);
+
+  $('insights-month').value = key;
+  $('insights-source-label').textContent = isDemoReport ? '虛構示範 · 消費洞察' : '你的消費洞察';
+  $('report-tag').textContent = month.month + (isDemoReport ? '・虛構示範' : '・個人報告');
+  $('data-notice').textContent = isDemoReport ? '虛構示範資料：店家、品項、日期與金額皆為合成，僅供功能展示。' : '私人消費報告：本檔包含真實消費明細，請自行決定分享對象。';
+  $('report-period').innerHTML = '<small>本期觀察區間</small>' + month.year + '.' + mm + '.01 — ' + mm + '.' + month.days;
+  $('total').textContent = money(total);
+  $('total-change').textContent = current.length + ' 筆明細 · 含 ' + zeroCount + ' 筆零元' + (discounts ? ' · 已扣折抵 ' + number(discounts) + ' 元' : '');
+  $('records').innerHTML = invoices.length + '<small>張</small>';
+  $('active-days').innerHTML = activeDays + '<small>/ ' + daysInMonth + ' 天</small>';
+  $('highlight-stat').textContent = frequency.slice(0, 2).map(category => category.name).join('與');
+  $('drink-stat').textContent = frequency.slice(0, 2).map(category => category.name + ' ' + category.count + ' 次').join(' · ');
+  $('legend').innerHTML = categories.filter((_, index) => currTotals[index] !== 0).map(category => '<span style="--color:' + category.color + '">' + category.name + '</span>').join('');
+  $('audit-summary').textContent = '查看分類明細與計算方式 · ' + current.length + ' 筆品項';
+  $('audit-description').textContent = '依品名與賣方人工分類，尚未接模型。飲品含酒類；不明品項標示待確認。餐廳服務費列其他服務，餐廳折扣與點數折抵列正餐並扣除；不分攤至個別品名。零元明細保留供核對，消費次數只計付費紀錄。';
+  $('audit-rows').innerHTML = current.map(row => '<tr><td>' + dateLabel(row.day) + '</td><td>' + row.invoice + '</td><td>' + escapeHTML(row.merchant) + '</td><td>' + escapeHTML(row.name) + '</td><td' + (row.provisional ? ' class="provisional"' : '') + '>' + categories[row.category].name + (row.provisional ? '（暫定）' : '') + '</td><td class="numeric">' + row.quantity + '</td><td class="numeric">' + number(row.amount) + '</td></tr>').join('');
+  $('report-source').textContent = '目前洞察來源：' + month.source + '。金額依明細加總，已含負數折抵；發票張數按號碼去重。沒有紀錄不代表沒有消費。頁面只保留匿名發票代碼，不嵌入原始號碼、統編或地址。';
+
+  const calendar = $('calendar');
+  calendar.innerHTML = '';
+  ['一', '二', '三', '四', '五', '六', '日'].forEach((value, index) => {
+    const el = document.createElement('div');
+    el.className = 'weekday' + (index >= 5 ? ' weekend' : ''); el.textContent = value; calendar.append(el);
+  });
+  const offset = (new Date(month.year, month.monthNumber - 1, 1).getDay() + 6) % 7;
+  const weekRows = Math.ceil((offset + daysInMonth) / 7);
+  calendar.style.gridTemplateRows = '20px repeat(' + weekRows + ',1fr)';
+  for (let index = 0; index < weekRows * 7; index++) {
+    const el = document.createElement('div'), data = daily[index - offset];
+    if (!data) { el.className = 'day empty'; calendar.append(el); continue; }
+    const date = dateInfo(data.day);
+    el.className = 'day' + (data.count ? '' : ' no-record') + (date.weekend ? ' weekend' : '');
+    el.dataset.day = data.day;
+    el.title = dateLabel(data.day) + '（' + date.weekday + '）：' + (data.count ? money(data.amount) + ' · ' + data.count + ' 張發票' : '本檔無紀錄');
+    el.setAttribute('aria-label', el.title);
+    const diameter = peak?.amount > 0 ? Math.sqrt(Math.max(0, data.amount) / peak.amount) * 32 : 0;
+    el.innerHTML = '<span class="day-label">' + String(data.day).padStart(2, '0') + '</span>' + (data.count ? '<span class="bubble" style="width:' + diameter + 'px;height:' + diameter + 'px;background:' + categories[data.category].color + '"></span>' : '') + '<span class="day-total">' + (data.count ? number(data.amount) : '—') + '</span>';
+    calendar.append(el);
+  }
+  const visibleCategories = categories.map((category, index) => ({ ...category, index })).filter(category => currTotals[category.index] !== 0);
+  $('stacks').innerHTML = visibleCategories.map(category => '<div class="category-row"><span>' + category.name + '</span><div class="category-track"><i id="stack-' + category.index + '" style="background:' + category.color + '"></i></div><span class="numeric" id="amount-' + category.index + '">0</span></div>').join('');
+  $('routine').innerHTML = '<div class="routine-top"><div class="routine-label">重複出現的品項<br><strong>運動票券</strong></div><div class="routine-running" id="routine-amount">0<small>元累積</small></div></div><div class="ticket-strip">' + sports.map(row => '<div class="ticket pending" data-day="' + row.day + '"><div class="ticket-date">' + dateLabel(row.day) + '</div><span class="ticket-icon" aria-hidden="true"></span><div class="ticket-money">$' + row.amount + '</div><div class="ticket-caption">1 張發票</div></div>').join('') + '</div><div class="routine-foot">卡片依日期排序，等寬排列，不代表等長時間間隔。<br>' + (gaps.length ? '相鄰日期間隔：' + gaps.join('、') + ' 天。' : '目前不足兩個日期，無法計算間隔。') + '</div>';
+
+  const scenes = [
+    { title: '這個月的支出，集中在哪幾天？', subtitle: '圓的面積代表當日淨額；顏色代表當日金額最高的類別。', note: '「—」表示本檔無紀錄。' + month.month + '共 ' + daysInMonth + ' 天；紫色日期為週末。', value: topShare.toFixed(0), unit: '%', headline: '最高的 ' + topDays.length + ' 個日期，<br>占本月 ' + topShare.toFixed(0) + '% 支出。', body: topDays.length ? month.monthNumber + ' 月 ' + topDays.map(day => day.day).join('、') + ' 日合計 ' + money(topAmount) + '。最高一天為 ' + dateLabel(peak.day) + '，共 ' + money(peak.amount) + '。' : '本月沒有資料。', bottom: '<strong>' + activeDays + ' 天有紀錄，' + (daysInMonth - activeDays) + ' 天沒有紀錄。</strong><br>僅描述發票涵蓋的消費。' },
+    { title: '拆到品項，看見支出的組成。', subtitle: '品項歸類後逐日累積，長度代表類別淨額。', note: '含折扣與點數折抵；明細金額已包含數量，不重複乘算。', value: largestShare.toFixed(0), unit: '%', headline: categories[largestCategory].name + '，是本月<br>最大的支出類別。', body: categories[largestCategory].name + '共 ' + money(currTotals[largestCategory]) + '，占 ' + largestShare.toFixed(1) + '%。' + (discounts ? '全月已扣除折抵 ' + money(discounts) + '。' : '同一張發票可包含多種類別。'), bottom: '<strong>分類採人工判讀。</strong><br>不明品項保留暫定標記，可由下方明細核對。' },
+    { title: '有些習慣，不靠金額也能被看見。', subtitle: '同一品項沿日期出現，呈現交易的重複性。', note: '票券紀錄代表購買行為，無法確認實際入場或運動時長。', value: sportCount, unit: '張', headline: '運動票券，<br>在 ' + sportDays.length + ' 個日期出現。', body: '本月共有 ' + sportCount + ' 張運動類發票，累積 ' + money(sum(sports)) + '，占本月 ' + (total ? sum(sports) / total * 100 : 0).toFixed(1) + '%。', bottom: '<strong>頻繁出現，不一定是高額支出。</strong><br>往下選擇「運動」標籤，跟上個月比較。' },
+  ];
+  let position = autoplay ? 0 : 11.99, playing = autoplay, speed = 1, lastTime = null, activeScene = -1, lastDay = -1;
+  function updatePlay() {
+    $('play').textContent = playing ? 'Ⅱ' : '▶'; $('play').setAttribute('aria-label', playing ? '暫停動畫' : '播放動畫');
+    $('play-state').textContent = playing ? '正在播放' : position >= 36 ? '播放完畢' : '已暫停';
+  }
+  function render() {
+    const index = Math.min(2, Math.floor(position / 12));
+    const day = Math.min(daysInMonth, Math.floor(Math.min(1, (position - index * 12) / 10) * daysInMonth) + 1);
+    if (index !== activeScene) {
+      activeScene = index; lastDay = -1;
+      const scene = scenes[index];
+      document.querySelectorAll('.scene').forEach((el, i) => el.hidden = i !== index);
+      document.querySelectorAll('.chapter').forEach((el, i) => { el.classList.toggle('active', i === index); el.setAttribute('aria-current', i === index ? 'step' : 'false'); });
+      $('scene-title').textContent = scene.title; $('scene-subtitle').textContent = scene.subtitle; $('chart-note').textContent = scene.note;
+      $('insight-number').innerHTML = scene.value + '<small>' + scene.unit + '</small>';
+      $('insight-title').innerHTML = scene.headline; $('insight-body').textContent = scene.body; $('insight-bottom').innerHTML = scene.bottom;
+    }
+    if (day !== lastDay) {
+      lastDay = day; $('date-badge').textContent = dateLabel(day);
+      if (index === 0) document.querySelectorAll('.day[data-day]').forEach(el => { el.classList.toggle('future', Number(el.dataset.day) > day); el.classList.toggle('current', Number(el.dataset.day) === day); });
+      if (index === 1) visibleCategories.forEach(category => {
+        const amount = sum(current.filter(row => row.category === category.index && row.day <= day));
+        $('amount-' + category.index).textContent = number(amount);
+        $('stack-' + category.index).style.width = Math.max(0, amount) / Math.max(1, ...currTotals) * 100 + '%';
+      });
+      if (index === 2) {
+        document.querySelectorAll('.ticket').forEach(el => el.classList.toggle('pending', Number(el.dataset.day) > day));
+        $('routine-amount').innerHTML = number(sum(sports.filter(row => row.day <= day))) + '<small>元累積</small>';
+      }
+    }
+    $('timeline').value = position; $('time').textContent = '00:' + String(Math.floor(position)).padStart(2, '0') + ' / 00:36';
+  }
+  function tick(now) {
+    if (generation !== insightGeneration) return;
+    if (lastTime !== null && playing) { position = Math.min(36, position + (now - lastTime) / 1000 * speed); if (position >= 36) { playing = false; updatePlay(); } render(); }
+    lastTime = now; requestAnimationFrame(tick);
+  }
+  $('play').onclick = () => { if (position >= 36) position = 0; playing = !playing; lastTime = null; render(); updatePlay(); };
+  $('replay').onclick = () => { position = 0; playing = true; lastTime = null; render(); updatePlay(); };
+  $('timeline').oninput = event => { position = Number(event.target.value); playing = false; render(); updatePlay(); };
+  $('speed').textContent = '1×'; $('speed').setAttribute('aria-label', '播放速度 1 倍');
+  $('speed').onclick = () => { speed = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1; $('speed').textContent = speed + '×'; $('speed').setAttribute('aria-label', '播放速度 ' + speed + ' 倍'); };
+  $('finish').onclick = () => { position = activeScene * 12 + 11.99; playing = false; render(); updatePlay(); };
+  document.querySelectorAll('.chapter').forEach(el => el.onclick = () => { position = Number(el.dataset.chapter) * 12 + (playing ? 0 : 11.99); lastTime = null; render(); updatePlay(); });
+  document.onvisibilitychange = () => { if (document.hidden) { playing = false; updatePlay(); } lastTime = null; };
+  render(); updatePlay(); requestAnimationFrame(tick);
+
+  const largestFrequency = Math.max(1, ...frequency.map(category => category.count));
+  $('category-cloud').innerHTML = frequency.map(category => '<button class="cloud-word" data-category="' + category.index + '" style="--word-color:' + category.color + ';--word-size:' + (20 + 52 * category.count / largestFrequency) + '" aria-pressed="false" aria-label="' + category.name + '，' + category.count + ' 次消費">' + category.name + '<small>' + category.count + ' 次</small></button>').join('');
+  function showCategory(index) {
+    const category = frequency.find(item => item.index === index);
+    if (!category) return;
+    document.querySelectorAll('.cloud-word').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.category) === index)));
+    $('cloud-detail').innerHTML = '<strong>' + category.name + ' · ' + category.count + ' 次 · ' + money(category.amount) + '</strong><p>出現在 ' + category.days.length + ' 個日期，金額含同類折抵。</p><div class="date-chips">' + category.days.map(day => '<span>' + dateLabel(day) + '</span>').join('') + '</div>';
+  }
+  document.querySelectorAll('.cloud-word').forEach(button => button.onclick = () => showCategory(Number(button.dataset.category)));
+  if (frequency.length) showCategory(frequency[0].index);
+
+  const point = (radius, angle) => [190 + radius * Math.sin(angle * Math.PI / 180), 190 - radius * Math.cos(angle * Math.PI / 180)];
+  function wedge(start, end, outer, inner = 42) {
+    const a = point(inner, start), b = point(outer, start), c = point(outer, end), d = point(inner, end);
+    return 'M ' + a.join(' ') + ' L ' + b.join(' ') + ' A ' + outer + ' ' + outer + ' 0 0 1 ' + c.join(' ') + ' L ' + d.join(' ') + ' A ' + inner + ' ' + inner + ' 0 0 0 ' + a.join(' ') + ' Z';
+  }
+  function renderRhythm() {
+    const maximum = Math.max(1, ...daily.map(day => day[rhythmMetric]));
+    const unit = rhythmMetric === 'count' ? '次' : '元';
+    $('rhythm-month').textContent = month.month;
+    $('rhythm-description').textContent = '把 ' + month.monthNumber + ' 月排成一個圓，從上方 1 日順時針閱讀。長條長度代表' + (rhythmMetric === 'count' ? '消費次數。' : '折抵後的消費金額。');
+    document.querySelectorAll('[data-rhythm-metric]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.rhythmMetric === rhythmMetric)));
+    let markup = '<title>' + month.month + '消費分布</title>';
+    [42, 96, 150].forEach(radius => markup += '<circle class="radial-guide" cx="190" cy="190" r="' + radius + '" stroke-dasharray="2 5"/>');
+    daily.forEach((day, index) => {
+      const angle = index / daysInMonth * 360, step = 360 / daysInMonth, date = dateInfo(day.day);
+      const label = dateLabel(day.day) + '（' + date.weekday + (date.weekend ? '・週末' : '') + '）';
+      const a = point(42, angle), b = point(150, angle);
+      markup += '<line class="radial-guide" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '"/>';
+      if (day[rhythmMetric] > 0) markup += '<path class="radial-bar" data-bucket="' + index + '" tabindex="0" role="img" aria-label="' + label + '，' + day.count + ' 次，' + money(day.amount) + '" d="' + wedge(angle + 1, angle + step - 1, 42 + 108 * day[rhythmMetric] / maximum) + '"><title>' + label + ' · ' + day.count + ' 次 · ' + money(day.amount) + '</title></path>';
+      if (date.weekend) markup += '<path class="weekend-band" d="' + wedge(angle + 1, angle + step - 1, 159, 154) + '"><title>' + label + '</title></path>';
+      const labelPoint = point(175, angle + step / 2);
+      markup += '<text class="radial-label' + (date.weekend ? ' weekend' : '') + '" x="' + labelPoint[0] + '" y="' + labelPoint[1] + '">' + day.day + '</text>';
+    });
+    markup += '<text class="radial-center" x="190" y="189">' + number(daily.reduce((value, day) => value + day[rhythmMetric], 0)) + '</text><text class="radial-caption" x="190" y="210">本月 · ' + unit + '</text>';
+    $('rhythm-chart').innerHTML = markup;
+    $('rhythm-chart').setAttribute('aria-label', month.month + '消費分布，紫色外圈為週末');
+    $('rhythm-note').textContent = '同日發票合併；金額已含折抵。最外圈為 ' + number(maximum) + ' ' + unit + '；沒有長條表示本檔無紀錄。';
+    $('rhythm-rows').innerHTML = daily.map(day => { const date = dateInfo(day.day); return '<tr><td' + (date.weekend ? ' class="weekend-date"' : '') + '>' + dateLabel(day.day) + '（' + date.weekday + (date.weekend ? '・週末' : '') + '）</td><td class="numeric">' + day.count + '</td><td class="numeric">' + number(day.amount) + '</td></tr>'; }).join('');
+    const best = daily.reduce((a, b) => b[rhythmMetric] > a[rhythmMetric] ? b : a);
+    const showBucket = day => $('rhythm-detail').innerHTML = dateLabel(day.day) + '（' + dateInfo(day.day).weekday + '） · ' + day.count + ' 次 · ' + money(day.amount) + '<small>點選或聚焦長條，查看當日紀錄</small>';
+    showBucket(best);
+    $('rhythm-chart').querySelectorAll('[data-bucket]').forEach(bar => { bar.onmouseenter = bar.onfocus = bar.onclick = () => showBucket(daily[Number(bar.dataset.bucket)]); });
+  }
+  document.querySelectorAll('[data-rhythm-metric]').forEach(button => button.onclick = () => { rhythmMetric = button.dataset.rhythmMetric; renderRhythm(); });
+  renderRhythm();
+}
+
+$('insights-month').innerHTML = Object.keys(reportMonths).sort().reverse().map(key => '<option value="' + key + '">' + reportMonths[key].month + '</option>').join('');
+$('insights-month').addEventListener('change', event => {
+  renderInsights(event.target.value);
+  if (typeof refreshComparisonMonths === 'function') refreshComparisonMonths();
+});
+renderInsights(selectedMonthKey, !matchMedia('(prefers-reduced-motion: reduce)').matches);
+</script>
+<script data-source="monthly-comparison.js">
+'use strict';
+
+// Shared calculation rules for the browser and the automated checks.
+(function (root) {
+  function summarize(rows, selection, monthDays) {
+    if (rows === null) return null;
+    const selected = rows.filter(row =>
+      row.category === selection.category &&
+      (selection.name === undefined || row.name === selection.name)
+    );
+    const paid = selected.filter(row => row.amount > 0);
+    const amount = selected.reduce((total, row) => total + row.amount, 0);
+    const count = new Set(paid.map(row => row.invoice)).size;
+    return {
+      amount,
+      count,
+      days: new Set(paid.map(row => row.day)).size,
+      average: count ? amount / count : null,
+      daily: amount / monthDays,
+    };
+  }
+
+  function difference(current, previous) {
+    if (current === null || previous === null) return null;
+    return {
+      absolute: current - previous,
+      percent: previous === 0 ? null : (current - previous) / previous * 100,
+    };
+  }
+
+  function compare(previousMonth, currentMonth, selection) {
+    const previous = summarize(previousMonth.rows, selection, previousMonth.days);
+    const current = summarize(currentMonth.rows, selection, currentMonth.days);
+    const delta = Object.fromEntries(['amount', 'count', 'days', 'average', 'daily']
+      .map(key => [key, difference(current?.[key] ?? null, previous?.[key] ?? null)]));
+    return { previous, current, delta };
+  }
+
+  const api = { summarize, difference, compare };
+  root.MonthlyComparison = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(globalThis);
+</script>
+<script data-source="comparison-ui.js">
+'use strict';
+
+// Demo records are isolated from the personal report and never used by its charts.
+const comparisonItems = [...new Map(Object.values(reportMonths).flatMap(month => month.rows).map(row => [
+  row.category + ':' + row.name, { category: row.category, name: row.name },
+])).values()];
+// Keep the comparison taxonomy aligned with the future classifier output.
+// "待確認" is a review status, not a consumption tag.
+const comparisonSelections = categories
+  .map((category, index) => ({ category: index, label: category.name }))
+  .filter(selection => selection.label !== '待確認');
+const comparisonData = { actual: {}, demo: {} };
+function refreshComparisonMonths() {
+  const currentMonth = reportMonths[selectedMonthKey];
+  const date = new Date(currentMonth.year, currentMonth.monthNumber - 2, 1);
+  const previousKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+  const previousMonth = reportMonths[previousKey] || {
+    year: date.getFullYear(), monthNumber: date.getMonth() + 1,
+    month: date.getFullYear() + ' 年 ' + (date.getMonth() + 1) + ' 月',
+    days: new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate(), rows: null,
+  };
+  comparisonData.actual = { previous: previousMonth, current: currentMonth };
+  function demoMonth(month, newer) {
+    const rows = comparisonItems.flatMap((item, index) => Array.from({ length: newer ? (index + 2) % 5 : index % 4 }, (_, occurrence) => ({
+      ...item, day: 1 + (index * 3 + occurrence * 7) % month.days,
+      invoice: 'DEMO-' + month.monthNumber + '-' + index + '-' + occurrence,
+      amount: 30 + index * 8 + (newer ? 5 : 0),
+    })));
+    return { ...month, rows };
+  }
+  comparisonData.demo = { previous: demoMonth(previousMonth, false), current: demoMonth(currentMonth, true) };
+  comparisonSource = 'actual';
+  renderComparison();
+}
+let comparisonSource = 'actual';
+const comparisonMetrics = [
+  { key: 'amount', label: '消費金額', unit: '元', currency: true },
+  { key: 'count', label: '消費次數', unit: '次' },
+  { key: 'days', label: '有消費的日子', unit: '天' },
+  { key: 'average', label: '平均每次金額', unit: '元', currency: true, decimal: true },
+  { key: 'daily', label: '整月每日平均', unit: '元', currency: true, decimal: true },
+];
+const comparisonNumber = (value, decimal = false) => value.toLocaleString('zh-TW', {
+  minimumFractionDigits: decimal ? 1 : 0,
+  maximumFractionDigits: decimal ? 1 : 0,
+});
+function comparisonDelta(delta, metric) {
+  if (!delta) return '—<small>無法比較</small>';
+  if (delta.absolute === 0) return '持平';
+  const absolute = (delta.absolute > 0 ? '+' : '−') + comparisonNumber(Math.abs(delta.absolute), metric.decimal) + ' ' + metric.unit;
+  const percent = delta.percent === null ? '上月為 0，不計增減率' :
+    (delta.percent > 0 ? '+' : '−') + comparisonNumber(Math.abs(delta.percent), true) + '%';
+  return absolute + '<small>' + percent + '</small>';
+}
+function comparisonCard(month, stats, selection, isCurrent) {
+  const name = isCurrent ? '本月' : '上月';
+  const matching = month.rows?.filter(row => row.category === selection.category) ?? [];
+  const dailyAmounts = Array.from({ length: month.days }, (_, i) =>
+    matching.filter(row => row.day === i + 1).reduce((value, row) => value + row.amount, 0));
+  // The strip marks purchase days, not amount, so the two months have equal visual weight.
+  const strip = stats ? '<div class="month-days" aria-hidden="true">' + dailyAmounts.map(amount =>
+    '<span style="height:' + (amount > 0 ? '30' : '3') + 'px;opacity:' + (amount > 0 ? '1' : '.25') + '"></span>').join('') +
+    '</div><div class="month-caption">每一格一天 · 有消費的日子亮起</div>' :
+    '<div class="month-empty">尚未載入這個月的發票</div>';
+  return '<article class="month-card' + (isCurrent ? ' current-month' : '') + '"><span class="month-tag">' + name + '</span>' +
+    '<h3>' + (month.monthNumber + ' 月') + '</h3><div class="month-caption">' + month.month + ' · ' + month.days + ' 天</div>' +
+    '<div class="month-emblem"><span>' + (stats ? stats.count + '<small>次</small>' : '—') + '</span></div>' +
+    '<div class="month-amount">' + (stats ? '<small>NT$</small>' + comparisonNumber(stats.amount) : '尚無資料') + '</div>' +
+    '<div class="month-caption">' + (comparisonSource === 'demo' ? '模擬消費金額' : '發票涵蓋金額') + '</div>' + strip + '</article>';
+}
+function renderComparison() {
+  const selection = comparisonSelections[Number($('compare-item').value)];
+  const dataset = comparisonData[comparisonSource];
+  const result = MonthlyComparison.compare(dataset.previous, dataset.current, selection);
+  const demo = comparisonSource === 'demo';
+  document.querySelectorAll('[data-compare-source]').forEach(button =>
+    button.setAttribute('aria-pressed', String(button.dataset.compareSource === comparisonSource)));
+  $('compare-source-note').className = 'compare-source' + (demo ? ' demo' : '');
+  $('compare-source-note').textContent = demo ?
+    '示範模式：兩個月皆為模擬資料，僅展示比較功能，不代表你的實際消費。' :
+    (isDemoReport ? '本頁示範：' : '我的資料：') + dataset.current.month + '已載入；' + dataset.previous.month + (dataset.previous.rows ? (isDemoReport ? '已載入。以下為虛構示範比較。' : '已載入。以下為真實發票比較。') : '尚無資料，不計增減。');
+  $('compare-previous-heading').textContent = '上月 · ' + dataset.previous.monthNumber + ' 月';
+  $('compare-current-heading').textContent = '本月 · ' + dataset.current.monthNumber + ' 月';
+  $('compare-period-note').textContent = '本次比較：' + dataset.current.month + '對' + dataset.previous.month + '。同一張發票、同一標籤計 1 次付費消費；平均每次金額不等於商品單價。每日平均按各月實際天數計算，類別金額包含同類折抵。缺月不當成零，沒有紀錄不代表沒有消費。';
+  $('compare-months').innerHTML = comparisonCard(dataset.previous, result.previous, selection, false) +
+    comparisonCard(dataset.current, result.current, selection, true);
+  $('compare-caption').textContent = selection.label + ' · ' + (demo ? '模擬資料比較' : (isDemoReport ? '示範月度比較' : '我的月度比較'));
+  $('compare-specs').innerHTML = comparisonMetrics.map(metric => {
+    function value(stats) {
+      if (!stats) return '—<small>尚無資料</small>';
+      if (stats[metric.key] === null) return '—<small>無付費紀錄</small>';
+      return (metric.currency ? 'NT$ ' : '') + comparisonNumber(stats[metric.key], metric.decimal) + (metric.currency ? '' : ' ' + metric.unit);
+    }
+    return '<tr><th scope="row">' + metric.label + '</th><td>' + value(result.previous) + '</td><td>' + value(result.current) + '</td><td>' + comparisonDelta(result.delta[metric.key], metric) + '</td></tr>';
+  }).join('');
+  let title, description;
+  if (!result.previous || !result.current) {
+    title = '選好了「' + selection.label + '」，等上個月的自己到齊。';
+    description = '目前可看 ' + dataset.current.month + '數字；缺少 ' + dataset.previous.month + '資料，還不能判斷增加或減少。';
+  } else {
+    const change = result.delta.amount.absolute;
+    title = '「' + selection.label + '」' + (change === 0 ? '，兩個月花費相同。' :
+      '，這個月' + (change > 0 ? '多' : '少') + '花 ' + comparisonNumber(Math.abs(change)) + ' 元。');
+    description = '消費紀錄從 ' + result.previous.count + ' 次變成 ' + result.current.count + ' 次。' +
+      dataset.previous.monthNumber + ' 月 ' + dataset.previous.days + ' 天、' + dataset.current.monthNumber + ' 月 ' + dataset.current.days + ' 天，也可以對照每日平均，分辨月份長度的影響。';
+  }
+  $('compare-takeaway').innerHTML = '<strong>' + escapeHTML(title) + '</strong><p>' + escapeHTML(description) + '</p>';
+}
+$('compare-item').innerHTML = comparisonSelections.map((selection, i) =>
+  '<option value="' + i + '">' + escapeHTML(selection.label) + '</option>').join('');
+$('compare-item').value = String(Math.max(0, comparisonSelections.findIndex(selection => selection.category === 4)));
+$('compare-item').addEventListener('change', renderComparison);
+document.querySelectorAll('[data-compare-source]').forEach(button => {
+  if (isDemoReport) button.textContent = button.dataset.compareSource === 'actual' ? '本頁示範' : '另一組示範';
+});
+document.querySelectorAll('[data-compare-source]').forEach(button => button.addEventListener('click', () => {
+  comparisonSource = button.dataset.compareSource;
+  renderComparison();
+}));
+refreshComparisonMonths();
+</script>
 </body>
 </html>

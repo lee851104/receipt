@@ -1,5 +1,6 @@
 'use strict';
 
+const isDemoReport = expenseReportData.isDemo === true;
 const reportMonths = expenseReportData.months;
 const categories = expenseReportData.categories;
 let selectedMonthKey = Object.keys(reportMonths).sort().at(-1);
@@ -56,7 +57,9 @@ function renderInsights(key, autoplay = false) {
   }).filter(category => category.count > 0).sort((a, b) => b.count - a.count || a.index - b.index);
 
   $('insights-month').value = key;
-  $('report-tag').textContent = month.month + '・個人報告';
+  $('insights-source-label').textContent = isDemoReport ? '虛構示範 · 消費洞察' : '你的消費洞察';
+  $('report-tag').textContent = month.month + (isDemoReport ? '・虛構示範' : '・個人報告');
+  $('data-notice').textContent = isDemoReport ? '虛構示範資料：店家、品項、日期與金額皆為合成，僅供功能展示。' : '私人消費報告：本檔包含真實消費明細，請自行決定分享對象。';
   $('report-period').innerHTML = '<small>本期觀察區間</small>' + month.year + '.' + mm + '.01 — ' + mm + '.' + month.days;
   $('total').textContent = money(total);
   $('total-change').textContent = current.length + ' 筆明細 · 含 ' + zeroCount + ' 筆零元' + (discounts ? ' · 已扣折抵 ' + number(discounts) + ' 元' : '');
@@ -93,12 +96,12 @@ function renderInsights(key, autoplay = false) {
   }
   const visibleCategories = categories.map((category, index) => ({ ...category, index })).filter(category => currTotals[category.index] !== 0);
   $('stacks').innerHTML = visibleCategories.map(category => '<div class="category-row"><span>' + category.name + '</span><div class="category-track"><i id="stack-' + category.index + '" style="background:' + category.color + '"></i></div><span class="numeric" id="amount-' + category.index + '">0</span></div>').join('');
-  $('routine').innerHTML = '<div class="routine-top"><div class="routine-label">重複出現的品項<br><strong>體適能中心－體適能－全票</strong></div><div class="routine-running" id="routine-amount">0<small>元累積</small></div></div><div class="ticket-strip">' + sports.map(row => '<div class="ticket pending" data-day="' + row.day + '"><div class="ticket-date">' + dateLabel(row.day) + '</div><span class="ticket-icon" aria-hidden="true"></span><div class="ticket-money">$' + row.amount + '</div><div class="ticket-caption">1 張發票</div></div>').join('') + '</div><div class="routine-foot">卡片依日期排序，等寬排列，不代表等長時間間隔。<br>' + (gaps.length ? '相鄰日期間隔：' + gaps.join('、') + ' 天。' : '目前不足兩個日期，無法計算間隔。') + '</div>';
+  $('routine').innerHTML = '<div class="routine-top"><div class="routine-label">重複出現的品項<br><strong>運動票券</strong></div><div class="routine-running" id="routine-amount">0<small>元累積</small></div></div><div class="ticket-strip">' + sports.map(row => '<div class="ticket pending" data-day="' + row.day + '"><div class="ticket-date">' + dateLabel(row.day) + '</div><span class="ticket-icon" aria-hidden="true"></span><div class="ticket-money">$' + row.amount + '</div><div class="ticket-caption">1 張發票</div></div>').join('') + '</div><div class="routine-foot">卡片依日期排序，等寬排列，不代表等長時間間隔。<br>' + (gaps.length ? '相鄰日期間隔：' + gaps.join('、') + ' 天。' : '目前不足兩個日期，無法計算間隔。') + '</div>';
 
   const scenes = [
     { title: '這個月的支出，集中在哪幾天？', subtitle: '圓的面積代表當日淨額；顏色代表當日金額最高的類別。', note: '「—」表示本檔無紀錄。' + month.month + '共 ' + daysInMonth + ' 天；紫色日期為週末。', value: topShare.toFixed(0), unit: '%', headline: '最高的 ' + topDays.length + ' 個日期，<br>占本月 ' + topShare.toFixed(0) + '% 支出。', body: topDays.length ? month.monthNumber + ' 月 ' + topDays.map(day => day.day).join('、') + ' 日合計 ' + money(topAmount) + '。最高一天為 ' + dateLabel(peak.day) + '，共 ' + money(peak.amount) + '。' : '本月沒有資料。', bottom: '<strong>' + activeDays + ' 天有紀錄，' + (daysInMonth - activeDays) + ' 天沒有紀錄。</strong><br>僅描述發票涵蓋的消費。' },
     { title: '拆到品項，看見支出的組成。', subtitle: '品項歸類後逐日累積，長度代表類別淨額。', note: '含折扣與點數折抵；明細金額已包含數量，不重複乘算。', value: largestShare.toFixed(0), unit: '%', headline: categories[largestCategory].name + '，是本月<br>最大的支出類別。', body: categories[largestCategory].name + '共 ' + money(currTotals[largestCategory]) + '，占 ' + largestShare.toFixed(1) + '%。' + (discounts ? '全月已扣除折抵 ' + money(discounts) + '。' : '同一張發票可包含多種類別。'), bottom: '<strong>分類採人工判讀。</strong><br>不明品項保留暫定標記，可由下方明細核對。' },
-    { title: '有些習慣，不靠金額也能被看見。', subtitle: '同一品項沿日期出現，呈現交易的重複性。', note: '票券紀錄代表購買行為，無法確認實際入場或運動時長。', value: sportCount, unit: '張', headline: '體適能票券，<br>在 ' + sportDays.length + ' 個日期出現。', body: '本月共有 ' + sportCount + ' 張體適能中心發票，累積 ' + money(sum(sports)) + '，占本月 ' + (total ? sum(sports) / total * 100 : 0).toFixed(1) + '%。', bottom: '<strong>頻繁出現，不一定是高額支出。</strong><br>往下選擇「運動」標籤，跟上個月比較。' },
+    { title: '有些習慣，不靠金額也能被看見。', subtitle: '同一品項沿日期出現，呈現交易的重複性。', note: '票券紀錄代表購買行為，無法確認實際入場或運動時長。', value: sportCount, unit: '張', headline: '運動票券，<br>在 ' + sportDays.length + ' 個日期出現。', body: '本月共有 ' + sportCount + ' 張運動類發票，累積 ' + money(sum(sports)) + '，占本月 ' + (total ? sum(sports) / total * 100 : 0).toFixed(1) + '%。', bottom: '<strong>頻繁出現，不一定是高額支出。</strong><br>往下選擇「運動」標籤，跟上個月比較。' },
   ];
   let position = autoplay ? 0 : 11.99, playing = autoplay, speed = 1, lastTime = null, activeScene = -1, lastDay = -1;
   function updatePlay() {

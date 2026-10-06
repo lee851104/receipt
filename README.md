@@ -4,44 +4,23 @@
 
 > 最後更新：2026-10-06
 
-## 目前狀態
+[開啟專題網頁](invoice-insights.html)
 
-| 項目 | 狀態 |
-|---|---|
-| 前端原型 | ✅ 可使用：回顧動畫、文字雲、日期分布、月份切換、本月 vs 上月比較 |
-| 資料轉換 | ✅ 本機腳本把兩份 CSV 轉成匿名化的 `report-data.js` |
-| 品項分類 | ⚠️ 目前採人工對照表，尚未接上模型 |
-| 測試 | ✅ Python 3 項、JavaScript 10 項全部通過 |
-| 網頁上傳 CSV、模型訓練、DuckDB | ⬜ 尚未開始 |
+![專題網頁預覽：虛構示範資料的消費統計與日期分布](readme_pic.jpg)
 
-## 快速開始
-
-儲存庫只包含程式、文件、分類對照表及測試，**不包含原始 CSV、照片與 `report-data.js`**。
-請先將自己的 `0301-0331.csv`、`0401-0430.csv` 放在專案根目錄；需要 Python 3 與 Node.js（執行 JavaScript 測試時使用）。目前腳本按這兩個檔名讀取資料。
-
-產生網頁資料（CSV 有更新時執行）：
-
-```bash
-python build_report_data.py
-```
-
-接著用瀏覽器直接開啟 `invoice-insights.html`，不需要架伺服器。
-
-執行測試：
-
-下列完整測試需要上述本機 CSV，以及先產生的 `report-data.js`。只測試不依賴私人資料的比較計算，可執行 `node --test tests/monthly-comparison.test.cjs`。
-
-```bash
-python -m unittest discover -s tests
-```
-
-```bash
-node --test tests/monthly-comparison.test.cjs tests/comparison-interface.test.cjs
-```
-
-> Node 24 執行 `node --test tests/` 會把資料夾當成檔案而失敗，請直接列出測試檔。
+網頁已內含兩個月的**虛構示範資料**與所需程式，店家、品項、日期及金額皆為合成，不代表任何人的實際消費。下載這一個 HTML 檔後即可用瀏覽器開啟，不需要另外提供資料檔。
 
 ## 使用流程
+
+### 黃金圓（Golden Circle）
+
+| 層次 | 專題的回答 |
+|---|---|
+| 為什麼（Why） | 讓使用者不用一筆筆記帳，也能看懂自己的錢花在哪裡。 |
+| 如何做（How） | 把電子發票裡買的東西分類，看看每類花多少錢，以及跟上個月有什麼不同。 |
+| 做什麼（What） | 做一個用圖表呈現消費習慣、比較每月變化的網頁。 |
+
+### 操作流程
 
 1. **不用記帳，自動拆到品項**：匯入雲端發票 CSV，讀取明細並分類。
 2. **看見自己的消費模式**：用動畫、文字雲、日期圖呈現習慣。
@@ -49,49 +28,41 @@ node --test tests/monthly-comparison.test.cjs tests/comparison-interface.test.cj
 
 ## 資料
 
+以下皆為虛構示範，包含折扣、零元贈品與待確認分類，用來展示不同情境。
+
 | 月份 | 明細 | 發票 | 金額 |
 |---|---|---|---|
-| 2026 年 3 月 | 35 筆 | 20 張 | NT$ 4,392 |
-| 2026 年 4 月 | 52 筆 | 33 張 | NT$ 10,817（已扣折抵 NT$ 142） |
+| 2026 年 3 月（示範） | 50 筆 | 48 張 | NT$ 7,910 |
+| 2026 年 4 月（示範） | 53 筆 | 51 張 | NT$ 8,095 |
 
-- 來源：財政部電子發票整合服務平台下載的 CSV，一份檔案一個月
-- 欄位：發票日期、發票號碼、發票金額、發票狀態、賣方名稱、賣方地址、消費明細（數量、單價、金額、品名）等
-- 沒有 2 月資料，所以 3 月不計算月增減
-- 沒有時分資料，所以不做 24 小時分析
+- 示範資料由 `src/receipt/demo.py` 獨立產生，不讀取或改寫私人消費紀錄。
+- 分類標籤與配色放在 `configs/report.json`；公開品名對照表也只包含示範品項。
+- 沒有 2 月資料，所以 3 月不計算月增減；沒有時分資料，所以不做 24 小時分析。
+- `python scripts/build_report.py` 預設只產生示範版 `invoice-insights.html`。
+- 私人原始檔與設定保留在本機 `data/`；含真實資料的 `invoice-insights-private.html` 不納入版本追蹤，可單檔直接分享。
 
 ## 分類標籤
 
 共 10 種：正餐、飲品、零食甜點、生鮮食材、運動、其他服務、交通、住宿、日用品、電子產品。
 
 - 「待確認」是審核狀態，不列入比較選單
-- `item-categories.json` 目前有 68 個品名的人工對照，其中 3 個標記為暫定
+- `configs/item-categories.json` 包含 13 個虛構示範品名，其中未分類商品標記為暫定
 - 沒有對照到的品名，會自動歸為「待確認」
 
-## 月份比較規則
+### 與既有雲端發票服務的差別
 
-- 比較金額、消費次數、消費天數、平均每次金額、整月每日平均
-- 差額＝本月－上月；增減率＝差額 ÷ 上月 × 100%；上月為零時不計增減率
-- 同一張發票的同一標籤只算一次消費；零元品項不算次數
-- 折扣（負數金額）會扣減金額，但不增加次數
-- 沒有上月資料時顯示「尚無資料」，不當成零
-- 計算邏輯在 `monthly-comparison.js`，前端與測試共用同一份
+以下以「雲端發票」應用程式（Application，App）的官方說明為例，不代表所有發票服務都相同。
 
-## 檔案結構
+| 比較項目 | 雲端發票 App | 本專題 |
+|---|---|---|
+| 分類方式 | 已有商品類別與次類別，也能調整商品所屬分類 | 目前用人工對照表，將品項歸入上述 10 個標籤；自動分類模型仍在規劃 |
+| 分類調整 | 使用者可在 App 內變更商品的類別與次類別 | 目前需修改分類對照表；未對應的品項標示「待確認」 |
+| 查看消費 | 提供消費圓餅圖，可自訂日期區間查看 | 提供文字雲、日期分布，以及所選標籤的本月與上月並排比較 |
+| 資料使用 | 在 App 內查看發票與消費分析 | 目前先將下載的發票資料在本機轉換，再用網頁查看 |
 
-| 檔案 | 用途 |
-|---|---|
-| `invoice-insights.html` | 前端入口 |
-| `insights-ui.js` | 洞察區：動畫播放器、文字雲、日期分布、月份切換 |
-| `monthly-comparison.js` | 月份比較的計算規則 |
-| `comparison-ui.js` | 「自己跟自己比」的介面，可切換真實資料與示範資料 |
-| `report-data.js` | 由腳本產生的資料，**不要手動修改** |
-| `build_report_data.py` | 讀取 CSV，產生 `report-data.js` |
-| `item-categories.json` | 品名 → 標籤的人工對照表 |
-| `0301-0331.csv`、`0401-0430.csv` | 原始雲端發票 |
-| `tests/` | Python 與 JavaScript 測試 |
-| `專題架構與技術.md` | 給老師、組員看的架構說明 |
-| `發票回顧-專題企劃.md`、`發票回顧-技術框架.md` | 早期企劃，部分內容已過時，以本文件為準 |
-| `S__*.jpg` | 設計參考截圖（YouTube 洞察頁） |
+既有服務已能進行商品分類。本專題著重把分類結果整理成容易理解的消費回顧，並呈現自己每月的變化。
+
+參考：[雲端發票官方說明：消費分析、自訂日期與編輯商品類別](https://www.ecloudlife.com/w/faq/4)（查閱日期：2026-10-06）。
 
 ## 技術規劃
 
@@ -102,24 +73,74 @@ node --test tests/monthly-comparison.test.cjs tests/comparison-interface.test.cj
 | 儲存與統計 | DuckDB | 未開始 |
 | 前端 | HTML、CSS、JavaScript、SVG | 原型完成 |
 
-模型評估：用 300 筆人工確認的測試集計算 macro-F1，並比較訓練時間、推論速度與模型大小。F1 差不多時，選成本低的。正式流程在本機執行，不需呼叫外部 AI API。
+模型評估：會實作上述三種模型，在相同資料與評估條件下，比較分類效果，以及訓練、推論、記憶體與硬體等成本，再選擇合適的方法。正式流程規劃在本機執行。
 
-## 隱私
+### 專案結構
 
-- `.gitignore` 已排除原始 CSV、照片、試算表、快取及 `report-data.js`；這些檔案保留在本機，不推送 GitHub。
-- `report-data.js` 把發票號碼換成 `2026-03-R01` 這類代碼，不含統編、地址與載具資訊，但**仍包含店家名稱與品名**
-- 原始 CSV 含發票號碼、載具與地址，**不要上傳或分享**
+```text
+receipt/
+├── README.md                     # 專題說明與操作指令
+├── pyproject.toml                # Python 版本與相依套件設定
+├── .gitignore
+├── invoice-insights.html         # 已內嵌示範資料與程式的公開成品
+├── invoice-insights-private.html # 真實資料原版，僅留本機、不上傳
+├── presentation.html             # 可直接開啟的兩頁簡報
+├── readme_pic.jpg                # README 使用的專題預覽圖
+├── configs/
+│   ├── report.json               # 輸入資料清單、分類名稱與配色
+│   └── item-categories.json      # 品名與分類的人工對照
+├── src/
+│   ├── receipt/
+│   │   ├── __init__.py
+│   │   ├── demo.py               # 獨立產生虛構示範消費
+│   │   ├── invoices.py           # 解析、分類與發票號碼代碼化
+│   │   └── build.py              # 整合資料、樣式與程式，產生單檔網頁
+│   └── web/
+│       ├── invoice-insights.html # 網頁原始模板，不含發票資料
+│       ├── styles.css            # 網頁樣式
+│       ├── insights-ui.js        # 消費洞察與圖表
+│       ├── monthly-comparison.js # 月份比較計算
+│       ├── comparison-ui.js      # 比較介面
+│       └── flow-navigation.js    # 三區域導覽
+├── scripts/
+│   └── build_report.py           # 產生網頁的執行入口
+├── tests/                        # 資料、產生流程與前端測試
+├── data/                         # 僅留本機，不追蹤到 Git
+│   ├── raw/                      # 原始發票 CSV
+│   ├── processed/                # 產生的示範 report-data.js
+│   └── private/                  # 私人設定、品名對照與備份
+└── prototypes/
+    └── annual-review.html        # 保留的早期年度回顧原型
+```
 
-## 待完成
+修改網頁請編輯 `src/web/`，再執行下列指令更新根目錄成品；根目錄的 `invoice-insights.html` 會以示範資料重新產生，私人版本不會被覆寫。簡報直接編輯 `presentation.html`。
 
-- [ ] 網頁直接上傳 CSV
-- [ ] 通用格式清理：目前腳本寫死兩個檔名、一份檔案只能一個月，且發票狀態必須是「開立已確認」
-- [ ] 標註資料，訓練並比較三種分類模型，填入 macro-F1
-- [ ] 串接 DuckDB
-- [ ] 更新 `專題架構與技術.md` 與簡報中的進度
+目前 Python 程式只使用標準函式庫，需 Python 3.10 以上；前端測試另需 Node.js。
 
-## 簡報
+```sh
+python scripts/build_report.py
+python -m unittest discover -s tests -v
+node --test tests/monthly-comparison.test.cjs tests/comparison-interface.test.cjs
+```
 
-專題簡報（2 頁，風格與網頁一致）：<https://claude.ai/artifact/VUpAG1HsuVGSEPmtpK9VmX>
+公開示範版與全部測試都不需要私人資料，可在剛下載的專案直接執行。
 
-連結目前只有擁有者能開，要從頁面的 Share 選單分享後，其他人才看得到。
+若要重新產生自己的報告，先在 `data/private/report.json` 設定 `input_files`（原始 CSV 路徑）、`category_catalog`（私人品名對照表路徑）與 `categories`（分類名稱及配色，可參考公開設定）。所有路徑相對於專案根目錄，再執行：
+
+```sh
+python scripts/build_report.py --private
+```
+
+此指令只更新 `invoice-insights-private.html`，不覆寫公開示範版。CSV 指逗號分隔值（Comma-Separated Values）檔案，目前接受電子發票匯出欄位，一份檔案一個月。
+
+`data/`、`invoice-insights-private.html` 與未來的 `models/` 已排除版本追蹤。私人版本仍含真實店家、品名、日期與金額，請自行決定分享對象。
+
+目前尚未訓練模型或提供後端服務，因此不建立空的模型訓練、特徵工程、筆記本或服務目錄，待功能實作時再加入。
+
+## HTML 簡報
+
+[開啟專題簡報](presentation.html)
+
+共 2 頁，介紹使用流程、技術架構、三種模型的成本與效果比較規劃，以及企業商品資訊洞察的延伸應用。下載後可直接用瀏覽器開啟，使用畫面按鈕或鍵盤左右鍵翻頁。
+
+> 以上為專案內的相對連結。在 GitHub 儲存庫點選會顯示原始碼；若要讓訪客直接在線上觀看，需將網頁與簡報發布至網頁託管服務。

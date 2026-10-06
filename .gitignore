@@ -3,9 +3,8 @@
 *.tsv
 *.xls
 *.xlsx
-/report-data.js
-/rawdata/
-/raw-data/
+/data/
+/models/
 
 # Reference photos and screenshots
 *.jpg
@@ -28,3 +27,9 @@ node_modules/
 !.env.example
 .DS_Store
 Thumbs.db
+
+# Public README preview
+!/readme_pic.jpg
+
+# Local report containing real purchases
+/invoice-insights-private.html

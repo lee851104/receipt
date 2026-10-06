@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const root = path.join(__dirname, '..');
 
-function setup() {
+function setup(inlineOnly = false) {
   const nodes = new Map();
   function element() {
     return {
@@ -33,19 +33,31 @@ function setup() {
   };
   const context = vm.createContext({ document, matchMedia: () => ({ matches: true }), requestAnimationFrame(callback) { frames.push(callback); } });
   const html = fs.readFileSync(path.join(root, 'invoice-insights.html'), 'utf8');
-  for (const match of html.matchAll(/<script src="([^"]+)"><\/script>/g)) {
-    vm.runInContext(fs.readFileSync(path.join(root, match[1]), 'utf8'), context);
+  for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
+    const source = /\bsrc="([^"]+)"/.exec(match[1]);
+    if (source && inlineOnly) continue;
+    vm.runInContext(source ? fs.readFileSync(path.join(root, source[1]), 'utf8') : match[2], context);
   }
   return { nodes, buttons, chapters, metrics, frames, run: code => vm.runInContext(code, context) };
 }
 
-test('initial view uses April and compares seven sport purchases against March', () => {
+test('standalone HTML loads both months without external scripts', () => {
+  const { nodes } = setup(true);
+  assert.equal(nodes.get('total')?.textContent, 'NT$ 8,095');
+  assert.match(nodes.get('data-notice').textContent, /虛構示範資料/);
+  assert.match(nodes.get('report-tag').textContent, /虛構示範/);
+  assert.doesNotMatch(nodes.get('compare-source-note').textContent, /真實發票/);
+  nodes.get('insights-month').events.change({ target: { value: '2026-03' } });
+  assert.equal(nodes.get('total').textContent, 'NT$ 7,910');
+});
+
+test('initial view uses April and compares fictional sport purchases against March', () => {
   const { nodes } = setup();
-  assert.match(nodes.get('compare-months').innerHTML, /7<small>次/);
+  assert.match(nodes.get('compare-months').innerHTML, /6<small>次/);
   assert.doesNotMatch(nodes.get('compare-months').innerHTML, /尚無資料/);
-  assert.match(nodes.get('compare-specs').innerHTML, /350/);
-  assert.match(nodes.get('compare-takeaway').innerHTML, /兩個月花費相同/);
-  assert.equal(nodes.get('total').textContent, 'NT$ 10,817');
+  assert.match(nodes.get('compare-specs').innerHTML, /540/);
+  assert.match(nodes.get('compare-takeaway').innerHTML, /多花 180 元/);
+  assert.equal(nodes.get('total').textContent, 'NT$ 8,095');
   assert.equal(nodes.get('compare-current-heading').textContent, '本月 · 4 月');
 });
 
@@ -78,19 +90,19 @@ test('month switch refreshes totals, calendars, weekdays, clouds, audits and com
   for (const key of ['2026-03', '2026-04', '2026-03', '2026-04']) {
     selector.events.change({ target: { value: key } });
     const march = key === '2026-03';
-    assert.equal(nodes.get('total').textContent, march ? 'NT$ 4,392' : 'NT$ 10,817');
-    assert.match(nodes.get('audit-summary').textContent, march ? /35 筆/ : /52 筆/);
-    assert.match(nodes.get('report-source').textContent, march ? /0301-0331/ : /0401-0430/);
+    assert.equal(nodes.get('total').textContent, march ? 'NT$ 7,910' : 'NT$ 8,095');
+    assert.match(nodes.get('audit-summary').textContent, march ? /50 筆/ : /53 筆/);
+    assert.match(nodes.get('report-source').textContent, march ? /虛構示範資料（3 月）/ : /虛構示範資料（4 月）/);
     assert.equal((nodes.get('rhythm-chart').innerHTML.match(/class="weekend-band"/g) || []).length, march ? 9 : 8);
     assert.equal((nodes.get('rhythm-chart').innerHTML.match(/class="radial-label/g) || []).length, march ? 31 : 30);
-    assert.match(nodes.get('category-cloud').innerHTML, march ? /正餐<small>6 次/ : /飲品<small>10 次/);
+    assert.match(nodes.get('category-cloud').innerHTML, march ? /正餐<small>13 次/ : /飲品<small>12 次/);
     assert.match(nodes.get('compare-source-note').textContent, march ? /2 月尚無資料/ : /3 月已載入/);
     chapters[1].onclick();
-    assert.match(nodes.get('insight-title').innerHTML, /正餐/);
+    assert.match(nodes.get('insight-title').innerHTML, /住宿/);
     chapters[2].onclick();
-    assert.match(nodes.get('routine-amount').innerHTML, /350/);
+    assert.match(nodes.get('routine-amount').innerHTML, march ? /360/ : /540/);
     metrics[1].onclick();
-    assert.match(nodes.get('rhythm-chart').innerHTML, march ? />4,392<\/text>/ : />10,817<\/text>/);
+    assert.match(nodes.get('rhythm-chart').innerHTML, march ? />7,910<\/text>/ : />8,095<\/text>/);
   }
 });
 

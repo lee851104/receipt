@@ -1,40 +1,55 @@
-import json
+"""Verify CSV parsing with fictional records only."""
+import csv
+import tempfile
 import unittest
-
-from build_report_data import ROOT, build_month
+from pathlib import Path
+from src.receipt.invoices import build_month
 
 
 class ReportDataTests(unittest.TestCase):
     def setUp(self):
-        self.catalog = json.loads((ROOT / "item-categories.json").read_text(encoding="utf-8"))
+        self.folder = tempfile.TemporaryDirectory()
+        self.addCleanup(self.folder.cleanup)
+        self.path = Path(self.folder.name) / "fixture.csv"
+        self.catalog = {"測試餐盒": {"category": 0, "provisional": False}, "測試折扣": {"category": 0, "provisional": False}}
 
-    def test_csv_footer_excluded_and_totals_reconciled(self):
-        for filename, count, invoices, amount, days in [
-            ("0301-0331.csv", 35, 20, 4392, 31),
-            ("0401-0430.csv", 52, 33, 10817, 30),
-        ]:
-            key, month = build_month(ROOT / filename, self.catalog)
-            rows = month["rows"]
-            self.assertEqual(len(rows), count)
-            self.assertEqual(len({row["invoice"] for row in rows}), invoices)
-            self.assertEqual(sum(row["amount"] for row in rows), amount)
-            self.assertEqual(month["days"], days)
-            self.assertTrue(all(1 <= row["day"] <= days for row in rows))
-            self.assertTrue(all(row["invoice"].startswith(key + "-R") for row in rows))
-            self.assertTrue(all(set(row) == {"day", "invoice", "merchant", "name", "quantity", "amount", "category", "provisional"} for row in rows))
+    def write_rows(self, rows):
+        with self.path.open("w", encoding="utf-8-sig", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=["發票日期", "發票狀態", "發票號碼", "賣方名稱", "消費明細_品名", "消費明細_數量", "消費明細_金額"])
+            writer.writeheader()
+            for values in rows:
+                writer.writerow(dict(zip(writer.fieldnames, values)))
+            writer.writerow({"賣方名稱": "匯出摘要"})
 
-    def test_discount_and_points_are_retained(self):
-        _, month = build_month(ROOT / "0401-0430.csv", self.catalog)
-        adjustments = [row for row in month["rows"] if row["amount"] < 0]
-        self.assertEqual(sorted(row["amount"] for row in adjustments), [-100, -42])
-        self.assertTrue(all(row["category"] == 0 for row in adjustments))
+    def test_footer_discount_free_item_and_private_id(self):
+        self.write_rows([
+            ["20260302", "開立已確認", "PRIVATE-ID", "測試商店", "測試餐盒", 2, 240],
+            ["20260302", "開立已確認", "PRIVATE-ID", "測試商店", "測試折扣", 1, -20],
+            ["20260305", "開立已確認", "PRIVATE-ID-2", "測試商店", "未知贈品", 1, 0],
+        ])
+        key, month = build_month(self.path, self.catalog)
+        self.assertEqual(key, "2026-03")
+        self.assertEqual(month["days"], 31)
+        rows = month["rows"]
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(sum(row["amount"] for row in rows), 220)
+        self.assertEqual(len({row["invoice"] for row in rows}), 2)
+        self.assertEqual(rows[0]["quantity"], 2)
+        self.assertEqual(rows[1]["category"], 0)
+        self.assertEqual(rows[2]["category"], 10)
+        self.assertTrue(rows[2]["provisional"])
+        self.assertNotIn("PRIVATE-ID", str(rows))
+        self.assertTrue(all(set(row) == {"day", "invoice", "merchant", "name", "quantity", "amount", "category", "provisional"} for row in rows))
 
-    def test_same_sport_item_matches_across_months(self):
-        for filename in ["0301-0331.csv", "0401-0430.csv"]:
-            _, month = build_month(ROOT / filename, self.catalog)
-            sport = [row for row in month["rows"] if row["category"] == 4]
-            self.assertEqual(len({row["invoice"] for row in sport}), 7)
-            self.assertEqual(sum(row["amount"] for row in sport), 350)
+    def test_mixed_months_rejected(self):
+        self.write_rows([[date, "開立已確認", "X", "測試商店", "測試餐盒", 1, 120] for date in ("20260301", "20260401")])
+        with self.assertRaisesRegex(ValueError, "one month"):
+            build_month(self.path, self.catalog)
+
+    def test_unreviewed_invoice_rejected(self):
+        self.write_rows([["20260301", "作廢", "X", "測試商店", "測試餐盒", 1, 120]])
+        with self.assertRaisesRegex(ValueError, "Unreviewed"):
+            build_month(self.path, self.catalog)
 
 
 if __name__ == "__main__":

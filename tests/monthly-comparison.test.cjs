@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { summarize, difference, compare } = require('../monthly-comparison.js');
+const { summarize, difference, compare } = require('../src/web/monthly-comparison.js');
 
 const rows = [
   { invoice: 'A', day: 1, category: 0, name: '飯', amount: 100 },

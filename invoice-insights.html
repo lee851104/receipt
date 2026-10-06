@@ -589,7 +589,7 @@ const demoItems=[
 ];
 const profiles={an:{name:&#x27;小安&#x27;,counts:[24,5,13,11,7,3,13,8,6,4,3,3,16,15]},yu:{name:&#x27;小宇&#x27;,counts:[17,13,10,8,4,9,18,7,3,3,4,4,18,17]},lin:{name:&#x27;小林&#x27;,counts:[5,24,7,3,4,17,4,3,9,14,6,4,18,17]}};
 const positions=[[350,130],[180,107],[265,224],[430,281],[132,300],[310,343],[200,411],[424,442],[300,498],[99,439],[100,203],[440,184],[232,302],[455,358]];
-const $=id=&gt;document.getElementById(id);const svgNS=&#x27;http://www.w3.org/2000/svg&#x27;;let items=demoItems,categoryMode=false,category=&#x27;all&#x27;,leftKey=&#x27;an&#x27;,rightKey=null,nodes=[],edges=[],selected=null;
+const $=id=&gt;document.getElementById(id);const svgNS=&#x27;http://www.w3.org/2000/svg&#x27;;let items=demoItems,categoryMode=false,category=&#x27;all&#x27;,leftKey=&#x27;an&#x27;,rightKey=&#x27;yu&#x27;,nodes=[],edges=[],selected=null;
 for(const person of Object.values(profiles)){
  person.demoCounts=[...person.counts];person.categoryCounts=TasteProfile.categories.map(name=&gt;demoItems.reduce((n,item,i)=&gt;n+(item.c===name?person.counts[i]:0),0));
 }

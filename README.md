@@ -73,7 +73,30 @@
 | 儲存與統計 | DuckDB | 未開始 |
 | 前端 | HTML、CSS、JavaScript、SVG | 原型完成 |
 
-模型評估：會實作上述三種模型，在相同資料與評估條件下，比較分類效果，以及訓練、推論、記憶體與硬體等成本，再選擇合適的方法。正式流程規劃在本機執行。
+### 三種分類模型比較
+
+用相同資料比較三種方法，把發票品名分成 10 類。目前尚未實測，F1 待測，成本先列預估。
+
+| 模型 | 做法 | F1 分數 | 成本（預估） |
+|---|---|---|---|
+| TF-IDF＋邏輯迴歸 | 看品名中的字詞來分類。 | 待測 | 較低，一般電腦即可執行。 |
+| Embedding＋邏輯迴歸 | 先把品名轉成代表語意的數字，再分類。 | 待測 | 依向量模型大小而定，需額外計算與儲存向量。 |
+| BERT 微調 | 用商品資料調整現成模型，讓它更適合分類品名。 | 待測 | 訓練成本通常較高，需要較多時間與記憶體。 |
+
+**F1**：各類別分數取平均，介於 0–1，越高代表分類效果越好。[評分定義](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html)
+
+**選擇原則**：比較分類效果、執行時間與硬體費用；效果差不多，就選成本較低的。
+
+<details>
+<summary>名詞全名</summary>
+
+- TF-IDF：詞頻－逆向文件頻率（Term Frequency–Inverse Document Frequency）。
+- 邏輯迴歸：Logistic Regression。
+- Embedding：文字向量嵌入（Text Embedding）。
+- BERT：轉換器雙向編碼器表示模型（Bidirectional Encoder Representations from Transformers）；微調為 Fine-tuning。
+- 本表 F1 採宏平均 F1 分數（Macro-averaged F1 Score）。
+
+</details>
 
 ### 專案結構
 

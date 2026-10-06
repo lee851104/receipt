@@ -9,7 +9,7 @@
   output.value=TasteProfile.toURL(profile,location.href);
   get('taste-export-preview').textContent=`${profile.demo?'虛構示範':'這份報告'} · ${profile.months.join('、')} · ${profile.counts.reduce((a,b)=>a+b,0)} 筆已分類品項。`;
   get('taste-open-link').href=output.value;
-  notice.textContent=location.protocol==='file:'?'這是本機連結。朋友可將完整連結貼進他的比較頁；若要直接點開，需先將兩個頁面發布到網站。':'連結已產生，可複製給朋友；對方開啟後即可匯入比較。';
+  notice.textContent=location.protocol==='file:'?'這是本機連結。朋友可將完整連結貼進他的比較頁；若要直接點開，需先將這個檔案發布到網站。':'連結已產生，可複製給朋友；對方開啟後即可匯入比較。';
   return output.value;
  }
  function show(){panel.hidden=false;exportButton.setAttribute('aria-expanded','true');try{generate();}catch(error){notice.textContent=error.message;output.value='';get('taste-open-link').removeAttribute('href');} }

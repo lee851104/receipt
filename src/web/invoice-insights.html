@@ -12,7 +12,7 @@
 <section class="intro"><div><p class="eyebrow">從消費，看見自己</p><h1>You are<br>what you <em>buy.</em></h1><p class="subtitle">不用逐筆記帳。從發票品項，看見消費模式，再跟上個月的自己比。</p></div><div class="period" id="report-period"></div></section>
 <p class="data-notice" id="data-notice" role="note"></p>
 <section class="taste-sharing" aria-label="與朋友比較品味">
- <div class="taste-actions"><a class="taste-primary" id="compare-friends" href="taste-comparison.html">比較跟朋友品味差多少 ↗</a><button id="export-taste" type="button" disabled title="功能準備中">匯出我的品味連結</button></div>
+ <div class="taste-actions"><a class="taste-primary" id="compare-friends" href="#friends">比較跟朋友品味差多少 ↗</a><button id="export-taste" type="button" disabled title="功能準備中">匯出我的品味連結</button></div>
  <p class="taste-caption">把消費偏好帶到朋友比較頁。品味連結匯出功能準備中。</p>
  <div id="taste-export-panel" class="taste-export-panel" hidden>
   <div class="taste-export-heading"><div><h2>分享偏好，從一個連結開始。</h2><p>只分享暱稱、月份與各類消費筆數，不包含店家、品名、發票號碼或金額。取得連結的人可以讀取這些摘要；連結沒有加密。</p></div></div>
@@ -86,6 +86,8 @@
 </section>
 <footer><div id="report-source"></div><div class="footer-brand">You are what you buy.</div></footer>
 </main>
+<section id="taste-view" aria-label="朋友品味比較" hidden><iframe id="taste-frame" title="朋友品味比較" referrerpolicy="no-referrer"></iframe></section>
+<template id="taste-page-source"></template>
 <script src="flow-navigation.js"></script>
 <script src="report-data.js"></script>
 <script src="insights-ui.js"></script>
@@ -93,5 +95,6 @@
 <script src="comparison-ui.js"></script>
 <script src="taste-profile.js"></script>
 <script src="taste-export.js"></script>
+<script src="taste-navigation.js"></script>
 </body>
 </html>

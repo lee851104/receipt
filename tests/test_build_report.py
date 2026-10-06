@@ -1,6 +1,8 @@
 """Exercise the public build command with synthetic data, without private files."""
 import csv
 import json
+import re
+from html import unescape
 import shutil
 import subprocess
 import sys
@@ -46,7 +48,10 @@ class StandaloneBuildTests(unittest.TestCase):
             self.assertIn("虛構示範", html)
             self.assertNotIn("PRIVATE-", html)
             self.assertEqual(original.read_text(), "PRIVATE-HTML-UNCHANGED")
-            comparison = (project / "taste-comparison.html").read_text(encoding="utf-8")
+            self.assertFalse((project / "taste-comparison.html").exists())
+            embedded = re.search(r'<template id="taste-page-source">(.*?)</template>', html, re.S)
+            self.assertIsNotNone(embedded)
+            comparison = unescape(embedded.group(1))
             compared = ResourceParser()
             compared.feed(comparison)
             self.assertEqual(compared.external, [])
@@ -98,7 +103,7 @@ class StandaloneBuildTests(unittest.TestCase):
             parsed = ResourceParser()
             parsed.feed(html)
             self.assertEqual(parsed.external, [])
-            self.assertEqual(len(parsed.scripts), 7)
+            self.assertEqual(len(parsed.scripts), 8)
             self.assertTrue((project / "data" / "private" / "report-data.js").is_file())
             self.assertNotIn('"PRIVATE-INVOICE-001"', (project / "src" / "web" / "invoice-insights.html").read_text(encoding="utf-8"))
             second = subprocess.run(command, cwd=folder, capture_output=True, text=True)

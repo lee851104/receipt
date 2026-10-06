@@ -8,7 +8,7 @@
 
 ![專題網頁預覽：虛構示範資料的消費統計與日期分布](readme_pic.jpg)
 
-網頁已內含兩個月的**虛構示範資料**與所需程式，店家、品項、日期及金額皆為合成，不代表任何人的實際消費。下載這一個 HTML 檔後即可用瀏覽器開啟，不需要另外提供資料檔。若要使用朋友比較功能，請一併下載 `taste-comparison.html`，放在同一資料夾。
+網頁已內含兩個月的**虛構示範資料**與所需程式，店家、品項、日期及金額皆為合成，不代表任何人的實際消費。只要下載 `invoice-insights.html` 一個檔案，即可離線查看消費報告並切換朋友品味比較，不需要其他網頁、程式或資料檔。
 
 ## 使用流程
 
@@ -38,7 +38,7 @@
 - 示範資料由 `src/receipt/demo.py` 獨立產生，不讀取或改寫私人消費紀錄。
 - 分類標籤與配色放在 `configs/report.json`；公開品名對照表也只包含示範品項。
 - 沒有 2 月資料，所以 3 月不計算月增減；沒有時分資料，所以不做 24 小時分析。
-- `python scripts/build_report.py` 預設產生示範版 `invoice-insights.html` 與 `taste-comparison.html` 比較頁，不讀取私人資料。
+- `python scripts/build_report.py` 預設產生包含報告與朋友比較的單檔示範版 `invoice-insights.html`，不讀取私人資料。
 - 私人原始檔與設定保留在本機 `data/`；含真實資料的 `invoice-insights-private.html` 不納入版本追蹤，可單檔直接分享。
 
 ## 分類標籤
@@ -84,7 +84,6 @@ receipt/
 ├── .gitignore
 ├── invoice-insights.html         # 已內嵌示範資料與程式的公開成品
 ├── invoice-insights-private.html # 真實資料原版，僅留本機、不上傳
-├── taste-comparison.html         # 偏好連結匯入與朋友比較
 ├── presentation.html             # 可直接開啟的兩頁簡報
 ├── readme_pic.jpg                # README 使用的專題預覽圖
 ├── configs/
@@ -103,9 +102,10 @@ receipt/
 │       ├── monthly-comparison.js # 月份比較計算
 │       ├── comparison-ui.js      # 比較介面
 │       ├── flow-navigation.js    # 三區域導覽
-│       ├── taste-comparison.html # 朋友品味比較頁來源
+│       ├── taste-comparison.html # 內嵌朋友比較畫面的來源
 │       ├── taste-profile.js      # 偏好摘要與分享連結格式
-│       └── taste-export.js       # 報告匯出與比較入口
+│       ├── taste-export.js       # 報告匯出與比較入口
+│       └── taste-navigation.js   # 單檔內的畫面切換與返回
 ├── scripts/
 │   └── build_report.py           # 產生網頁的執行入口
 ├── tests/                        # 資料、產生流程與前端測試
@@ -117,7 +117,7 @@ receipt/
     └── annual-review.html        # 保留的早期年度回顧原型
 ```
 
-修改網頁請編輯 `src/web/`，再執行下列指令更新根目錄成品；根目錄的 `invoice-insights.html` 會以示範資料重新產生，私人版本不會被覆寫；同時更新 `taste-comparison.html` 比較頁。簡報直接編輯 `presentation.html`。
+修改網頁請編輯 `src/web/`，再執行下列指令更新根目錄成品；根目錄的 `invoice-insights.html` 會以示範資料重新產生，私人版本不會被覆寫。朋友比較的畫面、樣式與程式也會內嵌至同一檔案。簡報直接編輯 `presentation.html`。
 
 目前 Python 程式只使用標準函式庫，需 Python 3.10 以上；前端測試另需 Node.js。
 
@@ -143,13 +143,13 @@ python scripts/build_report.py --private
 
 ## 與朋友比較偏好
 
-報告上方可點「比較跟朋友品味差多少」帶入自己的摘要。「匯出我的品味連結」目前只保留按鈕，暫不開放點選。到[朋友比較頁](taste-comparison.html)貼上兩人的連結；只匯入一人時先顯示自己的分布，兩人到齊後顯示連線與相似百分比。
+報告上方可點「比較跟朋友品味差多少」帶入自己的摘要。「匯出我的品味連結」目前只保留按鈕，暫不開放點選。到[朋友比較畫面](invoice-insights.html#friends)貼上兩人的連結；只匯入一人時先顯示自己的分布，兩人到齊後顯示連線與相似百分比。點「返回消費洞察」即可回到同一檔案內的報告。
 
 連結只包含暱稱、報告涵蓋月份及 10 類已確認品項的筆數，不含店家、品名、單筆日期、金額或發票號碼。依正金額品項逐筆計數，排除折扣、贈品及待確認分類，並涵蓋全部月份。資料放在網址片段（URL Fragment）內，不上傳至伺服器；這不是加密，取得完整連結的人可以讀取摘要。公開示範版匯出的仍是虛構資料。
 
 目前比較分類比例的餘弦相似度（Cosine Similarity），100% 表示比例相同、0% 表示沒有共同類別；還不能分辨半糖／無糖或水餃餡料。品項層級的細節仍保留在示範人物中；混用匯入摘要時會統一成分類模式。
 
-本機 `file:` 連結不能讓朋友直接開啟你的電腦檔案，但可以完整貼入他自己的比較頁讀取。把 `invoice-insights.html` 與 `taste-comparison.html` 放在同一網站目錄後，匯出按鈕會使用目前網站位址產生可直接開啟的連結。
+本機 `file:` 連結不能讓朋友直接開啟你的電腦檔案。示範時直接傳送 `invoice-insights.html` 即可；對方下載後可離線操作報告與比較畫面。若日後發布到網站，只需部署這一個檔案。匯出按鈕目前仍停用；已有的摘要連結可貼入比較畫面讀取。
 
 ## HTML 簡報
 

@@ -20,7 +20,7 @@
   return validate({schema,name:name.trim()||'我的偏好',demo:report.isDemo===true,months,counts});
  }
  function toURL(profile,base){
-  const url=new URL('taste-comparison.html',base);
+  const url=new URL(base);
   if(!['file:','http:','https:'].includes(url.protocol))throw new Error('請從本機檔案或網頁開啟報告。');
   const bytes=new TextEncoder().encode(JSON.stringify(validate(profile)));
   const token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');

@@ -10,8 +10,8 @@ test('export only whitelisted aggregate fields, excluding refunds, gifts and unc
 });
 test('Chinese names and data round-trip through both file and hosted URLs',()=>{
  const p=taste.fromReport(fixture,'小明 🍵');
- for(const base of ['file:///D:/receipt/invoice-insights.html','https://example.test/receipt/invoice-insights.html']){
-  const url=taste.toURL(p,base);assert.match(url,/taste-comparison.html#taste=/);assert.deepEqual(taste.fromURL(url),p);
+ for(const base of ['file:///D:/receipt/invoice-insights.html','https://example.test/receipt/invoice-insights.html','file:///C:/demo/renamed.html']){
+  const url=taste.toURL(p,base);assert.equal(new URL(url).pathname,new URL(base).pathname);assert.match(url,/#taste=/);assert.deepEqual(taste.fromURL(url),p);
  }
 });
 test('reject incompatible, oversized, empty and malformed profiles',()=>{

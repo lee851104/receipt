@@ -19,11 +19,13 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 .comparison-overview .readout{display:block;padding:0;min-width:0}.readout-number{display:inline-block;border:0;padding:0;margin:0 0 5px;font-size:11px}.readout p{font-size:13px;line-height:1.75;overflow-wrap:anywhere}.readout #summary{color:var(--ink);font-size:14px}.readout .summary-case{margin-top:5px}.summary-case strong,.summary-case span{display:inline}.summary-case strong{margin-right:9px;font-size:11px}.readout small{margin-top:7px}
 .import-title-row h2{font-size:12px;margin-bottom:8px}.imports{gap:12px;margin-bottom:18px}.import-card{padding:11px 14px;border-radius:11px}.import-heading{margin-bottom:5px}.import-heading label{font-size:12px}.import-clear{font-size:10px;min-height:24px}.import-fields{gap:7px}.import-fields input{padding:7px 10px;min-height:36px}.import-submit{padding:7px 14px;min-height:36px}.examples{gap:6px;margin-top:7px}.examples button{padding:1px 8px;min-height:24px}.import-status{margin:5px 0 0;min-height:15px;line-height:1.5}
 @media(max-width:640px){main{padding-top:20px}.intro h1{font-size:25px}.intro h1 em{display:inline}.intro .eyebrow{font-size:9px}.comparison-overview{grid-template-columns:1fr;gap:12px;padding:16px;margin-bottom:17px}.comparison-overview .overall{border-right:0;border-bottom:1px solid #463435;padding:0 0 12px;display:grid;grid-template-columns:1fr auto;align-items:center}.comparison-overview .score{font-size:52px}.comparison-overview .readout{padding:0}.readout p{font-size:12px}.readout #summary{font-size:13px}.imports{gap:8px}.import-card{padding:10px 12px}.import-title-row span{font-size:9px}}
+.return-report{display:inline-block;color:var(--muted);font-size:12px;text-decoration:none;margin-bottom:14px}.return-report:hover{color:var(--pink)}
 </style>
 </head>
 <body>
 <header><a class="brand" href="invoice-insights.html"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>You are what you buy.</a><span class="tag" id="comparison-tag">虛構示範 · 品味連線</span></header>
 <main>
+<a id="return-report" class="return-report" href="#report" hidden>← 返回消費洞察</a>
 <div class="intro"><div><p class="eyebrow"><span>TASTE CONNECTIONS</span> 從消費，看見彼此</p><h1>把你的喜歡，<em>和我的連起來。</em></h1><p class="subtitle">每個點是一種消費品項。看看哪些選擇，讓你們有了交集。</p></div></div>
 <section class="comparison-overview" aria-label="評分與綜合解讀"><div class="overall"><div class="overall-label">綜合品味相似指數</div><div class="score"><span id="overall-score">—</span><small id="score-unit">%</small></div><div class="overall-note" id="overall-note">等待另一人匯入</div></div><div class="readout"><span class="readout-number">綜合解讀</span><div><p id="summary"></p><p class="summary-case"><strong class="summary-best-label">臭味相投</strong><span id="summary-best"></span></p><p class="summary-case"><strong class="summary-worst-label">背道而馳</strong><span id="summary-worst"></span></p><small id="summary-note">這是消費偏好的相似指數，不代表同樣比例的喜好完全相同，也不是關係契合度。</small></div></div>
 </section>
@@ -41,6 +43,8 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 <script src="taste-profile.js"></script>
 <script>
 'use strict';
+const pageHost=window.parent!==window&&window.frameElement?.id==='taste-frame'?window.parent:null;
+function pageLocation(){return pageHost?pageHost.location:location;}
 const demoItems=[
  {a:'美式咖啡',b:'拿鐵咖啡',c:'飲品',g:0,s:.96},
  {a:'無糖紅茶',b:'烏龍茶',c:'飲品',g:0,s:.84},
@@ -197,8 +201,13 @@ for(const side of ['a','b']){
  $('profile-url-'+side).value=keyFor(side)?'demo://'+keyFor(side):'';updateImport(side);
 }
 document.querySelectorAll('[data-demo-side]').forEach(button=>button.addEventListener('click',()=>{const side=button.dataset.demoSide;$('profile-url-'+side).value='demo://'+button.dataset.demoKey;importProfile(side);}));
-$('category').addEventListener('change',event=>{category=event.target.value;draw();});$('reset').addEventListener('click',clearSelection);$('network').addEventListener('keydown',event=>{if(event.key==='Escape')clearSelection();});matchMedia('(max-width:640px)').addEventListener('change',draw);const requestedCase=new URLSearchParams(location.search).get('case');if(['dumplings','sweetness'].includes(requestedCase)){category=requestedCase;$('category').value=category;}
-function importHash(){if(!location.hash)return;leftKey=null;$('profile-url-a').value=location.href;updateImport('a');draw();importProfile('a');}
-window.addEventListener('hashchange',importHash);if(location.hash)importHash();else draw();
+$('category').addEventListener('change',event=>{category=event.target.value;draw();});$('reset').addEventListener('click',clearSelection);$('network').addEventListener('keydown',event=>{if(event.key==='Escape')clearSelection();});matchMedia('(max-width:640px)').addEventListener('change',draw);const requestedCase=new URLSearchParams(pageLocation().search).get('case');if(['dumplings','sweetness'].includes(requestedCase)){category=requestedCase;$('category').value=category;}
+function importHash(){if(!pageLocation().hash.startsWith('#taste='))return;leftKey=null;$('profile-url-a').value=pageLocation().href;updateImport('a');draw();importProfile('a');}
+window.refreshTasteFromLocation=importHash;
+if(pageHost){
+ const back=$('return-report');back.hidden=false;
+ for(const link of [back,document.querySelector('header .brand')])link.addEventListener('click',event=>{event.preventDefault();pageHost.ReceiptPages.showReport();});
+}else window.addEventListener('hashchange',importHash);
+if(pageLocation().hash.startsWith('#taste='))importHash();else draw();
 </script>
 </body></html>

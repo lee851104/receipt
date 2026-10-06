@@ -1,5 +1,6 @@
 """Generate a standalone HTML report from configuration, source assets and local data."""
 import argparse
+from html import escape
 import json
 import re
 from pathlib import Path
@@ -48,7 +49,7 @@ def main():
     payload = json.dumps(data, ensure_ascii=False, indent=2).replace("<", "\\u003c")
     data_script = "'use strict';\nconst expenseReportData = " + payload + ";\n"
     scripts = {"report-data.js": data_script}
-    for name in ("insights-ui.js", "monthly-comparison.js", "comparison-ui.js", "flow-navigation.js", "taste-profile.js", "taste-export.js"):
+    for name in ("insights-ui.js", "monthly-comparison.js", "comparison-ui.js", "flow-navigation.js", "taste-profile.js", "taste-export.js", "taste-navigation.js"):
         scripts[name] = (WEB / name).read_text(encoding="utf-8")
     template = (WEB / "invoice-insights.html").read_text(encoding="utf-8")
     style_link = '<link rel="stylesheet" href="styles.css">'
@@ -56,15 +57,17 @@ def main():
         raise ValueError("Expected exactly one stylesheet link in the HTML template")
     stylesheet = (WEB / "styles.css").read_text(encoding="utf-8")
     html = embed_scripts(template.replace(style_link, "<style>" + stylesheet + "</style>", 1), scripts)
+    comparison = (WEB / "taste-comparison.html").read_text(encoding="utf-8")
+    comparison = embed_scripts(comparison, {"taste-profile.js": scripts["taste-profile.js"]})
+    marker = '<template id="taste-page-source"></template>'
+    if html.count(marker) != 1:
+        raise ValueError("Expected exactly one embedded comparison template")
+    html = html.replace(marker, '<template id="taste-page-source">' + escape(comparison) + '</template>', 1)
     processed = ROOT / "data" / ("private" if args.private else "processed")
     processed.mkdir(parents=True, exist_ok=True)
     (processed / "report-data.js").write_text(data_script, encoding="utf-8")
     output = "invoice-insights-private.html" if args.private else "invoice-insights.html"
     (ROOT / output).write_text(html, encoding="utf-8")
-    if not args.private:
-        comparison = (WEB / "taste-comparison.html").read_text(encoding="utf-8")
-        comparison = embed_scripts(comparison, {"taste-profile.js": scripts["taste-profile.js"]})
-        (ROOT / "taste-comparison.html").write_text(comparison, encoding="utf-8")
     for key, month in months.items():
         print(key, len(month["rows"]), "rows; total", sum(row["amount"] for row in month["rows"]))
 

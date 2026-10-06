@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>品味連線 · You are what you buy.</title>
+<style>
+:root{color-scheme:dark;--paper:#101010;--surface:#191919;--ink:#f2f1ed;--muted:#bbb8b2;--line:#30302e;--pink:#ef8588;--blue:#93b8d3;--positive:#5eeac7;--negative:#ffb65c;--font:"Segoe UI","Microsoft JhengHei",sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.7 var(--font);-webkit-font-smoothing:antialiased}button,select{font:inherit;color:inherit}button,select,summary{cursor:pointer}a{color:inherit}button:focus-visible,select:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--pink);outline-offset:5px}[hidden]{display:none!important}header,main,footer{max-width:1328px;margin:auto}header{padding:25px 40px;display:flex;justify-content:space-between;align-items:center;gap:20px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:12px;font-size:18px;font-weight:650;letter-spacing:2px;text-decoration:none}.brand-mark{width:30px;height:33px;border:1.5px solid var(--pink);border-radius:6px;display:grid;align-content:center;gap:4px;padding:6px;flex-shrink:0}.brand-mark i{height:2px;background:var(--pink)}.brand-mark i:last-child{width:55%}.tag{border:1px solid var(--line);border-radius:30px;font-size:10px;padding:7px 12px;color:var(--muted);white-space:nowrap}.tag:before{content:'';display:inline-block;width:6px;height:6px;background:var(--pink);border-radius:50%;margin-right:8px}main{padding:38px 40px 0}.intro{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;margin-bottom:27px}.eyebrow{font-size:10px;letter-spacing:2px;color:var(--muted);margin:0 0 11px}.eyebrow span{color:var(--pink);margin-right:12px}h1{font-size:clamp(28px,3vw,39px);line-height:1.4;margin:0;font-weight:600;letter-spacing:-.7px}h1 em{font-style:normal;color:var(--pink)}.subtitle{font-size:12px;color:var(--muted);margin:10px 0 0}.overall{text-align:right;border-left:1px solid var(--line);padding-left:37px;min-width:200px}.overall-label{font-size:11px;color:#c8c6bf}.score{font-size:67px;color:var(--pink);line-height:1.15;letter-spacing:-3px;font-variant-numeric:tabular-nums;font-weight:550}.score small{font-size:24px;letter-spacing:0;margin-left:3px}.overall-note{color:var(--muted);font-size:10px;margin-top:5px}.graph-card{background:#151515;border:1px solid var(--line);border-radius:20px;overflow:hidden}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:17px 25px;border-bottom:1px solid var(--line)}.controls{display:flex;gap:23px;align-items:center}.controls label{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:10px}.controls select{background:#232321;border:1px solid #45443f;border-radius:8px;padding:8px 30px 8px 12px;font-size:12px;min-height:40px;max-width:190px}.scope{font-size:11px;color:#c4c1b8;text-align:right}.scope strong{color:var(--ink);font-size:13px;font-weight:500;margin-left:5px}.legend{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;padding:16px 26px 0;font-size:12px;color:#ddd9d1}.legend-item{display:flex;align-items:center;gap:9px}.legend-item.positive-label{color:var(--positive);font-weight:600}.legend-item.negative-label{color:var(--negative);font-weight:600}.size-key{display:flex;align-items:center;gap:4px;height:21px}.size-key i{display:block;border:1px solid #aaa49b;background:#635e5530;border-radius:50%;width:7px;height:7px}.size-key i:nth-child(2){width:11px;height:11px}.size-key i:nth-child(3){width:17px;height:17px}.line-key{display:grid;gap:4px;width:30px}.line-key i{display:block;height:1px;background:#ddd9d1;border-radius:3px}.line-key i:last-child{height:4px}.sign-key{width:32px;height:0;border-top:4px solid var(--positive)}.sign-key.negative{border-top-color:var(--negative);border-top-style:dashed}.legend-explain{font-size:10px;color:var(--muted);padding:8px 26px 0;margin:0}.legend-explain b{font-weight:500;color:#d5c6b0}.legend-hint{margin-left:auto;font-size:10px;color:#888781}.canvas{position:relative;padding:0 14px}svg{display:block;width:100%;height:auto;overflow:visible}.cluster-ring{fill:none;stroke:#30302e;stroke-width:1;stroke-dasharray:2 8}.cluster-word{fill:#282725;font-size:100px;font-weight:650;letter-spacing:-5px;pointer-events:none}.person-name{font-size:16px;fill:var(--ink);font-weight:500}.person-sub{font-size:10px;fill:var(--muted)}.edge{stroke:#b8a3c4;fill:none;stroke-linecap:round;transition:opacity .15s,stroke .15s}.edge-hit{fill:none;stroke:transparent;stroke-width:20;cursor:pointer}.node{cursor:pointer;outline:none}.node .dot{stroke-width:2;transition:fill-opacity .15s}.node .halo{fill:none;stroke-width:1.2;opacity:0;transition:opacity .15s}.node:hover .halo,.node:focus .halo,.node.is-selected .halo{opacity:1}.node text{font-size:13px;fill:#f5f2eb;pointer-events:none;text-anchor:middle;paint-order:stroke;stroke:#151515;stroke-width:4px;stroke-linejoin:round}.node .quiet-label{opacity:1}.node:hover .quiet-label,.node:focus .quiet-label,.node.is-selected .quiet-label{opacity:1}.node:hover text,.node:focus text,.node.is-selected text{fill:var(--ink)}.node.dim{opacity:.2}.detail{border-top:1px solid var(--line);background:#1b1b19;display:flex;align-items:center;gap:14px;min-height:65px;padding:15px 26px}.detail-icon{display:grid;place-items:center;width:29px;height:29px;flex-shrink:0;border:1px solid #55444e;border-radius:50%;color:#d4b5c7;font-size:14px}.detail-text{font-size:12px;color:#c7c3ba;flex:1}.detail-text strong{color:var(--ink);font-weight:500}.reset{background:transparent;color:var(--muted);font-size:11px;border:1px solid #46433e;border-radius:7px;padding:7px 11px;min-height:36px;white-space:nowrap}.reset:hover{color:var(--ink);background:#272623}.readout{display:flex;gap:16px;padding:22px 5px 14px;align-items:start}.readout-number{font-size:10px;color:var(--pink);border:1px solid #674147;border-radius:7px;padding:5px 8px;white-space:nowrap;margin-top:1px}.readout p{font-size:13px;margin:0;line-height:1.9;color:#ccc9c2}.readout p strong{font-weight:500;color:var(--ink)}.readout .summary-case{margin-top:10px}.summary-case strong{display:block;font-size:11px;margin-bottom:3px}.readout .summary-best-label{color:var(--positive)}.readout .summary-worst-label{color:var(--negative)}.summary-case span{display:block}.readout small{display:block;color:var(--muted);font-size:10px;margin-top:5px}.method{border-top:1px solid var(--line);margin-top:12px;padding-top:17px;color:var(--muted);font-size:10px}.method summary{width:fit-content}.method p{max-width:1000px;font-size:11px;margin:12px 0 0;line-height:1.9}.method code{color:#d1adbe}footer{display:flex;justify-content:space-between;gap:20px;padding:23px 40px 30px;font-size:10px;color:#807f78}.empty-title{fill:var(--ink);font-size:22px;text-anchor:middle}.empty-note{fill:var(--muted);font-size:13px;text-anchor:middle}.live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media(max-width:900px){.toolbar{flex-wrap:wrap;gap:12px}.scope{text-align:left}.overall{padding-left:25px;min-width:170px}.controls{gap:17px}.legend{gap:20px}.legend-hint{display:none}}
+@media(max-width:640px){header{padding:18px 20px}.brand{font-size:12px;letter-spacing:1px;gap:8px}.brand-mark{width:25px;height:29px;padding:5px}.tag{font-size:8px;padding:6px 8px}main{padding:28px 18px 0}.intro{grid-template-columns:1fr;gap:20px;margin-bottom:20px}h1{font-size:30px}h1 em{display:block}.person-name{font-size:21px}.person-sub{font-size:14px}.subtitle{font-size:11px}.eyebrow{font-size:9px}.overall{border-left:0;border-top:1px solid var(--line);padding:15px 0 0;display:grid;grid-template-columns:1fr auto;align-items:center;text-align:left}.overall-label{font-size:12px}.score{grid-column:2;grid-row:1/3;font-size:55px}.score small{font-size:20px}.overall-note{grid-column:1;grid-row:2;margin-top:0}.graph-card{border-radius:16px}.toolbar{padding:14px 16px;gap:9px}.controls{width:100%;gap:12px}.controls label{display:block;flex:1;min-width:0;font-size:10px}.controls select{display:block;width:100%;max-width:none;margin-top:5px;font-size:11px;padding:8px;min-height:40px}.scope{font-size:10px}.scope strong{font-size:11px}.legend{padding:14px 16px 0;gap:14px;font-size:11px}.legend-item{gap:7px}.canvas{padding:0 5px}.detail{padding:13px 15px;gap:9px;align-items:start;flex-wrap:wrap}.detail-text{font-size:11px;min-width:180px}.detail-icon{width:25px;height:25px}.reset{margin-left:34px;font-size:10px;padding:4px 10px;min-height:30px}.readout{padding:19px 2px 12px;gap:10px}.readout p{font-size:12px}.readout-number{font-size:9px;padding:4px 6px}.readout small{font-size:10px}.method{font-size:10px}footer{padding:20px 18px 26px;flex-direction:column;gap:5px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.import-note{font-size:11px;color:var(--muted);margin:0 0 12px}.imports{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:23px}.import-card{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:20px 22px}.import-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}.import-heading label{font-size:13px;font-weight:550}.import-heading label:before{content:'';display:inline-block;width:7px;height:7px;background:#ff9aa7;border-radius:50%;margin-right:8px}.import-card.right .import-heading label:before{background:#9bbcff}.import-clear{border:0;background:none;padding:3px 0;min-height:28px;font-size:11px;color:var(--muted)}.import-clear:disabled{opacity:.35;cursor:default}.import-fields{display:flex;gap:9px}.import-fields input{font:inherit;min-width:0;flex:1;background:#101010;border:1px solid #4b4544;border-radius:8px;padding:10px 12px;color:var(--ink);font-size:12px;min-height:43px}.import-fields input:focus-visible{outline:2px solid var(--pink);outline-offset:3px}.import-fields input[aria-invalid=true]{border-color:#ff978a}.import-submit{background:#ef8588;color:#241517;border:0;border-radius:8px;padding:10px 18px;font-size:12px;font-weight:600;min-height:43px}.right .import-submit{background:#9bbcff;color:#17212c}.examples{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:10px;color:var(--muted)}.examples button{background:#242322;border:1px solid #42403c;border-radius:20px;padding:4px 10px;min-height:30px;font-size:10px}.examples button:hover{border-color:#ada49a;color:#fff}.import-status{font-size:10px;color:var(--muted);margin:10px 0 0;min-height:17px;overflow-wrap:anywhere}.import-status.error{color:#ffaaa0}.slot-title{fill:#dad5cc;font-size:21px;text-anchor:middle}.slot-note{fill:#aaa69d;font-size:12px;text-anchor:middle}.score.waiting{color:#a6a29b}.readout .summary-case[hidden]{display:none}.import-title-row{display:flex;align-items:center;justify-content:space-between;gap:16px}.import-title-row h2{font-size:14px;font-weight:500;margin:0 0 8px}.import-title-row span{font-size:10px;color:var(--muted)}
+@media(max-width:640px){.imports{gap:12px;grid-template-columns:1fr;margin-bottom:18px}.import-card{padding:17px}.import-fields input{font-size:12px}.import-title-row{align-items:start}.import-title-row span{font-size:9px}.import-note{font-size:10px}.slot-title{font-size:21px}.slot-note{font-size:14px}}
+
+/* Lead with the result; keep importing secondary and compact. */
+main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-size:28px}.intro .eyebrow{margin-bottom:6px}.intro .subtitle{margin-top:6px}
+.comparison-overview{display:grid;grid-template-columns:200px minmax(0,1fr);gap:26px;align-items:center;background:#191717;border:1px solid #463435;border-radius:16px;padding:22px 26px;margin-bottom:22px}
+.comparison-overview .overall{border:0;border-right:1px solid #463435;padding:0 24px 0 0;min-width:0;text-align:left}.comparison-overview .score{font-size:66px}.comparison-overview .overall-note{font-size:10px}
+.comparison-overview .readout{display:block;padding:0;min-width:0}.readout-number{display:inline-block;border:0;padding:0;margin:0 0 5px;font-size:11px}.readout p{font-size:13px;line-height:1.75;overflow-wrap:anywhere}.readout #summary{color:var(--ink);font-size:14px}.readout .summary-case{margin-top:5px}.summary-case strong,.summary-case span{display:inline}.summary-case strong{margin-right:9px;font-size:11px}.readout small{margin-top:7px}
+.import-title-row h2{font-size:12px;margin-bottom:8px}.imports{gap:12px;margin-bottom:18px}.import-card{padding:11px 14px;border-radius:11px}.import-heading{margin-bottom:5px}.import-heading label{font-size:12px}.import-clear{font-size:10px;min-height:24px}.import-fields{gap:7px}.import-fields input{padding:7px 10px;min-height:36px}.import-submit{padding:7px 14px;min-height:36px}.examples{gap:6px;margin-top:7px}.examples button{padding:1px 8px;min-height:24px}.import-status{margin:5px 0 0;min-height:15px;line-height:1.5}
+@media(max-width:640px){main{padding-top:20px}.intro h1{font-size:25px}.intro h1 em{display:inline}.intro .eyebrow{font-size:9px}.comparison-overview{grid-template-columns:1fr;gap:12px;padding:16px;margin-bottom:17px}.comparison-overview .overall{border-right:0;border-bottom:1px solid #463435;padding:0 0 12px;display:grid;grid-template-columns:1fr auto;align-items:center}.comparison-overview .score{font-size:52px}.comparison-overview .readout{padding:0}.readout p{font-size:12px}.readout #summary{font-size:13px}.imports{gap:8px}.import-card{padding:10px 12px}.import-title-row span{font-size:9px}}
+</style>
+</head>
+<body>
+<header><a class="brand" href="invoice-insights.html"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>You are what you buy.</a><span class="tag" id="comparison-tag">虛構示範 · 品味連線</span></header>
+<main>
+<div class="intro"><div><p class="eyebrow"><span>TASTE CONNECTIONS</span> 從消費，看見彼此</p><h1>把你的喜歡，<em>和我的連起來。</em></h1><p class="subtitle">每個點是一種消費品項。看看哪些選擇，讓你們有了交集。</p></div></div>
+<section class="comparison-overview" aria-label="評分與綜合解讀"><div class="overall"><div class="overall-label">綜合品味相似指數</div><div class="score"><span id="overall-score">—</span><small id="score-unit">%</small></div><div class="overall-note" id="overall-note">等待另一人匯入</div></div><div class="readout"><span class="readout-number">綜合解讀</span><div><p id="summary"></p><p class="summary-case"><strong class="summary-best-label">臭味相投</strong><span id="summary-best"></span></p><p class="summary-case"><strong class="summary-worst-label">背道而馳</strong><span id="summary-worst"></span></p><small id="summary-note">這是消費偏好的相似指數，不代表同樣比例的喜好完全相同，也不是關係契合度。</small></div></div>
+</section>
+<div class="import-title-row"><h2>匯入偏好</h2><span>貼上連結，或用示範人物試看</span></div><section class="imports" aria-label="匯入兩人的偏好網址"><form class="import-card" id="import-a" novalidate><div class="import-heading"><label for="profile-url-a">左側 · 你的偏好</label><button class="import-clear" id="clear-a" type="button">移除資料</button></div><div class="import-fields"><input id="profile-url-a" type="text" inputmode="url" placeholder="貼上偏好分享網址" autocomplete="off" spellcheck="false" aria-describedby="import-status-a"><button class="import-submit" type="submit">匯入</button></div><div class="examples"><span>示範：</span><button type="button" data-demo-side="a" data-demo-key="an">小安</button><button type="button" data-demo-side="a" data-demo-key="yu">小宇</button><button type="button" data-demo-side="a" data-demo-key="lin">小林</button></div><p class="import-status" id="import-status-a" role="status" aria-live="polite"></p></form><form class="import-card right" id="import-b" novalidate><div class="import-heading"><label for="profile-url-b">右側 · 朋友的偏好</label><button class="import-clear" id="clear-b" type="button">移除資料</button></div><div class="import-fields"><input id="profile-url-b" type="text" inputmode="url" placeholder="貼上偏好分享網址" autocomplete="off" spellcheck="false" aria-describedby="import-status-b"><button class="import-submit" type="submit">匯入</button></div><div class="examples"><span>示範：</span><button type="button" data-demo-side="b" data-demo-key="an">小安</button><button type="button" data-demo-side="b" data-demo-key="yu">小宇</button><button type="button" data-demo-side="b" data-demo-key="lin">小林</button></div><p class="import-status" id="import-status-b" role="status" aria-live="polite"></p></form></section>
+<section class="graph-card" aria-label="兩人的消費品項連結圖">
+<div class="toolbar"><div class="controls"><label for="category">篩選消費種類<select id="category"><option value="all">全部類別</option><option value="dumplings">案例：同店不同餡</option><option value="sweetness">案例：半糖與無糖</option><option>正餐</option><option>飲品</option><option>零食甜點</option><option>生鮮食材</option><option>運動</option><option>其他服務</option><option>交通</option><option>住宿</option><option>日用品</option><option>電子產品</option></select></label></div><div class="scope" id="scope" role="status" aria-live="polite"></div></div>
+<div class="legend"><span class="legend-item"><span class="size-key" aria-hidden="true"><i></i><i></i><i></i></span>點越大，消費次數越多</span><span class="legend-item positive-label"><span class="sign-key" aria-hidden="true"></span>正相關</span><span class="legend-item negative-label"><span class="sign-key negative" aria-hidden="true"></span>負相關</span><span class="legend-item"><span class="line-key" aria-hidden="true"><i></i><i></i></span>線越粗，關聯越強</span><span class="legend-hint">點選查看關聯，點空白處取消</span></div>
+<p class="legend-explain"><b>同款也能選得不同：</b>可篩選「同店不同餡」或「半糖與無糖」。餡料與甜度各自比較，差異不代表兩人整體品味相反。</p>
+<div class="canvas"><svg id="network" viewBox="0 0 1200 570" role="group" aria-label="左側粉紅是你的資料，右側藍色是朋友的資料；匯入後可點選圓點或連線"></svg></div>
+<div class="detail"><span class="detail-icon" aria-hidden="true">↔</span><div class="detail-text" id="detail" role="status" aria-live="polite">點選一個圓點或一條線，看看你們買了什麼、相似在哪裡。</div><button class="reset" id="reset" type="button">顯示全部連線</button></div>
+</section>
+<details class="method"><summary>資料來源與相似百分比怎麼算？</summary><div id="category-method" hidden><p>報告連結包含暱稱、涵蓋月份與 10 類已確認消費品項的筆數，每筆正金額的品項算一次，不計折扣、贈品及待確認分類。沒有店家、品名、單筆日期、金額或發票號碼，但摘要仍可被取得連結的人讀取；編碼並非加密。</p><p>分類模式使用 10 類筆數向量計算餘弦相似度（Cosine Similarity），再乘以 100。100% 表示各類的比例相同，0% 表示沒有共同類別。這不是實際品味重疊比例，無法分辨同一類中的半糖與無糖、蔬菜餡與鮮蝦餡；分類沒有負值，因此不會產生負相關連線。</p><p>圓點面積代表品項筆數；只有相同類別會連線。線的強弱為兩人該類占比的較小值除以較大值，越接近就越粗。綜合分數使用全部分類，不隨篩選改變。若混用示範人物，會先將其虛構次數彙整至相同 10 類，用於操作示範。不同月份或資料量會影響比較，請留意兩側資料範圍。</p></div><div id="demo-method"><p>人物、消費次數與特徵分數皆為虛構；八方雲集與水餃名稱取自討論案例，不代表真實購買紀錄或實際配方。尚未接入語意嵌入（Semantic Embedding）模型。本案例把「蔬菜餡取向」設為 +1、「鮮蝦餡取向」設為 −1；另把同一家虛構茶舖、同款紅茶的「半糖」與「無糖」設為甜度對比的 +1 與 −1。這不是實際含糖量，也不代表不同甜度必然互斥；店家、料理形式與類別保留較小的共同權重。這個對比軸是人工設計，不能從點蔬菜水餃推論為素食者，也不能從一筆選擇推論整體品味。</p><p>品項以 36 維示範特徵表示，先將向量長度縮放為 1，再計算內積（Inner Product）；此時等同餘弦相似度（Cosine Similarity）。正值用亮薄荷綠實線（正相關）、負值用亮橘色虛線（負相關），線寬隨絕對值增加；圖例中的「正相關／負相關」表示本示範特徵的同向／反向，不是從多筆觀測估計的統計相關係數。0 表示這組特徵沒有方向關聯，不畫線。所有非零連線皆保留。圓點面積代表消費次數，位置只為排版。</p><p>整體先依次數彙整特徵，再把 −1 到 +1 的分數以 <code>(分數 + 1) ÷ 2 × 100</code> 映射為 0—100%：50% 表示方向無關、100% 表示同向、0% 表示完全反向。這是未校準的示範指數，不是實際喜好重疊比例。綜合解讀從全類別可直接對照的品項配對中，選出分數最高與最低的一組；同分時優先選雙方共同次數較多的配對。篩選只更新範圍指數，綜合分數仍涵蓋全部類別；無資料不當作 0 分。<a href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html" target="_blank" rel="noopener noreferrer">計算定義參考</a>。</p></div></details>
+</main><footer><span id="comparison-footer">2026.01—03 · 同期間比較 · 僅供視覺與互動討論</span><span>You are what you buy. / TASTE CONNECTIONS</span></footer>
+<noscript><p>請開啟 JavaScript 以查看點線圖。</p></noscript>
+<script data-source="taste-profile.js">
+/* Shared, versioned aggregate profile. The fragment is encoded, not encrypted. */
+(function (root) {
+ 'use strict';
+ const categories=Object.freeze(['正餐','飲品','零食甜點','生鮮食材','運動','其他服務','交通','住宿','日用品','電子產品']);
+ const schema='receipt-taste/categories-v1';
+ function validate(value){
+  if(!value||value.schema!==schema)throw new Error('這不是支援的品味連結版本，請回報告重新產生。');
+  if(typeof value.name!=='string'||!value.name.trim()||value.name.length>24)throw new Error('暱稱需為 1–24 個字元。');
+  if(typeof value.demo!=='boolean'||!Array.isArray(value.months)||!value.months.length||value.months.length>120||value.months.some(m=>typeof m!=='string'||!/^20\d{2}-(0[1-9]|1[0-2])$/.test(m))||new Set(value.months).size!==value.months.length)throw new Error('資料月份或來源格式不正確。');
+  if(!Array.isArray(value.counts)||value.counts.length!==categories.length||value.counts.some(c=>!Number.isSafeInteger(c)||c<0||c>1000000)||!value.counts.some(c=>c>0))throw new Error('消費筆數格式不正確，或沒有可比較的資料。');
+  // Reconstruct an allowlist rather than passing through arbitrary source fields.
+  return {schema,name:value.name.trim(),demo:value.demo,months:[...value.months].sort(),counts:[...value.counts]};
+ }
+ function fromReport(report,name){
+  const counts=categories.map(()=>0),months=Object.keys(report.months).sort();
+  for(const month of Object.values(report.months))for(const row of month.rows){
+   const i=categories.indexOf(report.categories[row.category]?.name);
+   if(i>=0&&!row.provisional&&Number.isFinite(row.amount)&&row.amount>0)counts[i]++;
+  }
+  return validate({schema,name:name.trim()||'我的偏好',demo:report.isDemo===true,months,counts});
+ }
+ function toURL(profile,base){
+  const url=new URL('taste-comparison.html',base);
+  if(!['file:','http:','https:'].includes(url.protocol))throw new Error('請從本機檔案或網頁開啟報告。');
+  const bytes=new TextEncoder().encode(JSON.stringify(validate(profile)));
+  const token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  url.hash='taste='+token;return url.href;
+ }
+ function fromURL(text){
+  if(typeof text!=='string'||text.length>12000)throw new Error('連結太長或格式不正確。');
+  const hash=text.slice(text.indexOf('#')+1),token=new URLSearchParams(hash).get('taste');
+  if(!text.includes('#')||!token||!/^[\w-]+$/.test(token))throw new Error('找不到品味資料，請貼上報告產生的完整連結。');
+  try{
+   const bytes=Uint8Array.from(atob(token.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+   return validate(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)));
+  }catch(error){throw new Error('無法讀取品味連結。請確認完整複製，並使用目前版本重新匯出。');}
+ }
+ function cosine(a,b){const n=Math.hypot(...a)*Math.hypot(...b);return n?Math.min(1,Math.max(0,a.reduce((s,x,i)=>s+x*b[i],0)/n)):null;}
+ const api=Object.freeze({categories,schema,validate,fromReport,toURL,fromURL,cosine});
+ if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.TasteProfile=api;
+})(globalThis);
+</script>
+<script>
+'use strict';
+const demoItems=[
+ {a:'美式咖啡',b:'拿鐵咖啡',c:'飲品',g:0,s:.96},
+ {a:'無糖紅茶',b:'烏龍茶',c:'飲品',g:0,s:.84},
+ {a:'可頌',b:'肉桂捲',c:'零食甜點',g:1,s:.89},
+ {a:'鮭魚飯',b:'日式丼飯',c:'正餐',g:1,s:.94},
+ {a:'蔬食餐盒',b:'沙拉碗',c:'正餐',g:1,s:.78},
+ {a:'麻辣燙',b:'咖哩飯',c:'正餐',g:1,s:.67},
+ {a:'登山體驗票',b:'步道導覽票',c:'運動',g:2,s:.92},
+ {a:'健身房入場',b:'瑜珈體驗',c:'運動',g:2,s:.76},
+ {a:'筆記本',b:'手帳',c:'日用品',g:3,s:.86},
+ {a:'香氛蠟燭',b:'擴香瓶',c:'日用品',g:3,s:.73},
+ {a:'無線滑鼠',b:'無線鍵盤',c:'電子產品',g:4,s:.90},
+ {a:'旅店住宿',b:'露營住宿',c:'住宿',g:5,s:.63},
+ {a:'蔬菜水餃',b:'鮮蝦水餃',c:'正餐',g:1,merchant:'八方雲集',dumpling:true},
+ {a:'紅茶・半糖',b:'紅茶・無糖',c:'飲品',g:0,merchant:'示範茶舖',sweetness:true}
+];
+const profiles={an:{name:'小安',counts:[24,5,13,11,7,3,13,8,6,4,3,3,16,15]},yu:{name:'小宇',counts:[17,13,10,8,4,9,18,7,3,3,4,4,18,17]},lin:{name:'小林',counts:[5,24,7,3,4,17,4,3,9,14,6,4,18,17]}};
+const positions=[[350,130],[180,107],[265,224],[430,281],[132,300],[310,343],[200,411],[424,442],[300,498],[99,439],[100,203],[440,184],[232,302],[455,358]];
+const $=id=>document.getElementById(id);const svgNS='http://www.w3.org/2000/svg';let items=demoItems,categoryMode=false,category='all',leftKey='an',rightKey=null,nodes=[],edges=[],selected=null;
+for(const person of Object.values(profiles)){
+ person.demoCounts=[...person.counts];person.categoryCounts=TasteProfile.categories.map(name=>demoItems.reduce((n,item,i)=>n+(item.c===name?person.counts[i]:0),0));
+}
+function chartName(key,mobile){const letters=Array.from(profiles[key].name),limit=mobile?5:10;return letters.slice(0,limit).join('')+(letters.length>limit?'…':'');}
+function profileMonths(key){return profiles[key].payload?.months||['2026-01','2026-02','2026-03'];}
+function isDemoProfile(key){return profiles[key].payload?profiles[key].payload.demo:true;}
+function prepareMode(){
+ categoryMode=loadedSides().some(side=>Boolean(profiles[keyFor(side)].payload));
+ items=categoryMode?TasteProfile.categories.map(c=>({a:c,b:c,c})):demoItems;
+ for(const person of Object.values(profiles))person.counts=categoryMode?(person.payload?.counts||person.categoryCounts):person.demoCounts;
+ for(const option of $('category').options)if(['dumplings','sweetness'].includes(option.value))option.disabled=categoryMode;
+ if(categoryMode&&['dumplings','sweetness'].includes(category)){category='all';$('category').value='all';}
+ $('category-method').hidden=!categoryMode;$('demo-method').hidden=categoryMode;
+ document.querySelector('.subtitle').textContent=categoryMode?'每個點是一類消費偏好。看看你們常買的類型，有多少交集。':'每個點是一種消費品項。看看哪些選擇，讓你們有了交集。';
+ document.querySelector('.overall-label').textContent=categoryMode?'消費類型相似度':'綜合品味相似指數';
+ document.querySelector('.legend-item').lastChild.textContent=categoryMode?'點越大，品項筆數越多':'點越大，消費次數越多';
+ document.querySelector('.negative-label').hidden=categoryMode;
+ document.querySelector('.legend-explain').textContent=categoryMode?'目前比較的是消費類型，還不能辨認甜度或餡料。只有相同類別會連線；兩人在該類的消費占比越接近，線越粗。':'同款也能選得不同：可篩選「同店不同餡」或「半糖與無糖」。餡料與甜度各自比較，差異不代表兩人整體品味相反。';
+ const loaded=loadedSides(),demo=loaded.length&&loaded.every(side=>isDemoProfile(keyFor(side)));
+ $('comparison-tag').textContent=(demo?'虛構示範':loaded.length?'偏好摘要':'等待匯入')+' · 品味連線';
+ $('comparison-footer').textContent=categoryMode?'分類摘要比較 · 連結資料在本頁處理，不上傳發票':'2026.01—03 · 虛構示範 · 僅供視覺與互動討論';
+}
+function shareFor(side,i){const counts=profiles[keyFor(side)].counts;return counts[i]/counts.reduce((a,b)=>a+b,0);}
+function connectionScore(a,b){if(!categoryMode)return dot(feature(a.i,'a'),feature(b.i,'b'));if(a.i!==b.i)return 0;const x=shareFor('a',a.i),y=shareFor('b',b.i);return Math.min(x,y)/Math.max(x,y);}
+function renderCategorySummary(overall){
+ document.querySelector('.summary-best-label').textContent='臭味相投';document.querySelector('.summary-worst-label').textContent='背道而馳';
+ const rows=items.map((item,i)=>({name:item.c,a:shareFor('a',i),b:shareFor('b',i)}));
+ const closeness=r=>Math.max(r.a,r.b)?Math.min(r.a,r.b)/Math.max(r.a,r.b):0;
+ const best=[...rows].sort((a,b)=>closeness(b)-closeness(a)||Math.min(b.a,b.b)-Math.min(a.a,a.b))[0];
+ const worst=[...rows].sort((a,b)=>Math.abs(b.a-b.b)-Math.abs(a.a-a.b))[0];
+ const percent=n=>(n*100).toFixed(1)+'%';
+ $('summary').textContent=`${profiles[leftKey].name} × ${profiles[rightKey].name} · 看看你們常買的類型有多像。`;
+ $('summary-best').textContent=Math.min(best.a,best.b)>0?`「${best.name}」${percent(best.a)} ↔ ${percent(best.b)}，購物車有默契。`:'沒有共同類別，購物車活在平行宇宙。';
+ $('summary-worst').textContent=Math.abs(worst.a-worst.b)>1e-9?`「${worst.name}」${percent(worst.a)} ↔ ${percent(worst.b)}，一位常客、一位路過。`:'比例都相同，像拿同一張購物清單。';
+ const mixed=loadedSides().some(side=>isDemoProfile(keyFor(side)));
+ const samePeriod=JSON.stringify(profileMonths(leftKey))===JSON.stringify(profileMonths(rightKey));
+ $('summary-note').textContent=(mixed?'含示範資料 · ':'')+(samePeriod?'':'月份不同 · ')+'僅比較消費類型，不含甜度、餡料。';
+}
+function keyFor(side){return side==='a'?leftKey:rightKey;}
+function hasBoth(){return leftKey!==null&&rightKey!==null;}
+function loadedSides(){return ['a','b'].filter(side=>keyFor(side)!==null);}
+function cosine(a,b){const n=Math.hypot(...a)*Math.hypot(...b);return n?a.reduce((s,x,i)=>s+x*b[i],0)/n:null;}
+function unit(v){const n=Math.hypot(...v);return n?v.map(x=>x/n):v;}
+function feature(i,side){if(categoryMode){const vector=Array(36).fill(0);vector[i]=1;return vector;}const key=keyFor(side);const v=Array(36).fill(0);if(items[i].sweetness){v[33]=.35;v[34]=.25;v[12]=.2;v[35]=key==='yu'?-1:1;return unit(v);}if(items[i].dumpling){v[30]=.25;v[31]=.35;v[13]=.2;v[32]=key==='yu'?-1:1;return unit(v);}v[i]=1;v[12+items[i].g]=.4;const base=unit(v);if(key!=='an'){for(let k=0;k<base.length;k++)base[k]*=items[i].s;base[18+i]=Math.sqrt(1-items[i].s**2);}return base;}
+function dot(a,b){return a.reduce((total,x,i)=>total+x*b[i],0);}
+function indexPercent(score){return score===null?null:Math.round(categoryMode?Math.max(0,Math.min(1,score))*100:(Math.max(-1,Math.min(1,score))+1)*50);}
+function edgeColor(score){return score>0?'#5eeac7':'#ffb65c';}
+function edgeWidth(score){return 1.4+6*Math.abs(score)**2;}
+function signed(score){return (score>0?'+':'−')+Math.abs(score).toFixed(2);}
+function productName(i,side){const key=keyFor(side);if(items[i].dumpling||items[i].sweetness)return key==='yu'?items[i].b:items[i].a;return key==='an'?items[i].a:items[i].b;}
+function relation(edge){if(categoryMode)return '占比接近度 '+Math.round(edge.score*100)+'%';return (edge.score>0?'正相關':'負相關')+' '+signed(edge.score);}
+function aggregate(person,side,indices){const result=Array(36).fill(0);for(const i of indices){const v=feature(i,side);for(let k=0;k<v.length;k++)result[k]+=v[k]*person.counts[i];}return result;}
+function similarity(indices){return hasBoth()?cosine(aggregate(profiles[leftKey],'a',indices),aggregate(profiles[rightKey],'b',indices)):null;}
+function el(tag,attrs={},text){const n=document.createElementNS(svgNS,tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;return n;}
+function path(a,b){const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),p={x:a.x+dx/d*(a.r+3),y:a.y+dy/d*(a.r+3)},q={x:b.x-dx/d*(b.r+3),y:b.y-dy/d*(b.r+3)};return `M ${p.x} ${p.y} C ${p.x+(q.x-p.x)*.42} ${p.y}, ${q.x-(q.x-p.x)*.42} ${q.y}, ${q.x} ${q.y}`;}
+function clearSelection(){selected=null;for(const edge of edges){edge.line.style.opacity=String(.5+Math.abs(edge.score)*.45);edge.line.style.stroke=edgeColor(edge.score);}for(const node of nodes){node.group.classList.remove('dim','is-selected');}$('detail').textContent=!loadedSides().length?'先在上方貼上網址，或點選一位示範人物。':!nodes.length?'這個類別目前沒有示範資料，請選擇其他種類。':hasBoth()?'點選一個圓點或一條線，看看你們買了什麼、相似在哪裡。':'已顯示一人的消費品項；另一人匯入後，才會出現比較連線。';}
+function highlight(edgeList,nodeIds){for(const edge of edges){const active=edgeList.includes(edge);edge.line.style.opacity=active?'1':'.09';edge.line.style.stroke=edgeColor(edge.score);}for(const node of nodes){node.group.classList.toggle('dim',!nodeIds.includes(node.id));node.group.classList.toggle('is-selected',nodeIds.includes(node.id));}}
+function selectNode(node){selected=node.id;const matches=edges.filter(e=>e.a.id===node.id||e.b.id===node.id);highlight(matches,[node.id,...matches.flatMap(e=>[e.a.id,e.b.id])]);const person=profiles[keyFor(node.side)].name;const counterpart=matches.map(e=>{const other=e.a===node?e.b:e.a;return `${other.name}（${relation(e)}）`;}).join('、');$('detail').textContent=`${person} · ${node.name} · ${node.count} ${categoryMode?'筆品項':'次'}${counterpart?'　↔　品項對比：'+counterpart:hasBoth()?'　· 目前沒有可比較的連線':'　· 尚待另一人匯入，暫不比較'}`;}
+function selectEdge(edge){if(categoryMode){selected=edge.a.id+'-'+edge.b.id;highlight([edge],[edge.a.id,edge.b.id]);$('detail').textContent=`${edge.a.name} · ${profiles[leftKey].name} ${edge.a.count} 筆（占 ${(shareFor('a',edge.a.i)*100).toFixed(1)}%） ↔ ${profiles[rightKey].name} ${edge.b.count} 筆（占 ${(shareFor('b',edge.b.i)*100).toFixed(1)}%） · ${relation(edge)}`;return;}selected=edge.a.id+'-'+edge.b.id;highlight([edge],[edge.a.id,edge.b.id]);let extra='';if(edge.a.i===edge.b.i&&(items[edge.a.i].dumpling||items[edge.a.i].sweetness)){extra=edge.a.name===edge.b.name?' · 同店、同款、同樣的選擇。':items[edge.a.i].dumpling?' · 同為八方雲集水餃，餡料取向不同。':' · 同店、同款紅茶，半糖與無糖的甜度選擇不同。';}$('detail').textContent=`${profiles[leftKey].name}：${edge.a.name} ${edge.a.count} 次　↔　${profiles[rightKey].name}：${edge.b.name} ${edge.b.count} 次　·　${relation(edge)}（示範）${extra}`;}
+function bind(group,callback){group.addEventListener('click',callback);group.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();callback();}});}
+function summaryJoke(pair,best){
+ const item=items[pair.i],same=productName(pair.i,'a')===productName(pair.i,'b');
+ if(same)return '直接點兩份。';
+ if(item.dumpling)return '一個逛菜園，一個出海。';
+ if(item.sweetness)return '一個加糖，一個讓糖罐放假。';
+ if(pair.i===0)return '開機鍵都叫咖啡。';
+ if(pair.i===11)return '同團出遊，睡覺不同門派。';
+ return best?'各點各的，也很合拍。':'各有主張，不搶最後一份。';
+}
+function renderSummary(overall){
+ if(!categoryMode){document.querySelector('.summary-best-label').textContent='臭味相投';document.querySelector('.summary-worst-label').textContent='背道而馳';$('summary-note').textContent='虛構示範 · 分數不代表關係契合度。';}
+ document.querySelectorAll('.summary-case').forEach(node=>node.hidden=!hasBoth());
+ $('summary-note').hidden=!hasBoth();
+ if(!hasBoth()){
+  const side=loadedSides()[0];$('summary-best').textContent='';$('summary-worst').textContent='';
+  $('summary').textContent=side?`已載入${profiles[keyFor(side)].name}，再匯入朋友的連結就能比較。`:'貼上兩人的連結，看看品味有多像。';return;
+ }
+ if(categoryMode){renderCategorySummary(overall);return;}
+ const pairs=items.map((item,i)=>({i,score:dot(feature(i,'a'),feature(i,'b')),shared:Math.min(profiles[leftKey].counts[i],profiles[rightKey].counts[i])})).filter(pair=>pair.shared>0);
+ const tieBreak=(a,b)=>b.shared-a.shared||a.i-b.i;
+ const best=[...pairs].sort((a,b)=>Math.abs(a.score-b.score)<1e-9?tieBreak(a,b):b.score-a.score)[0];
+ const worst=[...pairs].sort((a,b)=>Math.abs(a.score-b.score)<1e-9?tieBreak(a,b):a.score-b.score)[0];
+ $('summary').textContent=leftKey===rightKey?`${profiles[leftKey].name} × 自己 · 這輪是自己對答案。`:`${profiles[leftKey].name} × ${profiles[rightKey].name} · 合拍的、各有主張的，都在這裡。`;
+ for(const [id,pair,isBest] of [['summary-best',best,true],['summary-worst',worst,false]]){
+  if(!isBest&&Math.abs(best.score-worst.score)<1e-9){$(id).textContent='各組一樣合拍，差異不用硬加戲。';$(id).removeAttribute('data-item');continue;}
+  const item=items[pair.i],same=productName(pair.i,'a')===productName(pair.i,'b');
+  const choices=same?`都選${productName(pair.i,'a')}`:`${productName(pair.i,'a')} ↔ ${productName(pair.i,'b')}`;
+  $(id).textContent=choices+'；'+summaryJoke(pair,isBest);$(id).dataset.item=String(pair.i);
+ }
+}
+function updateImport(side,message='',error=false){
+ const key=keyFor(side),status=$('import-status-'+side);$('clear-'+side).disabled=key===null;
+ status.textContent=message||(key?`已匯入 ${profiles[key].name} · ${profileMonths(key).join('、')} · ${isDemoProfile(key)?'虛構示範資料':'報告偏好摘要'}`:'尚未匯入，貼上網址或點選示範人物。');
+ status.classList.toggle('error',error);$('profile-url-'+side).setAttribute('aria-invalid',String(error));
+}
+function importProfile(side){
+ const text=$('profile-url-'+side).value.trim(),match=/^demo:\/\/(an|yu|lin)\/?$/.exec(text);
+ let key;
+ try{
+  if(match)key=match[1];
+  else{const payload=TasteProfile.fromURL(text);key='import-'+side;profiles[key]={name:payload.name,payload,counts:payload.counts};}
+ }catch(error){const current=keyFor(side);updateImport(side,(text?error.message:'請先填入偏好網址。')+(current?' 圖中仍保留'+profiles[current].name+'的資料。':''),true);return;}
+ if(side==='a')leftKey=key;else rightKey=key;updateImport(side);draw();
+}
+function removeProfile(side){if(side==='a')leftKey=null;else rightKey=null;$('profile-url-'+side).value='';updateImport(side);draw();}
+function draw(){
+ prepareMode();
+ const mobile=matchMedia('(max-width:640px)').matches,svg=$('network'),indices=items.map((_,i)=>i).filter(i=>category==='all'||(category==='dumplings'?items[i].dumpling:category==='sweetness'?items[i].sweetness:items[i].c===category)).filter(i=>!loadedSides().length||loadedSides().some(side=>profiles[keyFor(side)].counts[i]>0));svg.replaceChildren();const chartWidth=mobile?600:1200,chartHeight=mobile&&loadedSides().length&&indices.length>4?160+indices.length*76:570;svg.setAttribute('viewBox',`0 0 ${chartWidth} ${chartHeight}`);nodes=[];edges=[];selected=null;
+ const overall=similarity(items.map((_,i)=>i));$('overall-score').textContent=overall===null?'—':indexPercent(overall);$('score-unit').hidden=overall===null;$('overall-score').parentElement.classList.toggle('waiting',overall===null);$('overall-note').textContent=hasBoth()?(categoryMode?'全類別評估 · 分類偏好摘要':'全類別評估 · 虛構示範'):loadedSides().length?'等待另一人匯入':'先匯入偏好資料';
+ const scopeScore=similarity(indices),count=loadedSides().length;
+ $('scope').textContent=(category==='all'?'全類別':category==='dumplings'?'同店不同餡':category==='sweetness'?'半糖與無糖':category)+' · '+(!count?'尚未匯入資料':!indices.length?'目前無資料':loadedSides().reduce((n,side)=>n+indices.filter(i=>profiles[keyFor(side)].counts[i]>0).length,0)+(categoryMode?' 個類別點 · ':' 個品項點 · ')+(scopeScore===null?(hasBoth()?'此範圍有一側無資料':'尚待另一人匯入'):categoryMode&&category!=='all'?'綜合分數仍計算全部類別':'範圍相似 '+indexPercent(scopeScore)+'%'));
+ renderSummary(overall);
+ if(!indices.length){svg.append(el('text',{x:chartWidth/2,y:chartHeight/2-25,class:'empty-title'},'這個類別，還沒有資料。'),el('text',{x:chartWidth/2,y:chartHeight/2+20,class:'empty-note'},'換個消費種類，看看你們的交集。'));clearSelection();return;}
+ const decorations=el('g',{'aria-hidden':'true'});for(const side of ['a','b']){
+  const key=keyFor(side),x=mobile?(side==='a'?145:455):(side==='a'?275:925),y=mobile?chartHeight/2+15:300;
+  decorations.append(el('ellipse',{cx:x,cy:y,rx:mobile?118:220,ry:mobile?chartHeight/2-95:214,class:'cluster-ring'}));
+  decorations.append(el('circle',{cx:x-105,cy:38,r:4,fill:side==='a'?'#ff9aa7':'#9bbcff'}),el('text',{x,y:43,'text-anchor':'middle',class:'person-name'},key?chartName(key,mobile)+' · '+(side==='a'?'你':'朋友'):(side==='a'?'你的偏好':'朋友的偏好')));
+  if(!key){decorations.append(el('text',{x,y:y-8,class:'slot-title'},'等待匯入'),el('text',{x,y:y+22,class:'slot-note'},'在上方貼上偏好網址'));continue;}
+  decorations.append(el('text',{x,y:y+25,'text-anchor':'middle',class:'cluster-word'},side==='a'?'A':'B'),el('text',{x,y:66,'text-anchor':'middle',class:'person-sub'},indices.reduce((s,i)=>s+profiles[key].counts[i],0)+(categoryMode?' 筆品項 · ':' 次消費 · ')+indices.filter(i=>profiles[key].counts[i]>0).length+(categoryMode?' 種類別':' 種品項')));
+ }svg.append(decorations);
+ for(const side of loadedSides()){for(const [j,i] of indices.entries()){if(!profiles[keyFor(side)].counts[i])continue;const original=positions[i];let x,y;if(mobile){x=side==='a'?145:455;if(indices.length>4){x+=(side==='a'?1:-1)*(j%2?-18:18);y=120+j*76;}else{y=140+(j+.5)/indices.length*300;}}else if(indices.length<=4){const t=(j+.5)/indices.length;x=(side==='a'?310:890)+Math.sin(j*2)*70;y=140+t*300;}else if(categoryMode){x=side==='a'?(i%2?380:150):(i%2?820:1050);y=110+Math.floor(i/2)*86+(i%2)*40;}else{x=side==='a'?original[0]:1200-original[0];y=original[1]+(side==='b'?(i%3-1)*12:0);}const count=profiles[keyFor(side)].counts[i],r=categoryMode?Math.sqrt(count)*Math.min(6.4,(mobile?27:30)/Math.sqrt(Math.max(...loadedSides().flatMap(side=>profiles[keyFor(side)].counts)))):Math.sqrt(count)*(mobile&&indices.length>4?4.7:6.4);nodes.push({id:side+i,side,i,name:productName(i,side),count,x,y,r});}}
+ for(const a of nodes.filter(n=>n.side==='a'))for(const b of nodes.filter(n=>n.side==='b')){const score=connectionScore(a,b);if(Math.abs(score)>1e-8)edges.push({a,b,score});}
+ const edgeLayer=el('g'),hitLayer=el('g'),nodeLayer=el('g');for(const edge of edges){const d=path(edge.a,edge.b);edge.line=el('path',{d,class:'edge','stroke-width':edgeWidth(edge.score),'stroke-dasharray':edge.score<0?'10 7':'none',opacity:.5+Math.abs(edge.score)*.45,'data-similarity':edge.score});edgeLayer.append(edge.line);const hit=el('g',{tabindex:'0',role:'button','aria-label':`${edge.a.name}與${edge.b.name}，${relation(edge)}，查看連線`});hit.append(el('path',{d,class:'edge-hit'}));hit.append(el('title',{},`${edge.a.name} ↔ ${edge.b.name} · ${relation(edge)}`));bind(hit,()=>selectEdge(edge));hitLayer.append(hit);}
+ svg.append(edgeLayer,hitLayer);
+ for(const node of nodes){const color=node.side==='a'?'#ff9aa7':'#9bbcff';node.group=el('g',{class:'node',tabindex:'0',role:'button','data-node':node.id,'aria-label':`${profiles[keyFor(node.side)].name}，${node.name}，${node.count} ${categoryMode?'筆品項':'次'}，查看關聯`});node.group.append(el('circle',{cx:node.x,cy:node.y,r:Math.max(node.r+12,25),fill:'transparent'}));node.group.append(el('circle',{cx:node.x,cy:node.y,r:node.r+6,class:'halo',stroke:color}));node.group.append(el('circle',{cx:node.x,cy:node.y,r:node.r,class:'dot',fill:color,'fill-opacity':1,stroke:node.side==='a'?'#ffd3dc':'#dae6ff'}));const name=el('text',{x:node.x,y:node.y+node.r+(mobile?22:18),class:!mobile&&node.count<7&&indices.length>4?'quiet-label':''},node.name);if(mobile)name.setAttribute('style','font-size:19px');if(items[node.i].merchant)name.append(el('tspan',{x:node.x,dy:mobile?17:14,'font-size':mobile?14:11,fill:'#d4d0c8'},items[node.i].merchant));node.group.append(name,el('title',{},`${node.name} · ${node.count} ${categoryMode?'筆品項':'次'} · ${items[node.i].c}`));bind(node.group,()=>selectNode(node));nodeLayer.append(node.group);}svg.append(nodeLayer);clearSelection();
+}
+// Clicking the surrounding page clears the graph selection; controls and details remain usable.
+document.addEventListener('click',event=>{
+ if(selected && !event.target.closest('#network [role="button"], button, select, option, a, summary, input, .import-card, .detail')) clearSelection();
+});
+for(const side of ['a','b']){
+ $('import-'+side).addEventListener('submit',event=>{event.preventDefault();importProfile(side);});
+ $('clear-'+side).addEventListener('click',()=>removeProfile(side));
+ $('profile-url-'+side).addEventListener('input',()=>updateImport(side,'網址已修改，按「匯入」才會更新圖表。'));
+ $('profile-url-'+side).value=keyFor(side)?'demo://'+keyFor(side):'';updateImport(side);
+}
+document.querySelectorAll('[data-demo-side]').forEach(button=>button.addEventListener('click',()=>{const side=button.dataset.demoSide;$('profile-url-'+side).value='demo://'+button.dataset.demoKey;importProfile(side);}));
+$('category').addEventListener('change',event=>{category=event.target.value;draw();});$('reset').addEventListener('click',clearSelection);$('network').addEventListener('keydown',event=>{if(event.key==='Escape')clearSelection();});matchMedia('(max-width:640px)').addEventListener('change',draw);const requestedCase=new URLSearchParams(location.search).get('case');if(['dumplings','sweetness'].includes(requestedCase)){category=requestedCase;$('category').value=category;}
+function importHash(){if(!location.hash)return;leftKey=null;$('profile-url-a').value=location.href;updateImport('a');draw();importProfile('a');}
+window.addEventListener('hashchange',importHash);if(location.hash)importHash();else draw();
+</script>
+</body></html>

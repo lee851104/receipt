@@ -48,7 +48,7 @@ def main():
     payload = json.dumps(data, ensure_ascii=False, indent=2).replace("<", "\\u003c")
     data_script = "'use strict';\nconst expenseReportData = " + payload + ";\n"
     scripts = {"report-data.js": data_script}
-    for name in ("insights-ui.js", "monthly-comparison.js", "comparison-ui.js", "flow-navigation.js"):
+    for name in ("insights-ui.js", "monthly-comparison.js", "comparison-ui.js", "flow-navigation.js", "taste-profile.js", "taste-export.js"):
         scripts[name] = (WEB / name).read_text(encoding="utf-8")
     template = (WEB / "invoice-insights.html").read_text(encoding="utf-8")
     style_link = '<link rel="stylesheet" href="styles.css">'
@@ -61,6 +61,10 @@ def main():
     (processed / "report-data.js").write_text(data_script, encoding="utf-8")
     output = "invoice-insights-private.html" if args.private else "invoice-insights.html"
     (ROOT / output).write_text(html, encoding="utf-8")
+    if not args.private:
+        comparison = (WEB / "taste-comparison.html").read_text(encoding="utf-8")
+        comparison = embed_scripts(comparison, {"taste-profile.js": scripts["taste-profile.js"]})
+        (ROOT / "taste-comparison.html").write_text(comparison, encoding="utf-8")
     for key, month in months.items():
         print(key, len(month["rows"]), "rows; total", sum(row["amount"] for row in month["rows"]))
 

@@ -390,6 +390,11 @@ html { scroll-behavior: smooth; }
 @media(max-width:520px) { .month-filter { align-items:start; flex-direction:column; gap:12px; padding:18px; } .month-filter select { min-width:155px; } .category-row { grid-template-columns:64px minmax(0,1fr) 48px; gap:8px; font-size:10px; } }
 
 .data-notice { padding: 14px 18px; border: 1px solid #734449; border-radius: 10px; color: #efb7ba; background: #282021; font-size: 14px; }
+
+/* Profile sharing */
+.taste-sharing{margin:22px 0 32px}.taste-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.taste-actions a,.taste-sharing button{font:inherit;font-size:13px;border:1px solid #514545;background:#201c1c;color:var(--ink);padding:12px 18px;border-radius:10px;text-decoration:none;cursor:pointer}.taste-actions .taste-primary{background:#ef8588;border-color:#ef8588;color:#241517;font-weight:600}.taste-caption,.taste-export-panel p{font-size:12px;color:var(--muted);line-height:1.8}.taste-export-panel{margin-top:18px;padding:24px;border:1px solid #544042;border-radius:16px;background:#191717;max-width:920px}.taste-export-panel h2{font-size:20px;margin:0 0 10px}.taste-export-panel p{margin:9px 0 15px}.taste-name-row{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.taste-name-row label,.taste-link-label{display:block;font-size:12px;color:var(--muted)}.taste-export-panel input,.taste-export-panel textarea{display:block;background:#101010;border:1px solid #59504f;border-radius:8px;color:var(--ink);font:inherit;font-size:13px;padding:12px;margin-top:6px}.taste-export-panel textarea{width:100%;resize:vertical;overflow-wrap:anywhere;margin-bottom:14px}.taste-export-panel a:not([href]){opacity:.4;cursor:default}.taste-sharing :focus-visible{outline:2px solid #ef8588;outline-offset:4px}#taste-export-status{color:#f2c2c4}@media(max-width:640px){.taste-actions a,.taste-sharing button{font-size:12px}.taste-export-panel{padding:18px}.taste-name-row label{width:100%}.taste-name-row input{width:100%}}
+
+.taste-sharing button:disabled{opacity:.5;cursor:not-allowed;}
 </style>
 </head>
 <body>
@@ -397,6 +402,17 @@ html { scroll-behavior: smooth; }
 <main>
 <section class="intro"><div><p class="eyebrow">從消費，看見自己</p><h1>You are<br>what you <em>buy.</em></h1><p class="subtitle">不用逐筆記帳。從發票品項，看見消費模式，再跟上個月的自己比。</p></div><div class="period" id="report-period"></div></section>
 <p class="data-notice" id="data-notice" role="note"></p>
+<section class="taste-sharing" aria-label="與朋友比較品味">
+ <div class="taste-actions"><a class="taste-primary" id="compare-friends" href="taste-comparison.html">比較跟朋友品味差多少 ↗</a><button id="export-taste" type="button" disabled title="功能準備中">匯出我的品味連結</button></div>
+ <p class="taste-caption">把消費偏好帶到朋友比較頁。品味連結匯出功能準備中。</p>
+ <div id="taste-export-panel" class="taste-export-panel" hidden>
+  <div class="taste-export-heading"><div><h2>分享偏好，從一個連結開始。</h2><p>只分享暱稱、月份與各類消費筆數，不包含店家、品名、發票號碼或金額。取得連結的人可以讀取這些摘要；連結沒有加密。</p></div></div>
+  <div class="taste-name-row"><label for="taste-nickname">你的暱稱 <input id="taste-nickname" type="text" maxlength="24" value="我的偏好" autocomplete="off"></label><button id="taste-regenerate" type="button">更新連結</button></div>
+  <p id="taste-export-preview"></p><label class="taste-link-label" for="taste-link">你的品味連結</label><textarea id="taste-link" rows="3" readonly spellcheck="false"></textarea>
+  <div class="taste-actions"><button id="taste-copy" type="button">複製連結</button><a id="taste-open-link">帶到朋友比較頁 ↗</a></div>
+  <p id="taste-export-status" role="status" aria-live="polite"></p><p class="taste-caption">涵蓋報告所有月份，不受目前畫面月份影響。依正金額、分類已確認的品項筆數計算；折扣、贈品與待確認分類不計入。這是分類偏好摘要，還無法分辨甜度或餡料。</p>
+ </div>
+</section>
 <nav class="flow-links" aria-label="回顧流程">
   <a href="#items" aria-current="location"><span class="step-number">01</span><span>拆到品項</span></a>
   <a href="#insights"><span class="step-number">02</span><span>看見消費模式</span></a>
@@ -1985,6 +2001,76 @@ document.querySelectorAll('[data-compare-source]').forEach(button => button.addE
   renderComparison();
 }));
 refreshComparisonMonths();
+</script>
+<script data-source="taste-profile.js">
+/* Shared, versioned aggregate profile. The fragment is encoded, not encrypted. */
+(function (root) {
+ 'use strict';
+ const categories=Object.freeze(['正餐','飲品','零食甜點','生鮮食材','運動','其他服務','交通','住宿','日用品','電子產品']);
+ const schema='receipt-taste/categories-v1';
+ function validate(value){
+  if(!value||value.schema!==schema)throw new Error('這不是支援的品味連結版本，請回報告重新產生。');
+  if(typeof value.name!=='string'||!value.name.trim()||value.name.length>24)throw new Error('暱稱需為 1–24 個字元。');
+  if(typeof value.demo!=='boolean'||!Array.isArray(value.months)||!value.months.length||value.months.length>120||value.months.some(m=>typeof m!=='string'||!/^20\d{2}-(0[1-9]|1[0-2])$/.test(m))||new Set(value.months).size!==value.months.length)throw new Error('資料月份或來源格式不正確。');
+  if(!Array.isArray(value.counts)||value.counts.length!==categories.length||value.counts.some(c=>!Number.isSafeInteger(c)||c<0||c>1000000)||!value.counts.some(c=>c>0))throw new Error('消費筆數格式不正確，或沒有可比較的資料。');
+  // Reconstruct an allowlist rather than passing through arbitrary source fields.
+  return {schema,name:value.name.trim(),demo:value.demo,months:[...value.months].sort(),counts:[...value.counts]};
+ }
+ function fromReport(report,name){
+  const counts=categories.map(()=>0),months=Object.keys(report.months).sort();
+  for(const month of Object.values(report.months))for(const row of month.rows){
+   const i=categories.indexOf(report.categories[row.category]?.name);
+   if(i>=0&&!row.provisional&&Number.isFinite(row.amount)&&row.amount>0)counts[i]++;
+  }
+  return validate({schema,name:name.trim()||'我的偏好',demo:report.isDemo===true,months,counts});
+ }
+ function toURL(profile,base){
+  const url=new URL('taste-comparison.html',base);
+  if(!['file:','http:','https:'].includes(url.protocol))throw new Error('請從本機檔案或網頁開啟報告。');
+  const bytes=new TextEncoder().encode(JSON.stringify(validate(profile)));
+  const token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  url.hash='taste='+token;return url.href;
+ }
+ function fromURL(text){
+  if(typeof text!=='string'||text.length>12000)throw new Error('連結太長或格式不正確。');
+  const hash=text.slice(text.indexOf('#')+1),token=new URLSearchParams(hash).get('taste');
+  if(!text.includes('#')||!token||!/^[\w-]+$/.test(token))throw new Error('找不到品味資料，請貼上報告產生的完整連結。');
+  try{
+   const bytes=Uint8Array.from(atob(token.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+   return validate(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)));
+  }catch(error){throw new Error('無法讀取品味連結。請確認完整複製，並使用目前版本重新匯出。');}
+ }
+ function cosine(a,b){const n=Math.hypot(...a)*Math.hypot(...b);return n?Math.min(1,Math.max(0,a.reduce((s,x,i)=>s+x*b[i],0)/n)):null;}
+ const api=Object.freeze({categories,schema,validate,fromReport,toURL,fromURL,cosine});
+ if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.TasteProfile=api;
+})(globalThis);
+</script>
+<script data-source="taste-export.js">
+(function(){
+ 'use strict';
+ const get=id=>document.getElementById(id);
+ const exportButton=get('export-taste'),compareButton=get('compare-friends');
+ if(!exportButton||!compareButton)return;
+ const panel=get('taste-export-panel'),output=get('taste-link'),notice=get('taste-export-status');
+ function generate(){
+  const profile=TasteProfile.fromReport(expenseReportData,get('taste-nickname').value);
+  output.value=TasteProfile.toURL(profile,location.href);
+  get('taste-export-preview').textContent=`${profile.demo?'虛構示範':'這份報告'} · ${profile.months.join('、')} · ${profile.counts.reduce((a,b)=>a+b,0)} 筆已分類品項。`;
+  get('taste-open-link').href=output.value;
+  notice.textContent=location.protocol==='file:'?'這是本機連結。朋友可將完整連結貼進他的比較頁；若要直接點開，需先將兩個頁面發布到網站。':'連結已產生，可複製給朋友；對方開啟後即可匯入比較。';
+  return output.value;
+ }
+ function show(){panel.hidden=false;exportButton.setAttribute('aria-expanded','true');try{generate();}catch(error){notice.textContent=error.message;output.value='';get('taste-open-link').removeAttribute('href');} }
+ exportButton.addEventListener('click',()=>{show();get('taste-nickname').focus();});
+ get('taste-regenerate').addEventListener('click',show);
+ get('taste-nickname').addEventListener('input',()=>{output.value='';get('taste-open-link').removeAttribute('href');notice.textContent='暱稱已變更，請按「更新連結」。';});
+ get('taste-copy').addEventListener('click',async()=>{
+  if(!output.value){notice.textContent='請先產生連結。';return;}
+  try{await navigator.clipboard.writeText(output.value);notice.textContent='已複製完整連結，可貼到比較頁或傳給朋友。';}
+  catch{output.focus();output.select();notice.textContent='已選取連結，請按 Ctrl+C（或長按複製）。';}
+ });
+ compareButton.addEventListener('click',event=>{event.preventDefault();try{location.href=generate();}catch(error){show();notice.textContent=error.message;}});
+})();
 </script>
 </body>
 </html>

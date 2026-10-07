@@ -1,0 +1,26 @@
+{
+  "min_records": 3,
+  "category_min_items": 10,
+  "category_top": 2,
+  "district_top": 2,
+  "district_min_invoices": 2,
+  "brand_min_invoices": 3,
+  "price_levels": [
+    {"label": "小資型", "below": 150},
+    {"label": "均衡型", "below": 400},
+    {"label": "享受型"}
+  ],
+  "remote_sellers": ["富邦媒體", "網路家庭", "蝦皮", "酷澎", "博客來", "富胖達", "優食", "中華電信", "台灣大哥大", "遠傳電信", "台灣電力", "台灣自來水"],
+  "flavor": {
+    "categories": ["正餐", "飲品", "零食甜點", "生鮮食材"],
+    "vegetarian": ["素食", "全素", "蛋奶素", "奶蛋素", "五辛素", "植物肉", "蔬食", "素肉", "素料", "素雞", "素鴨", "素火腿", "素香腸"],
+    "meat": ["豬肉", "牛肉", "雞肉", "雞腿", "雞排", "雞塊", "雞柳", "羊肉", "鴨肉", "鵝肉", "鮮蝦", "蝦仁", "鮭魚", "鯛魚", "鮪魚", "鱈魚", "魚排", "海鮮", "排骨", "培根", "火腿", "肉燥", "肉絲", "肉片", "肉鬆", "香腸", "叉燒", "燒肉", "滷肉", "魯肉", "牛排", "豬排"],
+    "min_items": 3,
+    "vegetarian_at_most": 0.3,
+    "meat_at_least": 0.7,
+    "difference_at_least": 0.6
+  },
+  "weights": {"category": 0.35, "district": 0.3, "brand": 0.15, "flavor": 0.1, "price": 0.1},
+  "thresholds": {"taste": 0.8, "taste_same_area": 0.7},
+  "top_matches": 5
+}

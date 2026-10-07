@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>找到同好 · You are what you buy.</title>
+<style>
+:root{color-scheme:dark;--paper:#101010;--surface:#191919;--ink:#f2f1ed;--muted:#bbb8b2;--line:#30302e;--pink:#ef8588;--teal:#5eeac7;--amber:#ffb65c;--font:"Segoe UI","Microsoft JhengHei",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.7 var(--font);-webkit-font-smoothing:antialiased}
+main{max-width:880px;margin:0 auto;padding:24px 18px 56px}
+.return-report{display:inline-block;color:var(--muted);font-size:12px;text-decoration:none;margin-bottom:14px}.return-report:hover{color:var(--pink)}
+.eyebrow{color:var(--pink);font-size:11px;letter-spacing:2px;margin:0 0 6px}
+h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 10px}h3{font-size:17px;margin:0}
+.note{color:var(--muted);font-size:12px;margin:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:16px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}
+.chips li{border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:12px}
+.chips small{color:var(--muted);margin-right:5px}
+.areas{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px}
+.areas label{display:flex;align-items:center;gap:6px;cursor:pointer}.areas input{accent-color:var(--teal);width:16px;height:16px}
+.matches{margin-top:30px}
+.match-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.score{font-size:24px;font-weight:600;color:var(--teal)}.score small{font-size:12px;color:var(--muted);font-weight:400;margin-left:6px}
+.basis{color:var(--muted);font-size:12px;margin:10px 0 0}
+.reasons,.differences{margin:8px 0 0;padding-left:20px}
+.reasons li::marker{content:"✓  ";color:var(--teal)}.differences li::marker{content:"≠  ";color:var(--amber)}
+.empty{color:var(--muted);margin-top:16px}
+.method{margin-top:22px;color:var(--muted);font-size:12px}.method summary{cursor:pointer}.method p{margin:8px 0}
+@media(max-width:640px){h1{font-size:23px}.card{padding:15px}}
+</style>
+</head>
+<body>
+<main>
+<a id="return-report" class="return-report" href="#report" hidden>← 返回消費洞察</a>
+<p class="eyebrow">FIND YOUR PEOPLE · 找到同好</p>
+<h1>從消費習慣，找到合拍的人。</h1>
+<p class="note" id="match-note"></p>
+<section class="card" aria-labelledby="my-tags-title"><h2 id="my-tags-title">我的消費標籤</h2><ul class="chips" id="my-tags"></ul></section>
+<section class="card" aria-labelledby="areas-title"><h2 id="areas-title">確認生活圈</h2><p class="note" id="areas-note"></p><div class="areas" id="my-areas"></div></section>
+<section class="matches" aria-labelledby="matches-title"><h2 id="matches-title">和你最合拍的人</h2><p class="note" id="match-status" role="status" aria-live="polite"></p><div id="match-list"></div></section>
+<details class="method"><summary>怎麼算的？</summary><div id="method"></div></details>
+</main>
+<script src="match-filter.js"></script>
+<script src="match-data.js"></script>
+<script>
+'use strict';
+(function () {
+  const data = matchReportData, settings = data.settings;
+  const $ = id => document.getElementById(id);
+  const pct = value => Math.round(value * 100) + '%';
+  function make(tag, text, className) {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+  }
+  function chipItems(tags) {
+    return tags.map(tag => {
+      const item = make('li');
+      item.append(make('small', tag.dimension), tag.text);
+      return item;
+    });
+  }
+  function lines(texts, className) {
+    const list = make('ul', undefined, className);
+    for (const text of texts) list.append(make('li', text));
+    return list;
+  }
+  function card(match) {
+    const article = make('article', undefined, 'card');
+    const head = make('div', undefined, 'match-head');
+    const score = make('div', match.total + '%', 'score');
+    score.append(make('small', '品味 ' + match.taste + '%'));
+    head.append(make('h3', match.name), score);
+    const tags = make('ul', undefined, 'chips');
+    tags.append(...chipItems(match.tags));
+    article.append(head, tags, make('p', '比較了：' + match.basis.join('、'), 'basis'), lines(match.reasons, 'reasons'));
+    if (match.differences.length) article.append(lines(match.differences, 'differences'));
+    return article;
+  }
+  const chosen = new Set();
+  function render() {
+    const list = $('match-list');
+    if (!data.me.ready) {
+      $('match-status').textContent = '';
+      list.replaceChildren(make('p', '資料不足，還不能配對：需要至少 ' + settings.category_min_items + ' 筆已分類品項（目前 '
+        + data.me.item_count + ' 筆），以及品牌、葷素紀錄或消費檔次其中一項。多掃幾張發票再看看。', 'empty'));
+      return;
+    }
+    const passed = MatchFilter.recommend(data.candidates, [...chosen], settings.thresholds);
+    const shown = passed.slice(0, settings.top_matches);
+    $('match-status').textContent = '符合條件 ' + passed.length + ' 位' + (passed.length > shown.length ? '，顯示前 ' + shown.length + ' 位' : '') + '。';
+    list.replaceChildren(...(shown.length ? shown.map(card) : [make('p', '目前沒有夠相似的人，多掃幾張發票再看看。', 'empty')]));
+  }
+  $('match-note').textContent = '配對對象是 ' + data.population + ' 位虛構示範用戶。'
+    + (data.isDemo ? '「我」也是虛構示範資料。' : '你的標籤來自這份私人報告，只存在這個檔案裡。');
+  const mine = $('my-tags');
+  if (data.me.tags.length) mine.append(...chipItems(data.me.tags));
+  else mine.replaceWith(make('p', '資料還不夠產生標籤。', 'note'));
+  $('areas-note').textContent = data.me.areas.length
+    ? '下面是依發票賣方地址推測的常消費地區。勾選真的是你生活圈的地方：同生活圈的人，品味門檻從 ' + pct(settings.thresholds.taste)
+      + ' 降到 ' + pct(settings.thresholds.taste_same_area) + '。不勾選就不會用來放寬門檻。'
+    : '目前推測不出常消費地區，所以只用 ' + pct(settings.thresholds.taste) + ' 的門檻。';
+  for (const area of data.me.areas) {
+    const label = make('label'), box = make('input');
+    box.type = 'checkbox';
+    box.addEventListener('change', () => { if (box.checked) chosen.add(area); else chosen.delete(area); render(); });
+    label.append(box, area);
+    $('my-areas').append(label);
+  }
+  const weights = settings.weights;
+  $('method').append(
+    make('p', '五個面向加權：品類 ' + pct(weights.category) + '、常消費地區 ' + pct(weights.district) + '、品牌 ' + pct(weights.brand)
+      + '、葷素紀錄 ' + pct(weights.flavor) + '、消費檔次 ' + pct(weights.price) + '。缺資料的面向不計分，權重分給其他面向。'),
+    make('p', '品類一定要能比較（各自至少 ' + settings.category_min_items + ' 筆已分類品項），另外至少再有品牌、葷素紀錄、消費檔次其中一項，才會配對。'),
+    make('p', '品味分數不含地區，至少 ' + pct(settings.thresholds.taste) + ' 才推薦；對方常在你勾選的生活圈消費時，放寬為 '
+      + pct(settings.thresholds.taste_same_area) + '。大字是總分，用來排序。'),
+    make('p', '同一張發票的同一品項只算一次；有品項買 2 份以上的發票，可能是多人一起消費，不列入消費檔次。'),
+    make('p', '只用行政區與連鎖品牌，不顯示分店、日期或金額。配對對象皆為虛構示範用戶，他們的常消費地區視為已確認的生活圈。'));
+  render();
+  const pageHost = window.parent !== window && window.frameElement?.id === 'match-frame' ? window.parent : null;
+  if (pageHost) {
+    const back = $('return-report');
+    back.hidden = false;
+    back.addEventListener('click', event => { event.preventDefault(); pageHost.ReceiptPages.showReport(); });
+  }
+})();
+</script>
+</body>
+</html>

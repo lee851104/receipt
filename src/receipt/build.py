@@ -7,6 +7,9 @@ from pathlib import Path
 
 from .invoices import build_month
 from .demo import build_demo
+from .matching import eligible, ready
+from .personas import build_personas
+from .tags import build_profile
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / "src" / "web"
@@ -28,6 +31,36 @@ def embed_scripts(html, scripts):
     return html
 
 
+def embed_page(html, template_id, page):
+    """Place a standalone page inside a template element so the report stays one file."""
+    marker = f'<template id="{template_id}"></template>'
+    if html.count(marker) != 1:
+        raise ValueError(f"Expected exactly one template: {template_id}")
+    return html.replace(marker, f'<template id="{template_id}">' + escape(page) + "</template>", 1)
+
+
+def script_constant(name, value):
+    # A product name must not be able to introduce an HTML script element.
+    payload = json.dumps(value, ensure_ascii=False, indent=2).replace("<", "\\u003c")
+    return f"'use strict';\nconst {name} = " + payload + ";\n"
+
+
+def build_matches(months, categories, is_demo):
+    """Profile the report and keep only the scores and words the match page shows."""
+    settings = json.loads((ROOT / "configs" / "tags.json").read_text(encoding="utf-8"))
+    brands = json.loads((ROOT / "configs" / "brands.json").read_text(encoding="utf-8"))
+    me = build_profile([row for month in months.values() for row in month["rows"]], categories, brands, settings)
+    people = [{"name": person["name"], "profile": build_profile(person["rows"], categories, brands, settings)}
+              for person in build_personas()]
+    names = [category["name"] for category in categories]
+    return {
+        "isDemo": is_demo, "population": len(people),
+        "settings": {key: settings[key] for key in ("weights", "thresholds", "top_matches", "category_min_items")},
+        "me": {"ready": ready(me), "item_count": me["item_count"], "areas": me["areas"], "tags": me["tags"]},
+        "candidates": eligible(me, people, names, settings) if ready(me) else [],
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Build a public demo, or an explicitly requested private report.")
     parser.add_argument("--private", action="store_true", help="Read data/private/report.json and write invoice-insights-private.html")
@@ -45,9 +78,7 @@ def main():
     else:
         months = build_demo(catalog)
     data = {"isDemo": not args.private, "categories": config["categories"], "months": months}
-    # A product name must not be able to introduce an HTML script element.
-    payload = json.dumps(data, ensure_ascii=False, indent=2).replace("<", "\\u003c")
-    data_script = "'use strict';\nconst expenseReportData = " + payload + ";\n"
+    data_script = script_constant("expenseReportData", data)
     scripts = {"report-data.js": data_script}
     for name in ("insights-ui.js", "monthly-comparison.js", "comparison-ui.js", "flow-navigation.js", "taste-profile.js", "taste-export.js", "taste-navigation.js"):
         scripts[name] = (WEB / name).read_text(encoding="utf-8")
@@ -59,10 +90,12 @@ def main():
     html = embed_scripts(template.replace(style_link, "<style>" + stylesheet + "</style>", 1), scripts)
     comparison = (WEB / "taste-comparison.html").read_text(encoding="utf-8")
     comparison = embed_scripts(comparison, {"taste-profile.js": scripts["taste-profile.js"]})
-    marker = '<template id="taste-page-source"></template>'
-    if html.count(marker) != 1:
-        raise ValueError("Expected exactly one embedded comparison template")
-    html = html.replace(marker, '<template id="taste-page-source">' + escape(comparison) + '</template>', 1)
+    html = embed_page(html, "taste-page-source", comparison)
+    matches = build_matches(months, config["categories"], not args.private)
+    match_page = embed_scripts((WEB / "match.html").read_text(encoding="utf-8"), {
+        "match-filter.js": (WEB / "match-filter.js").read_text(encoding="utf-8"),
+        "match-data.js": script_constant("matchReportData", matches)})
+    html = embed_page(html, "match-page-source", match_page)
     processed = ROOT / "data" / ("private" if args.private else "processed")
     processed.mkdir(parents=True, exist_ok=True)
     (processed / "report-data.js").write_text(data_script, encoding="utf-8")
@@ -70,6 +103,7 @@ def main():
     (ROOT / output).write_text(html, encoding="utf-8")
     for key, month in months.items():
         print(key, len(month["rows"]), "rows; total", sum(row["amount"] for row in month["rows"]))
+    print("match candidates:", len(matches["candidates"]), "of", matches["population"], "fictional people")
 
 
 if __name__ == "__main__":

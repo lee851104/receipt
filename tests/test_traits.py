@@ -128,6 +128,13 @@ class TraitTests(unittest.TestCase):
         rows = bought(base, (LONG_DAYS[:1], "測試海鮮套餐", 0, 600, "測試海港餐廳", AWAY))
         self.assertIsNone(trait(rows, "holiday"))
 
+    def test_no_home_city_means_no_trip_days(self):
+        # Six districts at a sixth each: none reaches the 20% that marks a home city, so nothing counts as away.
+        districts = ["高雄市苓雅區", "高雄市新興區", "高雄市前鎮區", "高雄市左營區", "臺北市信義區", "臺北市內湖區"]
+        rows = bought(*[(WORKDAYS[4 * index:4 * index + 4], "測試排骨便當", 0, 100, "測試便當店", district)
+                        for index, district in enumerate(districts)])
+        self.assertIsNone(trait(rows, "holiday"))
+
     def test_workday_only_shopping_leans_to_workdays(self):
         self.assertEqual(trait(bought(lunches(24)), "days"), -1)
 

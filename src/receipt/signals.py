@@ -164,7 +164,7 @@ def measure(rows, period, context):
              if invoice["portions"] and invoice["food"] > 0]
     located = [invoice for invoice in paid if invoice["district"]]
     home = home_cities(located)
-    away = [invoice for invoice in located if invoice["district"][:3] not in home]
+    away = [invoice for invoice in located if invoice["district"][:3] not in home] if home else []
     trips = {invoice["date"] for invoice in away} | {invoice["date"] for invoice in paid if invoice["channel"] == "住宿"}
     daily_spend = Counter()
     for item in daily:

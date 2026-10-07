@@ -1,0 +1,117 @@
+{
+  "min_items": 20,
+  "similarity": {"shrink": 0.25, "min_shared_two_sided": 5},
+  "traits": [
+    {"id": "spend", "name": "省錢 ↔ 享受", "ends": ["省錢", "享受"], "kind": "two_sided", "weight": 1,
+     "requires": {"food_items": 10},
+     "signals": [
+       {"id": "meal_cost", "weight": 0.5, "scale": [100, 200, 300]},
+       {"id": "clearance_share", "weight": 0.3, "toward": -1, "full": 0.3},
+       {"id": "premium_drink_share", "weight": 0.2, "toward": 1, "full": 0.5}
+     ]},
+    {"id": "meals", "name": "快速解決 ↔ 好好吃飯", "ends": ["快速解決", "好好吃飯"], "kind": "two_sided", "weight": 1,
+     "requires": {"meal_items": 8},
+     "signals": [
+       {"id": "store_meal_share", "weight": 0.4, "toward": -1, "full": 0.8},
+       {"id": "weekday_quick_share", "weight": 0.3, "toward": -1, "full": 0.6},
+       {"id": "shop_meal_share", "weight": 0.3, "toward": 1, "full": 0.8}
+     ]},
+    {"id": "motive", "name": "超商：省錢 ↔ 省時", "ends": ["為了省錢", "為了省時"], "kind": "two_sided", "weight": 1,
+     "requires": {"store_food_items": 8},
+     "signals": [
+       {"id": "store_clearance_share", "weight": 0.5, "toward": -1, "full": 0.4},
+       {"id": "weekday_quick_share", "weight": 0.5, "toward": 1, "full": 0.6}
+     ]},
+    {"id": "cooking", "name": "外食 ↔ 自己煮", "ends": ["外食", "自己煮"], "kind": "two_sided", "weight": 1,
+     "requires": {"food_items": 10},
+     "signals": [
+       {"id": "fresh_share", "weight": 0.5, "toward": 1, "full": 0.4},
+       {"id": "ready_meal_share", "weight": 0.3, "toward": -1, "full": 0.6},
+       {"id": "kitchen_per_month", "weight": 0.2, "toward": 1, "full": 2}
+     ]},
+    {"id": "sweet", "name": "清爽 ↔ 香甜", "ends": ["清爽", "香甜"], "kind": "two_sided", "weight": 1,
+     "requires": {"known_sugar_drinks": 3},
+     "signals": [
+       {"id": "sugar_mean", "weight": 0.8, "scale": [0, 0.3, 1]},
+       {"id": "dessert_share", "weight": 0.2, "toward": 1, "full": 0.3}
+     ]},
+    {"id": "routine", "name": "固定習慣 ↔ 喜歡嘗鮮", "ends": ["固定習慣", "喜歡嘗鮮"], "kind": "two_sided", "weight": 1,
+     "requires": {"items": 20},
+     "signals": [
+       {"id": "repeat_rate", "weight": 0.4, "scale": [0.7, 0.45, 0.2]},
+       {"id": "shop_focus", "weight": 0.3, "scale": [0.8, 0.55, 0.3]},
+       {"id": "new_shop_share", "weight": 0.3, "scale": [0.2, 0.4, 0.6]}
+     ]},
+    {"id": "sport", "name": "運動投入", "kind": "level", "weight": 1,
+     "signals": [
+       {"id": "sport_visits", "weight": 0.6, "toward": 1, "full": 8},
+       {"id": "sport_supplies", "weight": 0.25, "toward": 1, "full": 4},
+       {"id": "sport_gear", "weight": 0.15, "toward": 1, "full": 1}
+     ]},
+    {"id": "driving", "name": "自己開車騎車", "kind": "level", "weight": 1,
+     "signals": [
+       {"id": "fuel_visits", "weight": 0.6, "toward": 1, "full": 4},
+       {"id": "parking_visits", "weight": 0.25, "toward": 1, "full": 4},
+       {"id": "car_care", "weight": 0.15, "toward": 1, "full": 1}
+     ]},
+    {"id": "travel", "name": "待在生活圈 ↔ 常出遊", "ends": ["待在生活圈", "常出遊"], "kind": "two_sided", "weight": 1,
+     "requires": {"district_invoices": 10},
+     "signals": [
+       {"id": "away_share", "weight": 0.5, "scale": [0, 0.1, 0.3]},
+       {"id": "stays", "weight": 0.3, "toward": 1, "full": 1},
+       {"id": "long_trips", "weight": 0.2, "toward": 1, "full": 2}
+     ]},
+    {"id": "stock", "name": "囤貨 ↔ 少量即買", "ends": ["囤貨", "少量即買"], "kind": "two_sided", "weight": 1,
+     "requires": {"daily_items": 3},
+     "signals": [
+       {"id": "convenience_share", "weight": 0.5, "scale": [0, 0.5, 1]},
+       {"id": "bulk_share", "weight": 0.3, "toward": -1, "full": 0.5},
+       {"id": "small_daily_visits", "weight": 0.2, "toward": 1, "full": 4}
+     ]},
+    {"id": "lifestyle", "name": "生活質感小物", "kind": "level", "weight": 1,
+     "signals": [
+       {"id": "home_items", "weight": 0.4, "toward": 1, "full": 2},
+       {"id": "stationery_items", "weight": 0.3, "toward": 1, "full": 2},
+       {"id": "select_visits", "weight": 0.3, "toward": 1, "full": 2}
+     ]},
+    {"id": "tech", "name": "3C 投入", "kind": "level", "weight": 1,
+     "signals": [
+       {"id": "tech_items", "weight": 0.4, "toward": 1, "full": 3},
+       {"id": "tech_spend", "weight": 0.4, "toward": 1, "full": 3000},
+       {"id": "tech_visits", "weight": 0.2, "toward": 1, "full": 2}
+     ]},
+    {"id": "days", "name": "上班日型 ↔ 休假日型", "ends": ["上班日型", "休假日型"], "kind": "two_sided", "weight": 1,
+     "requires": {"invoices": 10},
+     "signals": [
+       {"id": "offday_invoice_share", "weight": 0.6, "scale": [0, "offday_share", "offday_double"]},
+       {"id": "offday_amount_share", "weight": 0.4, "scale": [0, "offday_share", "offday_double"]}
+     ]},
+    {"id": "holiday", "name": "避開連假 ↔ 連假出遊", "ends": ["避開連假", "連假出遊"], "kind": "two_sided", "weight": 1,
+     "requires": {"trip_days": 2, "long_holidays": 1},
+     "signals": [
+       {"id": "holiday_trip_share", "weight": 1, "scale": [0, "long_holiday_share", 1]}
+     ]},
+    {"id": "fun", "name": "娛樂體驗", "kind": "level", "weight": 1,
+     "signals": [
+       {"id": "fun_visits", "weight": 0.7, "toward": 1, "full": 4},
+       {"id": "fun_kinds", "weight": 0.3, "toward": 1, "full": 4}
+     ]},
+    {"id": "pets_cat", "name": "有養寵物（貓）", "group": "有養寵物", "kind": "level", "weight": 1,
+     "signals": [
+       {"id": "pet_food_cat", "weight": 0.6, "toward": 1, "full": 2},
+       {"id": "pet_supply_cat", "weight": 0.25, "toward": 1, "full": 1},
+       {"id": "pet_visits_cat", "weight": 0.15, "toward": 1, "full": 1}
+     ]},
+    {"id": "pets_dog", "name": "有養寵物（狗）", "group": "有養寵物", "kind": "level", "weight": 1,
+     "signals": [
+       {"id": "pet_food_dog", "weight": 0.6, "toward": 1, "full": 2},
+       {"id": "pet_supply_dog", "weight": 0.25, "toward": 1, "full": 1},
+       {"id": "pet_visits_dog", "weight": 0.15, "toward": 1, "full": 1}
+     ]},
+    {"id": "alcohol", "name": "小酌", "kind": "level", "weight": 1,
+     "signals": [
+       {"id": "alcohol_items", "weight": 0.7, "toward": 1, "full": 8},
+       {"id": "bar_visits", "weight": 0.3, "toward": 1, "full": 4}
+     ]}
+  ]
+}

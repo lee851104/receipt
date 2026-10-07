@@ -165,6 +165,11 @@ class TraitTests(unittest.TestCase):
         self.assertAlmostEqual(trait(rows, "pets_cat"), 0.075)
         self.assertAlmostEqual(trait(rows, "pets_dog"), 0.075)
 
+    def test_a_zero_quantity_line_does_not_break_the_vector(self):
+        rows = bought(lunches(), (WORKDAYS[20:22], "測試精品手沖", 1, 180, "測試咖啡館", HOME))
+        rows[-1]["quantity"] = 0
+        self.assertIsNotNone(build_vector(rows, PERIOD, CONTEXT))
+
 
 class TypicalTests(unittest.TestCase):
     def test_two_sided_traits_are_measured_from_the_average_and_levels_stay(self):

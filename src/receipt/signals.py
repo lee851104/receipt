@@ -183,7 +183,7 @@ def measure(rows, period, context):
     signals = {
         "meal_cost": median(costs) if len(costs) >= 3 else None,
         "clearance_share": share(count(food, lambda item: item["clearance"]), len(food)),
-        "premium_drink_share": share(count(drinks, lambda item: item["amount"] / item["quantity"] >= 100), len(drinks)),
+        "premium_drink_share": share(count(drinks, lambda item: item["amount"] / max(item["quantity"], 1) >= 100), len(drinks)),
         "store_meal_share": share(count(meals, lambda item: item["channel"] == "超商"), len(meals)),
         "weekday_quick_share": weekday_quick_share(meals, off),
         "store_clearance_share": share(count(store_food, lambda item: item["clearance"]), len(store_food)),

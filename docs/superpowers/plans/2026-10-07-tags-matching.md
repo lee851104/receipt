@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 每筆明細帶行政區；由明細產生消費標籤；和 40 位虛構用戶配對，在報告內的新頁面顯示前 5 名、配對理由與差異說明。
+**Goal:** 每筆明細帶行政區；由明細產生消費標籤；和 40 位虛構用戶比較，在報告內的新頁面讓使用者確認生活圈，顯示前 5 名、配對理由與差異說明。
 
-**Architecture:** Python 在產生報告時完成全部計算（`address.py` → `tags.py` → `matching.py`，虛構用戶來自 `personas.py`），`build.py` 把結果嵌入新的 `match.html`，再以 `<template>` 放進單一報告檔；`taste-navigation.js` 用 `#match` 切換到配對頁。
+**Architecture:** Python 在產生報告時完成分數計算（`address.py` → `tags.py` → `matching.py`，虛構用戶來自 `personas.py`），輸出品味 70% 以上的候選名單；`build.py` 把名單與 `match-filter.js` 嵌入新的 `match.html`，再以 `<template>` 放進單一報告檔。配對頁依使用者勾選的生活圈套用 80%／70% 門檻；`taste-navigation.js` 用 `#match` 切換頁面。
 
 **Tech Stack:** Python 3.10+ 標準函式庫（`unittest`）、原生 HTML/CSS/JavaScript、Node.js 22 `node:test`
 
@@ -18,13 +18,17 @@
 - 網頁只能嵌入 `district`（縣市＋區），不得嵌入完整地址或統編。
 - 報告維持單一 HTML 檔、沒有外部資源。
 - 配對頁的資料一律用 `textContent` 或 DOM 節點寫入，不用 `innerHTML`。
-- 權重：品類 0.35、生活圈 0.3、品牌 0.15、口味 0.1、消費檔次 0.1。門檻：品味 0.8；兩人生活圈有重疊時 0.7。
+- 權重：品類 0.35、常消費地區 0.3、品牌 0.15、葷素紀錄 0.1、消費檔次 0.1。門檻：品味 0.8；地區重疊且使用者確認時 0.7。品類需 10 筆有效品項。
 - 在 `feature/tags-matching` 分支工作，不要 push。只 `git add` 本任務列出的檔案（`docs/architecture.svg` 不屬於本計畫）。
 - Commit 訊息用英文，結尾一行 `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`。
 - 指令都在專案根目錄 `D:\receipt` 用 Git Bash 執行：
   - Python 測試：`python -m unittest discover -s tests -v`
-  - Node 測試：`node --test tests/monthly-comparison.test.cjs tests/comparison-interface.test.cjs tests/taste-profile.test.cjs`
+  - Node 測試：`node --test tests/*.test.cjs`
 - Node 測試讀取根目錄已產生的 `invoice-insights.html`；改到 `src/web/*` 或會影響輸出的 `src/receipt/*` 後，要執行 `python scripts/build_report.py` 重新產生，並把它一起 commit。
+
+## 校準結果（原型，供參考）
+
+下列參數已用原型驗證：同類型 160 組全部通過；不同類型 1,400 組中，確認生活圈後通過 44 組（手搖學生與健身族、自己下廚與家庭採買）；示範的「我」有 5 位手搖學生在 80% 以上，另有 5 位健身族在 71%–75% 且常在高雄市苓雅區消費；同區的 3C 玩家只有 36%–38%。
 
 ## 檔案結構
 
@@ -34,17 +38,17 @@
 | `src/receipt/invoices.py` | 修改 | 明細加 `district` |
 | `src/receipt/demo.py` | 修改 | 示範店家指定行政區 |
 | `src/receipt/tags.py` | 新增 | 明細 → 個人檔案與標籤 |
-| `src/receipt/matching.py` | 新增 | 相似度、門檻、排序、理由、差異 |
+| `src/receipt/matching.py` | 新增 | 相似度、可比較條件、候選名單、理由、差異 |
 | `src/receipt/personas.py` | 新增 | 40 位虛構用戶 |
-| `src/receipt/build.py` | 修改 | 計算配對並嵌入配對頁 |
-| `configs/tags.json` | 新增 | 標籤門檻、口味詞典、權重、門檻 |
-| `configs/brands.json` | 新增 | 連鎖品牌關鍵字 |
+| `src/receipt/build.py` | 修改 | 計算候選名單並嵌入配對頁 |
+| `configs/tags.json`、`configs/brands.json` | 新增 | 門檻、詞典、非實體賣方、權重；品牌關鍵字 |
+| `src/web/match-filter.js` | 新增 | 依確認的生活圈套用推薦門檻 |
 | `src/web/match.html` | 新增 | 配對頁 |
 | `src/web/invoice-insights.html` | 修改 | 行政區欄、「找到同好」連結、配對頁容器 |
 | `src/web/insights-ui.js` | 修改 | 行政區欄、頁尾說明 |
 | `src/web/taste-navigation.js` | 修改 | 切換朋友比較頁與配對頁 |
 | `src/web/styles.css` | 修改 | 配對頁容器樣式 |
-| `tests/test_address.py`、`tests/test_tags.py`、`tests/test_matching.py`、`tests/test_personas.py` | 新增 | 單元測試 |
+| `tests/test_address.py`、`tests/test_tags.py`、`tests/test_matching.py`、`tests/test_personas.py`、`tests/match-filter.test.cjs` | 新增 | 單元測試 |
 | `tests/test_report_data.py`、`tests/test_build_report.py`、`tests/comparison-interface.test.cjs` | 修改 | 既有測試補上新行為 |
 | `invoice-insights.html` | 重新產生 | 公開示範版 |
 
@@ -234,7 +238,7 @@ EOF
 Run: `python -m unittest discover -s tests -v`
 Expected: FAIL — `test_footer_discount_free_item_and_private_id`（鍵集合不符）、`test_district_replaces_full_address_and_tax_id`（`KeyError: 'district'`）、`test_default_build...`（找不到 `"district"`）
 
-Run: `node --test tests/monthly-comparison.test.cjs tests/comparison-interface.test.cjs tests/taste-profile.test.cjs`
+Run: `node --test tests/*.test.cjs`
 Expected: FAIL — `standalone HTML loads both months without external scripts`
 
 - [ ] **Step 3: Implement**
@@ -293,7 +297,7 @@ Expected: 印出 `2026-03 50 rows; total 7910` 與 `2026-04 53 rows; total 8095`
 Run: `python -m unittest discover -s tests -v`
 Expected: 全部 OK
 
-Run: `node --test tests/monthly-comparison.test.cjs tests/comparison-interface.test.cjs tests/taste-profile.test.cjs`
+Run: `node --test tests/*.test.cjs`
 Expected: `# pass 15`、`# fail 0`
 
 - [ ] **Step 6: Commit**
@@ -316,23 +320,21 @@ EOF
 - Test: `tests/test_tags.py`
 
 **Interfaces:**
-- Consumes: Task 1 的 `normalize_place`；報告明細格式（含 `district`）
+- Consumes: Task 1 的 `normalize_place`；報告明細格式（含 `district`、`quantity`）
 - Produces:
-  - `percent(value: float) -> int`：四捨五入（0.5 進位）的百分比整數，顯示與門檻共用
-  - `brand_of(merchant: str, brands: list[dict]) -> str | None`
-  - `flavor_of(name: str, flavor: dict) -> int | None`：葷 1、素 0、看不出 None
-  - `flavor_label(ratio: float | None, flavor: dict) -> str | None`：`"偏蔬食"`、`"偏葷食"`、`"葷素都吃"` 或 None
+  - `percent(value: float) -> int`：0.5 進位的整數百分比，顯示與門檻共用
+  - `brand_of(merchant, brands) -> str | None`、`is_remote(merchant, keywords) -> bool`
+  - `flavor_of(name, flavor) -> int | None`：素 0、葷 1、未知 None
+  - `flavor_label(ratio, flavor) -> str | None`：`"素食品項較多"`、`"葷食品項較多"`、`"葷素品項都有"` 或 None
   - `build_profile(rows, categories, brands, settings) -> dict`，鍵：
-    - `category_counts: list[int]`（長度 10）
+    - `item_count: int`（同張同品名去重後的有效品項數）
+    - `category_counts: list[int] | None`（長度 10；不足 `category_min_items` 時為 None）
     - `top_categories: list[int]`
-    - `district_shares: dict[str, float]`
-    - `areas: list[str]`（生活圈標籤）
-    - `brand_shares: dict[str, float]`
-    - `frequent_brands: list[tuple[str, int]]`
-    - `price_level: int | None`
-    - `meat_ratio: float | None`
+    - `district_shares: dict[str, float]`、`areas: list[str]`（常消費地區）
+    - `brand_shares: dict[str, float]`、`frequent_brands: list[tuple[str, int]]`
+    - `price_level: int | None`、`meat_ratio: float | None`
     - `flavor_items: dict[str, dict[str, int]]`（品牌 → 品名 → 次數）
-    - `tags: list[{"dimension": str, "text": str}]`
+    - `tags: list[{"dimension": str, "text": str}]`，dimension 為 品類偏好、常消費地區、常去品牌、消費檔次、葷素紀錄
 
 - [ ] **Step 1: Create the configuration files**
 
@@ -341,6 +343,7 @@ EOF
 ```json
 {
   "min_records": 3,
+  "category_min_items": 10,
   "category_top": 2,
   "district_top": 2,
   "district_min_invoices": 2,
@@ -350,10 +353,11 @@ EOF
     {"label": "均衡型", "below": 400},
     {"label": "享受型"}
   ],
+  "remote_sellers": ["富邦媒體", "網路家庭", "蝦皮", "酷澎", "博客來", "富胖達", "優食", "中華電信", "台灣大哥大", "遠傳電信", "台灣電力", "台灣自來水"],
   "flavor": {
     "categories": ["正餐", "飲品", "零食甜點", "生鮮食材"],
+    "vegetarian": ["素食", "全素", "蛋奶素", "奶蛋素", "五辛素", "植物肉", "蔬食", "素肉", "素料", "素雞", "素鴨", "素火腿", "素香腸"],
     "meat": ["豬肉", "牛肉", "雞肉", "雞腿", "雞排", "雞塊", "雞柳", "羊肉", "鴨肉", "鵝肉", "鮮蝦", "蝦仁", "鮭魚", "鯛魚", "鮪魚", "鱈魚", "魚排", "海鮮", "排骨", "培根", "火腿", "肉燥", "肉絲", "肉片", "肉鬆", "香腸", "叉燒", "燒肉", "滷肉", "魯肉", "牛排", "豬排"],
-    "vegetarian": ["素食", "蔬食", "全素", "蛋奶素", "蔬菜", "素餃", "素料", "素肉"],
     "min_items": 3,
     "vegetarian_at_most": 0.3,
     "meat_at_least": 0.7,
@@ -423,9 +427,10 @@ BRANDS = json.loads((ROOT / "configs" / "brands.json").read_text(encoding="utf-8
 SETTINGS = json.loads((ROOT / "configs" / "tags.json").read_text(encoding="utf-8"))
 
 
-def row(invoice, category=0, amount=100, name="測試品項", merchant="測試小店", district="高雄市苓雅區", provisional=False):
+def row(invoice, category=0, amount=100, name="測試品項", merchant="測試小店", district="高雄市苓雅區",
+        provisional=False, quantity=1):
     return {"day": 1, "invoice": invoice, "merchant": merchant, "district": district, "name": name,
-            "quantity": 1, "amount": amount, "category": category, "provisional": provisional}
+            "quantity": quantity, "amount": amount, "category": category, "provisional": provisional}
 
 
 def profile_of(rows):
@@ -440,7 +445,10 @@ class TagTests(unittest.TestCase):
     def test_shipped_settings_match_the_spec(self):
         self.assertAlmostEqual(sum(SETTINGS["weights"].values()), 1)
         self.assertEqual(SETTINGS["thresholds"], {"taste": 0.8, "taste_same_area": 0.7})
+        self.assertEqual(SETTINGS["category_min_items"], 10)
         self.assertEqual([level["label"] for level in SETTINGS["price_levels"]], ["小資型", "均衡型", "享受型"])
+        self.assertNotIn("蔬菜", SETTINGS["flavor"]["vegetarian"])
+        self.assertTrue(SETTINGS["remote_sellers"])
         self.assertTrue(all(entry["brand"] and entry["keywords"] for entry in BRANDS))
 
     def test_percent_rounds_half_up(self):
@@ -453,29 +461,52 @@ class TagTests(unittest.TestCase):
         self.assertEqual(brand_of("統一超商股份有限公司高雄示範分公司", BRANDS), "7-ELEVEN")
         self.assertIsNone(brand_of("示範巷口麵店", BRANDS))
 
-    def test_flavor_words_avoid_single_character_traps(self):
+    def test_flavor_words_prefer_explicit_vegetarian_markers(self):
         flavor = SETTINGS["flavor"]
+        self.assertEqual(flavor_of("示範全素香腸", flavor), 0)
+        self.assertEqual(flavor_of("示範素食雞排", flavor), 0)
+        self.assertEqual(flavor_of("示範蔬食餐盒", flavor), 0)
+        self.assertEqual(flavor_of("示範蔬菜豬肉水餃", flavor), 1)
+        self.assertEqual(flavor_of("示範鮮蝦水餃", flavor), 1)
+        self.assertIsNone(flavor_of("示範蔬菜水餃", flavor))
         self.assertIsNone(flavor_of("示範牛奶", flavor))
         self.assertIsNone(flavor_of("示範肉桂捲", flavor))
-        self.assertEqual(flavor_of("示範蔬菜水餃", flavor), 0)
-        self.assertEqual(flavor_of("示範鮮蝦水餃", flavor), 1)
-        self.assertEqual(flavor_of("示範蔬菜豬肉水餃", flavor), 1)
-        self.assertEqual(flavor_of("示範素肉便當", flavor), 0)
 
     def test_category_tags_count_confirmed_paid_items(self):
-        profile = profile_of([row("A", 1), row("B", 1), row("C", 1), row("D", 0), row("E", 2, amount=-10),
-                              row("F", 2, amount=0), row("G", 3, provisional=True), row("H", 10, provisional=True)])
-        self.assertEqual(profile["category_counts"][:4], [1, 3, 0, 0])
-        self.assertEqual(texts(profile, "品類偏好"), ["常買飲品（75%）", "常買正餐（25%）"])
+        rows = [row(f"D{i}", 1) for i in range(7)] + [row(f"M{i}", 0) for i in range(3)]
+        rows += [row("E", 2, amount=-10), row("F", 2, amount=0), row("G", 3, provisional=True), row("H", 10, provisional=True)]
+        profile = profile_of(rows)
+        self.assertEqual(profile["item_count"], 10)
+        self.assertEqual(profile["category_counts"][:4], [3, 7, 0, 0])
+        self.assertEqual(texts(profile, "品類偏好"), ["常買飲品（70%）", "常買正餐（30%）"])
+
+    def test_category_needs_ten_items(self):
+        few = profile_of([row(f"D{i}", 1) for i in range(9)])
+        self.assertEqual(few["item_count"], 9)
+        self.assertIsNone(few["category_counts"])
+        self.assertEqual(texts(few, "品類偏好"), [])
+
+    def test_one_portion_per_item_and_invoice(self):
+        rows = [row("A", 1, name="示範紅茶"), row("A", 1, name="示範紅茶"), row("B", 1, name="示範紅茶", quantity=4)]
+        rows += [row(f"M{i}", 0, name="示範便當") for i in range(8)]
+        profile = profile_of(rows)
+        self.assertEqual(profile["item_count"], 10)
+        self.assertEqual(profile["category_counts"][:2], [8, 2])
 
     def test_area_tags_need_enough_invoices_and_two_per_district(self):
         profile = profile_of([row("A"), row("B"), row("C", district="高雄市新興區"), row("D", district="高雄市新興區"),
                               row("E", district="臺北市信義區"), row("F", district=None)])
-        self.assertEqual(texts(profile, "生活圈"), ["高雄市新興區", "高雄市苓雅區"])
+        self.assertEqual(texts(profile, "常消費地區"), ["高雄市新興區", "高雄市苓雅區"])
         self.assertAlmostEqual(profile["district_shares"]["高雄市苓雅區"], 0.4)
         few = profile_of([row("A"), row("B")])
         self.assertEqual(few["district_shares"], {})
-        self.assertEqual(texts(few, "生活圈"), [])
+        self.assertEqual(texts(few, "常消費地區"), [])
+
+    def test_remote_sellers_do_not_count_as_places(self):
+        online = [row(f"O{i}", merchant="富邦媒體科技股份有限公司", district="臺北市內湖區") for i in range(3)]
+        profile = profile_of(online + [row(f"L{i}") for i in range(3)])
+        self.assertEqual(profile["district_shares"], {"高雄市苓雅區": 1.0})
+        self.assertEqual(texts(profile, "常消費地區"), ["高雄市苓雅區"])
 
     def test_frequent_brands_need_three_invoices(self):
         profile = profile_of([row(f"S{i}", merchant="統一超商股份有限公司示範門市") for i in range(3)]
@@ -483,7 +514,7 @@ class TagTests(unittest.TestCase):
         self.assertEqual(texts(profile, "常去品牌"), ["7-ELEVEN（3 次）"])
         self.assertAlmostEqual(profile["brand_shares"]["示範咖啡"], 0.4)
 
-    def test_price_level_uses_median_invoice_total(self):
+    def test_price_level_uses_median_personal_invoice(self):
         cheap, middle = SETTINGS["price_levels"][0]["below"], SETTINGS["price_levels"][1]["below"]
 
         def level(totals):
@@ -493,15 +524,27 @@ class TagTests(unittest.TestCase):
         self.assertEqual(level([cheap, cheap, middle + 1]), ["均衡型"])
         self.assertEqual(level([middle, middle, 1]), ["享受型"])
         self.assertEqual(level([middle, middle]), [])
-        discounted = profile_of([row("D", amount=cheap + 10), row("D", amount=-20), row("E", amount=cheap - 10), row("F", amount=cheap - 10)])
+        discounted = profile_of([row("D", amount=cheap + 10), row("D", amount=-20, name="測試折扣"),
+                                 row("E", amount=cheap - 10), row("F", amount=cheap - 10)])
         self.assertEqual(texts(discounted, "消費檔次"), ["小資型"])
 
-    def test_flavor_tag_needs_three_flavored_food_items(self):
-        rows = [row("A", name="示範蔬菜水餃"), row("B", name="示範蔬菜水餃"), row("C", name="示範鮮蝦水餃", merchant="示範水餃館")]
+    def test_shared_bills_stay_out_of_price_level(self):
+        cheap = SETTINGS["price_levels"][0]["below"]
+        personal = [row(f"P{i}", amount=cheap - 10) for i in range(3)]
+        portions = [row(f"S{i}", amount=1600, quantity=4) for i in range(3)]
+        repeated = [row(f"R{i}", amount=800, name="示範火鍋") for i in range(3) for _ in range(2)]
+        self.assertEqual(texts(profile_of(portions + personal), "消費檔次"), ["小資型"])
+        self.assertEqual(texts(profile_of(repeated + personal), "消費檔次"), ["小資型"])
+        self.assertEqual(texts(profile_of(portions + personal[:2]), "消費檔次"), [])
+
+    def test_flavor_tag_describes_purchases(self):
+        rows = [row("A", name="示範全素水餃"), row("B", name="示範全素水餃"), row("C", name="示範鮮蝦水餃", merchant="示範水餃館")]
         profile = profile_of(rows)
-        self.assertEqual(texts(profile, "口味"), ["葷素都吃"])
+        self.assertEqual(texts(profile, "葷素紀錄"), ["葷素品項都有"])
         self.assertEqual(profile["flavor_items"], {"示範水餃館": {"示範鮮蝦水餃": 1}})
-        self.assertEqual(texts(profile_of(rows[:2]), "口味"), [])
+        self.assertEqual(texts(profile_of(rows[:2]), "葷素紀錄"), [])
+        self.assertEqual(texts(profile_of([row(f"V{i}", name="示範素食便當") for i in range(3)]), "葷素紀錄"), ["素食品項較多"])
+        self.assertIsNone(profile_of([row(f"V{i}", name="示範蔬菜水餃") for i in range(3)])["meat_ratio"])
         self.assertIsNone(profile_of([row(f"G{i}", category=4, name="示範雞肉造型背包") for i in range(3)])["meat_ratio"])
 
 
@@ -519,7 +562,7 @@ Expected: FAIL，`ModuleNotFoundError: No module named 'src.receipt.tags'`
 建立 `src/receipt/tags.py`：
 
 ```python
-"""Summarize purchases into comparable dimensions and short readable tags."""
+"""Summarize purchases into comparable dimensions and short tags that describe the records."""
 from collections import Counter
 from statistics import median
 
@@ -533,21 +576,27 @@ def percent(value):
     return int(value * 100 + 0.5)
 
 
+def mentions(merchant, keywords):
+    name = normalize_place(merchant or "")
+    return any(normalize_place(keyword) in name for keyword in keywords)
+
+
 def brand_of(merchant, brands):
     """Return the chain brand whose keyword appears in the seller name, if any."""
-    name = normalize_place(merchant or "")
-    for entry in brands:
-        if any(normalize_place(keyword) in name for keyword in entry["keywords"]):
-            return entry["brand"]
-    return None
+    return next((entry["brand"] for entry in brands if mentions(merchant, entry["keywords"])), None)
+
+
+def is_remote(merchant, keywords):
+    """Online, delivery and utility sellers print a company address, not where the buyer was."""
+    return mentions(merchant, keywords)
 
 
 def flavor_of(name, flavor):
-    """1 for meat or seafood, 0 for vegetarian, None when the name gives no hint."""
-    if any(word in name for word in flavor["meat"]):
-        return 1
+    """0 when the name says vegetarian, 1 for meat or seafood, None otherwise (plain 蔬菜 proves nothing)."""
     if any(word in name for word in flavor["vegetarian"]):
         return 0
+    if any(word in name for word in flavor["meat"]):
+        return 1
     return None
 
 
@@ -555,10 +604,10 @@ def flavor_label(ratio, flavor):
     if ratio is None:
         return None
     if ratio <= flavor["vegetarian_at_most"]:
-        return "偏蔬食"
+        return "素食品項較多"
     if ratio >= flavor["meat_at_least"]:
-        return "偏葷食"
-    return "葷素都吃"
+        return "葷食品項較多"
+    return "葷素品項都有"
 
 
 def level_of(amount, levels):
@@ -580,17 +629,29 @@ def shares(counter):
 def build_profile(rows, categories, brands, settings):
     names = [category["name"] for category in categories]
     flavor, minimum = settings["flavor"], settings["min_records"]
-    valid = [row for row in rows
-             if row["amount"] > 0 and not row["provisional"] and row["category"] < CONFIRMED]
+    # One portion per item and invoice: four hotpots on one bill count once.
+    seen, valid = set(), []
+    for row in rows:
+        key = (row["invoice"], row["name"])
+        if row["amount"] > 0 and not row["provisional"] and row["category"] < CONFIRMED and key not in seen:
+            seen.add(key)
+            valid.append(row)
     counts = [0] * CONFIRMED
     for row in valid:
         counts[row["category"]] += 1
+    enough_items = len(valid) >= settings["category_min_items"]
     invoices = {}
     for row in rows:
         invoice = invoices.setdefault(row["invoice"], {
-            "total": 0, "district": row.get("district"), "brand": brand_of(row["merchant"], brands)})
+            "total": 0, "shared": False, "names": set(), "brand": brand_of(row["merchant"], brands),
+            "district": None if is_remote(row["merchant"], settings["remote_sellers"]) else row.get("district")})
         invoice["total"] += row["amount"]
+        if row["amount"] > 0:
+            # Several portions of one item suggest the bill also covered other people.
+            invoice["shared"] |= row["quantity"] >= 2 or row["name"] in invoice["names"]
+            invoice["names"].add(row["name"])
     paid = [invoice for invoice in invoices.values() if invoice["total"] > 0]
+    personal = [invoice for invoice in paid if not invoice["shared"]]
     districts = Counter(invoice["district"] for invoice in paid if invoice["district"])
     chains = Counter(invoice["brand"] for invoice in paid if invoice["brand"])
     flavored, flavor_items = [], {}
@@ -607,15 +668,17 @@ def build_profile(rows, categories, brands, settings):
             items[row["name"]] = items.get(row["name"], 0) + 1
     known_area = sum(districts.values()) >= minimum
     profile = {
-        "category_counts": counts,
-        "top_categories": [index for index, count in ranked(dict(enumerate(counts))) if count][:settings["category_top"]],
+        "item_count": len(valid),
+        "category_counts": counts if enough_items else None,
+        "top_categories": [index for index, count in ranked(dict(enumerate(counts))) if count][:settings["category_top"]]
+        if enough_items else [],
         "district_shares": shares(districts) if known_area else {},
         "areas": [district for district, count in ranked(districts)
                   if count >= settings["district_min_invoices"]][:settings["district_top"]] if known_area else [],
         "brand_shares": shares(chains) if sum(chains.values()) >= minimum else {},
         "frequent_brands": [(brand, count) for brand, count in ranked(chains) if count >= settings["brand_min_invoices"]],
-        "price_level": level_of(median(invoice["total"] for invoice in paid), settings["price_levels"])
-        if len(paid) >= minimum else None,
+        "price_level": level_of(median(invoice["total"] for invoice in personal), settings["price_levels"])
+        if len(personal) >= minimum else None,
         "meat_ratio": sum(flavored) / len(flavored) if len(flavored) >= flavor["min_items"] else None,
         "flavor_items": flavor_items,
     }
@@ -624,31 +687,32 @@ def build_profile(rows, categories, brands, settings):
 
 
 def describe(profile, names, settings):
-    counts = profile["category_counts"]
-    total = sum(counts)
-    tags = [{"dimension": "品類偏好", "text": f"常買{names[index]}（{percent(counts[index] / total)}%）"}
-            for index in profile["top_categories"]]
-    tags += [{"dimension": "生活圈", "text": area} for area in profile["areas"]]
+    counts, tags = profile["category_counts"], []
+    if counts:
+        total = sum(counts)
+        tags += [{"dimension": "品類偏好", "text": f"常買{names[index]}（{percent(counts[index] / total)}%）"}
+                 for index in profile["top_categories"]]
+    tags += [{"dimension": "常消費地區", "text": area} for area in profile["areas"]]
     tags += [{"dimension": "常去品牌", "text": f"{brand}（{count} 次）"} for brand, count in profile["frequent_brands"]]
     if profile["price_level"] is not None:
         tags.append({"dimension": "消費檔次", "text": settings["price_levels"][profile["price_level"]]["label"]})
     label = flavor_label(profile["meat_ratio"], settings["flavor"])
     if label:
-        tags.append({"dimension": "口味", "text": label})
+        tags.append({"dimension": "葷素紀錄", "text": label})
     return tags
 ```
 
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `python -m unittest tests.test_tags -v`
-Expected: 9 tests OK
+Expected: 13 tests OK
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add configs/tags.json configs/brands.json src/receipt/tags.py tests/test_tags.py
 git commit -F - <<'EOF'
-feat: build purchase profiles and readable tags
+feat: build purchase profiles and tags that describe the records
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -656,42 +720,45 @@ EOF
 
 ---
 
-### Task 4: 配對分數、門檻與說明
+### Task 4: 配對分數、可比較條件與候選名單
 
 **Files:**
 - Create: `src/receipt/matching.py`
 - Test: `tests/test_matching.py`
 
 **Interfaces:**
-- Consumes: Task 3 的 `percent`、`flavor_of`、`flavor_label`；`build_profile` 的回傳格式
+- Consumes: Task 3 的 `percent`、`flavor_of`、`flavor_label`、`build_profile` 與其回傳格式
 - Produces:
   - `overlap(a: dict, b: dict) -> float | None`
   - `weighted(parts: dict, weights: dict, names) -> float | None`
-  - `passes(taste: float | None, same_area: bool, thresholds: dict) -> bool`
-  - `compare(me, other, settings) -> {"parts": dict, "taste": float | None, "total": float | None, "same_area": bool, "recommended": bool}`
+  - `ready(profile) -> bool`：品類可比較，且品牌、葷素紀錄、消費檔次至少有一項
+  - `compare(me, other, settings) -> {"parts": dict, "comparable": bool, "taste": float | None, "total": float | None}`
   - `reasons(me, other, parts, names, settings) -> list[str]`
   - `differences(me, other, settings) -> list[str]`
-  - `rank(me, candidates: list[{"name": str, "profile": dict}], names, settings) -> list[{"name", "total", "taste", "tags", "reasons", "differences"}]`，`total` 與 `taste` 為百分比整數
+  - `eligible(me, candidates: list[{"name": str, "profile": dict}], names, settings) -> list[{"name", "total", "taste", "areas", "tags", "basis", "reasons", "differences"}]`，`total` 與 `taste` 為整數百分比；只含可比較且品味至少 `taste_same_area` 的人，依總分排序
 
 - [ ] **Step 1: Write the failing test**
 
 建立 `tests/test_matching.py`：
 
 ```python
-"""Similarity, thresholds and explanations on hand-made profiles."""
+"""Similarity, comparability and explanations on hand-made profiles."""
 import json
 import unittest
 from pathlib import Path
 
-from src.receipt.matching import compare, differences, overlap, passes, rank, reasons, weighted
+from src.receipt.matching import compare, differences, eligible, overlap, ready, reasons, weighted
+from src.receipt.tags import build_profile
 
 ROOT = Path(__file__).resolve().parents[1]
+CATEGORIES = json.loads((ROOT / "configs" / "report.json").read_text(encoding="utf-8"))["categories"]
+BRANDS = json.loads((ROOT / "configs" / "brands.json").read_text(encoding="utf-8"))
 SETTINGS = json.loads((ROOT / "configs" / "tags.json").read_text(encoding="utf-8"))
-NAMES = [category["name"] for category in json.loads((ROOT / "configs" / "report.json").read_text(encoding="utf-8"))["categories"]]
+NAMES = [category["name"] for category in CATEGORIES]
 
 
 def profile(**changes):
-    base = {"category_counts": [5, 5, 0, 0, 0, 0, 0, 0, 0, 0], "top_categories": [0, 1],
+    base = {"item_count": 10, "category_counts": [5, 5, 0, 0, 0, 0, 0, 0, 0, 0], "top_categories": [0, 1],
             "district_shares": {"高雄市苓雅區": 1.0}, "areas": ["高雄市苓雅區"],
             "brand_shares": {"示範茶屋": 1.0}, "frequent_brands": [("示範茶屋", 5)],
             "price_level": 0, "meat_ratio": 0.0, "flavor_items": {}, "tags": []}
@@ -708,10 +775,9 @@ def neighbour():
 class MatchingTests(unittest.TestCase):
     def test_identical_profiles_score_full_marks(self):
         result = compare(profile(), profile(), SETTINGS)
+        self.assertTrue(result["comparable"])
         self.assertAlmostEqual(result["taste"], 1)
         self.assertAlmostEqual(result["total"], 1)
-        self.assertTrue(result["same_area"])
-        self.assertTrue(result["recommended"])
 
     def test_overlap_is_histogram_intersection(self):
         self.assertAlmostEqual(overlap({"A": 0.6, "B": 0.4}, {"A": 0.3, "C": 0.7}), 0.3)
@@ -731,32 +797,27 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(result["parts"]["price"], 0.5)
         self.assertIsNone(result["parts"]["flavor"])
 
-    def test_thresholds_compare_whole_percentages(self):
-        bars = SETTINGS["thresholds"]
-        self.assertFalse(passes(0.79, False, bars))
-        self.assertTrue(passes(0.80, False, bars))
-        self.assertFalse(passes(0.69, True, bars))
-        self.assertTrue(passes(0.70, True, bars))
-        self.assertTrue(passes(0.7951, False, bars))  # shown as 80%
-        self.assertFalse(passes(None, True, bars))
+    def test_category_is_required(self):
+        result = compare(profile(category_counts=None, top_categories=[]), profile(), SETTINGS)
+        self.assertFalse(result["comparable"])
+        self.assertIsNone(result["taste"])
+        self.assertIsNone(result["total"])
 
-    def test_same_area_alone_is_not_enough(self):
-        result = compare(profile(), neighbour(), SETTINGS)
-        self.assertTrue(result["same_area"])
-        self.assertFalse(result["recommended"])
+    def test_one_more_taste_dimension_is_required(self):
+        bare = profile(brand_shares={}, frequent_brands=[], meat_ratio=None, price_level=None)
+        self.assertFalse(compare(bare, profile(), SETTINGS)["comparable"])
+        self.assertFalse(ready(bare))
+        self.assertTrue(ready(dict(bare, price_level=1)))
+        self.assertFalse(ready(profile(category_counts=None)))
 
-    def test_shared_area_lowers_the_bar(self):
-        weights = SETTINGS["weights"]
-        expected = (weights["category"] + 0.5 * weights["flavor"] + weights["price"]) / (
-            weights["category"] + weights["brand"] + weights["flavor"] + weights["price"])
-        self.assertTrue(0.7 <= expected < 0.8)
-        other = profile(brand_shares={"示範超商": 1.0}, frequent_brands=[("示範超商", 5)], meat_ratio=0.5)
-        near = compare(profile(), other, SETTINGS)
-        self.assertAlmostEqual(near["taste"], expected)
-        self.assertTrue(near["recommended"])
-        far = compare(profile(), dict(other, district_shares={"臺北市信義區": 1.0}, areas=["臺北市信義區"]), SETTINGS)
-        self.assertFalse(far["same_area"])
-        self.assertFalse(far["recommended"])
+    def test_three_uncategorized_invoices_cannot_be_compared(self):
+        rows = [{"day": 1, "invoice": f"U{i}", "merchant": "測試小店", "district": "高雄市苓雅區", "name": "測試未分類",
+                 "quantity": 1, "amount": 120, "category": 10, "provisional": True} for i in range(3)]
+        sparse = build_profile(rows, CATEGORIES, BRANDS, SETTINGS)
+        result = compare(sparse, sparse, SETTINGS)
+        self.assertFalse(result["comparable"])
+        self.assertIsNone(result["taste"])
+        self.assertFalse(ready(sparse))
 
     def test_reasons_follow_contribution(self):
         me, other = profile(price_level=1), profile(price_level=1)
@@ -767,27 +828,30 @@ class MatchingTests(unittest.TestCase):
         me = profile(top_categories=[0], frequent_brands=[])
         other = profile(top_categories=[1], district_shares={"臺北市信義區": 1.0}, areas=["臺北市信義區"], frequent_brands=[])
         parts = compare(me, other, SETTINGS)["parts"]
-        self.assertEqual(reasons(me, other, parts, NAMES, SETTINGS), ["口味都偏蔬食", "消費檔次都是小資型"])
+        self.assertEqual(reasons(me, other, parts, NAMES, SETTINGS), ["都買比較多素食品項", "消費檔次都是小資型"])
         stranger = profile(top_categories=[9], areas=[], district_shares={}, frequent_brands=[], meat_ratio=None, price_level=2)
         parts = compare(profile(), stranger, SETTINGS)["parts"]
         self.assertEqual(reasons(profile(), stranger, parts, NAMES, SETTINGS), ["整體消費比例相近"])
 
     def test_differences_name_the_shared_store(self):
-        veg = profile(meat_ratio=0.0, frequent_brands=[("示範水餃館", 4)], flavor_items={"示範水餃館": {"示範蔬菜水餃": 4}})
+        veg = profile(meat_ratio=0.0, frequent_brands=[("示範水餃館", 4)], flavor_items={"示範水餃館": {"示範全素水餃": 4}})
         meat = profile(meat_ratio=1.0, frequent_brands=[("示範水餃館", 4)],
-                       flavor_items={"示範水餃館": {"示範鮮蝦水餃": 3, "示範蔬菜水餃": 1}})
-        self.assertEqual(differences(veg, meat, SETTINGS), ["都常去示範水餃館，但點的不一樣（示範蔬菜水餃／示範鮮蝦水餃）"])
-        self.assertEqual(differences(veg, profile(meat_ratio=1.0), SETTINGS), ["口味不同：一位偏蔬食、一位偏葷食"])
+                       flavor_items={"示範水餃館": {"示範鮮蝦水餃": 3, "示範全素水餃": 1}})
+        self.assertEqual(differences(veg, meat, SETTINGS), ["都常去示範水餃館，但點的不一樣（示範全素水餃／示範鮮蝦水餃）"])
+        self.assertEqual(differences(veg, profile(meat_ratio=1.0), SETTINGS), ["購買紀錄不同：一位素食品項較多、一位葷食品項較多"])
         self.assertEqual(differences(veg, profile(meat_ratio=0.5), SETTINGS), [])
         self.assertEqual(differences(veg, profile(meat_ratio=None), SETTINGS), [])
 
-    def test_rank_filters_sorts_and_limits(self):
-        candidates = [{"name": f"示範用戶 {i}", "profile": profile(price_level=i % 3)} for i in range(7)]
-        candidates.append({"name": "示範鄰居", "profile": neighbour()})
-        result = rank(profile(), candidates, NAMES, SETTINGS)
-        self.assertEqual([match["name"] for match in result], ["示範用戶 0", "示範用戶 3", "示範用戶 6", "示範用戶 1", "示範用戶 4"])
-        self.assertEqual([match["total"] for match in result], [100, 100, 100, 95, 95])
-        self.assertEqual(set(result[0]), {"name", "total", "taste", "tags", "reasons", "differences"})
+    def test_eligible_keeps_the_area_band_and_sorts(self):
+        candidates = [{"name": f"示範用戶 {i}", "profile": profile(price_level=i % 3)} for i in range(4)]
+        candidates += [{"name": "示範鄰居", "profile": neighbour()},
+                       {"name": "示範資料不足", "profile": profile(category_counts=None, top_categories=[])},
+                       {"name": "示範中間", "profile": profile(brand_shares={"示範超商": 1.0}, frequent_brands=[("示範超商", 5)], meat_ratio=0.5)}]
+        result = eligible(profile(), candidates, NAMES, SETTINGS)
+        self.assertEqual([match["name"] for match in result], ["示範用戶 0", "示範用戶 3", "示範用戶 1", "示範用戶 2", "示範中間"])
+        self.assertEqual(result[-1]["taste"], 71)
+        self.assertEqual(set(result[0]), {"name", "total", "taste", "areas", "tags", "basis", "reasons", "differences"})
+        self.assertEqual(result[0]["basis"], ["品類", "常消費地區", "品牌", "葷素紀錄", "消費檔次"])
 
 
 if __name__ == "__main__":
@@ -804,12 +868,14 @@ Expected: FAIL，`ModuleNotFoundError: No module named 'src.receipt.matching'`
 建立 `src/receipt/matching.py`：
 
 ```python
-"""Score how alike two purchase profiles are, decide on a recommendation and explain it."""
+"""Score how alike two purchase profiles are and explain it; the page applies the area rule."""
 import math
 
 from .tags import flavor_label, flavor_of, percent
 
 TASTE = ("category", "brand", "flavor", "price")
+LABELS = {"category": "品類", "district": "常消費地區", "brand": "品牌", "flavor": "葷素紀錄", "price": "消費檔次"}
+FLAVOR_REASONS = {"素食品項較多": "都買比較多素食品項", "葷食品項較多": "都買比較多葷食品項", "葷素品項都有": "葷素品項都有買"}
 
 
 def overlap(a, b):
@@ -821,8 +887,10 @@ def overlap(a, b):
 
 def similarities(me, other, settings):
     mine, theirs = me["category_counts"], other["category_counts"]
-    norm = math.hypot(*mine) * math.hypot(*theirs)
-    category = min(1.0, sum(x * y for x, y in zip(mine, theirs)) / norm) if norm else None
+    category = None
+    if mine and theirs:
+        norm = math.hypot(*mine) * math.hypot(*theirs)
+        category = min(1.0, sum(x * y for x, y in zip(mine, theirs)) / norm) if norm else None
     span = len(settings["price_levels"]) - 1
     price = None
     if me["price_level"] is not None and other["price_level"] is not None:
@@ -841,18 +909,19 @@ def weighted(parts, weights, names):
     return sum(weights[name] * parts[name] for name in available) / weight if weight else None
 
 
-def passes(taste, same_area, thresholds):
-    """Compare whole percentages, so a score shown as 80% always clears an 80% bar."""
-    bar = thresholds["taste_same_area"] if same_area else thresholds["taste"]
-    return taste is not None and percent(taste) >= percent(bar)
+def ready(profile):
+    """Enough data to be matched at all: category plus one more taste dimension."""
+    return profile["category_counts"] is not None and (
+        bool(profile["brand_shares"]) or profile["meat_ratio"] is not None or profile["price_level"] is not None)
 
 
 def compare(me, other, settings):
     parts = similarities(me, other, settings)
-    taste = weighted(parts, settings["weights"], TASTE)
-    same_area = bool(set(me["areas"]) & set(other["areas"]))
-    return {"parts": parts, "taste": taste, "total": weighted(parts, settings["weights"], settings["weights"]),
-            "same_area": same_area, "recommended": passes(taste, same_area, settings["thresholds"])}
+    # Category is required, plus at least one more taste dimension, so thin data cannot score 100%.
+    comparable = parts["category"] is not None and any(parts[name] is not None for name in TASTE[1:])
+    return {"parts": parts, "comparable": comparable,
+            "taste": weighted(parts, settings["weights"], TASTE) if comparable else None,
+            "total": weighted(parts, settings["weights"], settings["weights"]) if comparable else None}
 
 
 def reasons(me, other, parts, names, settings):
@@ -869,7 +938,7 @@ def reasons(me, other, parts, names, settings):
         found.append(("category", f"都很常買{names[categories[0]]}"))
     label = flavor_label(me["meat_ratio"], settings["flavor"])
     if label and label == flavor_label(other["meat_ratio"], settings["flavor"]):
-        found.append(("flavor", f"口味都{label}" if label.startswith("偏") else "都是葷素都吃"))
+        found.append(("flavor", FLAVOR_REASONS[label]))
     if me["price_level"] is not None and me["price_level"] == other["price_level"]:
         found.append(("price", f"消費檔次都是{settings['price_levels'][me['price_level']]['label']}"))
     weights = settings["weights"]
@@ -895,20 +964,23 @@ def differences(me, other, settings):
         a, b = favorite(mine), favorite(others)
         if flavor_of(a, flavor) != flavor_of(b, flavor):
             return [f"都常去{brand}，但點的不一樣（{a}／{b}）"]
-    return ["口味不同：一位偏蔬食、一位偏葷食"]
+    return ["購買紀錄不同：一位素食品項較多、一位葷食品項較多"]
 
 
-def rank(me, candidates, names, settings):
-    """Recommended candidates, best first, shaped for the match page."""
+def eligible(me, candidates, names, settings):
+    """Everyone who could pass once an area is confirmed, best first; the page applies the final rule."""
+    floor = percent(settings["thresholds"]["taste_same_area"])
     scored = [(candidate, compare(me, candidate["profile"], settings)) for candidate in candidates]
-    scored = [(candidate, result) for candidate, result in scored if result["recommended"]]
+    scored = [(candidate, result) for candidate, result in scored
+              if result["comparable"] and percent(result["taste"]) >= floor]
     scored.sort(key=lambda pair: (-pair[1]["total"], -pair[1]["taste"], pair[0]["name"]))
     return [{
         "name": candidate["name"], "total": percent(result["total"]), "taste": percent(result["taste"]),
-        "tags": candidate["profile"]["tags"],
+        "areas": candidate["profile"]["areas"], "tags": candidate["profile"]["tags"],
+        "basis": [label for name, label in LABELS.items() if result["parts"][name] is not None],
         "reasons": reasons(me, candidate["profile"], result["parts"], names, settings),
         "differences": differences(me, candidate["profile"], settings),
-    } for candidate, result in scored[:settings["top_matches"]]]
+    } for candidate, result in scored]
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -921,7 +993,7 @@ Expected: 11 tests OK
 ```bash
 git add src/receipt/matching.py tests/test_matching.py
 git commit -F - <<'EOF'
-feat: score, gate and explain matches between profiles
+feat: score and explain matches, refusing thin data
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -936,10 +1008,10 @@ EOF
 - Test: `tests/test_personas.py`
 
 **Interfaces:**
-- Consumes: Task 2 的示範資料（含行政區）；Task 3 的 `build_profile`；Task 4 的 `compare`、`differences`、`rank`
+- Consumes: Task 2 的示範資料（含行政區）；Task 3 的 `build_profile`；Task 4 的 `compare`、`differences`、`eligible`
 - Produces: `build_personas(per_type=5, seed=SEED) -> list[{"name": str, "type": str, "rows": list[dict]}]`，40 人，`rows` 格式與報告明細相同
 
-下列類型參數已用原型校準過（同類型 160 組全部通過門檻、最低 0.83；不同類型 1,400 組沒有一組通過、最高 0.78；示範的「我」配到 5 位手搖學生）。請照抄，不要自行調整。
+下列類型參數已用原型校準過（見「校準結果」）。請照抄，不要自行調整。
 
 - [ ] **Step 1: Write the failing test**
 
@@ -952,7 +1024,7 @@ import unittest
 from pathlib import Path
 
 from src.receipt.demo import build_demo
-from src.receipt.matching import compare, differences, rank
+from src.receipt.matching import compare, differences, eligible
 from src.receipt.personas import build_personas
 from src.receipt.tags import build_profile
 
@@ -971,6 +1043,8 @@ class PersonaTests(unittest.TestCase):
         cls.profiles = {person["name"]: build_profile(person["rows"], CATEGORIES, BRANDS, SETTINGS) for person in cls.people}
         demo_rows = [row for month in build_demo(CATALOG).values() for row in month["rows"]]
         cls.me = build_profile(demo_rows, CATEGORIES, BRANDS, SETTINGS)
+        candidates = [{"name": name, "profile": profile} for name, profile in cls.profiles.items()]
+        cls.pool = eligible(cls.me, candidates, NAMES, SETTINGS)
 
     def test_forty_reproducible_fictional_people(self):
         self.assertEqual(len(self.people), 40)
@@ -990,19 +1064,19 @@ class PersonaTests(unittest.TestCase):
         found = differences(self.profiles["手搖學生 A"], self.profiles["手搖學生 D"], SETTINGS)
         self.assertEqual(found, ["都常去示範餐坊，但點的不一樣（示範蔬食餐盒／示範鮮蝦餐盒）"])
 
-    def test_neighbours_with_other_tastes_are_not_recommended(self):
+    def test_neighbours_with_other_tastes_are_not_candidates(self):
+        pool = {candidate["name"] for candidate in self.pool}
         for person in self.people:
             if person["type"] == "3C 玩家":
-                result = compare(self.me, self.profiles[person["name"]], SETTINGS)
-                self.assertTrue(result["same_area"], person["name"])
-                self.assertFalse(result["recommended"], person["name"])
+                self.assertTrue(set(self.profiles[person["name"]]["areas"]) & set(self.me["areas"]), person["name"])
+                self.assertNotIn(person["name"], pool)
 
-    def test_demo_report_gets_explained_recommendations(self):
-        candidates = [{"name": name, "profile": profile} for name, profile in self.profiles.items()]
-        matches = rank(self.me, candidates, NAMES, SETTINGS)
-        self.assertGreaterEqual(len(matches), 1)
-        self.assertTrue(all(match["reasons"] for match in matches))
-        self.assertTrue(any(match["differences"] for match in matches))
+    def test_confirming_an_area_unlocks_more_people(self):
+        high = [c for c in self.pool if c["taste"] >= 80]
+        band = [c for c in self.pool if 70 <= c["taste"] < 80 and set(c["areas"]) & set(self.me["areas"])]
+        self.assertGreaterEqual(len(high), 1)
+        self.assertGreaterEqual(len(band), 1)
+        self.assertTrue(any(candidate["differences"] for candidate in self.pool))
 
 
 if __name__ == "__main__":
@@ -1044,9 +1118,9 @@ TYPES = [
         (4, "示範運動館", ["示範體適能體驗票"], (80, 100), (2, 3)),
         (8, "示範生活館", ["示範文具組"], (60, 120), (1, 3)),
     ]},
-    {"label": "健身族", "areas": {"高雄市前鎮區": 5, "高雄市左營區": 5}, "habits": [
+    {"label": "健身族", "areas": {"高雄市前鎮區": 5, "高雄市苓雅區": 5}, "habits": [
         (4, "示範運動館", ["示範重訓課", "示範健身月票"], (300, 600), (6, 8)),
-        (0, "示範餐坊", ["示範雞肉餐盒", "示範牛肉餐盒"], (120, 160), (8, 10)),
+        (0, "示範餐坊", ["示範雞肉餐盒", "示範蔬食沙拉"], (120, 160), (8, 10)),
         (1, "示範超商", ["示範無糖豆漿", "示範乳清飲"], (35, 60), (8, 10)),
         (3, "示範量販", ["示範雞肉分裝包"], (200, 300), (2, 3)),
     ]},
@@ -1131,7 +1205,91 @@ EOF
 
 ---
 
-### Task 6: 配對頁與報告整合
+### Task 6: 依確認的生活圈套用門檻
+
+**Files:**
+- Create: `src/web/match-filter.js`
+- Test: `tests/match-filter.test.cjs`
+
+**Interfaces:**
+- Consumes: Task 4 `eligible()` 的輸出格式（`taste` 為整數百分比、`areas` 為字串陣列）
+- Produces: 瀏覽器全域 `MatchFilter.recommend(candidates, confirmedAreas, thresholds)`，Node 中以 `require` 取得同一個函式；回傳符合門檻的候選人，保留原本順序
+
+- [ ] **Step 1: Write the failing test**
+
+建立 `tests/match-filter.test.cjs`：
+
+```js
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const { recommend } = require('../src/web/match-filter.js');
+
+const thresholds = { taste: 0.8, taste_same_area: 0.7 };
+const people = [
+  { name: 'A', taste: 80, areas: [] },
+  { name: 'B', taste: 79, areas: ['高雄市苓雅區'] },
+  { name: 'C', taste: 70, areas: ['高雄市苓雅區'] },
+  { name: 'D', taste: 69, areas: ['高雄市苓雅區'] },
+  { name: 'E', taste: 75, areas: ['臺北市信義區'] },
+];
+const names = list => list.map(person => person.name);
+
+test('without a confirmed area only the higher bar applies', () => {
+  assert.deepEqual(names(recommend(people, [], thresholds)), ['A']);
+});
+
+test('a confirmed shared area lowers the bar to 70%', () => {
+  assert.deepEqual(names(recommend(people, ['高雄市苓雅區'], thresholds)), ['A', 'B', 'C']);
+});
+
+test('an area that nobody shares changes nothing', () => {
+  assert.deepEqual(names(recommend(people, ['高雄市新興區'], thresholds)), ['A']);
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `node --test tests/match-filter.test.cjs`
+Expected: FAIL，`Cannot find module '../src/web/match-filter.js'`
+
+- [ ] **Step 3: Write minimal implementation**
+
+建立 `src/web/match-filter.js`：
+
+```js
+/* The final recommendation rule, shared by the match page and its tests. */
+(function (root) {
+  'use strict';
+  const whole = value => Math.round(value * 100);
+  function recommend(candidates, confirmedAreas, thresholds) {
+    const chosen = new Set(confirmedAreas);
+    return candidates.filter(candidate => candidate.taste >= whole(thresholds.taste)
+      || (candidate.taste >= whole(thresholds.taste_same_area) && candidate.areas.some(area => chosen.has(area))));
+  }
+  const api = Object.freeze({ recommend });
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.MatchFilter = api;
+})(globalThis);
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `node --test tests/*.test.cjs`
+Expected: `# pass 18`、`# fail 0`
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/web/match-filter.js tests/match-filter.test.cjs
+git commit -F - <<'EOF'
+feat: apply the confirmed-area threshold rule in the browser
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+EOF
+```
+
+---
+
+### Task 7: 配對頁與報告整合
 
 **Files:**
 - Create: `src/web/match.html`
@@ -1143,8 +1301,8 @@ EOF
 - Regenerate: `invoice-insights.html`
 
 **Interfaces:**
-- Consumes: `build_profile`（Task 3）、`rank`（Task 4）、`build_personas`（Task 5）
-- Produces: 報告中的 `<template id="match-page-source">`；配對頁內的常數 `matchReportData`，格式：`{"isDemo": bool, "candidates": int, "settings": {"weights": {...}, "thresholds": {...}}, "me": {"tags": [...]}, "matches": [...rank 的輸出]}`；`window.ReceiptPages.showReport()` 照舊
+- Consumes: `build_profile`（Task 3）、`eligible`、`ready`（Task 4）、`build_personas`（Task 5）、`match-filter.js`（Task 6）
+- Produces: 報告中的 `<template id="match-page-source">`；配對頁內的常數 `matchReportData`，格式：`{"isDemo": bool, "population": int, "settings": {"weights", "thresholds", "top_matches", "category_min_items"}, "me": {"ready": bool, "item_count": int, "areas": [...], "tags": [...]}, "candidates": [...eligible 的輸出]}`；`window.ReceiptPages.showReport()` 照舊
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1158,11 +1316,14 @@ EOF
             matched = ResourceParser()
             matched.feed(match_page)
             self.assertEqual(matched.external, [])
+            self.assertIn('data-source="match-filter.js"', match_page)
             payload = json.loads(re.search(r"const matchReportData = (.*?);\n</script>", match_page, re.S).group(1))
             self.assertTrue(payload["isDemo"])
-            self.assertEqual(payload["candidates"], 40)
+            self.assertEqual(payload["population"], 40)
             self.assertEqual(payload["settings"]["thresholds"], {"taste": 0.8, "taste_same_area": 0.7})
-            self.assertGreaterEqual(len(payload["matches"]), 1)
+            self.assertTrue(payload["me"]["ready"])
+            self.assertEqual(payload["me"]["areas"], ["高雄市苓雅區", "高雄市新興區"])
+            self.assertGreaterEqual(len(payload["candidates"]), 1)
             self.assertIn('href="#match"', html)
 ```
 
@@ -1170,7 +1331,10 @@ EOF
 
 ```python
             match_page = unescape(re.search(r'<template id="match-page-source">(.*?)</template>', html, re.S).group(1))
-            self.assertIn('"isDemo": false', match_page)
+            payload = json.loads(re.search(r"const matchReportData = (.*?);\n</script>", match_page, re.S).group(1))
+            self.assertFalse(payload["isDemo"])
+            self.assertFalse(payload["me"]["ready"])
+            self.assertEqual(payload["candidates"], [])
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1194,16 +1358,19 @@ Expected: FAIL — `match_source` 為 None；另一個測試在 `re.search(...).
 main{max-width:880px;margin:0 auto;padding:24px 18px 56px}
 .return-report{display:inline-block;color:var(--muted);font-size:12px;text-decoration:none;margin-bottom:14px}.return-report:hover{color:var(--pink)}
 .eyebrow{color:var(--pink);font-size:11px;letter-spacing:2px;margin:0 0 6px}
-h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 12px}h3{font-size:17px;margin:0}
+h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 10px}h3{font-size:17px;margin:0}
 .note{color:var(--muted);font-size:12px;margin:0}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:16px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}
 .chips li{border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:12px}
 .chips small{color:var(--muted);margin-right:5px}
+.areas{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px}
+.areas label{display:flex;align-items:center;gap:6px;cursor:pointer}.areas input{accent-color:var(--teal);width:16px;height:16px}
 .matches{margin-top:30px}
 .match-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
 .score{font-size:24px;font-weight:600;color:var(--teal)}.score small{font-size:12px;color:var(--muted);font-weight:400;margin-left:6px}
-.reasons,.differences{margin:12px 0 0;padding-left:20px}
+.basis{color:var(--muted);font-size:12px;margin:10px 0 0}
+.reasons,.differences{margin:8px 0 0;padding-left:20px}
 .reasons li::marker{content:"✓  ";color:var(--teal)}.differences li::marker{content:"≠  ";color:var(--amber)}
 .empty{color:var(--muted);margin-top:16px}
 .method{margin-top:22px;color:var(--muted);font-size:12px}.method summary{cursor:pointer}.method p{margin:8px 0}
@@ -1217,15 +1384,18 @@ h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 12
 <h1>從消費習慣，找到合拍的人。</h1>
 <p class="note" id="match-note"></p>
 <section class="card" aria-labelledby="my-tags-title"><h2 id="my-tags-title">我的消費標籤</h2><ul class="chips" id="my-tags"></ul></section>
-<section class="matches" aria-labelledby="matches-title"><h2 id="matches-title">和你最合拍的人</h2><div id="match-list"></div></section>
+<section class="card" aria-labelledby="areas-title"><h2 id="areas-title">確認生活圈</h2><p class="note" id="areas-note"></p><div class="areas" id="my-areas"></div></section>
+<section class="matches" aria-labelledby="matches-title"><h2 id="matches-title">和你最合拍的人</h2><p class="note" id="match-status" role="status" aria-live="polite"></p><div id="match-list"></div></section>
 <details class="method"><summary>怎麼算的？</summary><div id="method"></div></details>
 </main>
+<script src="match-filter.js"></script>
 <script src="match-data.js"></script>
 <script>
 'use strict';
 (function () {
-  const data = matchReportData;
+  const data = matchReportData, settings = data.settings;
   const $ = id => document.getElementById(id);
+  const pct = value => Math.round(value * 100) + '%';
   function make(tag, text, className) {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
@@ -1244,32 +1414,58 @@ h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 12
     for (const text of texts) list.append(make('li', text));
     return list;
   }
-  $('match-note').textContent = '配對對象是 ' + data.candidates + ' 位虛構示範用戶。'
-    + (data.isDemo ? '「我」也是虛構示範資料。' : '你的標籤來自這份私人報告，只存在這個檔案裡。');
-  const mine = $('my-tags');
-  if (data.me.tags.length) mine.append(...chipItems(data.me.tags));
-  else mine.replaceWith(make('p', '資料還不夠產生標籤，多掃幾張發票再看看。', 'note'));
-  const list = $('match-list');
-  if (!data.matches.length) list.append(make('p', '目前沒有夠相似的人，多掃幾張發票再看看。', 'empty'));
-  for (const match of data.matches) {
-    const card = make('article', undefined, 'card');
+  function card(match) {
+    const article = make('article', undefined, 'card');
     const head = make('div', undefined, 'match-head');
     const score = make('div', match.total + '%', 'score');
     score.append(make('small', '品味 ' + match.taste + '%'));
     head.append(make('h3', match.name), score);
     const tags = make('ul', undefined, 'chips');
     tags.append(...chipItems(match.tags));
-    card.append(head, tags, lines(match.reasons, 'reasons'));
-    if (match.differences.length) card.append(lines(match.differences, 'differences'));
-    list.append(card);
+    article.append(head, tags, make('p', '比較了：' + match.basis.join('、'), 'basis'), lines(match.reasons, 'reasons'));
+    if (match.differences.length) article.append(lines(match.differences, 'differences'));
+    return article;
   }
-  const weights = data.settings.weights, bars = data.settings.thresholds;
-  const pct = value => Math.round(value * 100) + '%';
+  const chosen = new Set();
+  function render() {
+    const list = $('match-list');
+    if (!data.me.ready) {
+      $('match-status').textContent = '';
+      list.replaceChildren(make('p', '資料不足，還不能配對：需要至少 ' + settings.category_min_items + ' 筆已分類品項（目前 '
+        + data.me.item_count + ' 筆），以及品牌、葷素紀錄或消費檔次其中一項。多掃幾張發票再看看。', 'empty'));
+      return;
+    }
+    const passed = MatchFilter.recommend(data.candidates, [...chosen], settings.thresholds);
+    const shown = passed.slice(0, settings.top_matches);
+    $('match-status').textContent = '符合條件 ' + passed.length + ' 位' + (passed.length > shown.length ? '，顯示前 ' + shown.length + ' 位' : '') + '。';
+    list.replaceChildren(...(shown.length ? shown.map(card) : [make('p', '目前沒有夠相似的人，多掃幾張發票再看看。', 'empty')]));
+  }
+  $('match-note').textContent = '配對對象是 ' + data.population + ' 位虛構示範用戶。'
+    + (data.isDemo ? '「我」也是虛構示範資料。' : '你的標籤來自這份私人報告，只存在這個檔案裡。');
+  const mine = $('my-tags');
+  if (data.me.tags.length) mine.append(...chipItems(data.me.tags));
+  else mine.replaceWith(make('p', '資料還不夠產生標籤。', 'note'));
+  $('areas-note').textContent = data.me.areas.length
+    ? '下面是依發票賣方地址推測的常消費地區。勾選真的是你生活圈的地方：同生活圈的人，品味門檻從 ' + pct(settings.thresholds.taste)
+      + ' 降到 ' + pct(settings.thresholds.taste_same_area) + '。不勾選就不會用來放寬門檻。'
+    : '目前推測不出常消費地區，所以只用 ' + pct(settings.thresholds.taste) + ' 的門檻。';
+  for (const area of data.me.areas) {
+    const label = make('label'), box = make('input');
+    box.type = 'checkbox';
+    box.addEventListener('change', () => { if (box.checked) chosen.add(area); else chosen.delete(area); render(); });
+    label.append(box, area);
+    $('my-areas').append(label);
+  }
+  const weights = settings.weights;
   $('method').append(
-    make('p', '五個面向加權：品類 ' + pct(weights.category) + '、生活圈 ' + pct(weights.district) + '、品牌 ' + pct(weights.brand)
-      + '、口味 ' + pct(weights.flavor) + '、消費檔次 ' + pct(weights.price) + '。缺資料的面向不計分，權重分給其他面向。'),
-    make('p', '品味分數不含生活圈，至少 ' + pct(bars.taste) + ' 才推薦；兩人生活圈有重疊時放寬為 ' + pct(bars.taste_same_area) + '。大字是總分，用來排序。'),
-    make('p', '只用行政區與連鎖品牌，不顯示分店、日期或金額。配對對象皆為虛構示範用戶。'));
+    make('p', '五個面向加權：品類 ' + pct(weights.category) + '、常消費地區 ' + pct(weights.district) + '、品牌 ' + pct(weights.brand)
+      + '、葷素紀錄 ' + pct(weights.flavor) + '、消費檔次 ' + pct(weights.price) + '。缺資料的面向不計分，權重分給其他面向。'),
+    make('p', '品類一定要能比較（各自至少 ' + settings.category_min_items + ' 筆已分類品項），另外至少再有品牌、葷素紀錄、消費檔次其中一項，才會配對。'),
+    make('p', '品味分數不含地區，至少 ' + pct(settings.thresholds.taste) + ' 才推薦；對方常在你勾選的生活圈消費時，放寬為 '
+      + pct(settings.thresholds.taste_same_area) + '。大字是總分，用來排序。'),
+    make('p', '同一張發票的同一品項只算一次；有品項買 2 份以上的發票，可能是多人一起消費，不列入消費檔次。'),
+    make('p', '只用行政區與連鎖品牌，不顯示分店、日期或金額。配對對象皆為虛構示範用戶，他們的常消費地區視為已確認的生活圈。'));
+  render();
   const pageHost = window.parent !== window && window.frameElement?.id === 'match-frame' ? window.parent : null;
   if (pageHost) {
     const back = $('return-report');
@@ -1282,13 +1478,13 @@ h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 12
 </html>
 ```
 
-- [ ] **Step 4: Compute and embed matches in the build**
+- [ ] **Step 4: Compute and embed the candidates in the build**
 
 `src/receipt/build.py`：
 - 在 `from .demo import build_demo` 之後加入三行 import：
 
 ```python
-from .matching import rank
+from .matching import eligible, ready
 from .personas import build_personas
 from .tags import build_profile
 ```
@@ -1311,16 +1507,19 @@ def script_constant(name, value):
 
 
 def build_matches(months, categories, is_demo):
-    """Profile the report, rank the fictional population and keep only what the page shows."""
+    """Profile the report and keep only the scores and words the match page shows."""
     settings = json.loads((ROOT / "configs" / "tags.json").read_text(encoding="utf-8"))
     brands = json.loads((ROOT / "configs" / "brands.json").read_text(encoding="utf-8"))
     me = build_profile([row for month in months.values() for row in month["rows"]], categories, brands, settings)
-    candidates = [{"name": person["name"], "profile": build_profile(person["rows"], categories, brands, settings)}
-                  for person in build_personas()]
+    people = [{"name": person["name"], "profile": build_profile(person["rows"], categories, brands, settings)}
+              for person in build_personas()]
     names = [category["name"] for category in categories]
-    return {"isDemo": is_demo, "candidates": len(candidates),
-            "settings": {"weights": settings["weights"], "thresholds": settings["thresholds"]},
-            "me": {"tags": me["tags"]}, "matches": rank(me, candidates, names, settings)}
+    return {
+        "isDemo": is_demo, "population": len(people),
+        "settings": {key: settings[key] for key in ("weights", "thresholds", "top_matches", "category_min_items")},
+        "me": {"ready": ready(me), "item_count": me["item_count"], "areas": me["areas"], "tags": me["tags"]},
+        "candidates": eligible(me, people, names, settings) if ready(me) else [],
+    }
 ```
 
 - 在 `main()` 中，把
@@ -1351,15 +1550,16 @@ def build_matches(months, categories, is_demo):
 ```python
     html = embed_page(html, "taste-page-source", comparison)
     matches = build_matches(months, config["categories"], not args.private)
-    match_page = embed_scripts((WEB / "match.html").read_text(encoding="utf-8"),
-                               {"match-data.js": script_constant("matchReportData", matches)})
+    match_page = embed_scripts((WEB / "match.html").read_text(encoding="utf-8"), {
+        "match-filter.js": (WEB / "match-filter.js").read_text(encoding="utf-8"),
+        "match-data.js": script_constant("matchReportData", matches)})
     html = embed_page(html, "match-page-source", match_page)
 ```
 
 - 在 `main()` 最後的 `for key, month in months.items():` 迴圈之後加入：
 
 ```python
-    print("matches:", len(matches["matches"]), "of", matches["candidates"], "fictional people")
+    print("match candidates:", len(matches["candidates"]), "of", matches["population"], "fictional people")
 ```
 
 - [ ] **Step 5: Link the page from the report**
@@ -1446,22 +1646,22 @@ def build_matches(months, categories, is_demo):
 - [ ] **Step 6: Rebuild the public demo**
 
 Run: `python scripts/build_report.py`
-Expected: 兩個月份的摘要與 `matches: 5 of 40 fictional people`
+Expected: 兩個月份的摘要與 `match candidates: 10 of 40 fictional people`
 
 - [ ] **Step 7: Run all tests to verify they pass**
 
 Run: `python -m unittest discover -s tests -v`
 Expected: 全部 OK
 
-Run: `node --test tests/monthly-comparison.test.cjs tests/comparison-interface.test.cjs tests/taste-profile.test.cjs`
-Expected: `# pass 15`、`# fail 0`
+Run: `node --test tests/*.test.cjs`
+Expected: `# pass 18`、`# fail 0`
 
 - [ ] **Step 8: Commit**
 
 ```bash
 git add src/web/match.html src/receipt/build.py src/web/invoice-insights.html src/web/taste-navigation.js src/web/styles.css tests/test_build_report.py invoice-insights.html
 git commit -F - <<'EOF'
-feat: add the find-your-people page to the report
+feat: add the find-your-people page with area confirmation
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -1469,26 +1669,28 @@ EOF
 
 ---
 
-### Task 7: 最終驗證（由主控執行，不交給子代理）
+### Task 8: 最終驗證（由主控執行，不交給子代理）
 
 **Files:** 無新增；只檢查。
 
 - [ ] **Step 1: 全部測試**
 
-Run: `python -m unittest discover -s tests -v` 與 Node 測試
+Run: `python -m unittest discover -s tests -v` 與 `node --test tests/*.test.cjs`
 Expected: 全部通過
 
 - [ ] **Step 2: 在瀏覽器檢查公開示範版**
 
 用本機 HTTP 伺服器開啟 `invoice-insights.html`：
 - 明細表有「行政區」欄。
-- 「找到同好 ↗」切到配對頁，顯示 5 位手搖學生；其中偏葷的人有「≠ 都常去示範餐坊，但點的不一樣（示範蔬食餐盒／示範鮮蝦餐盒）」。
+- 「找到同好 ↗」切到配對頁：標籤卡、兩個可勾選的常消費地區、「符合條件 5 位」。
+- 勾選高雄市苓雅區後變成「符合條件 10 位，顯示前 5 位」；取消勾選後恢復。
+- 偏葷的手搖學生卡片有「≠ 都常去示範餐坊，但點的不一樣（示範蔬食餐盒／示範鮮蝦餐盒）」。
 - 「← 返回消費洞察」回到報告原本的捲動位置；「比較跟朋友品味差多少」仍正常。
 - 手機寬度（375px）沒有水平捲動。
 
 - [ ] **Step 3: 用真實資料做冒煙測試（只印數量）**
 
-在記憶體中用 `data/private/report.json` 的輸入檔建立月份資料與配對結果，**不寫入任何檔案**，只印出：行政區解析成功與失敗的筆數、各標籤面向的數量、通過門檻的人數。
+在記憶體中用 `data/private/report.json` 的輸入檔建立月份資料與候選名單，**不寫入任何檔案**，只印出：行政區解析成功與失敗的筆數、非實體賣方的發票數、各標籤面向的數量、`ready` 與候選人數。
 
 - [ ] **Step 4: 回報使用者**
 

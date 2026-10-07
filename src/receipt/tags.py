@@ -27,13 +27,31 @@ def is_remote(merchant, keywords):
     return mentions(merchant, keywords)
 
 
+def meat_positions(name, words):
+    for word in words:
+        start = name.find(word)
+        while start != -1:
+            yield start
+            start = name.find(word, start + 1)
+
+
 def flavor_of(name, flavor):
-    """0 when the name says vegetarian, 1 for meat or seafood, None otherwise (plain 蔬菜 proves nothing)."""
-    if any(word in name for word in flavor["vegetarian"]):
-        return 0
-    if any(word in name for word in flavor["meat"]):
-        return 1
-    return None
+    """0 when the name says vegetarian, 1 for meat or seafood, None otherwise (plain 蔬菜 proves nothing).
+
+    A meat word right after 素 or 植物 names an imitation (素食雞排); any other meat word means meat was
+    added, so a name that also says vegetarian (素食便當加雞腿) cannot be called either way.
+    """
+    prefixes = tuple(flavor["imitation_prefixes"])
+    imitation = added = False
+    for start in meat_positions(name, flavor["meat"]):
+        if name[:start].endswith(prefixes):
+            imitation = True
+        else:
+            added = True
+    vegetarian = imitation or any(word in name for word in flavor["vegetarian"])
+    if added:
+        return None if vegetarian else 1
+    return 0 if vegetarian else None
 
 
 def flavor_label(ratio, flavor):

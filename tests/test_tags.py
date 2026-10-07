@@ -56,6 +56,14 @@ class TagTests(unittest.TestCase):
         self.assertIsNone(flavor_of("示範牛奶", flavor))
         self.assertIsNone(flavor_of("示範肉桂捲", flavor))
 
+    def test_meat_added_to_a_vegetarian_name_is_unknown(self):
+        flavor = SETTINGS["flavor"]
+        self.assertIsNone(flavor_of("示範素食便當加雞腿", flavor))
+        self.assertIsNone(flavor_of("示範植物肉與牛肉雙拼堡", flavor))
+        # A meat word right after 素 or 植物 names an imitation, not added meat.
+        self.assertEqual(flavor_of("示範素肉燥飯", flavor), 0)
+        self.assertEqual(flavor_of("示範植物牛肉堡", flavor), 0)
+
     def test_category_tags_count_confirmed_paid_items(self):
         rows = [row(f"D{i}", 1) for i in range(7)] + [row(f"M{i}", 0) for i in range(3)]
         rows += [row("E", 2, amount=-10), row("F", 2, amount=0), row("G", 3, provisional=True), row("H", 10, provisional=True)]

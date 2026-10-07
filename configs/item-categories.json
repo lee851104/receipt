@@ -1,54 +1,25 @@
 {
-  "示範蔬食餐盒": {
-    "category": 0,
-    "provisional": false
-  },
-  "示範花果茶": {
-    "category": 1,
-    "provisional": false
-  },
-  "示範燕麥餅": {
-    "category": 2,
-    "provisional": false
-  },
-  "示範綜合蔬菜箱": {
-    "category": 3,
-    "provisional": false
-  },
-  "示範體適能體驗票": {
-    "category": 4,
-    "provisional": false
-  },
-  "示範衣物清潔服務": {
-    "category": 5,
-    "provisional": false
-  },
-  "示範市區接駁票": {
-    "category": 6,
-    "provisional": false
-  },
-  "示範旅店雙人房": {
-    "category": 7,
-    "provisional": false
-  },
-  "示範環保清潔組": {
-    "category": 8,
-    "provisional": false
-  },
-  "示範無線滑鼠": {
-    "category": 9,
-    "provisional": false
-  },
-  "示範未分類商品": {
-    "category": 10,
-    "provisional": true
-  },
-  "示範餐盒折扣": {
-    "category": 0,
-    "provisional": false
-  },
-  "示範隨餐贈品": {
-    "category": 0,
-    "provisional": false
-  }
+  "示範蔬食餐盒": {"category": 0, "provisional": false},
+  "示範番茄燉飯": {"category": 0, "provisional": false},
+  "示範香菇湯麵": {"category": 0, "provisional": false},
+  "示範蔬菜咖哩": {"category": 0, "provisional": false},
+  "示範越南河粉": {"category": 0, "provisional": false},
+  "示範石鍋拌飯": {"category": 0, "provisional": false},
+  "示範花果茶": {"category": 1, "provisional": false},
+  "示範百香果茶": {"category": 1, "provisional": false},
+  "示範半糖冬瓜青茶": {"category": 1, "provisional": false},
+  "示範燕麥餅": {"category": 2, "provisional": false},
+  "示範焦糖布丁": {"category": 2, "provisional": false},
+  "示範花生豆花": {"category": 2, "provisional": false},
+  "示範綜合蔬菜箱": {"category": 3, "provisional": false},
+  "示範有機蔬菜": {"category": 3, "provisional": false},
+  "示範體適能體驗票": {"category": 4, "provisional": false},
+  "示範衣物清潔服務": {"category": 5, "provisional": false},
+  "示範市區接駁票": {"category": 6, "provisional": false},
+  "示範旅店雙人房": {"category": 7, "provisional": false},
+  "示範環保清潔劑": {"category": 8, "provisional": false},
+  "示範無線滑鼠": {"category": 9, "provisional": false},
+  "示範未分類商品": {"category": 10, "provisional": true},
+  "示範餐盒折扣": {"category": 0, "provisional": false},
+  "示範隨餐贈品": {"category": 0, "provisional": false}
 }

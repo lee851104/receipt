@@ -10,6 +10,7 @@ from .demo import build_demo
 from .matching import eligible, ready
 from .personas import MONTHS, build_personas
 from .tags import build_profile
+from .traits import load_context
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / "src" / "web"
@@ -45,13 +46,13 @@ def script_constant(name, value):
     return f"'use strict';\nconst {name} = " + payload + ";\n"
 
 
-def build_matches(months, categories, is_demo):
+def build_matches(months, categories, is_demo, population):
     """Profile the report and keep only the scores and words the match page shows."""
     settings = json.loads((ROOT / "configs" / "tags.json").read_text(encoding="utf-8"))
     brands = json.loads((ROOT / "configs" / "brands.json").read_text(encoding="utf-8"))
     me = build_profile([row for month in months.values() for row in month["rows"]], categories, brands, settings)
     people = [{"name": person["name"], "profile": build_profile(person["rows"], categories, brands, settings)}
-              for person in build_personas()]
+              for person in population]
     return {
         "isDemo": is_demo, "population": len(people),
         "personaMonths": [f"{year}-{month:02}" for year, month, _ in MONTHS],
@@ -93,7 +94,9 @@ def main():
     comparison = (WEB / "taste-comparison.html").read_text(encoding="utf-8")
     comparison = embed_scripts(comparison, {"taste-profile.js": scripts["taste-profile.js"]})
     html = embed_page(html, "taste-page-source", comparison)
-    matches = build_matches(months, config["categories"], not args.private)
+    context = load_context(ROOT)
+    population = build_personas(context["calendar"])
+    matches = build_matches(months, config["categories"], not args.private, population)
     match_page = embed_scripts((WEB / "match.html").read_text(encoding="utf-8"), {
         "match-filter.js": (WEB / "match-filter.js").read_text(encoding="utf-8"),
         "match-data.js": script_constant("matchReportData", matches)})

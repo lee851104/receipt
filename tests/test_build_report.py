@@ -118,6 +118,7 @@ class StandaloneBuildTests(unittest.TestCase):
             first = subprocess.run(command, cwd=folder, capture_output=True, text=True)
             self.assertEqual(first.returncode, 0, first.stderr)
             self.assertIn("taste vector: not enough data to compare", first.stdout)
+            self.assertNotIn("測試商店", first.stdout)
             report = project / "invoice-insights-private.html"
             self.assertFalse((project / "invoice-insights.html").exists())
             before = report.read_bytes()

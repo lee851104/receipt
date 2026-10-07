@@ -39,7 +39,7 @@ class ReportDataTests(unittest.TestCase):
         self.assertEqual(rows[2]["category"], 10)
         self.assertTrue(rows[2]["provisional"])
         self.assertNotIn("PRIVATE-ID", str(rows))
-        self.assertTrue(all(set(row) == {"day", "invoice", "merchant", "name", "quantity", "amount", "category", "provisional"} for row in rows))
+        self.assertTrue(all(set(row) == {"day", "invoice", "merchant", "district", "name", "quantity", "amount", "category", "provisional"} for row in rows))
 
     def test_mixed_months_rejected(self):
         self.write_rows([[date, "開立已確認", "X", "測試商店", "測試餐盒", 1, 120] for date in ("20260301", "20260401")])
@@ -50,6 +50,17 @@ class ReportDataTests(unittest.TestCase):
         self.write_rows([["20260301", "作廢", "X", "測試商店", "測試餐盒", 1, 120]])
         with self.assertRaisesRegex(ValueError, "Unreviewed"):
             build_month(self.path, self.catalog)
+
+    def test_district_replaces_full_address_and_tax_id(self):
+        fields = ["發票日期", "發票狀態", "發票號碼", "賣方名稱", "賣方地址", "賣方統一編號", "消費明細_品名", "消費明細_數量", "消費明細_金額"]
+        with self.path.open("w", encoding="utf-8-sig", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=fields)
+            writer.writeheader()
+            writer.writerow(dict(zip(fields, ["20260302", "開立已確認", "X1", "測試商店", "802高雄市苓雅區測試路99號", "TEST-TAX-ID", "測試餐盒", 1, 120])))
+        _, month = build_month(self.path, self.catalog)
+        self.assertEqual(month["rows"][0]["district"], "高雄市苓雅區")
+        self.assertNotIn("測試路", str(month))
+        self.assertNotIn("TEST-TAX-ID", str(month))
 
 
 if __name__ == "__main__":

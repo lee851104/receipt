@@ -70,8 +70,8 @@ function renderInsights(key, autoplay = false) {
   $('legend').innerHTML = categories.filter((_, index) => currTotals[index] !== 0).map(category => '<span style="--color:' + category.color + '">' + category.name + '</span>').join('');
   $('audit-summary').textContent = '查看分類明細與計算方式 · ' + current.length + ' 筆品項';
   $('audit-description').textContent = '依品名與賣方人工分類，尚未接模型。飲品含酒類；不明品項標示待確認。餐廳服務費列其他服務，餐廳折扣與點數折抵列正餐並扣除；不分攤至個別品名。零元明細保留供核對，消費次數只計付費紀錄。';
-  $('audit-rows').innerHTML = current.map(row => '<tr><td>' + dateLabel(row.day) + '</td><td>' + row.invoice + '</td><td>' + escapeHTML(row.merchant) + '</td><td>' + escapeHTML(row.name) + '</td><td' + (row.provisional ? ' class="provisional"' : '') + '>' + categories[row.category].name + (row.provisional ? '（暫定）' : '') + '</td><td class="numeric">' + row.quantity + '</td><td class="numeric">' + number(row.amount) + '</td></tr>').join('');
-  $('report-source').textContent = '目前洞察來源：' + month.source + '。金額依明細加總，已含負數折抵；發票張數按號碼去重。沒有紀錄不代表沒有消費。頁面只保留匿名發票代碼，不嵌入原始號碼、統編或地址。';
+  $('audit-rows').innerHTML = current.map(row => '<tr><td>' + dateLabel(row.day) + '</td><td>' + row.invoice + '</td><td>' + escapeHTML(row.merchant) + '</td><td>' + escapeHTML(row.district || '未知') + '</td><td>' + escapeHTML(row.name) + '</td><td' + (row.provisional ? ' class="provisional"' : '') + '>' + categories[row.category].name + (row.provisional ? '（暫定）' : '') + '</td><td class="numeric">' + row.quantity + '</td><td class="numeric">' + number(row.amount) + '</td></tr>').join('');
+  $('report-source').textContent = '目前洞察來源：' + month.source + '。金額依明細加總，已含負數折抵；發票張數按號碼去重。沒有紀錄不代表沒有消費。頁面只保留匿名發票代碼與行政區，不嵌入原始號碼、統編或完整地址。';
 
   const calendar = $('calendar');
   calendar.innerHTML = '';

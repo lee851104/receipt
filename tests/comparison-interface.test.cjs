@@ -46,6 +46,8 @@ test('standalone HTML loads both months without external scripts', () => {
   assert.equal(nodes.get('total')?.textContent, 'NT$ 8,095');
   assert.match(nodes.get('data-notice').textContent, /虛構示範資料/);
   assert.match(nodes.get('report-tag').textContent, /虛構示範/);
+  assert.match(nodes.get('audit-rows').innerHTML, /<td>高雄市苓雅區<\/td>/);
+  assert.match(nodes.get('report-source').textContent, /與行政區，不嵌入原始號碼、統編或完整地址/);
   assert.doesNotMatch(nodes.get('compare-source-note').textContent, /真實發票/);
   nodes.get('insights-month').events.change({ target: { value: '2026-03' } });
   assert.equal(nodes.get('total').textContent, 'NT$ 7,910');

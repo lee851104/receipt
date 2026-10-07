@@ -47,6 +47,7 @@ class StandaloneBuildTests(unittest.TestCase):
             self.assertIn('"isDemo": true', html)
             self.assertIn("虛構示範", html)
             self.assertNotIn("PRIVATE-", html)
+            self.assertIn('"district": "高雄市苓雅區"', html)
             self.assertEqual(original.read_text(), "PRIVATE-HTML-UNCHANGED")
             self.assertFalse((project / "taste-comparison.html").exists())
             embedded = re.search(r'<template id="taste-page-source">(.*?)</template>', html, re.S)
@@ -83,7 +84,7 @@ class StandaloneBuildTests(unittest.TestCase):
             (project / "data" / "private" / "report.json").write_text(json.dumps(config), encoding="utf-8")
             (project / "configs" / "item-categories.json").write_text('{"茶": {"category": 1, "provisional": false}}', encoding="utf-8")
             for name, date in (("march.csv", "20260301"), ("april.csv", "20260401")):
-                row = {"發票日期": date, "發票狀態": "開立已確認", "發票號碼": "PRIVATE-INVOICE-001", "賣方名稱": "測試商店", "賣方地址": "PRIVATE-ADDRESS", "載具號碼": "PRIVATE-CARRIER", "消費明細_品名": "茶", "消費明細_數量": "1", "消費明細_金額": "30"}
+                row = {"發票日期": date, "發票狀態": "開立已確認", "發票號碼": "PRIVATE-INVOICE-001", "賣方名稱": "測試商店", "賣方地址": "PRIVATE-ADDRESS", "賣方統一編號": "PRIVATE-TAX-ID", "載具號碼": "PRIVATE-CARRIER", "消費明細_品名": "茶", "消費明細_數量": "1", "消費明細_金額": "30"}
                 with (project / "data" / "raw" / name).open("w", encoding="utf-8-sig", newline="") as stream:
                     writer = csv.DictWriter(stream, fieldnames=row.keys())
                     writer.writeheader()
@@ -98,7 +99,7 @@ class StandaloneBuildTests(unittest.TestCase):
             self.assertIn('"2026-03"', html)
             self.assertIn('"2026-04"', html)
             self.assertIn('"amount": 30', html)
-            for private_value in ("PRIVATE-INVOICE-001", "PRIVATE-ADDRESS", "PRIVATE-CARRIER"):
+            for private_value in ("PRIVATE-INVOICE-001", "PRIVATE-ADDRESS", "PRIVATE-CARRIER", "PRIVATE-TAX-ID"):
                 self.assertNotIn(private_value, html)
             parsed = ResourceParser()
             parsed.feed(html)

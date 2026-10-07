@@ -6,6 +6,9 @@ def build_demo(catalog):
     products = [name for name, value in catalog.items() if name not in ("示範餐盒折扣", "示範隨餐贈品")]
     prices = [125, 65, 85, 230, 90, 180, 45, 2100, 160, 780, 75]
     shops = ["示範餐坊", "示範茶屋", "示範烘焙店", "示範蔬果舖", "示範運動館", "示範洗衣坊", "示範客運", "示範旅宿", "示範生活館", "示範數位店", "示範選物店"]
+    # Fictional shops placed in real districts; no street address is ever generated.
+    districts = ["高雄市苓雅區", "高雄市苓雅區", "高雄市新興區", "高雄市苓雅區", "高雄市前鎮區", "高雄市苓雅區",
+                 "高雄市新興區", "屏東縣恆春鎮", "高雄市新興區", "高雄市前鎮區", "高雄市新興區"]
     months = {}
     for month in (3, 4):
         key = f"2026-{month:02}"
@@ -17,7 +20,7 @@ def build_demo(catalog):
                 rows.append({
                     "day": (index * 3 + visit * 5 + month) % days + 1,
                     "invoice": f"DEMO-{key}-{len(rows) + 1:03}",
-                    "merchant": shops[index], "name": name, "quantity": 1,
+                    "merchant": shops[index], "district": districts[index], "name": name, "quantity": 1,
                     "amount": prices[index] + (15 if month == 4 and index == 0 else 0),
                     **catalog[name],
                 })

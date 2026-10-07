@@ -750,23 +750,24 @@ if(pageLocation().hash.startsWith(&#x27;#taste=&#x27;))importHash();else draw();
 main{max-width:880px;margin:0 auto;padding:24px 18px 56px}
 .return-report{display:inline-block;color:var(--muted);font-size:12px;text-decoration:none;margin-bottom:14px}.return-report:hover{color:var(--pink)}
 .eyebrow{color:var(--pink);font-size:11px;letter-spacing:2px;margin:0 0 6px}
-h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 10px}h3{font-size:17px;margin:0}
+h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 8px}h3{font-size:17px;margin:0}
 .note{color:var(--muted);font-size:12px;margin:0}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:16px}
-.chips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}
-.chips li{border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:12px}
-.chips small{color:var(--muted);margin-right:5px}
-.areas{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px}
-.areas label{display:flex;align-items:center;gap:6px;cursor:pointer}.areas input{accent-color:var(--teal);width:16px;height:16px}
-.matches{margin-top:30px}
-.match-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
-.score{font-size:24px;font-weight:600;color:var(--teal)}.score small{font-size:12px;color:var(--muted);font-weight:400;margin-left:6px}
-.basis{color:var(--muted);font-size:12px;margin:10px 0 0}
-.reasons,.differences{margin:8px 0 0;padding-left:20px}
-.reasons li::marker{content:&quot;✓  &quot;;color:var(--teal)}.differences li::marker{content:&quot;≠  &quot;;color:var(--amber)}
+.matches{margin-top:26px}.status{margin:0 0 4px}
+.ranges{display:flex;flex-wrap:wrap;gap:8px 18px;margin:12px 0 4px}
+.ranges label{display:flex;align-items:center;gap:6px;cursor:pointer}.ranges input{accent-color:var(--teal);width:16px;height:16px;margin:0}
+.ranges label.off{color:#77756f;cursor:not-allowed}
+.card{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-top:12px;cursor:pointer}
+.card:hover,.card:focus-visible{border-color:var(--teal);outline:none}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.score{font-size:24px;font-weight:600;color:var(--teal)}
+.place{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:0 9px;font-size:11px;font-weight:400;color:var(--muted);margin-left:8px;vertical-align:middle}
+.pair{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:10px 0 0;font-size:13px}
+.pair dt{color:var(--muted)}.pair dd{margin:0;min-width:0;overflow-wrap:anywhere}.pair .like{color:var(--teal)}.pair .unlike{color:var(--amber)}
 .empty{color:var(--muted);margin-top:16px}
-.method{margin-top:22px;color:var(--muted);font-size:12px}.method summary{cursor:pointer}.method p{margin:8px 0}
-@media(max-width:640px){h1{font-size:23px}.card{padding:15px}}
+details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor:pointer}details p{margin:8px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:10px 0 0;padding:0}
+.chips li{border:1px solid var(--line);border-radius:999px;padding:3px 11px;color:var(--ink)}.chips small{color:var(--muted);margin-right:5px}
+@media(max-width:640px){h1{font-size:23px}.card{padding:14px}}
 &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
@@ -775,22 +776,59 @@ h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 10
 &lt;p class=&quot;eyebrow&quot;&gt;FIND YOUR PEOPLE · 找到同好&lt;/p&gt;
 &lt;h1&gt;從消費習慣，找到合拍的人。&lt;/h1&gt;
 &lt;p class=&quot;note&quot; id=&quot;match-note&quot;&gt;&lt;/p&gt;
-&lt;section class=&quot;card&quot; aria-labelledby=&quot;my-tags-title&quot;&gt;&lt;h2 id=&quot;my-tags-title&quot;&gt;我的消費標籤&lt;/h2&gt;&lt;ul class=&quot;chips&quot; id=&quot;my-tags&quot;&gt;&lt;/ul&gt;&lt;/section&gt;
-&lt;section class=&quot;card&quot; aria-labelledby=&quot;areas-title&quot;&gt;&lt;h2 id=&quot;areas-title&quot;&gt;確認生活圈&lt;/h2&gt;&lt;p class=&quot;note&quot; id=&quot;areas-note&quot;&gt;&lt;/p&gt;&lt;div class=&quot;areas&quot; id=&quot;my-areas&quot;&gt;&lt;/div&gt;&lt;/section&gt;
-&lt;section class=&quot;matches&quot; aria-labelledby=&quot;matches-title&quot;&gt;&lt;h2 id=&quot;matches-title&quot;&gt;和你最合拍的人&lt;/h2&gt;&lt;p class=&quot;note&quot; id=&quot;match-status&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/p&gt;&lt;div id=&quot;match-list&quot;&gt;&lt;/div&gt;&lt;/section&gt;
-&lt;details class=&quot;method&quot;&gt;&lt;summary&gt;怎麼算的？&lt;/summary&gt;&lt;div id=&quot;method&quot;&gt;&lt;/div&gt;&lt;/details&gt;
+&lt;section class=&quot;matches&quot; aria-labelledby=&quot;matches-title&quot;&gt;
+&lt;h2 id=&quot;matches-title&quot;&gt;和你最合拍的人&lt;/h2&gt;
+&lt;p class=&quot;status&quot; id=&quot;match-status&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/p&gt;
+&lt;p class=&quot;note&quot; id=&quot;range-note&quot; hidden&gt;&lt;/p&gt;
+&lt;div class=&quot;ranges&quot; id=&quot;ranges&quot; role=&quot;radiogroup&quot; aria-label=&quot;要找多遠&quot; hidden&gt;&lt;/div&gt;
+&lt;div id=&quot;match-list&quot;&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;details&gt;&lt;summary&gt;你的消費標籤&lt;/summary&gt;&lt;ul class=&quot;chips&quot; id=&quot;my-tags&quot;&gt;&lt;/ul&gt;&lt;/details&gt;
+&lt;details&gt;&lt;summary&gt;怎麼算的？&lt;/summary&gt;&lt;div id=&quot;method&quot;&gt;&lt;/div&gt;&lt;/details&gt;
 &lt;/main&gt;
 &lt;script data-source=&quot;match-filter.js&quot;&gt;
-/* The final recommendation rule, shared by the match page and its tests. */
+/* Who the match page shows and what it says, shared by the page and its tests. */
 (function (root) {
   &#x27;use strict&#x27;;
+  const RANGES = [&#x27;同一區&#x27;, &#x27;同縣市&#x27;, &#x27;同地區&#x27;, &#x27;不限&#x27;];
+  const PLACES = [&#x27;同一區&#x27;, &#x27;同縣市&#x27;, &#x27;同地區&#x27;, &#x27;其他地區&#x27;];
   const whole = value =&gt; Math.round(value * 100);
-  function recommend(candidates, confirmedAreas, thresholds) {
-    const chosen = new Set(confirmedAreas);
-    return candidates.filter(candidate =&gt; candidate.taste &gt;= whole(thresholds.taste)
-      || (candidate.taste &gt;= whole(thresholds.taste_same_area) &amp;&amp; candidate.areas.some(area =&gt; chosen.has(area))));
+  function recommend(candidates, maxDistance, thresholds) {
+    const strong = candidates.filter(candidate =&gt; candidate.score &gt;= whole(thresholds.match));
+    if (strong.length) return strong;
+    if (maxDistance === null) return [];
+    return candidates.filter(candidate =&gt; candidate.score &gt;= whole(thresholds.nearby) &amp;&amp; candidate.distance &lt;= maxDistance);
   }
-  const api = Object.freeze({ recommend });
+  function view(data, maxDistance) {
+    const { settings, me, candidates } = data;
+    const { thresholds, top_matches: top } = settings;
+    const blank = { status: &#x27;&#x27;, note: &#x27;&#x27;, options: [], cards: [], empty: &#x27;&#x27; };
+    const cards = (list, withPlace) =&gt; list.slice(0, top)
+      .map(candidate =&gt; ({ candidate, place: withPlace ? PLACES[candidate.distance] : null }));
+    if (!me.ready) {
+      return { ...blank, empty: &#x27;資料不足，還不能配對：需要至少 &#x27; + settings.category_min_items + &#x27; 筆已分類品項（目前 &#x27;
+        + me.item_count + &#x27; 筆），以及品牌、葷素紀錄或消費檔次其中一項。多掃幾張發票再看看。&#x27; };
+    }
+    const strong = recommend(candidates, null, thresholds);
+    if (strong.length) {
+      return { ...blank, cards: cards(strong, false), status: strong.length + &#x27; 位配對分數 &#x27; + whole(thresholds.match) + &#x27;% 以上&#x27;
+        + (strong.length &gt; top ? &#x27;，顯示前 &#x27; + top + &#x27; 位&#x27; : &#x27;&#x27;) + &#x27;。&#x27; };
+    }
+    if (!candidates.some(candidate =&gt; candidate.score &gt;= whole(thresholds.nearby))) {
+      return { ...blank, empty: &#x27;目前沒有夠相似的人，多掃幾張發票再看看。&#x27; };
+    }
+    const options = RANGES.map((label, level) =&gt; {
+      const count = recommend(candidates, level, thresholds).length;
+      return { level, label, count, disabled: count === 0 };
+    });
+    return {
+      ...blank, options,
+      status: &#x27;目前沒有 &#x27; + whole(thresholds.match) + &#x27;% 以上的人。放寬到 &#x27; + whole(thresholds.nearby) + &#x27;%，要找多遠？&#x27;,
+      note: me.areas.length ? &#x27;以你的常消費地區為準：&#x27; + me.areas.join(&#x27;、&#x27;) + &#x27;。&#x27; : &#x27;推測不出你的常消費地區，只能選「不限」。&#x27;,
+      cards: maxDistance === null ? [] : cards(recommend(candidates, maxDistance, thresholds), true),
+    };
+  }
+  const api = Object.freeze({ recommend, view });
   if (typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports) module.exports = api; else root.MatchFilter = api;
 })(globalThis);
 &lt;/script&gt;
@@ -799,24 +837,44 @@ h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 10
 const matchReportData = {
   &quot;isDemo&quot;: true,
   &quot;population&quot;: 40,
+  &quot;personaMonths&quot;: [
+    &quot;2026-03&quot;,
+    &quot;2026-04&quot;
+  ],
   &quot;settings&quot;: {
     &quot;weights&quot;: {
       &quot;category&quot;: 0.35,
-      &quot;district&quot;: 0.3,
       &quot;brand&quot;: 0.15,
       &quot;flavor&quot;: 0.1,
       &quot;price&quot;: 0.1
     },
     &quot;thresholds&quot;: {
-      &quot;taste&quot;: 0.8,
-      &quot;taste_same_area&quot;: 0.7
+      &quot;match&quot;: 0.8,
+      &quot;nearby&quot;: 0.7
     },
+    &quot;price_levels&quot;: [
+      {
+        &quot;label&quot;: &quot;小資型&quot;,
+        &quot;below&quot;: 100
+      },
+      {
+        &quot;label&quot;: &quot;均衡型&quot;,
+        &quot;below&quot;: 300
+      },
+      {
+        &quot;label&quot;: &quot;享受型&quot;
+      }
+    ],
     &quot;top_matches&quot;: 5,
     &quot;category_min_items&quot;: 10
   },
   &quot;me&quot;: {
     &quot;ready&quot;: true,
     &quot;item_count&quot;: 97,
+    &quot;months&quot;: [
+      &quot;2026-03&quot;,
+      &quot;2026-04&quot;
+    ],
     &quot;areas&quot;: [
       &quot;高雄市苓雅區&quot;,
       &quot;高雄市新興區&quot;
@@ -866,695 +924,269 @@ const matchReportData = {
         &quot;dimension&quot;: &quot;葷素紀錄&quot;,
         &quot;text&quot;: &quot;素食品項較多&quot;
       }
+    ],
+    &quot;counts&quot;: [
+      24,
+      21,
+      9,
+      9,
+      10,
+      3,
+      12,
+      2,
+      5,
+      2
     ]
   },
   &quot;candidates&quot;: [
     {
       &quot;name&quot;: &quot;手搖學生 A&quot;,
-      &quot;total&quot;: 93,
-      &quot;taste&quot;: 96,
-      &quot;areas&quot;: [
-        &quot;高雄市苓雅區&quot;,
-        &quot;高雄市新興區&quot;
-      ],
-      &quot;tags&quot;: [
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買正餐（34%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買飲品（27%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市苓雅區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市新興區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範餐坊（21 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範茶屋（20 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範客運（12 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範烘焙店（8 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範運動館（5 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範水餃館（4 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;消費檔次&quot;,
-          &quot;text&quot;: &quot;均衡型&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-          &quot;text&quot;: &quot;素食品項較多&quot;
-        }
-      ],
-      &quot;basis&quot;: [
-        &quot;品類&quot;,
-        &quot;常消費地區&quot;,
-        &quot;品牌&quot;,
-        &quot;葷素紀錄&quot;,
-        &quot;消費檔次&quot;
-      ],
-      &quot;reasons&quot;: [
-        &quot;都很常買正餐&quot;,
-        &quot;都常在高雄市苓雅區消費&quot;,
-        &quot;都常去示範餐坊&quot;
-      ],
-      &quot;differences&quot;: []
-    },
-    {
-      &quot;name&quot;: &quot;手搖學生 C&quot;,
-      &quot;total&quot;: 93,
-      &quot;taste&quot;: 95,
-      &quot;areas&quot;: [
-        &quot;高雄市苓雅區&quot;,
-        &quot;高雄市新興區&quot;
-      ],
-      &quot;tags&quot;: [
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買正餐（36%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買飲品（27%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市苓雅區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市新興區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範餐坊（23 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範茶屋（20 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範客運（11 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範烘焙店（8 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範水餃館（4 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範運動館（4 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;消費檔次&quot;,
-          &quot;text&quot;: &quot;均衡型&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-          &quot;text&quot;: &quot;素食品項較多&quot;
-        }
-      ],
-      &quot;basis&quot;: [
-        &quot;品類&quot;,
-        &quot;常消費地區&quot;,
-        &quot;品牌&quot;,
-        &quot;葷素紀錄&quot;,
-        &quot;消費檔次&quot;
-      ],
-      &quot;reasons&quot;: [
-        &quot;都很常買正餐&quot;,
-        &quot;都常在高雄市苓雅區消費&quot;,
-        &quot;都常去示範餐坊&quot;
-      ],
-      &quot;differences&quot;: []
+      &quot;score&quot;: 96,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（21 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範水餃館（4 次）&quot;
+      },
+      &quot;counts&quot;: [
+        25,
+        20,
+        8,
+        0,
+        5,
+        0,
+        12,
+        0,
+        4,
+        0
+      ]
     },
     {
       &quot;name&quot;: &quot;手搖學生 B&quot;,
-      &quot;total&quot;: 90,
-      &quot;taste&quot;: 95,
-      &quot;areas&quot;: [
-        &quot;高雄市苓雅區&quot;,
-        &quot;高雄市新興區&quot;
-      ],
-      &quot;tags&quot;: [
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買正餐（35%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買飲品（25%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市苓雅區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市新興區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範餐坊（22 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範茶屋（19 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範客運（14 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範烘焙店（7 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範水餃館（5 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範運動館（5 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;消費檔次&quot;,
-          &quot;text&quot;: &quot;均衡型&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-          &quot;text&quot;: &quot;素食品項較多&quot;
-        }
-      ],
-      &quot;basis&quot;: [
-        &quot;品類&quot;,
-        &quot;常消費地區&quot;,
-        &quot;品牌&quot;,
-        &quot;葷素紀錄&quot;,
-        &quot;消費檔次&quot;
-      ],
-      &quot;reasons&quot;: [
-        &quot;都很常買正餐&quot;,
-        &quot;都常在高雄市苓雅區消費&quot;,
-        &quot;都常去示範餐坊&quot;
-      ],
-      &quot;differences&quot;: []
+      &quot;score&quot;: 95,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（22 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範水餃館（5 次）&quot;
+      },
+      &quot;counts&quot;: [
+        27,
+        19,
+        7,
+        0,
+        5,
+        0,
+        14,
+        0,
+        5,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;手搖學生 C&quot;,
+      &quot;score&quot;: 95,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（23 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範水餃館（4 次）&quot;
+      },
+      &quot;counts&quot;: [
+        27,
+        20,
+        8,
+        0,
+        4,
+        0,
+        11,
+        0,
+        5,
+        0
+      ]
     },
     {
       &quot;name&quot;: &quot;手搖學生 D&quot;,
-      &quot;total&quot;: 82,
-      &quot;taste&quot;: 81,
-      &quot;areas&quot;: [
-        &quot;高雄市苓雅區&quot;,
-        &quot;高雄市新興區&quot;
-      ],
-      &quot;tags&quot;: [
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買正餐（32%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買飲品（28%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市苓雅區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市新興區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範茶屋（21 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範餐坊（19 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範客運（12 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範烘焙店（8 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範水餃館（5 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範運動館（4 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;消費檔次&quot;,
-          &quot;text&quot;: &quot;均衡型&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-          &quot;text&quot;: &quot;葷食品項較多&quot;
-        }
-      ],
-      &quot;basis&quot;: [
-        &quot;品類&quot;,
-        &quot;常消費地區&quot;,
-        &quot;品牌&quot;,
-        &quot;葷素紀錄&quot;,
-        &quot;消費檔次&quot;
-      ],
-      &quot;reasons&quot;: [
-        &quot;都很常買正餐&quot;,
-        &quot;都常在高雄市苓雅區消費&quot;,
-        &quot;都常去示範餐坊&quot;
-      ],
-      &quot;differences&quot;: [
-        &quot;都常去示範餐坊，但點的不一樣（示範蔬食餐盒／示範鮮蝦餐盒）&quot;
+      &quot;score&quot;: 81,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範茶屋（21 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷食品項較多&quot;
+      },
+      &quot;counts&quot;: [
+        24,
+        21,
+        8,
+        0,
+        4,
+        0,
+        12,
+        0,
+        5,
+        0
       ]
     },
     {
       &quot;name&quot;: &quot;手搖學生 E&quot;,
-      &quot;total&quot;: 81,
-      &quot;taste&quot;: 80,
-      &quot;areas&quot;: [
-        &quot;高雄市苓雅區&quot;,
-        &quot;高雄市新興區&quot;
-      ],
-      &quot;tags&quot;: [
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買正餐（31%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買飲品（31%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市苓雅區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市新興區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範茶屋（23 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範餐坊（18 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範客運（11 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範烘焙店（9 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範水餃館（5 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範運動館（5 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;消費檔次&quot;,
-          &quot;text&quot;: &quot;均衡型&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-          &quot;text&quot;: &quot;葷食品項較多&quot;
-        }
-      ],
-      &quot;basis&quot;: [
-        &quot;品類&quot;,
-        &quot;常消費地區&quot;,
-        &quot;品牌&quot;,
-        &quot;葷素紀錄&quot;,
-        &quot;消費檔次&quot;
-      ],
-      &quot;reasons&quot;: [
-        &quot;都很常買正餐&quot;,
-        &quot;都常在高雄市苓雅區消費&quot;,
-        &quot;都常去示範餐坊&quot;
-      ],
-      &quot;differences&quot;: [
-        &quot;都常去示範餐坊，但點的不一樣（示範蔬食餐盒／示範鮮蝦餐盒）&quot;
-      ]
-    },
-    {
-      &quot;name&quot;: &quot;健身族 E&quot;,
-      &quot;total&quot;: 73,
-      &quot;taste&quot;: 75,
-      &quot;areas&quot;: [
-        &quot;高雄市苓雅區&quot;,
-        &quot;高雄市前鎮區&quot;
-      ],
-      &quot;tags&quot;: [
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買正餐（32%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買飲品（32%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市苓雅區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市前鎮區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範超商（18 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範餐坊（18 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範運動館（15 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範量販（5 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;消費檔次&quot;,
-          &quot;text&quot;: &quot;均衡型&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-          &quot;text&quot;: &quot;葷素品項都有&quot;
-        }
-      ],
-      &quot;basis&quot;: [
-        &quot;品類&quot;,
-        &quot;常消費地區&quot;,
-        &quot;品牌&quot;,
-        &quot;葷素紀錄&quot;,
-        &quot;消費檔次&quot;
-      ],
-      &quot;reasons&quot;: [
-        &quot;都很常買正餐&quot;,
-        &quot;都常在高雄市苓雅區消費&quot;,
-        &quot;消費檔次都是均衡型&quot;
-      ],
-      &quot;differences&quot;: []
-    },
-    {
-      &quot;name&quot;: &quot;健身族 D&quot;,
-      &quot;total&quot;: 73,
-      &quot;taste&quot;: 75,
-      &quot;areas&quot;: [
-        &quot;高雄市苓雅區&quot;,
-        &quot;高雄市前鎮區&quot;
-      ],
-      &quot;tags&quot;: [
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買正餐（35%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買飲品（31%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市苓雅區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市前鎮區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範餐坊（18 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範超商（16 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範運動館（13 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範量販（4 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;消費檔次&quot;,
-          &quot;text&quot;: &quot;均衡型&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-          &quot;text&quot;: &quot;葷素品項都有&quot;
-        }
-      ],
-      &quot;basis&quot;: [
-        &quot;品類&quot;,
-        &quot;常消費地區&quot;,
-        &quot;品牌&quot;,
-        &quot;葷素紀錄&quot;,
-        &quot;消費檔次&quot;
-      ],
-      &quot;reasons&quot;: [
-        &quot;都很常買正餐&quot;,
-        &quot;都常在高雄市苓雅區消費&quot;,
-        &quot;消費檔次都是均衡型&quot;
-      ],
-      &quot;differences&quot;: []
-    },
-    {
-      &quot;name&quot;: &quot;健身族 A&quot;,
-      &quot;total&quot;: 71,
-      &quot;taste&quot;: 72,
-      &quot;areas&quot;: [
-        &quot;高雄市苓雅區&quot;,
-        &quot;高雄市前鎮區&quot;
-      ],
-      &quot;tags&quot;: [
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買正餐（33%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買飲品（33%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市苓雅區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市前鎮區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範超商（18 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範餐坊（18 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範運動館（13 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範量販（6 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;消費檔次&quot;,
-          &quot;text&quot;: &quot;均衡型&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-          &quot;text&quot;: &quot;葷食品項較多&quot;
-        }
-      ],
-      &quot;basis&quot;: [
-        &quot;品類&quot;,
-        &quot;常消費地區&quot;,
-        &quot;品牌&quot;,
-        &quot;葷素紀錄&quot;,
-        &quot;消費檔次&quot;
-      ],
-      &quot;reasons&quot;: [
-        &quot;都很常買正餐&quot;,
-        &quot;都常在高雄市苓雅區消費&quot;,
-        &quot;消費檔次都是均衡型&quot;
-      ],
-      &quot;differences&quot;: [
-        &quot;都常去示範餐坊，但點的不一樣（示範蔬食餐盒／示範雞肉餐盒）&quot;
+      &quot;score&quot;: 80,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範茶屋（23 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷食品項較多&quot;
+      },
+      &quot;counts&quot;: [
+        23,
+        23,
+        9,
+        0,
+        5,
+        0,
+        11,
+        0,
+        4,
+        0
       ]
     },
     {
       &quot;name&quot;: &quot;健身族 B&quot;,
-      &quot;total&quot;: 71,
-      &quot;taste&quot;: 75,
-      &quot;areas&quot;: [
-        &quot;高雄市苓雅區&quot;,
-        &quot;高雄市前鎮區&quot;
-      ],
-      &quot;tags&quot;: [
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買正餐（32%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買飲品（32%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市苓雅區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市前鎮區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範超商（17 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範餐坊（17 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範運動館（14 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範量販（5 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;消費檔次&quot;,
-          &quot;text&quot;: &quot;均衡型&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-          &quot;text&quot;: &quot;葷素品項都有&quot;
-        }
-      ],
-      &quot;basis&quot;: [
-        &quot;品類&quot;,
-        &quot;常消費地區&quot;,
-        &quot;品牌&quot;,
-        &quot;葷素紀錄&quot;,
-        &quot;消費檔次&quot;
-      ],
-      &quot;reasons&quot;: [
-        &quot;都很常買正餐&quot;,
-        &quot;都常在高雄市苓雅區消費&quot;,
-        &quot;消費檔次都是均衡型&quot;
-      ],
-      &quot;differences&quot;: []
+      &quot;score&quot;: 75,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（17 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷素品項都有&quot;
+      },
+      &quot;counts&quot;: [
+        17,
+        17,
+        0,
+        5,
+        14,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 D&quot;,
+      &quot;score&quot;: 75,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（18 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷素品項都有&quot;
+      },
+      &quot;counts&quot;: [
+        18,
+        16,
+        0,
+        4,
+        13,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 E&quot;,
+      &quot;score&quot;: 75,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（18 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷素品項都有&quot;
+      },
+      &quot;counts&quot;: [
+        18,
+        18,
+        0,
+        5,
+        15,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 A&quot;,
+      &quot;score&quot;: 72,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（18 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷食品項較多&quot;
+      },
+      &quot;counts&quot;: [
+        18,
+        18,
+        0,
+        6,
+        13,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
     },
     {
       &quot;name&quot;: &quot;健身族 C&quot;,
-      &quot;total&quot;: 66,
-      &quot;taste&quot;: 71,
-      &quot;areas&quot;: [
-        &quot;高雄市前鎮區&quot;,
-        &quot;高雄市苓雅區&quot;
-      ],
-      &quot;tags&quot;: [
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買正餐（34%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;品類偏好&quot;,
-          &quot;text&quot;: &quot;常買飲品（32%）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市前鎮區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常消費地區&quot;,
-          &quot;text&quot;: &quot;高雄市苓雅區&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範餐坊（19 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範超商（18 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範運動館（15 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;常去品牌&quot;,
-          &quot;text&quot;: &quot;示範量販（4 次）&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;消費檔次&quot;,
-          &quot;text&quot;: &quot;均衡型&quot;
-        },
-        {
-          &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-          &quot;text&quot;: &quot;葷食品項較多&quot;
-        }
-      ],
-      &quot;basis&quot;: [
-        &quot;品類&quot;,
-        &quot;常消費地區&quot;,
-        &quot;品牌&quot;,
-        &quot;葷素紀錄&quot;,
-        &quot;消費檔次&quot;
-      ],
-      &quot;reasons&quot;: [
-        &quot;都很常買正餐&quot;,
-        &quot;都常在高雄市苓雅區消費&quot;,
-        &quot;消費檔次都是均衡型&quot;
-      ],
-      &quot;differences&quot;: [
-        &quot;都常去示範餐坊，但點的不一樣（示範蔬食餐盒／示範雞肉餐盒）&quot;
+      &quot;score&quot;: 71,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（19 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷食品項較多&quot;
+      },
+      &quot;counts&quot;: [
+        19,
+        18,
+        0,
+        4,
+        15,
+        0,
+        0,
+        0,
+        0,
+        0
       ]
     }
   ]
@@ -1566,79 +1198,79 @@ const matchReportData = {
   const data = matchReportData, settings = data.settings;
   const $ = id =&gt; document.getElementById(id);
   const pct = value =&gt; Math.round(value * 100) + &#x27;%&#x27;;
+  const pageHost = window.parent !== window &amp;&amp; window.frameElement?.id === &#x27;match-frame&#x27; ? window.parent : null;
   function make(tag, text, className) {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
     if (className) node.className = className;
     return node;
   }
-  function chipItems(tags) {
-    return tags.map(tag =&gt; {
-      const item = make(&#x27;li&#x27;);
-      item.append(make(&#x27;small&#x27;, tag.dimension), tag.text);
-      return item;
-    });
+  function pairFor(candidate) {
+    return {
+      score: candidate.score,
+      left: { name: &#x27;你&#x27;, demo: data.isDemo, months: data.me.months, counts: data.me.counts },
+      right: { name: candidate.name, demo: true, months: data.personaMonths, counts: candidate.counts },
+    };
   }
-  function lines(texts, className) {
-    const list = make(&#x27;ul&#x27;, undefined, className);
-    for (const text of texts) list.append(make(&#x27;li&#x27;, text));
-    return list;
-  }
-  function card(match) {
-    const article = make(&#x27;article&#x27;, undefined, &#x27;card&#x27;);
-    const head = make(&#x27;div&#x27;, undefined, &#x27;match-head&#x27;);
-    const score = make(&#x27;div&#x27;, match.total + &#x27;%&#x27;, &#x27;score&#x27;);
-    score.append(make(&#x27;small&#x27;, &#x27;品味 &#x27; + match.taste + &#x27;%&#x27;));
-    head.append(make(&#x27;h3&#x27;, match.name), score);
-    const tags = make(&#x27;ul&#x27;, undefined, &#x27;chips&#x27;);
-    tags.append(...chipItems(match.tags));
-    article.append(head, tags, make(&#x27;p&#x27;, &#x27;比較了：&#x27; + match.basis.join(&#x27;、&#x27;), &#x27;basis&#x27;), lines(match.reasons, &#x27;reasons&#x27;));
-    if (match.differences.length) article.append(lines(match.differences, &#x27;differences&#x27;));
-    return article;
-  }
-  const chosen = new Set();
-  function render() {
-    const list = $(&#x27;match-list&#x27;);
-    if (!data.me.ready) {
-      $(&#x27;match-status&#x27;).textContent = &#x27;&#x27;;
-      list.replaceChildren(make(&#x27;p&#x27;, &#x27;資料不足，還不能配對：需要至少 &#x27; + settings.category_min_items + &#x27; 筆已分類品項（目前 &#x27;
-        + data.me.item_count + &#x27; 筆），以及品牌、葷素紀錄或消費檔次其中一項。多掃幾張發票再看看。&#x27;, &#x27;empty&#x27;));
-      return;
+  function card({ candidate, place }) {
+    const button = make(&#x27;button&#x27;, undefined, &#x27;card&#x27;);
+    button.type = &#x27;button&#x27;;
+    button.title = &#x27;查看你和&#x27; + candidate.name + &#x27;的連線圖&#x27;;
+    const title = make(&#x27;h3&#x27;, candidate.name);
+    if (place) title.append(make(&#x27;span&#x27;, place, &#x27;place&#x27;));
+    const head = make(&#x27;div&#x27;, undefined, &#x27;card-head&#x27;);
+    head.append(title, make(&#x27;span&#x27;, candidate.score + &#x27;%&#x27;, &#x27;score&#x27;));
+    const pair = make(&#x27;dl&#x27;, undefined, &#x27;pair&#x27;);
+    for (const [label, tag, className] of [[&#x27;最像你&#x27;, candidate.like, &#x27;like&#x27;], [&#x27;最不像你&#x27;, candidate.unlike, &#x27;unlike&#x27;]]) {
+      if (tag) pair.append(make(&#x27;dt&#x27;, label), make(&#x27;dd&#x27;, tag.dimension + &#x27;：&#x27; + tag.text, className));
     }
-    const passed = MatchFilter.recommend(data.candidates, [...chosen], settings.thresholds);
-    const shown = passed.slice(0, settings.top_matches);
-    $(&#x27;match-status&#x27;).textContent = &#x27;符合條件 &#x27; + passed.length + &#x27; 位&#x27; + (passed.length &gt; shown.length ? &#x27;，顯示前 &#x27; + shown.length + &#x27; 位&#x27; : &#x27;&#x27;) + &#x27;。&#x27;;
-    list.replaceChildren(...(shown.length ? shown.map(card) : [make(&#x27;p&#x27;, &#x27;目前沒有夠相似的人，多掃幾張發票再看看。&#x27;, &#x27;empty&#x27;)]));
+    button.append(head, pair);
+    button.addEventListener(&#x27;click&#x27;, () =&gt; pageHost?.ReceiptPages.showConnection?.(pairFor(candidate)));
+    return button;
   }
+  let range = null;
+  function renderList() {
+    const shown = MatchFilter.view(data, range);
+    $(&#x27;match-list&#x27;).replaceChildren(...(shown.cards.length ? shown.cards.map(card)
+      : shown.empty ? [make(&#x27;p&#x27;, shown.empty, &#x27;empty&#x27;)] : []));
+  }
+  const first = MatchFilter.view(data, null);
+  $(&#x27;match-status&#x27;).textContent = first.status;
+  $(&#x27;range-note&#x27;).textContent = first.note;
+  $(&#x27;range-note&#x27;).hidden = !first.note;
+  $(&#x27;ranges&#x27;).hidden = !first.options.length;
+  for (const option of first.options) {
+    const label = make(&#x27;label&#x27;, undefined, option.disabled ? &#x27;off&#x27; : undefined), input = make(&#x27;input&#x27;);
+    input.type = &#x27;radio&#x27;;
+    input.name = &#x27;range&#x27;;
+    input.disabled = option.disabled;
+    input.addEventListener(&#x27;change&#x27;, () =&gt; { range = option.level; renderList(); });
+    label.append(input, option.label + &#x27; · &#x27; + option.count + &#x27; 位&#x27;);
+    $(&#x27;ranges&#x27;).append(label);
+  }
+  renderList();
   $(&#x27;match-note&#x27;).textContent = &#x27;配對對象是 &#x27; + data.population + &#x27; 位虛構示範用戶。&#x27;
-    + (data.isDemo ? &#x27;「我」也是虛構示範資料。&#x27; : &#x27;你的標籤來自這份私人報告，只存在這個檔案裡。&#x27;);
+    + (data.isDemo ? &#x27;「我」也是虛構示範資料。&#x27; : &#x27;你的標籤來自這份私人報告，只存在這個檔案裡。&#x27;) + &#x27;點一個人，看你們的連線圖。&#x27;;
   const mine = $(&#x27;my-tags&#x27;);
-  if (data.me.tags.length) mine.append(...chipItems(data.me.tags));
-  else mine.replaceWith(make(&#x27;p&#x27;, &#x27;資料還不夠產生標籤。&#x27;, &#x27;note&#x27;));
-  $(&#x27;areas-note&#x27;).textContent = data.me.areas.length
-    ? &#x27;下面是依發票賣方地址推測的常消費地區。勾選真的是你生活圈的地方：同生活圈的人，品味門檻從 &#x27; + pct(settings.thresholds.taste)
-      + &#x27; 降到 &#x27; + pct(settings.thresholds.taste_same_area) + &#x27;。不勾選就不會用來放寬門檻。&#x27;
-    : &#x27;目前推測不出常消費地區，所以只用 &#x27; + pct(settings.thresholds.taste) + &#x27; 的門檻。&#x27;;
-  for (const area of data.me.areas) {
-    const label = make(&#x27;label&#x27;), box = make(&#x27;input&#x27;);
-    box.type = &#x27;checkbox&#x27;;
-    box.addEventListener(&#x27;change&#x27;, () =&gt; { if (box.checked) chosen.add(area); else chosen.delete(area); render(); });
-    label.append(box, area);
-    $(&#x27;my-areas&#x27;).append(label);
+  for (const tag of data.me.tags) {
+    const item = make(&#x27;li&#x27;);
+    item.append(make(&#x27;small&#x27;, tag.dimension), tag.text);
+    mine.append(item);
   }
-  const weights = settings.weights;
+  if (!data.me.tags.length) mine.replaceWith(make(&#x27;p&#x27;, &#x27;資料還不夠產生標籤。&#x27;));
+  const weights = settings.weights, levels = settings.price_levels;
   $(&#x27;method&#x27;).append(
-    make(&#x27;p&#x27;, &#x27;五個面向加權：品類 &#x27; + pct(weights.category) + &#x27;、常消費地區 &#x27; + pct(weights.district) + &#x27;、品牌 &#x27; + pct(weights.brand)
-      + &#x27;、葷素紀錄 &#x27; + pct(weights.flavor) + &#x27;、消費檔次 &#x27; + pct(weights.price) + &#x27;。缺資料的面向不計分，權重分給其他面向。&#x27;),
+    make(&#x27;p&#x27;, &#x27;配對分數：品類、品牌、葷素紀錄、消費檔次依 &#x27; + [weights.category, weights.brand, weights.flavor, weights.price]
+      .map(weight =&gt; Math.round(weight * 100)).join(&#x27;：&#x27;) + &#x27; 加權，缺資料的面向不計分，權重分給其他面向。地區不算分。&#x27;),
     make(&#x27;p&#x27;, &#x27;品類一定要能比較（各自至少 &#x27; + settings.category_min_items + &#x27; 筆已分類品項），另外至少再有品牌、葷素紀錄、消費檔次其中一項，才會配對。&#x27;),
-    make(&#x27;p&#x27;, &#x27;品味分數不含地區，至少 &#x27; + pct(settings.thresholds.taste) + &#x27; 才推薦；對方常在你勾選的生活圈消費時，放寬為 &#x27;
-      + pct(settings.thresholds.taste_same_area) + &#x27;。大字是總分，用來排序。&#x27;),
-    make(&#x27;p&#x27;, &#x27;同一張發票的同一品項只算一次。消費檔次用每張發票的正餐份數估計幾人份，再看每人每餐花多少；合菜會讓每人金額偏低。&#x27;),
+    make(&#x27;p&#x27;, &#x27;配對分數 &#x27; + pct(settings.thresholds.match) + &#x27; 以上直接推薦。沒有人達到時，可以選要找多遠（同一區、同縣市、同地區或不限），範圍內 &#x27;
+      + pct(settings.thresholds.nearby) + &#x27; 以上的人會被推薦；距離依你和對方的常消費地區判斷。&#x27;),
+    make(&#x27;p&#x27;, &#x27;消費檔次只看有正餐的發票：用正餐份數估計幾人份，再取每人每餐花費的中位數。&#x27; + levels[0].label + &#x27;未滿 &#x27; + levels[0].below
+      + &#x27; 元，&#x27; + levels[1].label + &#x27;未滿 &#x27; + levels[1].below + &#x27; 元，其餘為&#x27; + levels[2].label + &#x27;。合菜會讓每人金額偏低。&#x27;),
+    make(&#x27;p&#x27;, &#x27;「最像你」「最不像你」取自對方自己的標籤，常消費地區不當成理由。同一張發票的同一品項只算一次。&#x27;),
     make(&#x27;p&#x27;, &#x27;此配對頁只用行政區與連鎖品牌，不顯示分店、日期或金額。&#x27;
       + (data.isDemo ? &#x27;&#x27; : &#x27;這份私人報告的其他頁面仍有完整交易明細，分享整份檔案就會一併分享。&#x27;)
-      + &#x27;配對對象皆為虛構示範用戶，他們的常消費地區視為已確認的生活圈。&#x27;));
-  render();
-  const pageHost = window.parent !== window &amp;&amp; window.frameElement?.id === &#x27;match-frame&#x27; ? window.parent : null;
+      + &#x27;配對對象皆為虛構示範用戶。&#x27;));
   if (pageHost) {
     const back = $(&#x27;return-report&#x27;);
     back.hidden = false;

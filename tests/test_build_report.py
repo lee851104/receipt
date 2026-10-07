@@ -43,6 +43,7 @@ class StandaloneBuildTests(unittest.TestCase):
             command = [sys.executable, str(project / "scripts" / "build_report.py")]
             result = subprocess.run(command, cwd=folder, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("taste similarity to 40 fictional people", result.stdout)
             html = (project / "invoice-insights.html").read_text(encoding="utf-8")
             self.assertIn('"isDemo": true', html)
             self.assertIn("虛構示範", html)
@@ -116,6 +117,7 @@ class StandaloneBuildTests(unittest.TestCase):
             command = [sys.executable, str(project / "scripts" / "build_report.py"), "--private"]
             first = subprocess.run(command, cwd=folder, capture_output=True, text=True)
             self.assertEqual(first.returncode, 0, first.stderr)
+            self.assertIn("taste vector: not enough data to compare", first.stdout)
             report = project / "invoice-insights-private.html"
             self.assertFalse((project / "invoice-insights.html").exists())
             before = report.read_bytes()

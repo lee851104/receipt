@@ -8,9 +8,10 @@ from pathlib import Path
 from .invoices import build_month
 from .demo import build_demo
 from .matching import eligible, ready
-from .personas import MONTHS, build_personas
+from .personas import MONTHS, PERIOD, build_friends, build_personas
+from .similarity import compare, percent
 from .tags import build_profile
-from .traits import load_context
+from .traits import build_vector, dated, load_context, relative, similarity_model, typical
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / "src" / "web"
@@ -64,6 +65,18 @@ def build_matches(months, categories, is_demo, population):
     }
 
 
+def taste_summary(months, population, friends, context):
+    """My taste vector and my similarity to each fictional person, all measured from the average person."""
+    settings = context["traits"]
+    raw = {person["name"]: build_vector(person["rows"], list(PERIOD), context) for person in population + friends}
+    centers = typical([raw[person["name"]] for person in population], settings)
+    rows, period = dated(months)
+    me = relative(build_vector(rows, period, context), centers)
+    model = similarity_model(settings)
+    scores = [compare(me, relative(raw[person["name"]], centers), model)["score"] for person in population]
+    return me, sorted(score for score in scores if score is not None)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Build a public demo, or an explicitly requested private report.")
     parser.add_argument("--private", action="store_true", help="Read data/private/report.json and write invoice-insights-private.html")
@@ -109,6 +122,13 @@ def main():
     for key, month in months.items():
         print(key, len(month["rows"]), "rows; total", sum(row["amount"] for row in month["rows"]))
     print("match candidates:", len(matches["candidates"]), "of", matches["population"], "fictional people")
+    me, scores = taste_summary(months, population, build_friends(context["calendar"]), context)
+    if me is None or not scores:
+        print("taste vector: not enough data to compare")
+    else:
+        middle = scores[len(scores) // 2]
+        print(f"taste similarity to {len(scores)} fictional people: highest {percent(scores[-1])}%, "
+              f"median {percent(middle)}%, lowest {percent(scores[0])}%")
 
 
 if __name__ == "__main__":

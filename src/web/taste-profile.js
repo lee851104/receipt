@@ -12,12 +12,19 @@
   return {schema,name:value.name.trim(),demo:value.demo,months:[...value.months].sort(),counts:[...value.counts]};
  }
  function fromReport(report,name){
-  const counts=categories.map(()=>0),months=Object.keys(report.months).sort();
+  const counts=categories.map(()=>0),months=Object.keys(report.months).sort(),seen=new Set();
   for(const month of Object.values(report.months))for(const row of month.rows){
    const i=categories.indexOf(report.categories[row.category]?.name);
-   if(i>=0&&!row.provisional&&Number.isFinite(row.amount)&&row.amount>0)counts[i]++;
+   if(i<0||row.provisional||!Number.isFinite(row.amount)||row.amount<=0)continue;
+   // One portion per item and invoice, as in the match tags; rows without an invoice code each count.
+   if(row.invoice!==undefined){const key=JSON.stringify([row.invoice,row.name]);if(seen.has(key))continue;seen.add(key);}
+   counts[i]++;
   }
   return validate({schema,name:name.trim()||'我的偏好',demo:report.isDemo===true,months,counts});
+ }
+ function fromPair(pair){
+  if(!pair||!Number.isSafeInteger(pair.score)||pair.score<0||pair.score>100)throw new Error('配對資料不正確，請回配對清單重新選擇。');
+  return {score:pair.score,left:validate({schema,...pair.left}),right:validate({schema,...pair.right})};
  }
  function toURL(profile,base){
   const url=new URL(base);
@@ -36,6 +43,6 @@
   }catch(error){throw new Error('無法讀取品味連結。請確認完整複製，並使用目前版本重新匯出。');}
  }
  function cosine(a,b){const n=Math.hypot(...a)*Math.hypot(...b);return n?Math.min(1,Math.max(0,a.reduce((s,x,i)=>s+x*b[i],0)/n)):null;}
- const api=Object.freeze({categories,schema,validate,fromReport,toURL,fromURL,cosine});
+ const api=Object.freeze({categories,schema,validate,fromReport,fromPair,toURL,fromURL,cosine});
  if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.TasteProfile=api;
 })(globalThis);

@@ -57,6 +57,7 @@ class StandaloneBuildTests(unittest.TestCase):
             compared.feed(comparison)
             self.assertEqual(compared.external, [])
             self.assertIn("receipt-taste/categories-v1", comparison)
+            self.assertIn("同一張發票的同一品項只算一次", comparison)
             match_source = re.search(r'<template id="match-page-source">(.*?)</template>', html, re.S)
             self.assertIsNotNone(match_source)
             match_page = unescape(match_source.group(1))

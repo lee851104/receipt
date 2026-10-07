@@ -398,7 +398,7 @@ html { scroll-behavior: smooth; }
 
 /* One file, two independent views; each keeps its own styles and scroll position. */
 body.taste-view-open{overflow:hidden}body.taste-view-open>header,body.taste-view-open>main{display:none}
-#taste-view{position:fixed;inset:0;background:var(--paper);z-index:1000}#taste-frame{display:block;width:100%;height:100%;border:0;background:var(--paper)}
+#taste-view,#match-view,#connection-view{position:fixed;inset:0;background:var(--paper);z-index:1000}#taste-frame,#match-frame,#connection-frame{display:block;width:100%;height:100%;border:0;background:var(--paper)}
 </style>
 </head>
 <body>
@@ -407,14 +407,14 @@ body.taste-view-open{overflow:hidden}body.taste-view-open>header,body.taste-view
 <section class="intro"><div><p class="eyebrow">從消費，看見自己</p><h1>You are<br>what you <em>buy.</em></h1><p class="subtitle">不用逐筆記帳。從發票品項，看見消費模式，再跟上個月的自己比。</p></div><div class="period" id="report-period"></div></section>
 <p class="data-notice" id="data-notice" role="note"></p>
 <section class="taste-sharing" aria-label="與朋友比較品味">
- <div class="taste-actions"><a class="taste-primary" id="compare-friends" href="#friends">比較跟朋友品味差多少 ↗</a><button id="export-taste" type="button" disabled title="功能準備中">匯出我的品味連結</button></div>
- <p class="taste-caption">把消費偏好帶到朋友比較頁。品味連結匯出功能準備中。</p>
+ <div class="taste-actions"><a class="taste-primary" id="compare-friends" href="#friends">比較跟朋友品味差多少 ↗</a><a id="find-matches" href="#match">找到同好 ↗</a><button id="export-taste" type="button" disabled title="功能準備中">匯出我的品味連結</button></div>
+ <p class="taste-caption">把消費偏好帶到朋友比較頁，或到「找到同好」看看誰和你最合拍。品味連結匯出功能準備中。</p>
  <div id="taste-export-panel" class="taste-export-panel" hidden>
   <div class="taste-export-heading"><div><h2>分享偏好，從一個連結開始。</h2><p>只分享暱稱、月份與各類消費筆數，不包含店家、品名、發票號碼或金額。取得連結的人可以讀取這些摘要；連結沒有加密。</p></div></div>
   <div class="taste-name-row"><label for="taste-nickname">你的暱稱 <input id="taste-nickname" type="text" maxlength="24" value="我的偏好" autocomplete="off"></label><button id="taste-regenerate" type="button">更新連結</button></div>
   <p id="taste-export-preview"></p><label class="taste-link-label" for="taste-link">你的品味連結</label><textarea id="taste-link" rows="3" readonly spellcheck="false"></textarea>
   <div class="taste-actions"><button id="taste-copy" type="button">複製連結</button><a id="taste-open-link">帶到朋友比較頁 ↗</a></div>
-  <p id="taste-export-status" role="status" aria-live="polite"></p><p class="taste-caption">涵蓋報告所有月份，不受目前畫面月份影響。依正金額、分類已確認的品項筆數計算；折扣、贈品與待確認分類不計入。這是分類偏好摘要，還無法分辨甜度或餡料。</p>
+  <p id="taste-export-status" role="status" aria-live="polite"></p><p class="taste-caption">涵蓋報告所有月份，不受目前畫面月份影響。依正金額、分類已確認的品項筆數計算，同一張發票的同一品項只算一次；折扣、贈品與待確認分類不計入。這是分類偏好摘要，還無法分辨甜度或餡料。</p>
  </div>
 </section>
 <nav class="flow-links" aria-label="回顧流程">
@@ -424,7 +424,7 @@ body.taste-view-open{overflow:hidden}body.taste-view-open>header,body.taste-view
 </nav>
 <section class="flow-region item-section" id="items" tabindex="-1" aria-labelledby="items-title">
   <div class="flow-heading"><p class="eyebrow">01 ／ 拆到品項</p><h2 id="items-title">一張發票裡買了什麼，分開看得更清楚。</h2><p>查看商品明細與分類，再往下看消費模式。</p></div>
-<details class="audit" open><summary id="audit-summary"></summary><p class="audit-description" id="audit-description"></p><div class="table-scroll"><table><thead><tr><th>日期</th><th>發票代碼</th><th>賣方</th><th>品項</th><th>分類</th><th class="numeric">數量</th><th class="numeric">金額 NT$</th></tr></thead><tbody id="audit-rows"></tbody></table></div></details>
+<details class="audit" open><summary id="audit-summary"></summary><p class="audit-description" id="audit-description"></p><div class="table-scroll"><table><thead><tr><th>日期</th><th>發票代碼</th><th>賣方</th><th>行政區</th><th>品項</th><th>分類</th><th class="numeric">數量</th><th class="numeric">金額 NT$</th></tr></thead><tbody id="audit-rows"></tbody></table></div></details>
 </section>
 <section class="flow-region" id="insights" tabindex="-1" aria-labelledby="insights-title">
   <div class="flow-heading"><p class="eyebrow">02 ／ 看見消費模式</p><h2 id="insights-title">從每筆消費，看見一個月的習慣。</h2></div>
@@ -438,7 +438,7 @@ body.taste-view-open{overflow:hidden}body.taste-view-open>header,body.taste-view
 <div class="scene" id="scene-2" hidden><div class="routine" id="routine"></div></div>
 <div class="legend" id="legend"></div><div class="chart-note" id="chart-note">依日期播放 · 每一個圓是一日消費的加總，並非消費地點。</div></div>
 <aside class="insight" aria-label="本章完整資料解讀"><div class="insight-overline">THE OBSERVATION / 本章完整解讀</div><div class="insight-number" id="insight-number"></div><h3 id="insight-title"></h3><p id="insight-body"></p><div class="insight-bottom" id="insight-bottom"></div></aside></div>
-<div class="controls"><button class="play" id="play" aria-label="暫停動畫">Ⅱ</button><button class="replay" id="replay" aria-label="從頭重播" title="從頭重播">↺</button><span class="control-label" id="play-state">正在播放</span><input class="timeline" id="timeline" type="range" min="0" max="36" step="0.01" value="0" aria-label="動畫播放進度，單位秒"><span class="time" id="time">00:00 / 00:36</span><button class="speed" id="speed" aria-label="播放速度 1 倍">1×</button></div>
+<div class="controls"><button class="play" id="play" aria-label="暫停動畫">Ⅱ</button><button class="replay" id="replay" aria-label="從頭重播" title="從頭重播">↺</button><span class="control-label" id="play-state">正在播放</span><input class="timeline" id="timeline" type="range" min="0" max="18" step="0.01" value="0" aria-label="動畫播放進度，單位秒"><span class="time" id="time">00:00 / 00:18</span><button class="speed" id="speed" aria-label="播放速度 1 倍">1×</button></div>
 </section>
 <section class="extra-insights" aria-labelledby="extra-title">
   <div class="section-heading"><h2 id="extra-title">換個角度，看見你的日常。</h2><p>出現得多，字就更大；沿著日期，看見一個月的消費分布。</p></div>
@@ -482,6 +482,8 @@ body.taste-view-open{overflow:hidden}body.taste-view-open>header,body.taste-view
 <footer><div id="report-source"></div><div class="footer-brand">You are what you buy.</div></footer>
 </main>
 <section id="taste-view" aria-label="朋友品味比較" hidden><iframe id="taste-frame" title="朋友品味比較" referrerpolicy="no-referrer"></iframe></section>
+<section id="match-view" aria-label="找到同好" hidden><iframe id="match-frame" title="找到同好" referrerpolicy="no-referrer"></iframe></section>
+<section id="connection-view" aria-label="你和配對對象的連線圖" hidden><iframe id="connection-frame" title="你和配對對象的連線圖" referrerpolicy="no-referrer"></iframe></section>
 <template id="taste-page-source">&lt;!doctype html&gt;
 &lt;html lang=&quot;zh-Hant&quot;&gt;
 &lt;head&gt;
@@ -521,7 +523,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 &lt;div class=&quot;canvas&quot;&gt;&lt;svg id=&quot;network&quot; viewBox=&quot;0 0 1200 570&quot; role=&quot;group&quot; aria-label=&quot;左側粉紅是你的資料，右側藍色是朋友的資料；匯入後可點選圓點或連線&quot;&gt;&lt;/svg&gt;&lt;/div&gt;
 &lt;div class=&quot;detail&quot;&gt;&lt;span class=&quot;detail-icon&quot; aria-hidden=&quot;true&quot;&gt;↔&lt;/span&gt;&lt;div class=&quot;detail-text&quot; id=&quot;detail&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;點選一個圓點或一條線，看看你們買了什麼、相似在哪裡。&lt;/div&gt;&lt;button class=&quot;reset&quot; id=&quot;reset&quot; type=&quot;button&quot;&gt;顯示全部連線&lt;/button&gt;&lt;/div&gt;
 &lt;/section&gt;
-&lt;details class=&quot;method&quot;&gt;&lt;summary&gt;資料來源與相似百分比怎麼算？&lt;/summary&gt;&lt;div id=&quot;category-method&quot; hidden&gt;&lt;p&gt;報告連結包含暱稱、涵蓋月份與 10 類已確認消費品項的筆數，每筆正金額的品項算一次，不計折扣、贈品及待確認分類。沒有店家、品名、單筆日期、金額或發票號碼，但摘要仍可被取得連結的人讀取；編碼並非加密。&lt;/p&gt;&lt;p&gt;分類模式使用 10 類筆數向量計算餘弦相似度（Cosine Similarity），再乘以 100。100% 表示各類的比例相同，0% 表示沒有共同類別。這不是實際品味重疊比例，無法分辨同一類中的半糖與無糖、蔬菜餡與鮮蝦餡；分類沒有負值，因此不會產生負相關連線。&lt;/p&gt;&lt;p&gt;圓點面積代表品項筆數；只有相同類別會連線。線的強弱為兩人該類占比的較小值除以較大值，越接近就越粗。綜合分數使用全部分類，不隨篩選改變。若混用示範人物，會先將其虛構次數彙整至相同 10 類，用於操作示範。不同月份或資料量會影響比較，請留意兩側資料範圍。&lt;/p&gt;&lt;/div&gt;&lt;div id=&quot;demo-method&quot;&gt;&lt;p&gt;人物、消費次數與特徵分數皆為虛構；八方雲集與水餃名稱取自討論案例，不代表真實購買紀錄或實際配方。尚未接入語意嵌入（Semantic Embedding）模型。本案例把「蔬菜餡取向」設為 +1、「鮮蝦餡取向」設為 −1；另把同一家虛構茶舖、同款紅茶的「半糖」與「無糖」設為甜度對比的 +1 與 −1。這不是實際含糖量，也不代表不同甜度必然互斥；店家、料理形式與類別保留較小的共同權重。這個對比軸是人工設計，不能從點蔬菜水餃推論為素食者，也不能從一筆選擇推論整體品味。&lt;/p&gt;&lt;p&gt;品項以 36 維示範特徵表示，先將向量長度縮放為 1，再計算內積（Inner Product）；此時等同餘弦相似度（Cosine Similarity）。正值用亮薄荷綠實線（正相關）、負值用亮橘色虛線（負相關），線寬隨絕對值增加；圖例中的「正相關／負相關」表示本示範特徵的同向／反向，不是從多筆觀測估計的統計相關係數。0 表示這組特徵沒有方向關聯，不畫線。所有非零連線皆保留。圓點面積代表消費次數，位置只為排版。&lt;/p&gt;&lt;p&gt;整體先依次數彙整特徵，再把 −1 到 +1 的分數以 &lt;code&gt;(分數 + 1) ÷ 2 × 100&lt;/code&gt; 映射為 0—100%：50% 表示方向無關、100% 表示同向、0% 表示完全反向。這是未校準的示範指數，不是實際喜好重疊比例。綜合解讀從全類別可直接對照的品項配對中，選出分數最高與最低的一組；同分時優先選雙方共同次數較多的配對。篩選只更新範圍指數，綜合分數仍涵蓋全部類別；無資料不當作 0 分。&lt;a href=&quot;https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;計算定義參考&lt;/a&gt;。&lt;/p&gt;&lt;/div&gt;&lt;/details&gt;
+&lt;details class=&quot;method&quot;&gt;&lt;summary&gt;資料來源與相似百分比怎麼算？&lt;/summary&gt;&lt;div id=&quot;category-method&quot; hidden&gt;&lt;p&gt;報告連結包含暱稱、涵蓋月份與 10 類已確認消費品項的筆數，同一張發票的同一品項只算一次，不計折扣、贈品及待確認分類。沒有店家、品名、單筆日期、金額或發票號碼，但摘要仍可被取得連結的人讀取；編碼並非加密。&lt;/p&gt;&lt;p&gt;分類模式使用 10 類筆數向量計算餘弦相似度（Cosine Similarity），再乘以 100。100% 表示各類的比例相同，0% 表示沒有共同類別。這不是實際品味重疊比例，無法分辨同一類中的半糖與無糖、蔬菜餡與鮮蝦餡；分類沒有負值，因此不會產生負相關連線。&lt;/p&gt;&lt;p&gt;圓點面積代表品項筆數；只有相同類別會連線。線的強弱為兩人該類占比的較小值除以較大值，越接近就越粗。綜合分數使用全部分類，不隨篩選改變。若混用示範人物，會先將其虛構次數彙整至相同 10 類，用於操作示範。不同月份或資料量會影響比較，請留意兩側資料範圍。&lt;/p&gt;&lt;/div&gt;&lt;div id=&quot;demo-method&quot;&gt;&lt;p&gt;人物、消費次數與特徵分數皆為虛構；八方雲集與水餃名稱取自討論案例，不代表真實購買紀錄或實際配方。尚未接入語意嵌入（Semantic Embedding）模型。本案例把「蔬菜餡取向」設為 +1、「鮮蝦餡取向」設為 −1；另把同一家虛構茶舖、同款紅茶的「半糖」與「無糖」設為甜度對比的 +1 與 −1。這不是實際含糖量，也不代表不同甜度必然互斥；店家、料理形式與類別保留較小的共同權重。這個對比軸是人工設計，不能從點蔬菜水餃推論為素食者，也不能從一筆選擇推論整體品味。&lt;/p&gt;&lt;p&gt;品項以 36 維示範特徵表示，先將向量長度縮放為 1，再計算內積（Inner Product）；此時等同餘弦相似度（Cosine Similarity）。正值用亮薄荷綠實線（正相關）、負值用亮橘色虛線（負相關），線寬隨絕對值增加；圖例中的「正相關／負相關」表示本示範特徵的同向／反向，不是從多筆觀測估計的統計相關係數。0 表示這組特徵沒有方向關聯，不畫線。所有非零連線皆保留。圓點面積代表消費次數，位置只為排版。&lt;/p&gt;&lt;p&gt;整體先依次數彙整特徵，再把 −1 到 +1 的分數以 &lt;code&gt;(分數 + 1) ÷ 2 × 100&lt;/code&gt; 映射為 0—100%：50% 表示方向無關、100% 表示同向、0% 表示完全反向。這是未校準的示範指數，不是實際喜好重疊比例。綜合解讀從全類別可直接對照的品項配對中，選出分數最高與最低的一組；同分時優先選雙方共同次數較多的配對。篩選只更新範圍指數，綜合分數仍涵蓋全部類別；無資料不當作 0 分。&lt;a href=&quot;https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;計算定義參考&lt;/a&gt;。&lt;/p&gt;&lt;/div&gt;&lt;/details&gt;
 &lt;/main&gt;&lt;footer&gt;&lt;span id=&quot;comparison-footer&quot;&gt;2026.01—03 · 同期間比較 · 僅供視覺與互動討論&lt;/span&gt;&lt;span&gt;You are what you buy. / TASTE CONNECTIONS&lt;/span&gt;&lt;/footer&gt;
 &lt;noscript&gt;&lt;p&gt;請開啟 JavaScript 以查看點線圖。&lt;/p&gt;&lt;/noscript&gt;
 &lt;script data-source=&quot;taste-profile.js&quot;&gt;
@@ -539,12 +541,19 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
   return {schema,name:value.name.trim(),demo:value.demo,months:[...value.months].sort(),counts:[...value.counts]};
  }
  function fromReport(report,name){
-  const counts=categories.map(()=&gt;0),months=Object.keys(report.months).sort();
+  const counts=categories.map(()=&gt;0),months=Object.keys(report.months).sort(),seen=new Set();
   for(const month of Object.values(report.months))for(const row of month.rows){
    const i=categories.indexOf(report.categories[row.category]?.name);
-   if(i&gt;=0&amp;&amp;!row.provisional&amp;&amp;Number.isFinite(row.amount)&amp;&amp;row.amount&gt;0)counts[i]++;
+   if(i&lt;0||row.provisional||!Number.isFinite(row.amount)||row.amount&lt;=0)continue;
+   // One portion per item and invoice, as in the match tags; rows without an invoice code each count.
+   if(row.invoice!==undefined){const key=JSON.stringify([row.invoice,row.name]);if(seen.has(key))continue;seen.add(key);}
+   counts[i]++;
   }
   return validate({schema,name:name.trim()||&#x27;我的偏好&#x27;,demo:report.isDemo===true,months,counts});
+ }
+ function fromPair(pair){
+  if(!pair||!Number.isSafeInteger(pair.score)||pair.score&lt;0||pair.score&gt;100)throw new Error(&#x27;配對資料不正確，請回配對清單重新選擇。&#x27;);
+  return {score:pair.score,left:validate({schema,...pair.left}),right:validate({schema,...pair.right})};
  }
  function toURL(profile,base){
   const url=new URL(base);
@@ -563,13 +572,14 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
   }catch(error){throw new Error(&#x27;無法讀取品味連結。請確認完整複製，並使用目前版本重新匯出。&#x27;);}
  }
  function cosine(a,b){const n=Math.hypot(...a)*Math.hypot(...b);return n?Math.min(1,Math.max(0,a.reduce((s,x,i)=&gt;s+x*b[i],0)/n)):null;}
- const api=Object.freeze({categories,schema,validate,fromReport,toURL,fromURL,cosine});
+ const api=Object.freeze({categories,schema,validate,fromReport,fromPair,toURL,fromURL,cosine});
  if(typeof module!==&#x27;undefined&#x27;&amp;&amp;module.exports)module.exports=api;else root.TasteProfile=api;
 })(globalThis);
 &lt;/script&gt;
 &lt;script&gt;
 &#x27;use strict&#x27;;
-const pageHost=window.parent!==window&amp;&amp;window.frameElement?.id===&#x27;taste-frame&#x27;?window.parent:null;
+const hostFrame=window.parent!==window?window.frameElement?.id:null;
+const pageHost=[&#x27;taste-frame&#x27;,&#x27;connection-frame&#x27;].includes(hostFrame)?window.parent:null;
 function pageLocation(){return pageHost?pageHost.location:location;}
 const demoItems=[
  {a:&#x27;美式咖啡&#x27;,b:&#x27;拿鐵咖啡&#x27;,c:&#x27;飲品&#x27;,g:0,s:.96},
@@ -593,6 +603,15 @@ const $=id=&gt;document.getElementById(id);const svgNS=&#x27;http://www.w3.org/2
 for(const person of Object.values(profiles)){
  person.demoCounts=[...person.counts];person.categoryCounts=TasteProfile.categories.map(name=&gt;demoItems.reduce((n,item,i)=&gt;n+(item.c===name?person.counts[i]:0),0));
 }
+// Opened from the match list: the sides are fixed to you and that match, and the big number is the match score.
+let pair=null;
+if(hostFrame===&#x27;connection-frame&#x27;){
+ try{pair=TasteProfile.fromPair(pageHost.ReceiptPages.connection());}catch(error){pageHost.ReceiptPages.showMatches();}
+ if(pair){
+  profiles.me={name:pair.left.name,payload:pair.left};profiles.match={name:pair.right.name,payload:pair.right};leftKey=&#x27;me&#x27;;rightKey=&#x27;match&#x27;;
+  for(const part of document.querySelectorAll(&#x27;.import-title-row, .imports&#x27;))part.hidden=true;
+ }
+}
 function chartName(key,mobile){const letters=Array.from(profiles[key].name),limit=mobile?5:10;return letters.slice(0,limit).join(&#x27;&#x27;)+(letters.length&gt;limit?&#x27;…&#x27;:&#x27;&#x27;);}
 function profileMonths(key){return profiles[key].payload?.months||[&#x27;2026-01&#x27;,&#x27;2026-02&#x27;,&#x27;2026-03&#x27;];}
 function isDemoProfile(key){return profiles[key].payload?profiles[key].payload.demo:true;}
@@ -604,7 +623,7 @@ function prepareMode(){
  if(categoryMode&amp;&amp;[&#x27;dumplings&#x27;,&#x27;sweetness&#x27;].includes(category)){category=&#x27;all&#x27;;$(&#x27;category&#x27;).value=&#x27;all&#x27;;}
  $(&#x27;category-method&#x27;).hidden=!categoryMode;$(&#x27;demo-method&#x27;).hidden=categoryMode;
  document.querySelector(&#x27;.subtitle&#x27;).textContent=categoryMode?&#x27;每個點是一類消費偏好。看看你們常買的類型，有多少交集。&#x27;:&#x27;每個點是一種消費品項。看看哪些選擇，讓你們有了交集。&#x27;;
- document.querySelector(&#x27;.overall-label&#x27;).textContent=categoryMode?&#x27;消費類型相似度&#x27;:&#x27;綜合品味相似指數&#x27;;
+ document.querySelector(&#x27;.overall-label&#x27;).textContent=pair?&#x27;配對分數&#x27;:categoryMode?&#x27;消費類型相似度&#x27;:&#x27;綜合品味相似指數&#x27;;
  document.querySelector(&#x27;.legend-item&#x27;).lastChild.textContent=categoryMode?&#x27;點越大，品項筆數越多&#x27;:&#x27;點越大，消費次數越多&#x27;;
  document.querySelector(&#x27;.negative-label&#x27;).hidden=categoryMode;
  document.querySelector(&#x27;.legend-explain&#x27;).textContent=categoryMode?&#x27;目前比較的是消費類型，還不能辨認甜度或餡料。只有相同類別會連線；兩人在該類的消費占比越接近，線越粗。&#x27;:&#x27;同款也能選得不同：可篩選「同店不同餡」或「半糖與無糖」。餡料與甜度各自比較，差異不代表兩人整體品味相反。&#x27;;
@@ -699,6 +718,7 @@ function draw(){
  prepareMode();
  const mobile=matchMedia(&#x27;(max-width:640px)&#x27;).matches,svg=$(&#x27;network&#x27;),indices=items.map((_,i)=&gt;i).filter(i=&gt;category===&#x27;all&#x27;||(category===&#x27;dumplings&#x27;?items[i].dumpling:category===&#x27;sweetness&#x27;?items[i].sweetness:items[i].c===category)).filter(i=&gt;!loadedSides().length||loadedSides().some(side=&gt;profiles[keyFor(side)].counts[i]&gt;0));svg.replaceChildren();const chartWidth=mobile?600:1200,chartHeight=mobile&amp;&amp;loadedSides().length&amp;&amp;indices.length&gt;4?160+indices.length*76:570;svg.setAttribute(&#x27;viewBox&#x27;,`0 0 ${chartWidth} ${chartHeight}`);nodes=[];edges=[];selected=null;
  const overall=similarity(items.map((_,i)=&gt;i));$(&#x27;overall-score&#x27;).textContent=overall===null?&#x27;—&#x27;:indexPercent(overall);$(&#x27;score-unit&#x27;).hidden=overall===null;$(&#x27;overall-score&#x27;).parentElement.classList.toggle(&#x27;waiting&#x27;,overall===null);$(&#x27;overall-note&#x27;).textContent=hasBoth()?(categoryMode?&#x27;全類別評估 · 分類偏好摘要&#x27;:&#x27;全類別評估 · 虛構示範&#x27;):loadedSides().length?&#x27;等待另一人匯入&#x27;:&#x27;先匯入偏好資料&#x27;;
+ if(pair){$(&#x27;overall-score&#x27;).textContent=pair.score;$(&#x27;overall-note&#x27;).textContent=&#x27;消費類型相似度 &#x27;+indexPercent(overall)+&#x27;%（下圖）&#x27;;}
  const scopeScore=similarity(indices),count=loadedSides().length;
  $(&#x27;scope&#x27;).textContent=(category===&#x27;all&#x27;?&#x27;全類別&#x27;:category===&#x27;dumplings&#x27;?&#x27;同店不同餡&#x27;:category===&#x27;sweetness&#x27;?&#x27;半糖與無糖&#x27;:category)+&#x27; · &#x27;+(!count?&#x27;尚未匯入資料&#x27;:!indices.length?&#x27;目前無資料&#x27;:loadedSides().reduce((n,side)=&gt;n+indices.filter(i=&gt;profiles[keyFor(side)].counts[i]&gt;0).length,0)+(categoryMode?&#x27; 個類別點 · &#x27;:&#x27; 個品項點 · &#x27;)+(scopeScore===null?(hasBoth()?&#x27;此範圍有一側無資料&#x27;:&#x27;尚待另一人匯入&#x27;):categoryMode&amp;&amp;category!==&#x27;all&#x27;?&#x27;綜合分數仍計算全部類別&#x27;:&#x27;範圍相似 &#x27;+indexPercent(scopeScore)+&#x27;%&#x27;));
  renderSummary(overall);
@@ -706,7 +726,7 @@ function draw(){
  const decorations=el(&#x27;g&#x27;,{&#x27;aria-hidden&#x27;:&#x27;true&#x27;});for(const side of [&#x27;a&#x27;,&#x27;b&#x27;]){
   const key=keyFor(side),x=mobile?(side===&#x27;a&#x27;?145:455):(side===&#x27;a&#x27;?275:925),y=mobile?chartHeight/2+15:300;
   decorations.append(el(&#x27;ellipse&#x27;,{cx:x,cy:y,rx:mobile?118:220,ry:mobile?chartHeight/2-95:214,class:&#x27;cluster-ring&#x27;}));
-  decorations.append(el(&#x27;circle&#x27;,{cx:x-105,cy:38,r:4,fill:side===&#x27;a&#x27;?&#x27;#ff9aa7&#x27;:&#x27;#9bbcff&#x27;}),el(&#x27;text&#x27;,{x,y:43,&#x27;text-anchor&#x27;:&#x27;middle&#x27;,class:&#x27;person-name&#x27;},key?chartName(key,mobile)+&#x27; · &#x27;+(side===&#x27;a&#x27;?&#x27;你&#x27;:&#x27;朋友&#x27;):(side===&#x27;a&#x27;?&#x27;你的偏好&#x27;:&#x27;朋友的偏好&#x27;)));
+  decorations.append(el(&#x27;circle&#x27;,{cx:x-105,cy:38,r:4,fill:side===&#x27;a&#x27;?&#x27;#ff9aa7&#x27;:&#x27;#9bbcff&#x27;}),el(&#x27;text&#x27;,{x,y:43,&#x27;text-anchor&#x27;:&#x27;middle&#x27;,class:&#x27;person-name&#x27;},key?chartName(key,mobile)+(pair?(side===&#x27;a&#x27;?&#x27;&#x27;:&#x27; · 配對對象&#x27;):&#x27; · &#x27;+(side===&#x27;a&#x27;?&#x27;你&#x27;:&#x27;朋友&#x27;)):(side===&#x27;a&#x27;?&#x27;你的偏好&#x27;:&#x27;朋友的偏好&#x27;)));
   if(!key){decorations.append(el(&#x27;text&#x27;,{x,y:y-8,class:&#x27;slot-title&#x27;},&#x27;等待匯入&#x27;),el(&#x27;text&#x27;,{x,y:y+22,class:&#x27;slot-note&#x27;},&#x27;在上方貼上偏好網址&#x27;));continue;}
   decorations.append(el(&#x27;text&#x27;,{x,y:y+25,&#x27;text-anchor&#x27;:&#x27;middle&#x27;,class:&#x27;cluster-word&#x27;},side===&#x27;a&#x27;?&#x27;A&#x27;:&#x27;B&#x27;),el(&#x27;text&#x27;,{x,y:66,&#x27;text-anchor&#x27;:&#x27;middle&#x27;,class:&#x27;person-sub&#x27;},indices.reduce((s,i)=&gt;s+profiles[key].counts[i],0)+(categoryMode?&#x27; 筆品項 · &#x27;:&#x27; 次消費 · &#x27;)+indices.filter(i=&gt;profiles[key].counts[i]&gt;0).length+(categoryMode?&#x27; 種類別&#x27;:&#x27; 種品項&#x27;)));
  }svg.append(decorations);
@@ -732,11 +752,555 @@ function importHash(){if(!pageLocation().hash.startsWith(&#x27;#taste=&#x27;))re
 window.refreshTasteFromLocation=importHash;
 if(pageHost){
  const back=$(&#x27;return-report&#x27;);back.hidden=false;
- for(const link of [back,document.querySelector(&#x27;header .brand&#x27;)])link.addEventListener(&#x27;click&#x27;,event=&gt;{event.preventDefault();pageHost.ReceiptPages.showReport();});
+ if(pair)back.textContent=&#x27;← 返回配對清單&#x27;;
+ back.addEventListener(&#x27;click&#x27;,event=&gt;{event.preventDefault();if(pair)pageHost.ReceiptPages.showMatches();else pageHost.ReceiptPages.showReport();});
+ document.querySelector(&#x27;header .brand&#x27;).addEventListener(&#x27;click&#x27;,event=&gt;{event.preventDefault();pageHost.ReceiptPages.showReport();});
 }else window.addEventListener(&#x27;hashchange&#x27;,importHash);
 if(pageLocation().hash.startsWith(&#x27;#taste=&#x27;))importHash();else draw();
 &lt;/script&gt;
 &lt;/body&gt;&lt;/html&gt;
+</template>
+<template id="match-page-source">&lt;!doctype html&gt;
+&lt;html lang=&quot;zh-Hant&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;title&gt;找到同好 · You are what you buy.&lt;/title&gt;
+&lt;style&gt;
+:root{color-scheme:dark;--paper:#101010;--surface:#191919;--ink:#f2f1ed;--muted:#bbb8b2;--line:#30302e;--pink:#ef8588;--teal:#5eeac7;--amber:#ffb65c;--font:&quot;Segoe UI&quot;,&quot;Microsoft JhengHei&quot;,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.7 var(--font);-webkit-font-smoothing:antialiased}
+main{max-width:880px;margin:0 auto;padding:24px 18px 56px}
+.return-report{display:inline-block;color:var(--muted);font-size:12px;text-decoration:none;margin-bottom:14px}.return-report:hover{color:var(--pink)}
+.eyebrow{color:var(--pink);font-size:11px;letter-spacing:2px;margin:0 0 6px}
+h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 8px}h3{font-size:17px;margin:0}
+.note{color:var(--muted);font-size:12px;margin:0}
+.matches{margin-top:26px}.status{margin:0 0 4px}
+.ranges{display:flex;flex-wrap:wrap;gap:8px 18px;margin:12px 0 4px}
+.ranges label{display:flex;align-items:center;gap:6px;cursor:pointer}.ranges input{accent-color:var(--teal);width:16px;height:16px;margin:0}
+.ranges label.off{color:#77756f;cursor:not-allowed}
+.card{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-top:12px;cursor:pointer}
+.card:hover,.card:focus-visible{border-color:var(--teal);outline:none}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.score{font-size:24px;font-weight:600;color:var(--teal)}
+.place{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:0 9px;font-size:11px;font-weight:400;color:var(--muted);margin-left:8px;vertical-align:middle}
+.pair{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:10px 0 0;font-size:13px}
+.pair dt{color:var(--muted)}.pair dd{margin:0;min-width:0;overflow-wrap:anywhere}.pair .like{color:var(--teal)}.pair .unlike{color:var(--amber)}
+.empty{color:var(--muted);margin-top:16px}
+details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor:pointer}details p{margin:8px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:10px 0 0;padding:0}
+.chips li{border:1px solid var(--line);border-radius:999px;padding:3px 11px;color:var(--ink)}.chips small{color:var(--muted);margin-right:5px}
+@media(max-width:640px){h1{font-size:23px}.card{padding:14px}}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;main&gt;
+&lt;a id=&quot;return-report&quot; class=&quot;return-report&quot; href=&quot;#report&quot; hidden&gt;← 返回消費洞察&lt;/a&gt;
+&lt;p class=&quot;eyebrow&quot;&gt;FIND YOUR PEOPLE · 找到同好&lt;/p&gt;
+&lt;h1&gt;從消費習慣，找到合拍的人。&lt;/h1&gt;
+&lt;p class=&quot;note&quot; id=&quot;match-note&quot;&gt;&lt;/p&gt;
+&lt;section class=&quot;matches&quot; aria-labelledby=&quot;matches-title&quot;&gt;
+&lt;h2 id=&quot;matches-title&quot;&gt;和你最合拍的人&lt;/h2&gt;
+&lt;p class=&quot;status&quot; id=&quot;match-status&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/p&gt;
+&lt;p class=&quot;note&quot; id=&quot;range-note&quot; hidden&gt;&lt;/p&gt;
+&lt;div class=&quot;ranges&quot; id=&quot;ranges&quot; role=&quot;radiogroup&quot; aria-label=&quot;要找多遠&quot; hidden&gt;&lt;/div&gt;
+&lt;div id=&quot;match-list&quot;&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;details&gt;&lt;summary&gt;你的消費標籤&lt;/summary&gt;&lt;ul class=&quot;chips&quot; id=&quot;my-tags&quot;&gt;&lt;/ul&gt;&lt;/details&gt;
+&lt;details&gt;&lt;summary&gt;怎麼算的？&lt;/summary&gt;&lt;div id=&quot;method&quot;&gt;&lt;/div&gt;&lt;/details&gt;
+&lt;/main&gt;
+&lt;script data-source=&quot;match-filter.js&quot;&gt;
+/* Who the match page shows and what it says, shared by the page and its tests. */
+(function (root) {
+  &#x27;use strict&#x27;;
+  const RANGES = [&#x27;同一區&#x27;, &#x27;同縣市&#x27;, &#x27;同地區&#x27;, &#x27;不限&#x27;];
+  const PLACES = [&#x27;同一區&#x27;, &#x27;同縣市&#x27;, &#x27;同地區&#x27;, &#x27;其他地區&#x27;];
+  const whole = value =&gt; Math.round(value * 100);
+  function recommend(candidates, maxDistance, thresholds) {
+    const strong = candidates.filter(candidate =&gt; candidate.score &gt;= whole(thresholds.match));
+    if (strong.length) return strong;
+    if (maxDistance === null) return [];
+    return candidates.filter(candidate =&gt; candidate.score &gt;= whole(thresholds.nearby) &amp;&amp; candidate.distance &lt;= maxDistance);
+  }
+  function view(data, maxDistance) {
+    const { settings, me, candidates } = data;
+    const { thresholds, top_matches: top } = settings;
+    const blank = { status: &#x27;&#x27;, note: &#x27;&#x27;, options: [], cards: [], empty: &#x27;&#x27; };
+    const cards = (list, withPlace) =&gt; list.slice(0, top)
+      .map(candidate =&gt; ({ candidate, place: withPlace ? PLACES[candidate.distance] : null }));
+    if (!me.ready) {
+      return { ...blank, empty: &#x27;資料不足，還不能配對：需要至少 &#x27; + settings.category_min_items + &#x27; 筆已分類品項（目前 &#x27;
+        + me.item_count + &#x27; 筆），以及品牌、葷素紀錄或消費檔次其中一項。多掃幾張發票再看看。&#x27; };
+    }
+    const strong = recommend(candidates, null, thresholds);
+    if (strong.length) {
+      return { ...blank, cards: cards(strong, false), status: strong.length + &#x27; 位配對分數 &#x27; + whole(thresholds.match) + &#x27;% 以上&#x27;
+        + (strong.length &gt; top ? &#x27;，顯示前 &#x27; + top + &#x27; 位&#x27; : &#x27;&#x27;) + &#x27;。&#x27; };
+    }
+    if (!candidates.some(candidate =&gt; candidate.score &gt;= whole(thresholds.nearby))) {
+      return { ...blank, empty: &#x27;目前沒有夠相似的人，多掃幾張發票再看看。&#x27; };
+    }
+    const options = RANGES.map((label, level) =&gt; {
+      const count = recommend(candidates, level, thresholds).length;
+      return { level, label, count, disabled: count === 0 };
+    });
+    return {
+      ...blank, options,
+      status: &#x27;目前沒有 &#x27; + whole(thresholds.match) + &#x27;% 以上的人。放寬到 &#x27; + whole(thresholds.nearby) + &#x27;%，要找多遠？&#x27;,
+      note: me.areas.length ? &#x27;以你的常消費地區為準：&#x27; + me.areas.join(&#x27;、&#x27;) + &#x27;。&#x27; : &#x27;推測不出你的常消費地區，只能選「不限」。&#x27;,
+      cards: maxDistance === null ? [] : cards(recommend(candidates, maxDistance, thresholds), true),
+    };
+  }
+  const api = Object.freeze({ recommend, view });
+  if (typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports) module.exports = api; else root.MatchFilter = api;
+})(globalThis);
+&lt;/script&gt;
+&lt;script data-source=&quot;match-data.js&quot;&gt;
+&#x27;use strict&#x27;;
+const matchReportData = {
+  &quot;isDemo&quot;: true,
+  &quot;population&quot;: 40,
+  &quot;personaMonths&quot;: [
+    &quot;2026-03&quot;,
+    &quot;2026-04&quot;
+  ],
+  &quot;settings&quot;: {
+    &quot;weights&quot;: {
+      &quot;category&quot;: 0.35,
+      &quot;brand&quot;: 0.15,
+      &quot;flavor&quot;: 0.1,
+      &quot;price&quot;: 0.1
+    },
+    &quot;thresholds&quot;: {
+      &quot;match&quot;: 0.8,
+      &quot;nearby&quot;: 0.7
+    },
+    &quot;price_levels&quot;: [
+      {
+        &quot;label&quot;: &quot;小資型&quot;,
+        &quot;below&quot;: 100
+      },
+      {
+        &quot;label&quot;: &quot;均衡型&quot;,
+        &quot;below&quot;: 300
+      },
+      {
+        &quot;label&quot;: &quot;享受型&quot;
+      }
+    ],
+    &quot;top_matches&quot;: 5,
+    &quot;category_min_items&quot;: 10
+  },
+  &quot;me&quot;: {
+    &quot;ready&quot;: true,
+    &quot;item_count&quot;: 97,
+    &quot;months&quot;: [
+      &quot;2026-03&quot;,
+      &quot;2026-04&quot;
+    ],
+    &quot;areas&quot;: [
+      &quot;高雄市苓雅區&quot;,
+      &quot;高雄市新興區&quot;
+    ],
+    &quot;tags&quot;: [
+      {
+        &quot;dimension&quot;: &quot;品類偏好&quot;,
+        &quot;text&quot;: &quot;常買正餐（25%）&quot;
+      },
+      {
+        &quot;dimension&quot;: &quot;品類偏好&quot;,
+        &quot;text&quot;: &quot;常買飲品（22%）&quot;
+      },
+      {
+        &quot;dimension&quot;: &quot;常消費地區&quot;,
+        &quot;text&quot;: &quot;高雄市苓雅區&quot;
+      },
+      {
+        &quot;dimension&quot;: &quot;常消費地區&quot;,
+        &quot;text&quot;: &quot;高雄市新興區&quot;
+      },
+      {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（24 次）&quot;
+      },
+      {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範茶屋（21 次）&quot;
+      },
+      {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範客運（12 次）&quot;
+      },
+      {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範運動館（10 次）&quot;
+      },
+      {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範烘焙店（9 次）&quot;
+      },
+      {
+        &quot;dimension&quot;: &quot;消費檔次&quot;,
+        &quot;text&quot;: &quot;均衡型&quot;
+      },
+      {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;素食品項較多&quot;
+      }
+    ],
+    &quot;counts&quot;: [
+      24,
+      21,
+      9,
+      9,
+      10,
+      3,
+      12,
+      2,
+      5,
+      2
+    ]
+  },
+  &quot;candidates&quot;: [
+    {
+      &quot;name&quot;: &quot;手搖學生 A&quot;,
+      &quot;score&quot;: 96,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（21 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範水餃館（4 次）&quot;
+      },
+      &quot;counts&quot;: [
+        25,
+        20,
+        8,
+        0,
+        5,
+        0,
+        12,
+        0,
+        4,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;手搖學生 B&quot;,
+      &quot;score&quot;: 95,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（22 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範水餃館（5 次）&quot;
+      },
+      &quot;counts&quot;: [
+        27,
+        19,
+        7,
+        0,
+        5,
+        0,
+        14,
+        0,
+        5,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;手搖學生 C&quot;,
+      &quot;score&quot;: 95,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（23 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範水餃館（4 次）&quot;
+      },
+      &quot;counts&quot;: [
+        27,
+        20,
+        8,
+        0,
+        4,
+        0,
+        11,
+        0,
+        5,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;手搖學生 D&quot;,
+      &quot;score&quot;: 81,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範茶屋（21 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷食品項較多&quot;
+      },
+      &quot;counts&quot;: [
+        24,
+        21,
+        8,
+        0,
+        4,
+        0,
+        12,
+        0,
+        5,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;手搖學生 E&quot;,
+      &quot;score&quot;: 80,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範茶屋（23 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷食品項較多&quot;
+      },
+      &quot;counts&quot;: [
+        23,
+        23,
+        9,
+        0,
+        5,
+        0,
+        11,
+        0,
+        4,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 B&quot;,
+      &quot;score&quot;: 75,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（17 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷素品項都有&quot;
+      },
+      &quot;counts&quot;: [
+        17,
+        17,
+        0,
+        5,
+        14,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 D&quot;,
+      &quot;score&quot;: 75,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（18 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷素品項都有&quot;
+      },
+      &quot;counts&quot;: [
+        18,
+        16,
+        0,
+        4,
+        13,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 E&quot;,
+      &quot;score&quot;: 75,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（18 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷素品項都有&quot;
+      },
+      &quot;counts&quot;: [
+        18,
+        18,
+        0,
+        5,
+        15,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 A&quot;,
+      &quot;score&quot;: 72,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（18 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷食品項較多&quot;
+      },
+      &quot;counts&quot;: [
+        18,
+        18,
+        0,
+        6,
+        13,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 C&quot;,
+      &quot;score&quot;: 71,
+      &quot;distance&quot;: 0,
+      &quot;like&quot;: {
+        &quot;dimension&quot;: &quot;常去品牌&quot;,
+        &quot;text&quot;: &quot;示範餐坊（19 次）&quot;
+      },
+      &quot;unlike&quot;: {
+        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
+        &quot;text&quot;: &quot;葷食品項較多&quot;
+      },
+      &quot;counts&quot;: [
+        19,
+        18,
+        0,
+        4,
+        15,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+};
+&lt;/script&gt;
+&lt;script&gt;
+&#x27;use strict&#x27;;
+(function () {
+  const data = matchReportData, settings = data.settings;
+  const $ = id =&gt; document.getElementById(id);
+  const pct = value =&gt; Math.round(value * 100) + &#x27;%&#x27;;
+  const pageHost = window.parent !== window &amp;&amp; window.frameElement?.id === &#x27;match-frame&#x27; ? window.parent : null;
+  function make(tag, text, className) {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+  }
+  function pairFor(candidate) {
+    return {
+      score: candidate.score,
+      left: { name: &#x27;你&#x27;, demo: data.isDemo, months: data.me.months, counts: data.me.counts },
+      right: { name: candidate.name, demo: true, months: data.personaMonths, counts: candidate.counts },
+    };
+  }
+  function card({ candidate, place }) {
+    const button = make(&#x27;button&#x27;, undefined, &#x27;card&#x27;);
+    button.type = &#x27;button&#x27;;
+    button.title = &#x27;查看你和&#x27; + candidate.name + &#x27;的連線圖&#x27;;
+    const title = make(&#x27;h3&#x27;, candidate.name);
+    if (place) title.append(make(&#x27;span&#x27;, place, &#x27;place&#x27;));
+    const head = make(&#x27;div&#x27;, undefined, &#x27;card-head&#x27;);
+    head.append(title, make(&#x27;span&#x27;, candidate.score + &#x27;%&#x27;, &#x27;score&#x27;));
+    const pair = make(&#x27;dl&#x27;, undefined, &#x27;pair&#x27;);
+    for (const [label, tag, className] of [[&#x27;最像你&#x27;, candidate.like, &#x27;like&#x27;], [&#x27;最不像你&#x27;, candidate.unlike, &#x27;unlike&#x27;]]) {
+      if (tag) pair.append(make(&#x27;dt&#x27;, label), make(&#x27;dd&#x27;, tag.dimension + &#x27;：&#x27; + tag.text, className));
+    }
+    button.append(head, pair);
+    button.addEventListener(&#x27;click&#x27;, () =&gt; pageHost?.ReceiptPages.showConnection?.(pairFor(candidate)));
+    return button;
+  }
+  let range = null;
+  function renderList() {
+    const shown = MatchFilter.view(data, range);
+    $(&#x27;match-list&#x27;).replaceChildren(...(shown.cards.length ? shown.cards.map(card)
+      : shown.empty ? [make(&#x27;p&#x27;, shown.empty, &#x27;empty&#x27;)] : []));
+  }
+  const first = MatchFilter.view(data, null);
+  $(&#x27;match-status&#x27;).textContent = first.status;
+  $(&#x27;range-note&#x27;).textContent = first.note;
+  $(&#x27;range-note&#x27;).hidden = !first.note;
+  $(&#x27;ranges&#x27;).hidden = !first.options.length;
+  for (const option of first.options) {
+    const label = make(&#x27;label&#x27;, undefined, option.disabled ? &#x27;off&#x27; : undefined), input = make(&#x27;input&#x27;);
+    input.type = &#x27;radio&#x27;;
+    input.name = &#x27;range&#x27;;
+    input.disabled = option.disabled;
+    input.addEventListener(&#x27;change&#x27;, () =&gt; { range = option.level; renderList(); });
+    label.append(input, option.label + &#x27; · &#x27; + option.count + &#x27; 位&#x27;);
+    $(&#x27;ranges&#x27;).append(label);
+  }
+  renderList();
+  $(&#x27;match-note&#x27;).textContent = &#x27;配對對象是 &#x27; + data.population + &#x27; 位虛構示範用戶。&#x27;
+    + (data.isDemo ? &#x27;「我」也是虛構示範資料。&#x27; : &#x27;你的標籤來自這份私人報告，只存在這個檔案裡。&#x27;) + &#x27;點一個人，看你們的連線圖。&#x27;;
+  const mine = $(&#x27;my-tags&#x27;);
+  for (const tag of data.me.tags) {
+    const item = make(&#x27;li&#x27;);
+    item.append(make(&#x27;small&#x27;, tag.dimension), tag.text);
+    mine.append(item);
+  }
+  if (!data.me.tags.length) mine.replaceWith(make(&#x27;p&#x27;, &#x27;資料還不夠產生標籤。&#x27;));
+  const weights = settings.weights, levels = settings.price_levels;
+  $(&#x27;method&#x27;).append(
+    make(&#x27;p&#x27;, &#x27;配對分數：品類、品牌、葷素紀錄、消費檔次依 &#x27; + [weights.category, weights.brand, weights.flavor, weights.price]
+      .map(weight =&gt; Math.round(weight * 100)).join(&#x27;：&#x27;) + &#x27; 加權，缺資料的面向不計分，權重分給其他面向。地區不算分。&#x27;),
+    make(&#x27;p&#x27;, &#x27;品類一定要能比較（各自至少 &#x27; + settings.category_min_items + &#x27; 筆已分類品項），另外至少再有品牌、葷素紀錄、消費檔次其中一項，才會配對。&#x27;),
+    make(&#x27;p&#x27;, &#x27;配對分數 &#x27; + pct(settings.thresholds.match) + &#x27; 以上直接推薦。沒有人達到時，可以選要找多遠（同一區、同縣市、同地區或不限），範圍內 &#x27;
+      + pct(settings.thresholds.nearby) + &#x27; 以上的人會被推薦；距離依你和對方的常消費地區判斷。&#x27;),
+    make(&#x27;p&#x27;, &#x27;消費檔次只看有正餐的發票：用正餐份數估計幾人份，再取每人每餐花費的中位數。&#x27; + levels[0].label + &#x27;未滿 &#x27; + levels[0].below
+      + &#x27; 元，&#x27; + levels[1].label + &#x27;未滿 &#x27; + levels[1].below + &#x27; 元，其餘為&#x27; + levels[2].label + &#x27;。合菜會讓每人金額偏低。&#x27;),
+    make(&#x27;p&#x27;, &#x27;「最像你」「最不像你」取自對方自己的標籤，常消費地區不當成理由。同一張發票的同一品項只算一次。&#x27;),
+    make(&#x27;p&#x27;, &#x27;此配對頁只用行政區與連鎖品牌，不顯示分店、日期或金額。&#x27;
+      + (data.isDemo ? &#x27;&#x27; : &#x27;這份私人報告的其他頁面仍有完整交易明細，分享整份檔案就會一併分享。&#x27;)
+      + &#x27;配對對象皆為虛構示範用戶。&#x27;));
+  if (pageHost) {
+    const back = $(&#x27;return-report&#x27;);
+    back.hidden = false;
+    back.addEventListener(&#x27;click&#x27;, event =&gt; { event.preventDefault(); pageHost.ReceiptPages.showReport(); });
+  }
+})();
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
 </template>
 <script data-source="flow-navigation.js">
 'use strict';
@@ -849,6 +1413,7 @@ const expenseReportData = {
           "day": 1,
           "invoice": "DEMO-2026-03-019",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -859,6 +1424,7 @@ const expenseReportData = {
           "day": 1,
           "invoice": "DEMO-2026-03-040",
           "merchant": "示範客運",
+          "district": "高雄市新興區",
           "name": "示範市區接駁票",
           "quantity": 1,
           "amount": 45,
@@ -869,6 +1435,7 @@ const expenseReportData = {
           "day": 2,
           "invoice": "DEMO-2026-03-013",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -879,6 +1446,7 @@ const expenseReportData = {
           "day": 2,
           "invoice": "DEMO-2026-03-045",
           "merchant": "示範生活館",
+          "district": "高雄市新興區",
           "name": "示範環保清潔組",
           "quantity": 1,
           "amount": 160,
@@ -889,6 +1457,7 @@ const expenseReportData = {
           "day": 3,
           "invoice": "DEMO-2026-03-007",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -899,6 +1468,7 @@ const expenseReportData = {
           "day": 3,
           "invoice": "DEMO-2026-03-048",
           "merchant": "示範選物店",
+          "district": "高雄市新興區",
           "name": "示範未分類商品",
           "quantity": 1,
           "amount": 75,
@@ -909,6 +1479,7 @@ const expenseReportData = {
           "day": 4,
           "invoice": "DEMO-2026-03-001",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -919,6 +1490,7 @@ const expenseReportData = {
           "day": 4,
           "invoice": "DEMO-2026-03-001",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範餐盒折扣",
           "quantity": 1,
           "amount": -25,
@@ -929,6 +1501,7 @@ const expenseReportData = {
           "day": 4,
           "invoice": "DEMO-2026-03-001",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範隨餐贈品",
           "quantity": 1,
           "amount": 0,
@@ -939,6 +1512,7 @@ const expenseReportData = {
           "day": 6,
           "invoice": "DEMO-2026-03-020",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -949,6 +1523,7 @@ const expenseReportData = {
           "day": 6,
           "invoice": "DEMO-2026-03-041",
           "merchant": "示範客運",
+          "district": "高雄市新興區",
           "name": "示範市區接駁票",
           "quantity": 1,
           "amount": 45,
@@ -959,6 +1534,7 @@ const expenseReportData = {
           "day": 7,
           "invoice": "DEMO-2026-03-014",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -969,6 +1545,7 @@ const expenseReportData = {
           "day": 7,
           "invoice": "DEMO-2026-03-046",
           "merchant": "示範生活館",
+          "district": "高雄市新興區",
           "name": "示範環保清潔組",
           "quantity": 1,
           "amount": 160,
@@ -979,6 +1556,7 @@ const expenseReportData = {
           "day": 8,
           "invoice": "DEMO-2026-03-008",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -989,6 +1567,7 @@ const expenseReportData = {
           "day": 9,
           "invoice": "DEMO-2026-03-002",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -999,6 +1578,7 @@ const expenseReportData = {
           "day": 10,
           "invoice": "DEMO-2026-03-023",
           "merchant": "示範烘焙店",
+          "district": "高雄市新興區",
           "name": "示範燕麥餅",
           "quantity": 1,
           "amount": 85,
@@ -1009,6 +1589,7 @@ const expenseReportData = {
           "day": 11,
           "invoice": "DEMO-2026-03-021",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1019,6 +1600,7 @@ const expenseReportData = {
           "day": 11,
           "invoice": "DEMO-2026-03-042",
           "merchant": "示範客運",
+          "district": "高雄市新興區",
           "name": "示範市區接駁票",
           "quantity": 1,
           "amount": 45,
@@ -1029,6 +1611,7 @@ const expenseReportData = {
           "day": 12,
           "invoice": "DEMO-2026-03-015",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1039,6 +1622,7 @@ const expenseReportData = {
           "day": 13,
           "invoice": "DEMO-2026-03-009",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -1049,6 +1633,7 @@ const expenseReportData = {
           "day": 13,
           "invoice": "DEMO-2026-03-028",
           "merchant": "示範蔬果舖",
+          "district": "高雄市苓雅區",
           "name": "示範綜合蔬菜箱",
           "quantity": 1,
           "amount": 230,
@@ -1059,6 +1644,7 @@ const expenseReportData = {
           "day": 14,
           "invoice": "DEMO-2026-03-003",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -1069,6 +1655,7 @@ const expenseReportData = {
           "day": 15,
           "invoice": "DEMO-2026-03-024",
           "merchant": "示範烘焙店",
+          "district": "高雄市新興區",
           "name": "示範燕麥餅",
           "quantity": 1,
           "amount": 85,
@@ -1079,6 +1666,7 @@ const expenseReportData = {
           "day": 16,
           "invoice": "DEMO-2026-03-022",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1089,6 +1677,7 @@ const expenseReportData = {
           "day": 16,
           "invoice": "DEMO-2026-03-032",
           "merchant": "示範運動館",
+          "district": "高雄市前鎮區",
           "name": "示範體適能體驗票",
           "quantity": 1,
           "amount": 90,
@@ -1099,6 +1688,7 @@ const expenseReportData = {
           "day": 17,
           "invoice": "DEMO-2026-03-016",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1109,6 +1699,7 @@ const expenseReportData = {
           "day": 18,
           "invoice": "DEMO-2026-03-010",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -1119,6 +1710,7 @@ const expenseReportData = {
           "day": 18,
           "invoice": "DEMO-2026-03-029",
           "merchant": "示範蔬果舖",
+          "district": "高雄市苓雅區",
           "name": "示範綜合蔬菜箱",
           "quantity": 1,
           "amount": 230,
@@ -1129,6 +1721,7 @@ const expenseReportData = {
           "day": 19,
           "invoice": "DEMO-2026-03-004",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -1139,6 +1732,7 @@ const expenseReportData = {
           "day": 19,
           "invoice": "DEMO-2026-03-036",
           "merchant": "示範洗衣坊",
+          "district": "高雄市苓雅區",
           "name": "示範衣物清潔服務",
           "quantity": 1,
           "amount": 180,
@@ -1149,6 +1743,7 @@ const expenseReportData = {
           "day": 20,
           "invoice": "DEMO-2026-03-025",
           "merchant": "示範烘焙店",
+          "district": "高雄市新興區",
           "name": "示範燕麥餅",
           "quantity": 1,
           "amount": 85,
@@ -1159,6 +1754,7 @@ const expenseReportData = {
           "day": 21,
           "invoice": "DEMO-2026-03-033",
           "merchant": "示範運動館",
+          "district": "高雄市前鎮區",
           "name": "示範體適能體驗票",
           "quantity": 1,
           "amount": 90,
@@ -1169,6 +1765,7 @@ const expenseReportData = {
           "day": 22,
           "invoice": "DEMO-2026-03-017",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1179,6 +1776,7 @@ const expenseReportData = {
           "day": 22,
           "invoice": "DEMO-2026-03-038",
           "merchant": "示範客運",
+          "district": "高雄市新興區",
           "name": "示範市區接駁票",
           "quantity": 1,
           "amount": 45,
@@ -1189,6 +1787,7 @@ const expenseReportData = {
           "day": 23,
           "invoice": "DEMO-2026-03-011",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -1199,6 +1798,7 @@ const expenseReportData = {
           "day": 23,
           "invoice": "DEMO-2026-03-030",
           "merchant": "示範蔬果舖",
+          "district": "高雄市苓雅區",
           "name": "示範綜合蔬菜箱",
           "quantity": 1,
           "amount": 230,
@@ -1209,6 +1809,7 @@ const expenseReportData = {
           "day": 24,
           "invoice": "DEMO-2026-03-005",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -1219,6 +1820,7 @@ const expenseReportData = {
           "day": 24,
           "invoice": "DEMO-2026-03-037",
           "merchant": "示範洗衣坊",
+          "district": "高雄市苓雅區",
           "name": "示範衣物清潔服務",
           "quantity": 1,
           "amount": 180,
@@ -1229,6 +1831,7 @@ const expenseReportData = {
           "day": 25,
           "invoice": "DEMO-2026-03-026",
           "merchant": "示範烘焙店",
+          "district": "高雄市新興區",
           "name": "示範燕麥餅",
           "quantity": 1,
           "amount": 85,
@@ -1239,6 +1842,7 @@ const expenseReportData = {
           "day": 25,
           "invoice": "DEMO-2026-03-043",
           "merchant": "示範旅宿",
+          "district": "屏東縣恆春鎮",
           "name": "示範旅店雙人房",
           "quantity": 1,
           "amount": 2100,
@@ -1249,6 +1853,7 @@ const expenseReportData = {
           "day": 26,
           "invoice": "DEMO-2026-03-034",
           "merchant": "示範運動館",
+          "district": "高雄市前鎮區",
           "name": "示範體適能體驗票",
           "quantity": 1,
           "amount": 90,
@@ -1259,6 +1864,7 @@ const expenseReportData = {
           "day": 27,
           "invoice": "DEMO-2026-03-018",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1269,6 +1875,7 @@ const expenseReportData = {
           "day": 27,
           "invoice": "DEMO-2026-03-039",
           "merchant": "示範客運",
+          "district": "高雄市新興區",
           "name": "示範市區接駁票",
           "quantity": 1,
           "amount": 45,
@@ -1279,6 +1886,7 @@ const expenseReportData = {
           "day": 28,
           "invoice": "DEMO-2026-03-012",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -1289,6 +1897,7 @@ const expenseReportData = {
           "day": 28,
           "invoice": "DEMO-2026-03-031",
           "merchant": "示範蔬果舖",
+          "district": "高雄市苓雅區",
           "name": "示範綜合蔬菜箱",
           "quantity": 1,
           "amount": 230,
@@ -1299,6 +1908,7 @@ const expenseReportData = {
           "day": 28,
           "invoice": "DEMO-2026-03-044",
           "merchant": "示範生活館",
+          "district": "高雄市新興區",
           "name": "示範環保清潔組",
           "quantity": 1,
           "amount": 160,
@@ -1309,6 +1919,7 @@ const expenseReportData = {
           "day": 29,
           "invoice": "DEMO-2026-03-006",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 125,
@@ -1319,6 +1930,7 @@ const expenseReportData = {
           "day": 30,
           "invoice": "DEMO-2026-03-027",
           "merchant": "示範烘焙店",
+          "district": "高雄市新興區",
           "name": "示範燕麥餅",
           "quantity": 1,
           "amount": 85,
@@ -1329,6 +1941,7 @@ const expenseReportData = {
           "day": 31,
           "invoice": "DEMO-2026-03-035",
           "merchant": "示範運動館",
+          "district": "高雄市前鎮區",
           "name": "示範體適能體驗票",
           "quantity": 1,
           "amount": 90,
@@ -1339,6 +1952,7 @@ const expenseReportData = {
           "day": 31,
           "invoice": "DEMO-2026-03-047",
           "merchant": "示範數位店",
+          "district": "高雄市前鎮區",
           "name": "示範無線滑鼠",
           "quantity": 1,
           "amount": 780,
@@ -1358,6 +1972,7 @@ const expenseReportData = {
           "day": 2,
           "invoice": "DEMO-2026-04-036",
           "merchant": "示範運動館",
+          "district": "高雄市前鎮區",
           "name": "示範體適能體驗票",
           "quantity": 1,
           "amount": 90,
@@ -1368,6 +1983,7 @@ const expenseReportData = {
           "day": 2,
           "invoice": "DEMO-2026-04-050",
           "merchant": "示範數位店",
+          "district": "高雄市前鎮區",
           "name": "示範無線滑鼠",
           "quantity": 1,
           "amount": 780,
@@ -1378,6 +1994,7 @@ const expenseReportData = {
           "day": 3,
           "invoice": "DEMO-2026-04-017",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1388,6 +2005,7 @@ const expenseReportData = {
           "day": 3,
           "invoice": "DEMO-2026-04-023",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1398,6 +2016,7 @@ const expenseReportData = {
           "day": 3,
           "invoice": "DEMO-2026-04-042",
           "merchant": "示範客運",
+          "district": "高雄市新興區",
           "name": "示範市區接駁票",
           "quantity": 1,
           "amount": 45,
@@ -1408,6 +2027,7 @@ const expenseReportData = {
           "day": 4,
           "invoice": "DEMO-2026-04-032",
           "merchant": "示範蔬果舖",
+          "district": "高雄市苓雅區",
           "name": "示範綜合蔬菜箱",
           "quantity": 1,
           "amount": 230,
@@ -1418,6 +2038,7 @@ const expenseReportData = {
           "day": 4,
           "invoice": "DEMO-2026-04-049",
           "merchant": "示範生活館",
+          "district": "高雄市新興區",
           "name": "示範環保清潔組",
           "quantity": 1,
           "amount": 160,
@@ -1428,6 +2049,7 @@ const expenseReportData = {
           "day": 5,
           "invoice": "DEMO-2026-04-001",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 140,
@@ -1438,6 +2060,7 @@ const expenseReportData = {
           "day": 5,
           "invoice": "DEMO-2026-04-007",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 140,
@@ -1448,6 +2071,7 @@ const expenseReportData = {
           "day": 5,
           "invoice": "DEMO-2026-04-051",
           "merchant": "示範選物店",
+          "district": "高雄市新興區",
           "name": "示範未分類商品",
           "quantity": 1,
           "amount": 75,
@@ -1458,6 +2082,7 @@ const expenseReportData = {
           "day": 5,
           "invoice": "DEMO-2026-04-001",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範餐盒折扣",
           "quantity": 1,
           "amount": -25,
@@ -1468,6 +2093,7 @@ const expenseReportData = {
           "day": 5,
           "invoice": "DEMO-2026-04-001",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範隨餐贈品",
           "quantity": 1,
           "amount": 0,
@@ -1478,6 +2104,7 @@ const expenseReportData = {
           "day": 7,
           "invoice": "DEMO-2026-04-037",
           "merchant": "示範運動館",
+          "district": "高雄市前鎮區",
           "name": "示範體適能體驗票",
           "quantity": 1,
           "amount": 90,
@@ -1488,6 +2115,7 @@ const expenseReportData = {
           "day": 8,
           "invoice": "DEMO-2026-04-012",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1498,6 +2126,7 @@ const expenseReportData = {
           "day": 8,
           "invoice": "DEMO-2026-04-018",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1508,6 +2137,7 @@ const expenseReportData = {
           "day": 8,
           "invoice": "DEMO-2026-04-043",
           "merchant": "示範客運",
+          "district": "高雄市新興區",
           "name": "示範市區接駁票",
           "quantity": 1,
           "amount": 45,
@@ -1518,6 +2148,7 @@ const expenseReportData = {
           "day": 10,
           "invoice": "DEMO-2026-04-002",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 140,
@@ -1528,6 +2159,7 @@ const expenseReportData = {
           "day": 10,
           "invoice": "DEMO-2026-04-008",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 140,
@@ -1538,6 +2170,7 @@ const expenseReportData = {
           "day": 11,
           "invoice": "DEMO-2026-04-024",
           "merchant": "示範烘焙店",
+          "district": "高雄市新興區",
           "name": "示範燕麥餅",
           "quantity": 1,
           "amount": 85,
@@ -1548,6 +2181,7 @@ const expenseReportData = {
           "day": 12,
           "invoice": "DEMO-2026-04-038",
           "merchant": "示範運動館",
+          "district": "高雄市前鎮區",
           "name": "示範體適能體驗票",
           "quantity": 1,
           "amount": 90,
@@ -1558,6 +2192,7 @@ const expenseReportData = {
           "day": 13,
           "invoice": "DEMO-2026-04-013",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1568,6 +2203,7 @@ const expenseReportData = {
           "day": 13,
           "invoice": "DEMO-2026-04-019",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1578,6 +2214,7 @@ const expenseReportData = {
           "day": 13,
           "invoice": "DEMO-2026-04-044",
           "merchant": "示範客運",
+          "district": "高雄市新興區",
           "name": "示範市區接駁票",
           "quantity": 1,
           "amount": 45,
@@ -1588,6 +2225,7 @@ const expenseReportData = {
           "day": 14,
           "invoice": "DEMO-2026-04-028",
           "merchant": "示範蔬果舖",
+          "district": "高雄市苓雅區",
           "name": "示範綜合蔬菜箱",
           "quantity": 1,
           "amount": 230,
@@ -1598,6 +2236,7 @@ const expenseReportData = {
           "day": 15,
           "invoice": "DEMO-2026-04-003",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 140,
@@ -1608,6 +2247,7 @@ const expenseReportData = {
           "day": 15,
           "invoice": "DEMO-2026-04-009",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 140,
@@ -1618,6 +2258,7 @@ const expenseReportData = {
           "day": 16,
           "invoice": "DEMO-2026-04-025",
           "merchant": "示範烘焙店",
+          "district": "高雄市新興區",
           "name": "示範燕麥餅",
           "quantity": 1,
           "amount": 85,
@@ -1628,6 +2269,7 @@ const expenseReportData = {
           "day": 17,
           "invoice": "DEMO-2026-04-033",
           "merchant": "示範運動館",
+          "district": "高雄市前鎮區",
           "name": "示範體適能體驗票",
           "quantity": 1,
           "amount": 90,
@@ -1638,6 +2280,7 @@ const expenseReportData = {
           "day": 18,
           "invoice": "DEMO-2026-04-014",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1648,6 +2291,7 @@ const expenseReportData = {
           "day": 18,
           "invoice": "DEMO-2026-04-020",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1658,6 +2302,7 @@ const expenseReportData = {
           "day": 18,
           "invoice": "DEMO-2026-04-045",
           "merchant": "示範客運",
+          "district": "高雄市新興區",
           "name": "示範市區接駁票",
           "quantity": 1,
           "amount": 45,
@@ -1668,6 +2313,7 @@ const expenseReportData = {
           "day": 19,
           "invoice": "DEMO-2026-04-029",
           "merchant": "示範蔬果舖",
+          "district": "高雄市苓雅區",
           "name": "示範綜合蔬菜箱",
           "quantity": 1,
           "amount": 230,
@@ -1678,6 +2324,7 @@ const expenseReportData = {
           "day": 20,
           "invoice": "DEMO-2026-04-004",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 140,
@@ -1688,6 +2335,7 @@ const expenseReportData = {
           "day": 20,
           "invoice": "DEMO-2026-04-010",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 140,
@@ -1698,6 +2346,7 @@ const expenseReportData = {
           "day": 20,
           "invoice": "DEMO-2026-04-039",
           "merchant": "示範洗衣坊",
+          "district": "高雄市苓雅區",
           "name": "示範衣物清潔服務",
           "quantity": 1,
           "amount": 180,
@@ -1708,6 +2357,7 @@ const expenseReportData = {
           "day": 21,
           "invoice": "DEMO-2026-04-026",
           "merchant": "示範烘焙店",
+          "district": "高雄市新興區",
           "name": "示範燕麥餅",
           "quantity": 1,
           "amount": 85,
@@ -1718,6 +2368,7 @@ const expenseReportData = {
           "day": 22,
           "invoice": "DEMO-2026-04-034",
           "merchant": "示範運動館",
+          "district": "高雄市前鎮區",
           "name": "示範體適能體驗票",
           "quantity": 1,
           "amount": 90,
@@ -1728,6 +2379,7 @@ const expenseReportData = {
           "day": 23,
           "invoice": "DEMO-2026-04-015",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1738,6 +2390,7 @@ const expenseReportData = {
           "day": 23,
           "invoice": "DEMO-2026-04-021",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1748,6 +2401,7 @@ const expenseReportData = {
           "day": 23,
           "invoice": "DEMO-2026-04-040",
           "merchant": "示範客運",
+          "district": "高雄市新興區",
           "name": "示範市區接駁票",
           "quantity": 1,
           "amount": 45,
@@ -1758,6 +2412,7 @@ const expenseReportData = {
           "day": 23,
           "invoice": "DEMO-2026-04-046",
           "merchant": "示範客運",
+          "district": "高雄市新興區",
           "name": "示範市區接駁票",
           "quantity": 1,
           "amount": 45,
@@ -1768,6 +2423,7 @@ const expenseReportData = {
           "day": 24,
           "invoice": "DEMO-2026-04-030",
           "merchant": "示範蔬果舖",
+          "district": "高雄市苓雅區",
           "name": "示範綜合蔬菜箱",
           "quantity": 1,
           "amount": 230,
@@ -1778,6 +2434,7 @@ const expenseReportData = {
           "day": 25,
           "invoice": "DEMO-2026-04-005",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 140,
@@ -1788,6 +2445,7 @@ const expenseReportData = {
           "day": 25,
           "invoice": "DEMO-2026-04-011",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 140,
@@ -1798,6 +2456,7 @@ const expenseReportData = {
           "day": 26,
           "invoice": "DEMO-2026-04-027",
           "merchant": "示範烘焙店",
+          "district": "高雄市新興區",
           "name": "示範燕麥餅",
           "quantity": 1,
           "amount": 85,
@@ -1808,6 +2467,7 @@ const expenseReportData = {
           "day": 26,
           "invoice": "DEMO-2026-04-047",
           "merchant": "示範旅宿",
+          "district": "屏東縣恆春鎮",
           "name": "示範旅店雙人房",
           "quantity": 1,
           "amount": 2100,
@@ -1818,6 +2478,7 @@ const expenseReportData = {
           "day": 27,
           "invoice": "DEMO-2026-04-035",
           "merchant": "示範運動館",
+          "district": "高雄市前鎮區",
           "name": "示範體適能體驗票",
           "quantity": 1,
           "amount": 90,
@@ -1828,6 +2489,7 @@ const expenseReportData = {
           "day": 28,
           "invoice": "DEMO-2026-04-016",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1838,6 +2500,7 @@ const expenseReportData = {
           "day": 28,
           "invoice": "DEMO-2026-04-022",
           "merchant": "示範茶屋",
+          "district": "高雄市苓雅區",
           "name": "示範花果茶",
           "quantity": 1,
           "amount": 65,
@@ -1848,6 +2511,7 @@ const expenseReportData = {
           "day": 28,
           "invoice": "DEMO-2026-04-041",
           "merchant": "示範客運",
+          "district": "高雄市新興區",
           "name": "示範市區接駁票",
           "quantity": 1,
           "amount": 45,
@@ -1858,6 +2522,7 @@ const expenseReportData = {
           "day": 29,
           "invoice": "DEMO-2026-04-031",
           "merchant": "示範蔬果舖",
+          "district": "高雄市苓雅區",
           "name": "示範綜合蔬菜箱",
           "quantity": 1,
           "amount": 230,
@@ -1868,6 +2533,7 @@ const expenseReportData = {
           "day": 29,
           "invoice": "DEMO-2026-04-048",
           "merchant": "示範生活館",
+          "district": "高雄市新興區",
           "name": "示範環保清潔組",
           "quantity": 1,
           "amount": 160,
@@ -1878,6 +2544,7 @@ const expenseReportData = {
           "day": 30,
           "invoice": "DEMO-2026-04-006",
           "merchant": "示範餐坊",
+          "district": "高雄市苓雅區",
           "name": "示範蔬食餐盒",
           "quantity": 1,
           "amount": 140,
@@ -1906,6 +2573,8 @@ const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({
 }[char]));
 let insightGeneration = 0;
 let rhythmMetric = 'count';
+// Each chapter plays through the month's days, then holds for a moment; three chapters in all.
+const CHAPTER = 6, PLAY = 5, LENGTH = CHAPTER * 3;
 
 function renderInsights(key, autoplay = false) {
   if (!reportMonths[key]) return;
@@ -1962,8 +2631,8 @@ function renderInsights(key, autoplay = false) {
   $('legend').innerHTML = categories.filter((_, index) => currTotals[index] !== 0).map(category => '<span style="--color:' + category.color + '">' + category.name + '</span>').join('');
   $('audit-summary').textContent = '查看分類明細與計算方式 · ' + current.length + ' 筆品項';
   $('audit-description').textContent = '依品名與賣方人工分類，尚未接模型。飲品含酒類；不明品項標示待確認。餐廳服務費列其他服務，餐廳折扣與點數折抵列正餐並扣除；不分攤至個別品名。零元明細保留供核對，消費次數只計付費紀錄。';
-  $('audit-rows').innerHTML = current.map(row => '<tr><td>' + dateLabel(row.day) + '</td><td>' + row.invoice + '</td><td>' + escapeHTML(row.merchant) + '</td><td>' + escapeHTML(row.name) + '</td><td' + (row.provisional ? ' class="provisional"' : '') + '>' + categories[row.category].name + (row.provisional ? '（暫定）' : '') + '</td><td class="numeric">' + row.quantity + '</td><td class="numeric">' + number(row.amount) + '</td></tr>').join('');
-  $('report-source').textContent = '目前洞察來源：' + month.source + '。金額依明細加總，已含負數折抵；發票張數按號碼去重。沒有紀錄不代表沒有消費。頁面只保留匿名發票代碼，不嵌入原始號碼、統編或地址。';
+  $('audit-rows').innerHTML = current.map(row => '<tr><td>' + dateLabel(row.day) + '</td><td>' + row.invoice + '</td><td>' + escapeHTML(row.merchant) + '</td><td>' + escapeHTML(row.district || '未知') + '</td><td>' + escapeHTML(row.name) + '</td><td' + (row.provisional ? ' class="provisional"' : '') + '>' + categories[row.category].name + (row.provisional ? '（暫定）' : '') + '</td><td class="numeric">' + row.quantity + '</td><td class="numeric">' + number(row.amount) + '</td></tr>').join('');
+  $('report-source').textContent = '目前洞察來源：' + month.source + '。金額依明細加總，已含負數折抵；發票張數按號碼去重。沒有紀錄不代表沒有消費。頁面只保留匿名發票代碼與行政區，不嵌入原始號碼、統編或完整地址。';
 
   const calendar = $('calendar');
   calendar.innerHTML = '';
@@ -1995,14 +2664,14 @@ function renderInsights(key, autoplay = false) {
     { title: '拆到品項，看見支出的組成。', subtitle: '品項歸類後逐日累積，長度代表類別淨額。', note: '含折扣與點數折抵；明細金額已包含數量，不重複乘算。', value: largestShare.toFixed(0), unit: '%', headline: categories[largestCategory].name + '，是本月<br>最大的支出類別。', body: categories[largestCategory].name + '共 ' + money(currTotals[largestCategory]) + '，占 ' + largestShare.toFixed(1) + '%。' + (discounts ? '全月已扣除折抵 ' + money(discounts) + '。' : '同一張發票可包含多種類別。'), bottom: '<strong>分類採人工判讀。</strong><br>不明品項保留暫定標記，可由下方明細核對。' },
     { title: '有些習慣，不靠金額也能被看見。', subtitle: '同一品項沿日期出現，呈現交易的重複性。', note: '票券紀錄代表購買行為，無法確認實際入場或運動時長。', value: sportCount, unit: '張', headline: '運動票券，<br>在 ' + sportDays.length + ' 個日期出現。', body: '本月共有 ' + sportCount + ' 張運動類發票，累積 ' + money(sum(sports)) + '，占本月 ' + (total ? sum(sports) / total * 100 : 0).toFixed(1) + '%。', bottom: '<strong>頻繁出現，不一定是高額支出。</strong><br>往下選擇「運動」標籤，跟上個月比較。' },
   ];
-  let position = autoplay ? 0 : 11.99, playing = autoplay, speed = 1, lastTime = null, activeScene = -1, lastDay = -1;
+  let position = autoplay ? 0 : CHAPTER - 0.01, playing = autoplay, speed = 1, lastTime = null, activeScene = -1, lastDay = -1;
   function updatePlay() {
     $('play').textContent = playing ? 'Ⅱ' : '▶'; $('play').setAttribute('aria-label', playing ? '暫停動畫' : '播放動畫');
-    $('play-state').textContent = playing ? '正在播放' : position >= 36 ? '播放完畢' : '已暫停';
+    $('play-state').textContent = playing ? '正在播放' : position >= LENGTH ? '播放完畢' : '已暫停';
   }
   function render() {
-    const index = Math.min(2, Math.floor(position / 12));
-    const day = Math.min(daysInMonth, Math.floor(Math.min(1, (position - index * 12) / 10) * daysInMonth) + 1);
+    const index = Math.min(2, Math.floor(position / CHAPTER));
+    const day = Math.min(daysInMonth, Math.floor(Math.min(1, (position - index * CHAPTER) / PLAY) * daysInMonth) + 1);
     if (index !== activeScene) {
       activeScene = index; lastDay = -1;
       const scene = scenes[index];
@@ -2025,20 +2694,21 @@ function renderInsights(key, autoplay = false) {
         $('routine-amount').innerHTML = number(sum(sports.filter(row => row.day <= day))) + '<small>元累積</small>';
       }
     }
-    $('timeline').value = position; $('time').textContent = '00:' + String(Math.floor(position)).padStart(2, '0') + ' / 00:36';
+    $('timeline').value = position; $('time').textContent = '00:' + String(Math.floor(position)).padStart(2, '0') + ' / 00:' + String(LENGTH).padStart(2, '0');
   }
   function tick(now) {
     if (generation !== insightGeneration) return;
-    if (lastTime !== null && playing) { position = Math.min(36, position + (now - lastTime) / 1000 * speed); if (position >= 36) { playing = false; updatePlay(); } render(); }
+    if (lastTime !== null && playing) { position = Math.min(LENGTH, position + (now - lastTime) / 1000 * speed); if (position >= LENGTH) { playing = false; updatePlay(); } render(); }
     lastTime = now; requestAnimationFrame(tick);
   }
-  $('play').onclick = () => { if (position >= 36) position = 0; playing = !playing; lastTime = null; render(); updatePlay(); };
+  $('play').onclick = () => { if (position >= LENGTH) position = 0; playing = !playing; lastTime = null; render(); updatePlay(); };
   $('replay').onclick = () => { position = 0; playing = true; lastTime = null; render(); updatePlay(); };
   $('timeline').oninput = event => { position = Number(event.target.value); playing = false; render(); updatePlay(); };
+  $('timeline').max = String(LENGTH);
   $('speed').textContent = '1×'; $('speed').setAttribute('aria-label', '播放速度 1 倍');
   $('speed').onclick = () => { speed = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1; $('speed').textContent = speed + '×'; $('speed').setAttribute('aria-label', '播放速度 ' + speed + ' 倍'); };
-  $('finish').onclick = () => { position = activeScene * 12 + 11.99; playing = false; render(); updatePlay(); };
-  document.querySelectorAll('.chapter').forEach(el => el.onclick = () => { position = Number(el.dataset.chapter) * 12 + (playing ? 0 : 11.99); lastTime = null; render(); updatePlay(); });
+  $('finish').onclick = () => { position = activeScene * CHAPTER + CHAPTER - 0.01; playing = false; render(); updatePlay(); };
+  document.querySelectorAll('.chapter').forEach(el => el.onclick = () => { position = Number(el.dataset.chapter) * CHAPTER + (playing ? 0 : CHAPTER - 0.01); lastTime = null; render(); updatePlay(); });
   document.onvisibilitychange = () => { if (document.hidden) { playing = false; updatePlay(); } lastTime = null; };
   render(); updatePlay(); requestAnimationFrame(tick);
 
@@ -2278,12 +2948,19 @@ refreshComparisonMonths();
   return {schema,name:value.name.trim(),demo:value.demo,months:[...value.months].sort(),counts:[...value.counts]};
  }
  function fromReport(report,name){
-  const counts=categories.map(()=>0),months=Object.keys(report.months).sort();
+  const counts=categories.map(()=>0),months=Object.keys(report.months).sort(),seen=new Set();
   for(const month of Object.values(report.months))for(const row of month.rows){
    const i=categories.indexOf(report.categories[row.category]?.name);
-   if(i>=0&&!row.provisional&&Number.isFinite(row.amount)&&row.amount>0)counts[i]++;
+   if(i<0||row.provisional||!Number.isFinite(row.amount)||row.amount<=0)continue;
+   // One portion per item and invoice, as in the match tags; rows without an invoice code each count.
+   if(row.invoice!==undefined){const key=JSON.stringify([row.invoice,row.name]);if(seen.has(key))continue;seen.add(key);}
+   counts[i]++;
   }
   return validate({schema,name:name.trim()||'我的偏好',demo:report.isDemo===true,months,counts});
+ }
+ function fromPair(pair){
+  if(!pair||!Number.isSafeInteger(pair.score)||pair.score<0||pair.score>100)throw new Error('配對資料不正確，請回配對清單重新選擇。');
+  return {score:pair.score,left:validate({schema,...pair.left}),right:validate({schema,...pair.right})};
  }
  function toURL(profile,base){
   const url=new URL(base);
@@ -2302,7 +2979,7 @@ refreshComparisonMonths();
   }catch(error){throw new Error('無法讀取品味連結。請確認完整複製，並使用目前版本重新匯出。');}
  }
  function cosine(a,b){const n=Math.hypot(...a)*Math.hypot(...b);return n?Math.min(1,Math.max(0,a.reduce((s,x,i)=>s+x*b[i],0)/n)):null;}
- const api=Object.freeze({categories,schema,validate,fromReport,toURL,fromURL,cosine});
+ const api=Object.freeze({categories,schema,validate,fromReport,fromPair,toURL,fromURL,cosine});
  if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.TasteProfile=api;
 })(globalThis);
 </script>
@@ -2333,31 +3010,44 @@ refreshComparisonMonths();
 })();
 </script>
 <script data-source="taste-navigation.js">
-/* The comparison document is embedded in this file, and created only on demand. */
+/* Secondary pages are embedded in this file, and created only on demand. */
 (function(){
  'use strict';
  if(typeof window==='undefined')return;
- const view=document.getElementById('taste-view');
- const frame=document.getElementById('taste-frame');
- const source=document.getElementById('taste-page-source');
- if(!view||!frame||!source)return;
- let loaded=false,showing=false,reportHash='',reportScroll=0,lastTasteHash='';
+ const pages=[
+  {view:'taste-view',frame:'taste-frame',source:'taste-page-source',link:'compare-friends',matches:hash=>hash==='#friends'||hash.startsWith('#taste=')},
+  {view:'match-view',frame:'match-frame',source:'match-page-source',link:'find-matches',matches:hash=>hash==='#match'},
+  // One match's chart reuses the comparison page and reloads every time, so no earlier pair lingers.
+  {view:'connection-view',frame:'connection-frame',source:'taste-page-source',link:'find-matches',matches:hash=>hash==='#connection',fresh:true},
+ ].map(page=>({...page,view:document.getElementById(page.view),frame:document.getElementById(page.frame),source:document.getElementById(page.source),loaded:false}))
+  .filter(page=>page.view&&page.frame&&page.source);
+ if(!pages.length)return;
+ let showing=null,reportHash='',reportScroll=0,lastTasteHash='',connection=null;
  function route(){
-  const hash=location.hash;
-  const compare=hash==='#friends'||hash.startsWith('#taste=');
-  if(compare){
+  let hash=location.hash;
+  if(hash==='#connection'&&!connection){history.replaceState(null,'','#match');hash='#match';}
+  const page=pages.find(candidate=>candidate.matches(hash));
+  if(page){
    if(!showing)reportScroll=window.scrollY;
-   document.body.classList.add('taste-view-open');view.hidden=false;showing=true;
-   if(!loaded){frame.srcdoc=source.content.textContent;loaded=true;}
-   else if(hash.startsWith('#taste=')&&hash!==lastTasteHash)frame.contentWindow.refreshTasteFromLocation?.();
-   lastTasteHash=hash;
-   frame.focus();
+   for(const other of pages)other.view.hidden=other!==page;
+   document.body.classList.add('taste-view-open');
+   if(page.fresh||!page.loaded){page.frame.srcdoc=page.source.content.textContent;page.loaded=true;}
+   else if(page.view.id==='taste-view'&&hash.startsWith('#taste=')&&hash!==lastTasteHash)page.frame.contentWindow.refreshTasteFromLocation?.();
+   if(page.view.id==='taste-view')lastTasteHash=hash;
+   showing=page;page.frame.focus();
   }else{
-   const wasShowing=showing;showing=false;view.hidden=true;document.body.classList.remove('taste-view-open');reportHash=hash;
-   if(wasShowing){document.getElementById('compare-friends').focus({preventScroll:true});requestAnimationFrame(()=>window.scrollTo({top:reportScroll,behavior:'instant'}));}
+   const was=showing;showing=null;reportHash=hash;
+   for(const other of pages)other.view.hidden=true;
+   document.body.classList.remove('taste-view-open');
+   if(was){document.getElementById(was.link)?.focus({preventScroll:true});requestAnimationFrame(()=>window.scrollTo({top:reportScroll,behavior:'instant'}));}
   }
  }
- window.ReceiptPages=Object.freeze({showReport(){location.hash=reportHash||'#report';}});
+ window.ReceiptPages=Object.freeze({
+  showReport(){location.hash=reportHash||'#report';},
+  showMatches(){location.hash='#match';},
+  showConnection(pair){connection=pair;location.hash='#connection';},
+  connection(){return connection;},
+ });
  window.addEventListener('hashchange',route);
  route();
 })();

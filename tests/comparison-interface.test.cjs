@@ -46,6 +46,8 @@ test('standalone HTML loads both months without external scripts', () => {
   assert.equal(nodes.get('total')?.textContent, 'NT$ 8,095');
   assert.match(nodes.get('data-notice').textContent, /虛構示範資料/);
   assert.match(nodes.get('report-tag').textContent, /虛構示範/);
+  assert.match(nodes.get('audit-rows').innerHTML, /<td>高雄市苓雅區<\/td>/);
+  assert.match(nodes.get('report-source').textContent, /與行政區，不嵌入原始號碼、統編或完整地址/);
   assert.doesNotMatch(nodes.get('compare-source-note').textContent, /真實發票/);
   nodes.get('insights-month').events.change({ target: { value: '2026-03' } });
   assert.equal(nodes.get('total').textContent, 'NT$ 7,910');
@@ -59,6 +61,8 @@ test('initial view uses April and compares fictional sport purchases against Mar
   assert.match(nodes.get('compare-takeaway').innerHTML, /多花 180 元/);
   assert.equal(nodes.get('total').textContent, 'NT$ 8,095');
   assert.equal(nodes.get('compare-current-heading').textContent, '本月 · 4 月');
+  assert.equal(nodes.get('time').textContent, '00:05 / 00:18');
+  assert.equal(nodes.get('timeline').max, '18');
 });
 
 test('source button and item selector update every category and item without corrupting personal data', () => {

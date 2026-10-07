@@ -12,14 +12,14 @@
 <section class="intro"><div><p class="eyebrow">從消費，看見自己</p><h1>You are<br>what you <em>buy.</em></h1><p class="subtitle">不用逐筆記帳。從發票品項，看見消費模式，再跟上個月的自己比。</p></div><div class="period" id="report-period"></div></section>
 <p class="data-notice" id="data-notice" role="note"></p>
 <section class="taste-sharing" aria-label="與朋友比較品味">
- <div class="taste-actions"><a class="taste-primary" id="compare-friends" href="#friends">比較跟朋友品味差多少 ↗</a><button id="export-taste" type="button" disabled title="功能準備中">匯出我的品味連結</button></div>
- <p class="taste-caption">把消費偏好帶到朋友比較頁。品味連結匯出功能準備中。</p>
+ <div class="taste-actions"><a class="taste-primary" id="compare-friends" href="#friends">比較跟朋友品味差多少 ↗</a><a id="find-matches" href="#match">找到同好 ↗</a><button id="export-taste" type="button" disabled title="功能準備中">匯出我的品味連結</button></div>
+ <p class="taste-caption">把消費偏好帶到朋友比較頁，或到「找到同好」看看誰和你最合拍。品味連結匯出功能準備中。</p>
  <div id="taste-export-panel" class="taste-export-panel" hidden>
   <div class="taste-export-heading"><div><h2>分享偏好，從一個連結開始。</h2><p>只分享暱稱、月份與各類消費筆數，不包含店家、品名、發票號碼或金額。取得連結的人可以讀取這些摘要；連結沒有加密。</p></div></div>
   <div class="taste-name-row"><label for="taste-nickname">你的暱稱 <input id="taste-nickname" type="text" maxlength="24" value="我的偏好" autocomplete="off"></label><button id="taste-regenerate" type="button">更新連結</button></div>
   <p id="taste-export-preview"></p><label class="taste-link-label" for="taste-link">你的品味連結</label><textarea id="taste-link" rows="3" readonly spellcheck="false"></textarea>
   <div class="taste-actions"><button id="taste-copy" type="button">複製連結</button><a id="taste-open-link">帶到朋友比較頁 ↗</a></div>
-  <p id="taste-export-status" role="status" aria-live="polite"></p><p class="taste-caption">涵蓋報告所有月份，不受目前畫面月份影響。依正金額、分類已確認的品項筆數計算；折扣、贈品與待確認分類不計入。這是分類偏好摘要，還無法分辨甜度或餡料。</p>
+  <p id="taste-export-status" role="status" aria-live="polite"></p><p class="taste-caption">涵蓋報告所有月份，不受目前畫面月份影響。依正金額、分類已確認的品項筆數計算，同一張發票的同一品項只算一次；折扣、贈品與待確認分類不計入。這是分類偏好摘要，還無法分辨甜度或餡料。</p>
  </div>
 </section>
 <nav class="flow-links" aria-label="回顧流程">
@@ -29,7 +29,7 @@
 </nav>
 <section class="flow-region item-section" id="items" tabindex="-1" aria-labelledby="items-title">
   <div class="flow-heading"><p class="eyebrow">01 ／ 拆到品項</p><h2 id="items-title">一張發票裡買了什麼，分開看得更清楚。</h2><p>查看商品明細與分類，再往下看消費模式。</p></div>
-<details class="audit" open><summary id="audit-summary"></summary><p class="audit-description" id="audit-description"></p><div class="table-scroll"><table><thead><tr><th>日期</th><th>發票代碼</th><th>賣方</th><th>品項</th><th>分類</th><th class="numeric">數量</th><th class="numeric">金額 NT$</th></tr></thead><tbody id="audit-rows"></tbody></table></div></details>
+<details class="audit" open><summary id="audit-summary"></summary><p class="audit-description" id="audit-description"></p><div class="table-scroll"><table><thead><tr><th>日期</th><th>發票代碼</th><th>賣方</th><th>行政區</th><th>品項</th><th>分類</th><th class="numeric">數量</th><th class="numeric">金額 NT$</th></tr></thead><tbody id="audit-rows"></tbody></table></div></details>
 </section>
 <section class="flow-region" id="insights" tabindex="-1" aria-labelledby="insights-title">
   <div class="flow-heading"><p class="eyebrow">02 ／ 看見消費模式</p><h2 id="insights-title">從每筆消費，看見一個月的習慣。</h2></div>
@@ -43,7 +43,7 @@
 <div class="scene" id="scene-2" hidden><div class="routine" id="routine"></div></div>
 <div class="legend" id="legend"></div><div class="chart-note" id="chart-note">依日期播放 · 每一個圓是一日消費的加總，並非消費地點。</div></div>
 <aside class="insight" aria-label="本章完整資料解讀"><div class="insight-overline">THE OBSERVATION / 本章完整解讀</div><div class="insight-number" id="insight-number"></div><h3 id="insight-title"></h3><p id="insight-body"></p><div class="insight-bottom" id="insight-bottom"></div></aside></div>
-<div class="controls"><button class="play" id="play" aria-label="暫停動畫">Ⅱ</button><button class="replay" id="replay" aria-label="從頭重播" title="從頭重播">↺</button><span class="control-label" id="play-state">正在播放</span><input class="timeline" id="timeline" type="range" min="0" max="36" step="0.01" value="0" aria-label="動畫播放進度，單位秒"><span class="time" id="time">00:00 / 00:36</span><button class="speed" id="speed" aria-label="播放速度 1 倍">1×</button></div>
+<div class="controls"><button class="play" id="play" aria-label="暫停動畫">Ⅱ</button><button class="replay" id="replay" aria-label="從頭重播" title="從頭重播">↺</button><span class="control-label" id="play-state">正在播放</span><input class="timeline" id="timeline" type="range" min="0" max="18" step="0.01" value="0" aria-label="動畫播放進度，單位秒"><span class="time" id="time">00:00 / 00:18</span><button class="speed" id="speed" aria-label="播放速度 1 倍">1×</button></div>
 </section>
 <section class="extra-insights" aria-labelledby="extra-title">
   <div class="section-heading"><h2 id="extra-title">換個角度，看見你的日常。</h2><p>出現得多，字就更大；沿著日期，看見一個月的消費分布。</p></div>
@@ -87,7 +87,10 @@
 <footer><div id="report-source"></div><div class="footer-brand">You are what you buy.</div></footer>
 </main>
 <section id="taste-view" aria-label="朋友品味比較" hidden><iframe id="taste-frame" title="朋友品味比較" referrerpolicy="no-referrer"></iframe></section>
+<section id="match-view" aria-label="找到同好" hidden><iframe id="match-frame" title="找到同好" referrerpolicy="no-referrer"></iframe></section>
+<section id="connection-view" aria-label="你和配對對象的連線圖" hidden><iframe id="connection-frame" title="你和配對對象的連線圖" referrerpolicy="no-referrer"></iframe></section>
 <template id="taste-page-source"></template>
+<template id="match-page-source"></template>
 <script src="flow-navigation.js"></script>
 <script src="report-data.js"></script>
 <script src="insights-ui.js"></script>

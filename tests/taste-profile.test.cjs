@@ -23,3 +23,17 @@ test('reject incompatible, oversized, empty and malformed profiles',()=>{
 test('category comparison has defined zero overlap and volume-independent identical distributions',()=>{
  assert.equal(taste.cosine([1,0],[0,1]),0);assert.ok(Math.abs(taste.cosine([2,1],[4,2])-1)<1e-12);assert.equal(taste.cosine([0,0],[1,1]),null);
 });
+test('one portion per item and invoice, as in the match tags',()=>{
+ const report={isDemo:false,categories:[{name:'飲品'},{name:'正餐'}],months:{'2026-03':{rows:[
+  {category:0,amount:50,invoice:'A',name:'紅茶'},{category:0,amount:50,invoice:'A',name:'紅茶'},
+  {category:0,amount:50,invoice:'B',name:'紅茶'},{category:1,amount:90,invoice:'A',name:'便當'}]}}};
+ const p=taste.fromReport(report,'小明');
+ assert.equal(p.counts[1],2);assert.equal(p.counts[0],1);
+});
+test('a match pair carries a whole-number score and two valid profiles',()=>{
+ const side=(name,demo)=>({name,demo,months:['2026-03','2026-04'],counts:[3,2,0,0,0,0,0,0,0,0]});
+ const pair=taste.fromPair({score:81,left:side('你',false),right:side('手搖學生 D',true)});
+ assert.equal(pair.score,81);assert.equal(pair.left.name,'你');assert.equal(pair.right.schema,taste.schema);
+ for(const invalid of [null,{score:81.5,left:side('你',false),right:side('D',true)},{score:101,left:side('你',false),right:side('D',true)},
+  {score:81,left:side('你',false),right:{...side('D',true),counts:[1]}}])assert.throws(()=>taste.fromPair(invalid));
+});

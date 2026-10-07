@@ -14,6 +14,8 @@ const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({
 }[char]));
 let insightGeneration = 0;
 let rhythmMetric = 'count';
+// Each chapter plays through the month's days, then holds for a moment; three chapters in all.
+const CHAPTER = 6, PLAY = 5, LENGTH = CHAPTER * 3;
 
 function renderInsights(key, autoplay = false) {
   if (!reportMonths[key]) return;
@@ -70,8 +72,8 @@ function renderInsights(key, autoplay = false) {
   $('legend').innerHTML = categories.filter((_, index) => currTotals[index] !== 0).map(category => '<span style="--color:' + category.color + '">' + category.name + '</span>').join('');
   $('audit-summary').textContent = '查看分類明細與計算方式 · ' + current.length + ' 筆品項';
   $('audit-description').textContent = '依品名與賣方人工分類，尚未接模型。飲品含酒類；不明品項標示待確認。餐廳服務費列其他服務，餐廳折扣與點數折抵列正餐並扣除；不分攤至個別品名。零元明細保留供核對，消費次數只計付費紀錄。';
-  $('audit-rows').innerHTML = current.map(row => '<tr><td>' + dateLabel(row.day) + '</td><td>' + row.invoice + '</td><td>' + escapeHTML(row.merchant) + '</td><td>' + escapeHTML(row.name) + '</td><td' + (row.provisional ? ' class="provisional"' : '') + '>' + categories[row.category].name + (row.provisional ? '（暫定）' : '') + '</td><td class="numeric">' + row.quantity + '</td><td class="numeric">' + number(row.amount) + '</td></tr>').join('');
-  $('report-source').textContent = '目前洞察來源：' + month.source + '。金額依明細加總，已含負數折抵；發票張數按號碼去重。沒有紀錄不代表沒有消費。頁面只保留匿名發票代碼，不嵌入原始號碼、統編或地址。';
+  $('audit-rows').innerHTML = current.map(row => '<tr><td>' + dateLabel(row.day) + '</td><td>' + row.invoice + '</td><td>' + escapeHTML(row.merchant) + '</td><td>' + escapeHTML(row.district || '未知') + '</td><td>' + escapeHTML(row.name) + '</td><td' + (row.provisional ? ' class="provisional"' : '') + '>' + categories[row.category].name + (row.provisional ? '（暫定）' : '') + '</td><td class="numeric">' + row.quantity + '</td><td class="numeric">' + number(row.amount) + '</td></tr>').join('');
+  $('report-source').textContent = '目前洞察來源：' + month.source + '。金額依明細加總，已含負數折抵；發票張數按號碼去重。沒有紀錄不代表沒有消費。頁面只保留匿名發票代碼與行政區，不嵌入原始號碼、統編或完整地址。';
 
   const calendar = $('calendar');
   calendar.innerHTML = '';
@@ -103,14 +105,14 @@ function renderInsights(key, autoplay = false) {
     { title: '拆到品項，看見支出的組成。', subtitle: '品項歸類後逐日累積，長度代表類別淨額。', note: '含折扣與點數折抵；明細金額已包含數量，不重複乘算。', value: largestShare.toFixed(0), unit: '%', headline: categories[largestCategory].name + '，是本月<br>最大的支出類別。', body: categories[largestCategory].name + '共 ' + money(currTotals[largestCategory]) + '，占 ' + largestShare.toFixed(1) + '%。' + (discounts ? '全月已扣除折抵 ' + money(discounts) + '。' : '同一張發票可包含多種類別。'), bottom: '<strong>分類採人工判讀。</strong><br>不明品項保留暫定標記，可由下方明細核對。' },
     { title: '有些習慣，不靠金額也能被看見。', subtitle: '同一品項沿日期出現，呈現交易的重複性。', note: '票券紀錄代表購買行為，無法確認實際入場或運動時長。', value: sportCount, unit: '張', headline: '運動票券，<br>在 ' + sportDays.length + ' 個日期出現。', body: '本月共有 ' + sportCount + ' 張運動類發票，累積 ' + money(sum(sports)) + '，占本月 ' + (total ? sum(sports) / total * 100 : 0).toFixed(1) + '%。', bottom: '<strong>頻繁出現，不一定是高額支出。</strong><br>往下選擇「運動」標籤，跟上個月比較。' },
   ];
-  let position = autoplay ? 0 : 11.99, playing = autoplay, speed = 1, lastTime = null, activeScene = -1, lastDay = -1;
+  let position = autoplay ? 0 : CHAPTER - 0.01, playing = autoplay, speed = 1, lastTime = null, activeScene = -1, lastDay = -1;
   function updatePlay() {
     $('play').textContent = playing ? 'Ⅱ' : '▶'; $('play').setAttribute('aria-label', playing ? '暫停動畫' : '播放動畫');
-    $('play-state').textContent = playing ? '正在播放' : position >= 36 ? '播放完畢' : '已暫停';
+    $('play-state').textContent = playing ? '正在播放' : position >= LENGTH ? '播放完畢' : '已暫停';
   }
   function render() {
-    const index = Math.min(2, Math.floor(position / 12));
-    const day = Math.min(daysInMonth, Math.floor(Math.min(1, (position - index * 12) / 10) * daysInMonth) + 1);
+    const index = Math.min(2, Math.floor(position / CHAPTER));
+    const day = Math.min(daysInMonth, Math.floor(Math.min(1, (position - index * CHAPTER) / PLAY) * daysInMonth) + 1);
     if (index !== activeScene) {
       activeScene = index; lastDay = -1;
       const scene = scenes[index];
@@ -133,20 +135,21 @@ function renderInsights(key, autoplay = false) {
         $('routine-amount').innerHTML = number(sum(sports.filter(row => row.day <= day))) + '<small>元累積</small>';
       }
     }
-    $('timeline').value = position; $('time').textContent = '00:' + String(Math.floor(position)).padStart(2, '0') + ' / 00:36';
+    $('timeline').value = position; $('time').textContent = '00:' + String(Math.floor(position)).padStart(2, '0') + ' / 00:' + String(LENGTH).padStart(2, '0');
   }
   function tick(now) {
     if (generation !== insightGeneration) return;
-    if (lastTime !== null && playing) { position = Math.min(36, position + (now - lastTime) / 1000 * speed); if (position >= 36) { playing = false; updatePlay(); } render(); }
+    if (lastTime !== null && playing) { position = Math.min(LENGTH, position + (now - lastTime) / 1000 * speed); if (position >= LENGTH) { playing = false; updatePlay(); } render(); }
     lastTime = now; requestAnimationFrame(tick);
   }
-  $('play').onclick = () => { if (position >= 36) position = 0; playing = !playing; lastTime = null; render(); updatePlay(); };
+  $('play').onclick = () => { if (position >= LENGTH) position = 0; playing = !playing; lastTime = null; render(); updatePlay(); };
   $('replay').onclick = () => { position = 0; playing = true; lastTime = null; render(); updatePlay(); };
   $('timeline').oninput = event => { position = Number(event.target.value); playing = false; render(); updatePlay(); };
+  $('timeline').max = String(LENGTH);
   $('speed').textContent = '1×'; $('speed').setAttribute('aria-label', '播放速度 1 倍');
   $('speed').onclick = () => { speed = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1; $('speed').textContent = speed + '×'; $('speed').setAttribute('aria-label', '播放速度 ' + speed + ' 倍'); };
-  $('finish').onclick = () => { position = activeScene * 12 + 11.99; playing = false; render(); updatePlay(); };
-  document.querySelectorAll('.chapter').forEach(el => el.onclick = () => { position = Number(el.dataset.chapter) * 12 + (playing ? 0 : 11.99); lastTime = null; render(); updatePlay(); });
+  $('finish').onclick = () => { position = activeScene * CHAPTER + CHAPTER - 0.01; playing = false; render(); updatePlay(); };
+  document.querySelectorAll('.chapter').forEach(el => el.onclick = () => { position = Number(el.dataset.chapter) * CHAPTER + (playing ? 0 : CHAPTER - 0.01); lastTime = null; render(); updatePlay(); });
   document.onvisibilitychange = () => { if (document.hidden) { playing = false; updatePlay(); } lastTime = null; };
   render(); updatePlay(); requestAnimationFrame(tick);
 

@@ -4,6 +4,8 @@ import calendar
 import csv
 from datetime import datetime
 
+from .address import parse_district
+
 
 def build_month(path, catalog):
     rows, invoice_ids = [], {}
@@ -27,6 +29,7 @@ def build_month(path, catalog):
                 "day": date.day,
                 "invoice": invoice_ids[original_id],
                 "merchant": row["賣方名稱"],
+                "district": parse_district(row.get("賣方地址")),
                 "name": name,
                 "quantity": int(row["消費明細_數量"]),
                 "amount": int(row["消費明細_金額"]),

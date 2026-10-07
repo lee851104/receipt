@@ -8,7 +8,7 @@ from pathlib import Path
 from .invoices import build_month
 from .demo import build_demo
 from .matching import eligible, ready
-from .personas import build_personas
+from .personas import MONTHS, build_personas
 from .tags import build_profile
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -52,12 +52,14 @@ def build_matches(months, categories, is_demo):
     me = build_profile([row for month in months.values() for row in month["rows"]], categories, brands, settings)
     people = [{"name": person["name"], "profile": build_profile(person["rows"], categories, brands, settings)}
               for person in build_personas()]
-    names = [category["name"] for category in categories]
     return {
         "isDemo": is_demo, "population": len(people),
-        "settings": {key: settings[key] for key in ("weights", "thresholds", "top_matches", "category_min_items")},
-        "me": {"ready": ready(me), "item_count": me["item_count"], "areas": me["areas"], "tags": me["tags"]},
-        "candidates": eligible(me, people, names, settings) if ready(me) else [],
+        "personaMonths": [f"{year}-{month:02}" for year, month, _ in MONTHS],
+        "settings": {key: settings[key] for key in ("weights", "thresholds", "price_levels", "top_matches", "category_min_items")},
+        "me": {"ready": ready(me), "item_count": me["item_count"], "months": sorted(months), "areas": me["areas"],
+               "tags": [{"dimension": tag["dimension"], "text": tag["text"]} for tag in me["tags"]],
+               "counts": me["category_counts"]},
+        "candidates": eligible(me, people, settings) if ready(me) else [],
     }
 
 

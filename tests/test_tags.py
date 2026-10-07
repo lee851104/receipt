@@ -27,8 +27,11 @@ def texts(profile, dimension):
 
 class TagTests(unittest.TestCase):
     def test_shipped_settings_match_the_spec(self):
-        self.assertAlmostEqual(sum(SETTINGS["weights"].values()), 1)
-        self.assertEqual(SETTINGS["thresholds"], {"taste": 0.8, "taste_same_area": 0.7})
+        self.assertEqual(SETTINGS["weights"], {"category": 0.35, "brand": 0.15, "flavor": 0.1, "price": 0.1})
+        self.assertEqual(SETTINGS["thresholds"], {"match": 0.8, "nearby": 0.7})
+        cities = [city for group in SETTINGS["regions"].values() for city in group]
+        self.assertEqual(len(set(cities)), 22)
+        self.assertTrue(all(len(city) == 3 for city in cities))
         self.assertEqual(SETTINGS["category_min_items"], 10)
         self.assertEqual([level["label"] for level in SETTINGS["price_levels"]], ["小資型", "均衡型", "享受型"])
         self.assertEqual([level.get("below") for level in SETTINGS["price_levels"]], [100, 300, None])
@@ -147,11 +150,16 @@ class TagTests(unittest.TestCase):
         unreviewed = [row(f"P{i}", 10, amount=120, provisional=True) for i in range(3)]
         self.assertEqual(texts(profile_of(unreviewed), "消費檔次"), [])
 
+    def test_tags_carry_comparison_keys(self):
+        rows = [row(f"S{i}", 0, merchant="統一超商股份有限公司示範門市", name="示範素食便當") for i in range(10)]
+        keys = {(tag["dimension"], tag["key"]) for tag in profile_of(rows)["tags"]}
+        self.assertEqual(keys, {("品類偏好", "正餐"), ("常消費地區", "高雄市苓雅區"), ("常去品牌", "7-ELEVEN"),
+                                ("消費檔次", "均衡型"), ("葷素紀錄", "素食品項較多")})
+
     def test_flavor_tag_describes_purchases(self):
         rows = [row("A", name="示範全素水餃"), row("B", name="示範全素水餃"), row("C", name="示範鮮蝦水餃", merchant="示範水餃館")]
         profile = profile_of(rows)
         self.assertEqual(texts(profile, "葷素紀錄"), ["葷素品項都有"])
-        self.assertEqual(profile["flavor_items"], {"示範水餃館": {"示範鮮蝦水餃": 1}})
         self.assertEqual(texts(profile_of(rows[:2]), "葷素紀錄"), [])
         self.assertEqual(texts(profile_of([row(f"V{i}", name="示範素食便當") for i in range(3)]), "葷素紀錄"), ["素食品項較多"])
         self.assertIsNone(profile_of([row(f"V{i}", name="示範蔬菜水餃") for i in range(3)])["meat_ratio"])

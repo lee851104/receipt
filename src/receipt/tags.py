@@ -112,18 +112,8 @@ def build_profile(rows, categories, brands, settings):
              if invoice["portions"] and invoice["food"] > 0]
     districts = Counter(invoice["district"] for invoice in paid if invoice["district"])
     chains = Counter(invoice["brand"] for invoice in paid if invoice["brand"])
-    flavored, flavor_items = [], {}
-    for row in valid:
-        if names[row["category"]] not in flavor["categories"]:
-            continue
-        value = flavor_of(row["name"], flavor)
-        if value is None:
-            continue
-        flavored.append(value)
-        brand = brand_of(row["merchant"], brands)
-        if brand:
-            items = flavor_items.setdefault(brand, {})
-            items[row["name"]] = items.get(row["name"], 0) + 1
+    judged = [flavor_of(row["name"], flavor) for row in valid if names[row["category"]] in flavor["categories"]]
+    flavored = [value for value in judged if value is not None]
     known_area = sum(districts.values()) >= minimum
     profile = {
         "item_count": len(valid),
@@ -137,23 +127,25 @@ def build_profile(rows, categories, brands, settings):
         "frequent_brands": [(brand, count) for brand, count in ranked(chains) if count >= settings["brand_min_invoices"]],
         "price_level": level_of(median(meals), settings["price_levels"]) if len(meals) >= minimum else None,
         "meat_ratio": sum(flavored) / len(flavored) if len(flavored) >= flavor["min_items"] else None,
-        "flavor_items": flavor_items,
     }
     profile["tags"] = describe(profile, names, settings)
     return profile
 
 
 def describe(profile, names, settings):
+    """Tags in display order; two tags of one dimension are the same when their keys match."""
     counts, tags = profile["category_counts"], []
     if counts:
         total = sum(counts)
-        tags += [{"dimension": "品類偏好", "text": f"常買{names[index]}（{percent(counts[index] / total)}%）"}
+        tags += [{"dimension": "品類偏好", "key": names[index], "text": f"常買{names[index]}（{percent(counts[index] / total)}%）"}
                  for index in profile["top_categories"]]
-    tags += [{"dimension": "常消費地區", "text": area} for area in profile["areas"]]
-    tags += [{"dimension": "常去品牌", "text": f"{brand}（{count} 次）"} for brand, count in profile["frequent_brands"]]
+    tags += [{"dimension": "常消費地區", "key": area, "text": area} for area in profile["areas"]]
+    tags += [{"dimension": "常去品牌", "key": brand, "text": f"{brand}（{count} 次）"}
+             for brand, count in profile["frequent_brands"]]
     if profile["price_level"] is not None:
-        tags.append({"dimension": "消費檔次", "text": settings["price_levels"][profile["price_level"]]["label"]})
+        level = settings["price_levels"][profile["price_level"]]["label"]
+        tags.append({"dimension": "消費檔次", "key": level, "text": level})
     label = flavor_label(profile["meat_ratio"], settings["flavor"])
     if label:
-        tags.append({"dimension": "葷素紀錄", "text": label})
+        tags.append({"dimension": "葷素紀錄", "key": label, "text": label})
     return tags

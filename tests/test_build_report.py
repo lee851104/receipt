@@ -64,6 +64,7 @@ class StandaloneBuildTests(unittest.TestCase):
             matched.feed(match_page)
             self.assertEqual(matched.external, [])
             self.assertIn('data-source="match-filter.js"', match_page)
+            self.assertIn("此配對頁只用行政區與連鎖品牌", match_page)
             payload = json.loads(re.search(r"const matchReportData = (.*?);\n</script>", match_page, re.S).group(1))
             self.assertTrue(payload["isDemo"])
             self.assertEqual(payload["population"], 40)
@@ -124,6 +125,7 @@ class StandaloneBuildTests(unittest.TestCase):
             # These raw bytes keep the platform newlines that write_text produced (CRLF on Windows).
             payload = json.loads(re.search(r"const matchReportData = (.*?);\r?\n</script>", match_page, re.S).group(1))
             self.assertFalse(payload["isDemo"])
+            self.assertIn("這份私人報告的其他頁面仍有完整交易明細", match_page)
             self.assertFalse(payload["me"]["ready"])
             self.assertEqual(payload["candidates"], [])
             self.assertTrue((project / "data" / "private" / "report-data.js").is_file())

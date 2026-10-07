@@ -1634,7 +1634,9 @@ const matchReportData = {
     make(&#x27;p&#x27;, &#x27;品味分數不含地區，至少 &#x27; + pct(settings.thresholds.taste) + &#x27; 才推薦；對方常在你勾選的生活圈消費時，放寬為 &#x27;
       + pct(settings.thresholds.taste_same_area) + &#x27;。大字是總分，用來排序。&#x27;),
     make(&#x27;p&#x27;, &#x27;同一張發票的同一品項只算一次；有品項買 2 份以上的發票，可能是多人一起消費，不列入消費檔次。&#x27;),
-    make(&#x27;p&#x27;, &#x27;只用行政區與連鎖品牌，不顯示分店、日期或金額。配對對象皆為虛構示範用戶，他們的常消費地區視為已確認的生活圈。&#x27;));
+    make(&#x27;p&#x27;, &#x27;此配對頁只用行政區與連鎖品牌，不顯示分店、日期或金額。&#x27;
+      + (data.isDemo ? &#x27;&#x27; : &#x27;這份私人報告的其他頁面仍有完整交易明細，分享整份檔案就會一併分享。&#x27;)
+      + &#x27;配對對象皆為虛構示範用戶，他們的常消費地區視為已確認的生活圈。&#x27;));
   render();
   const pageHost = window.parent !== window &amp;&amp; window.frameElement?.id === &#x27;match-frame&#x27; ? window.parent : null;
   if (pageHost) {

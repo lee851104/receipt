@@ -43,7 +43,8 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 <script src="taste-profile.js"></script>
 <script>
 'use strict';
-const pageHost=window.parent!==window&&window.frameElement?.id==='taste-frame'?window.parent:null;
+const hostFrame=window.parent!==window?window.frameElement?.id:null;
+const pageHost=['taste-frame','connection-frame'].includes(hostFrame)?window.parent:null;
 function pageLocation(){return pageHost?pageHost.location:location;}
 const demoItems=[
  {a:'美式咖啡',b:'拿鐵咖啡',c:'飲品',g:0,s:.96},
@@ -67,6 +68,15 @@ const $=id=>document.getElementById(id);const svgNS='http://www.w3.org/2000/svg'
 for(const person of Object.values(profiles)){
  person.demoCounts=[...person.counts];person.categoryCounts=TasteProfile.categories.map(name=>demoItems.reduce((n,item,i)=>n+(item.c===name?person.counts[i]:0),0));
 }
+// Opened from the match list: the sides are fixed to you and that match, and the big number is the match score.
+let pair=null;
+if(hostFrame==='connection-frame'){
+ try{pair=TasteProfile.fromPair(pageHost.ReceiptPages.connection());}catch(error){pageHost.ReceiptPages.showMatches();}
+ if(pair){
+  profiles.me={name:pair.left.name,payload:pair.left};profiles.match={name:pair.right.name,payload:pair.right};leftKey='me';rightKey='match';
+  for(const part of document.querySelectorAll('.import-title-row, .imports'))part.hidden=true;
+ }
+}
 function chartName(key,mobile){const letters=Array.from(profiles[key].name),limit=mobile?5:10;return letters.slice(0,limit).join('')+(letters.length>limit?'…':'');}
 function profileMonths(key){return profiles[key].payload?.months||['2026-01','2026-02','2026-03'];}
 function isDemoProfile(key){return profiles[key].payload?profiles[key].payload.demo:true;}
@@ -78,7 +88,7 @@ function prepareMode(){
  if(categoryMode&&['dumplings','sweetness'].includes(category)){category='all';$('category').value='all';}
  $('category-method').hidden=!categoryMode;$('demo-method').hidden=categoryMode;
  document.querySelector('.subtitle').textContent=categoryMode?'每個點是一類消費偏好。看看你們常買的類型，有多少交集。':'每個點是一種消費品項。看看哪些選擇，讓你們有了交集。';
- document.querySelector('.overall-label').textContent=categoryMode?'消費類型相似度':'綜合品味相似指數';
+ document.querySelector('.overall-label').textContent=pair?'配對分數':categoryMode?'消費類型相似度':'綜合品味相似指數';
  document.querySelector('.legend-item').lastChild.textContent=categoryMode?'點越大，品項筆數越多':'點越大，消費次數越多';
  document.querySelector('.negative-label').hidden=categoryMode;
  document.querySelector('.legend-explain').textContent=categoryMode?'目前比較的是消費類型，還不能辨認甜度或餡料。只有相同類別會連線；兩人在該類的消費占比越接近，線越粗。':'同款也能選得不同：可篩選「同店不同餡」或「半糖與無糖」。餡料與甜度各自比較，差異不代表兩人整體品味相反。';
@@ -173,6 +183,7 @@ function draw(){
  prepareMode();
  const mobile=matchMedia('(max-width:640px)').matches,svg=$('network'),indices=items.map((_,i)=>i).filter(i=>category==='all'||(category==='dumplings'?items[i].dumpling:category==='sweetness'?items[i].sweetness:items[i].c===category)).filter(i=>!loadedSides().length||loadedSides().some(side=>profiles[keyFor(side)].counts[i]>0));svg.replaceChildren();const chartWidth=mobile?600:1200,chartHeight=mobile&&loadedSides().length&&indices.length>4?160+indices.length*76:570;svg.setAttribute('viewBox',`0 0 ${chartWidth} ${chartHeight}`);nodes=[];edges=[];selected=null;
  const overall=similarity(items.map((_,i)=>i));$('overall-score').textContent=overall===null?'—':indexPercent(overall);$('score-unit').hidden=overall===null;$('overall-score').parentElement.classList.toggle('waiting',overall===null);$('overall-note').textContent=hasBoth()?(categoryMode?'全類別評估 · 分類偏好摘要':'全類別評估 · 虛構示範'):loadedSides().length?'等待另一人匯入':'先匯入偏好資料';
+ if(pair){$('overall-score').textContent=pair.score;$('overall-note').textContent='消費類型相似度 '+indexPercent(overall)+'%（下圖）';}
  const scopeScore=similarity(indices),count=loadedSides().length;
  $('scope').textContent=(category==='all'?'全類別':category==='dumplings'?'同店不同餡':category==='sweetness'?'半糖與無糖':category)+' · '+(!count?'尚未匯入資料':!indices.length?'目前無資料':loadedSides().reduce((n,side)=>n+indices.filter(i=>profiles[keyFor(side)].counts[i]>0).length,0)+(categoryMode?' 個類別點 · ':' 個品項點 · ')+(scopeScore===null?(hasBoth()?'此範圍有一側無資料':'尚待另一人匯入'):categoryMode&&category!=='all'?'綜合分數仍計算全部類別':'範圍相似 '+indexPercent(scopeScore)+'%'));
  renderSummary(overall);
@@ -180,7 +191,7 @@ function draw(){
  const decorations=el('g',{'aria-hidden':'true'});for(const side of ['a','b']){
   const key=keyFor(side),x=mobile?(side==='a'?145:455):(side==='a'?275:925),y=mobile?chartHeight/2+15:300;
   decorations.append(el('ellipse',{cx:x,cy:y,rx:mobile?118:220,ry:mobile?chartHeight/2-95:214,class:'cluster-ring'}));
-  decorations.append(el('circle',{cx:x-105,cy:38,r:4,fill:side==='a'?'#ff9aa7':'#9bbcff'}),el('text',{x,y:43,'text-anchor':'middle',class:'person-name'},key?chartName(key,mobile)+' · '+(side==='a'?'你':'朋友'):(side==='a'?'你的偏好':'朋友的偏好')));
+  decorations.append(el('circle',{cx:x-105,cy:38,r:4,fill:side==='a'?'#ff9aa7':'#9bbcff'}),el('text',{x,y:43,'text-anchor':'middle',class:'person-name'},key?chartName(key,mobile)+(pair?(side==='a'?'':' · 配對對象'):' · '+(side==='a'?'你':'朋友')):(side==='a'?'你的偏好':'朋友的偏好')));
   if(!key){decorations.append(el('text',{x,y:y-8,class:'slot-title'},'等待匯入'),el('text',{x,y:y+22,class:'slot-note'},'在上方貼上偏好網址'));continue;}
   decorations.append(el('text',{x,y:y+25,'text-anchor':'middle',class:'cluster-word'},side==='a'?'A':'B'),el('text',{x,y:66,'text-anchor':'middle',class:'person-sub'},indices.reduce((s,i)=>s+profiles[key].counts[i],0)+(categoryMode?' 筆品項 · ':' 次消費 · ')+indices.filter(i=>profiles[key].counts[i]>0).length+(categoryMode?' 種類別':' 種品項')));
  }svg.append(decorations);
@@ -206,7 +217,9 @@ function importHash(){if(!pageLocation().hash.startsWith('#taste='))return;leftK
 window.refreshTasteFromLocation=importHash;
 if(pageHost){
  const back=$('return-report');back.hidden=false;
- for(const link of [back,document.querySelector('header .brand')])link.addEventListener('click',event=>{event.preventDefault();pageHost.ReceiptPages.showReport();});
+ if(pair)back.textContent='← 返回配對清單';
+ back.addEventListener('click',event=>{event.preventDefault();if(pair)pageHost.ReceiptPages.showMatches();else pageHost.ReceiptPages.showReport();});
+ document.querySelector('header .brand').addEventListener('click',event=>{event.preventDefault();pageHost.ReceiptPages.showReport();});
 }else window.addEventListener('hashchange',importHash);
 if(pageLocation().hash.startsWith('#taste='))importHash();else draw();
 </script>

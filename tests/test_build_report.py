@@ -79,6 +79,8 @@ class StandaloneBuildTests(unittest.TestCase):
             self.assertGreaterEqual(len(payload["candidates"]), 1)
             self.assertEqual(set(payload["candidates"][0]), {"name", "score", "distance", "like", "unlike", "counts"})
             self.assertIn('href="#match"', html)
+            self.assertIn('<iframe id="connection-frame"', html)
+            self.assertIn("connection-frame", comparison)
             parsed = ResourceParser()
             parsed.feed(html)
             self.assertEqual(parsed.external, [])

@@ -61,6 +61,8 @@ test('initial view uses April and compares fictional sport purchases against Mar
   assert.match(nodes.get('compare-takeaway').innerHTML, /多花 180 元/);
   assert.equal(nodes.get('total').textContent, 'NT$ 8,095');
   assert.equal(nodes.get('compare-current-heading').textContent, '本月 · 4 月');
+  assert.equal(nodes.get('time').textContent, '00:05 / 00:18');
+  assert.equal(nodes.get('timeline').max, '18');
 });
 
 test('source button and item selector update every category and item without corrupting personal data', () => {

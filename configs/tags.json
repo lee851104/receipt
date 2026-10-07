@@ -6,10 +6,11 @@
   "district_min_invoices": 2,
   "brand_min_invoices": 3,
   "price_levels": [
-    {"label": "小資型", "below": 150},
-    {"label": "均衡型", "below": 400},
+    {"label": "小資型", "below": 100},
+    {"label": "均衡型", "below": 300},
     {"label": "享受型"}
   ],
+  "meal": {"portion_category": "正餐", "food_categories": ["正餐", "飲品", "零食甜點"]},
   "remote_sellers": ["富邦媒體", "網路家庭", "蝦皮", "酷澎", "博客來", "富胖達", "優食", "中華電信", "台灣大哥大", "遠傳電信", "台灣電力", "台灣自來水"],
   "flavor": {
     "categories": ["正餐", "飲品", "零食甜點", "生鮮食材"],

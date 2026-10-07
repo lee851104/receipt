@@ -94,18 +94,22 @@ def build_profile(rows, categories, brands, settings):
     for row in valid:
         counts[row["category"]] += 1
     enough_items = len(valid) >= settings["category_min_items"]
+    portion = names.index(settings["meal"]["portion_category"])
+    food = {names.index(name) for name in settings["meal"]["food_categories"]}
     invoices = {}
     for row in rows:
         invoice = invoices.setdefault(row["invoice"], {
-            "total": 0, "shared": False, "names": set(), "brand": brand_of(row["merchant"], brands),
+            "total": 0, "food": 0, "portions": 0, "brand": brand_of(row["merchant"], brands),
             "district": None if is_remote(row["merchant"], settings["remote_sellers"]) else row.get("district")})
         invoice["total"] += row["amount"]
-        if row["amount"] > 0:
-            # Several portions of one item suggest the bill also covered other people.
-            invoice["shared"] |= row["quantity"] >= 2 or row["name"] in invoice["names"]
-            invoice["names"].add(row["name"])
+        if not row["provisional"] and row["category"] in food:
+            invoice["food"] += row["amount"]
+            # Main-dish portions stand in for the number of people a bill fed.
+            if row["category"] == portion and row["amount"] > 0:
+                invoice["portions"] += row["quantity"]
     paid = [invoice for invoice in invoices.values() if invoice["total"] > 0]
-    personal = [invoice for invoice in paid if not invoice["shared"]]
+    meals = [invoice["food"] / invoice["portions"] for invoice in invoices.values()
+             if invoice["portions"] and invoice["food"] > 0]
     districts = Counter(invoice["district"] for invoice in paid if invoice["district"])
     chains = Counter(invoice["brand"] for invoice in paid if invoice["brand"])
     flavored, flavor_items = [], {}
@@ -131,8 +135,7 @@ def build_profile(rows, categories, brands, settings):
                   if count >= settings["district_min_invoices"]][:settings["district_top"]] if known_area else [],
         "brand_shares": shares(chains) if sum(chains.values()) >= minimum else {},
         "frequent_brands": [(brand, count) for brand, count in ranked(chains) if count >= settings["brand_min_invoices"]],
-        "price_level": level_of(median(invoice["total"] for invoice in personal), settings["price_levels"])
-        if len(personal) >= minimum else None,
+        "price_level": level_of(median(meals), settings["price_levels"]) if len(meals) >= minimum else None,
         "meat_ratio": sum(flavored) / len(flavored) if len(flavored) >= flavor["min_items"] else None,
         "flavor_items": flavor_items,
     }

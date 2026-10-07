@@ -31,6 +31,8 @@ class TagTests(unittest.TestCase):
         self.assertEqual(SETTINGS["thresholds"], {"taste": 0.8, "taste_same_area": 0.7})
         self.assertEqual(SETTINGS["category_min_items"], 10)
         self.assertEqual([level["label"] for level in SETTINGS["price_levels"]], ["小資型", "均衡型", "享受型"])
+        self.assertEqual([level.get("below") for level in SETTINGS["price_levels"]], [100, 300, None])
+        self.assertEqual(SETTINGS["meal"], {"portion_category": "正餐", "food_categories": ["正餐", "飲品", "零食甜點"]})
         self.assertNotIn("蔬菜", SETTINGS["flavor"]["vegetarian"])
         self.assertTrue(SETTINGS["remote_sellers"])
         self.assertTrue(all(entry["brand"] and entry["keywords"] for entry in BRANDS))
@@ -106,28 +108,44 @@ class TagTests(unittest.TestCase):
         self.assertEqual(texts(profile, "常去品牌"), ["7-ELEVEN（3 次）"])
         self.assertAlmostEqual(profile["brand_shares"]["示範咖啡"], 0.4)
 
-    def test_price_level_uses_median_personal_invoice(self):
+    def test_price_level_divides_a_meal_bill_by_its_main_dishes(self):
+        # Four people, four different hotpots and four drinks on each bill: 450 a head, not 1,800 a bill.
+        rows = [row(f"H{i}", 0, amount=amount, name=name) for i in range(3)
+                for name, amount in (("示範牛肉鍋", 420), ("示範雞肉鍋", 380), ("示範海鮮鍋", 450), ("示範蔬菜鍋", 350))]
+        rows += [row(f"H{i}", 1, amount=200, name="示範紅茶", quantity=4) for i in range(3)]
+        self.assertEqual(texts(profile_of(rows), "消費檔次"), ["享受型"])
+        bentos = [row(f"B{i}", 0, amount=800, name="示範便當", quantity=4) for i in range(3)]
+        self.assertEqual(texts(profile_of(bentos), "消費檔次"), ["均衡型"])
+
+    def test_price_level_uses_the_median_meal(self):
         cheap, middle = SETTINGS["price_levels"][0]["below"], SETTINGS["price_levels"][1]["below"]
 
-        def level(totals):
-            return texts(profile_of([row(f"I{i}", amount=total) for i, total in enumerate(totals)]), "消費檔次")
+        def level(amounts):
+            return texts(profile_of([row(f"I{i}", 0, amount=amount) for i, amount in enumerate(amounts)]), "消費檔次")
 
         self.assertEqual(level([cheap - 1, cheap - 1, middle + 1]), ["小資型"])
         self.assertEqual(level([cheap, cheap, middle + 1]), ["均衡型"])
         self.assertEqual(level([middle, middle, 1]), ["享受型"])
         self.assertEqual(level([middle, middle]), [])
-        discounted = profile_of([row("D", amount=cheap + 10), row("D", amount=-20, name="測試折扣"),
-                                 row("E", amount=cheap - 10), row("F", amount=cheap - 10)])
-        self.assertEqual(texts(discounted, "消費檔次"), ["小資型"])
 
-    def test_shared_bills_stay_out_of_price_level(self):
-        cheap = SETTINGS["price_levels"][0]["below"]
-        personal = [row(f"P{i}", amount=cheap - 10) for i in range(3)]
-        portions = [row(f"S{i}", amount=1600, quantity=4) for i in range(3)]
-        repeated = [row(f"R{i}", amount=800, name="示範火鍋") for i in range(3) for _ in range(2)]
-        self.assertEqual(texts(profile_of(portions + personal), "消費檔次"), ["小資型"])
-        self.assertEqual(texts(profile_of(repeated + personal), "消費檔次"), ["小資型"])
-        self.assertEqual(texts(profile_of(portions + personal[:2]), "消費檔次"), [])
+    def test_drinks_and_discounts_on_a_meal_bill_count(self):
+        # With the drink, D is 120 and the median is 120; without it the median would fall to 80.
+        drinks = [row("D", 0, amount=80, name="示範便當"), row("D", 1, amount=40, name="示範紅茶"),
+                  row("E", 0, amount=120), row("F", 0, amount=50)]
+        self.assertEqual(texts(profile_of(drinks), "消費檔次"), ["均衡型"])
+        # With the discount, G is 90 and the median is 95; without it the median would rise to 110.
+        discounts = [row("G", 0, amount=110, name="示範便當"), row("G", 0, amount=-20, name="示範折扣"),
+                     row("H", 0, amount=95), row("I", 0, amount=300)]
+        self.assertEqual(texts(profile_of(discounts), "消費檔次"), ["小資型"])
+
+    def test_bills_without_a_main_dish_stay_out_of_price_level(self):
+        drinks = [row(f"T{i}", 1, amount=60, name="示範紅茶") for i in range(3)]
+        gadgets = [row(f"G{i}", 9, amount=2000, name="示範耳機") for i in range(3)]
+        self.assertEqual(texts(profile_of(drinks + gadgets), "消費檔次"), [])
+        meals = [row(f"M{i}", 0, amount=120) for i in range(3)]
+        self.assertEqual(texts(profile_of(drinks + gadgets + meals), "消費檔次"), ["均衡型"])
+        unreviewed = [row(f"P{i}", 10, amount=120, provisional=True) for i in range(3)]
+        self.assertEqual(texts(profile_of(unreviewed), "消費檔次"), [])
 
     def test_flavor_tag_describes_purchases(self):
         rows = [row("A", name="示範全素水餃"), row("B", name="示範全素水餃"), row("C", name="示範鮮蝦水餃", merchant="示範水餃館")]

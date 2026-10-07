@@ -61,6 +61,8 @@ def trait_value(trait, measured):
 
 def build_vector(rows, period, context):
     """One value per trait (None where data is thin), or None when the person has too little data at all."""
+    if not period:
+        return None
     settings = context["traits"]
     measured = measure(rows, period, context)
     if measured["counts"]["items"] < settings["min_items"]:

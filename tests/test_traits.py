@@ -79,6 +79,7 @@ class ScaleTests(unittest.TestCase):
 
 class TraitTests(unittest.TestCase):
     def test_too_few_items_leave_no_vector(self):
+        self.assertIsNone(build_vector([], [], CONTEXT))
         self.assertIsNone(build_vector(bought(lunches(19)), PERIOD, CONTEXT))
         self.assertIsNotNone(build_vector(bought(lunches(20)), PERIOD, CONTEXT))
 

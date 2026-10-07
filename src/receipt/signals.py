@@ -139,7 +139,7 @@ def pet_signals(items, paid, months):
                     pets[species][kind] += part
     for invoice in paid:
         if invoice["channel"] == "寵物":
-            known = {line["species"] for line in invoice["lines"] if line["species"]}
+            known = {line["species"] for line in invoice["lines"] if line["species"] and (line["pet_food"] or line["pet_supply"])}
             for species, part in SPLIT[known.pop() if len(known) == 1 else None]:
                 pets[species]["visits"] += part
     return {f"pet_{kind}_{species}": pets[species][key] / months

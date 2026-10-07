@@ -75,6 +75,13 @@ class PersonaTests(unittest.TestCase):
             with self.subTest(kind=kind):
                 self.assertGreater(self.score(fourth, fifth), self.score(first, fourth))
 
+    def test_family_cooks_show_the_pet_they_keep(self):
+        cooks = self.types["家庭下廚"]
+        for name in cooks[:3]:
+            self.assertGreaterEqual(self.raw[name][INDEX["pets_dog"]], 0.5, name)
+        for name in cooks[3:]:
+            self.assertGreaterEqual(self.raw[name][INDEX["pets_cat"]], 0.5, name)
+
     def test_clearance_shoppers_and_rice_ball_eaters_both_live_at_the_convenience_store_but_differ(self):
         saving, hurried = self.types["省錢上班族"], self.types["忙碌工程師"]
         for name in saving + hurried:

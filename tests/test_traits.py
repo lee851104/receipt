@@ -156,6 +156,15 @@ class TraitTests(unittest.TestCase):
                       (WORKDAYS[36:44], "測試料理米酒", 3, 50, "示範超商", HOME))
         self.assertAlmostEqual(trait(rows, "alcohol"), 0.7)
 
+    def test_dog_snacks_are_dog_food_and_pet_shop_visits_follow_pet_items(self):
+        rows = bought(lunches(), (WORKDAYS[20:24], "測試狗零食", 8, 200, "測試寵物店", HOME))
+        self.assertAlmostEqual(trait(rows, "pets_dog"), 0.75)
+        self.assertEqual(trait(rows, "pets_cat"), 0)
+        # A pet-shop bill without a pet item is split evenly, even when its name mentions a cat.
+        rows = bought(lunches(), (WORKDAYS[20:22], "測試貓抓板", 8, 300, "測試寵物店", HOME))
+        self.assertAlmostEqual(trait(rows, "pets_cat"), 0.075)
+        self.assertAlmostEqual(trait(rows, "pets_dog"), 0.075)
+
 
 class TypicalTests(unittest.TestCase):
     def test_two_sided_traits_are_measured_from_the_average_and_levels_stay(self):

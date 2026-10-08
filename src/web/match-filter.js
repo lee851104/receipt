@@ -1,44 +1,107 @@
-/* Who the match page shows and what it says, shared by the page and its tests. */
+/* Who the match page shows and what it says; the page and its tests share these pure functions. */
 (function (root) {
   'use strict';
-  const RANGES = ['同一區', '同縣市', '同地區', '不限'];
-  const PLACES = ['同一區', '同縣市', '同地區', '其他地區'];
-  const whole = value => Math.round(value * 100);
-  function recommend(candidates, maxDistance, thresholds) {
-    const strong = candidates.filter(candidate => candidate.score >= whole(thresholds.match));
-    if (strong.length) return strong;
-    if (maxDistance === null) return [];
-    return candidates.filter(candidate => candidate.score >= whole(thresholds.nearby) && candidate.distance <= maxDistance);
+  const similarity = typeof module !== 'undefined' && module.exports ? require('./trait-similarity.js') : root.TraitSimilarity;
+  const MINUS = String.fromCharCode(0x2212);  // the minus sign, not a hyphen
+  const RANGES = Object.freeze([
+    { level: null, label: '不限' }, { level: 0, label: '同一區' }, { level: 1, label: '同縣市' }, { level: 2, label: '同地區' }]);
+  // Code-point order, as Python sorts names, so both sides break ties the same way.
+  const byName = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+
+  // +62%, −42% or 0%, rounding halves up as percent() does.
+  function signed(score) {
+    const whole = similarity.percent(score);
+    return (whole > 0 ? '+' : whole < 0 ? MINUS : '') + Math.abs(whole) + '%';
   }
-  function view(data, maxDistance) {
-    const { settings, me, candidates } = data;
-    const { thresholds, top_matches: top } = settings;
-    const blank = { status: '', note: '', options: [], cards: [], empty: '' };
-    const cards = (list, withPlace) => list.slice(0, top)
-      .map(candidate => ({ candidate, place: withPlace ? PLACES[candidate.distance] : null }));
-    if (!me.ready) {
-      return { ...blank, empty: '資料不足，還不能配對：需要至少 ' + settings.category_min_items + ' 筆已分類品項（目前 '
-        + me.item_count + ' 筆），以及品牌、葷素紀錄或消費檔次其中一項。多掃幾張發票再看看。' };
-    }
-    const strong = recommend(candidates, null, thresholds);
-    if (strong.length) {
-      return { ...blank, cards: cards(strong, false), status: strong.length + ' 位配對分數 ' + whole(thresholds.match) + '% 以上'
-        + (strong.length > top ? '，顯示前 ' + top + ' 位' : '') + '。' };
-    }
-    if (!candidates.some(candidate => candidate.score >= whole(thresholds.nearby))) {
-      return { ...blank, empty: '目前沒有夠相似的人，多掃幾張發票再看看。' };
-    }
-    const options = RANGES.map((label, level) => {
-      const count = recommend(candidates, level, thresholds).length;
-      return { level, label, count, disabled: count === 0 };
+
+  // Everyone who can be compared with me, in the payload's order, with their score and each cell's share of it.
+  function scored(data) {
+    return data.people.map(person => ({ person, ...similarity.compare(data.me.vector, person.vector, data.model) }))
+      .filter(entry => entry.comparable);
+  }
+
+  // People past the threshold on one side, then within the chosen distance; strongest first, ties by name.
+  function pick(entries, settings, opposite, range) {
+    const eligible = entries.filter(entry => (opposite ? entry.score <= -settings.min_score : entry.score >= settings.min_score));
+    const within = eligible.filter(entry => range === null || entry.person.distance <= range)
+      .sort((a, b) => (opposite ? a.score - b.score : b.score - a.score) || byName(a.person.name, b.person.name));
+    return { eligible: eligible.length, within: within.length, shown: within.slice(0, settings.top) };
+  }
+
+  const end = (trait, value) => trait.ends[value > 0 ? 1 : 0];
+  const latin = /[A-Za-z0-9]/;
+  // Chinese next to Latin letters or digits gets a space, as the report writes 「3C 投入」.
+  function words(...pieces) {
+    return pieces.reduce((text, piece) => {
+      const gap = text && piece && latin.test(text[text.length - 1]) !== latin.test(piece[0]);
+      return text + (gap ? ' ' : '') + piece;
+    }, '');
+  }
+
+  // How one cell reads on a card: a habit both have, both on one side, or opposite sides.
+  function phrase(trait, mine, theirs) {
+    if (trait.kind === 'level') return words('都有', trait.habit, '的紀錄');
+    if (mine * theirs > 0) return '都偏' + end(trait, mine);
+    return '你偏' + end(trait, mine) + '，對方偏' + end(trait, theirs);
+  }
+
+  // The cell that adds most to the score and the one that takes most away; null when there is none.
+  function reasons(entry, me, traits) {
+    let best = null, worst = null;
+    entry.parts.forEach((part, index) => {
+      if (part === null) return;
+      if (part > 0 && (best === null || part > entry.parts[best])) best = index;
+      if (part < 0 && (worst === null || part < entry.parts[worst])) worst = index;
     });
+    const describe = index => (index === null ? null : phrase(traits[index], me[index], entry.person.vector[index]));
+    return { alike: describe(best), unlike: describe(worst) };
+  }
+
+  // My three most distinctive two-sided traits (at least 0.2 from the average) and the habits on record.
+  function mine(vector, traits) {
+    if (!vector) return { lean: '資料還不夠，看不出品味特質', habits: '' };
+    const leaning = traits.map((trait, index) => ({ trait, index, value: vector[index] }))
+      .filter(({ trait, value }) => trait.kind === 'two_sided' && value !== null && Math.abs(value) >= 0.2)
+      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value) || a.index - b.index)
+      .slice(0, 3).map(({ trait, value }) => '偏' + end(trait, value));
+    const habits = traits.filter((trait, index) => trait.kind === 'level' && vector[index] > 0).map(trait => trait.habit);
+    if (!leaning.length && !habits.length) return { lean: '跟一般人差不多', habits: '' };
+    return { lean: leaning.length ? '跟一般人比：' + leaning.join('・') : '', habits: habits.length ? words('也有', habits.join('、'), '的紀錄') : '' };
+  }
+
+  function status(result, settings, opposite) {
+    const line = signed(opposite ? -settings.min_score : settings.min_score) + (opposite ? ' 以下' : ' 以上');
+    if (!result.eligible) return opposite ? '目前沒有和你明顯相反的人（' + line + '）。' : '目前沒有品味夠相似的人（' + line + '）。';
+    if (!result.within) return '這個距離內沒有品味相似度 ' + line + '的人，試試放寬距離。';
+    return result.within + ' 位品味相似度 ' + line + (result.within > settings.top ? '，顯示前 ' + settings.top + ' 位' : '') + '。';
+  }
+
+  function card(entry, data) {
+    const why = reasons(entry, data.me.vector, data.traits);
+    return { person: entry.person, name: entry.person.name, score: signed(entry.score), percent: similarity.percent(entry.score),
+      opposite: entry.score < 0, place: entry.person.place, alike: why.alike, unlike: why.unlike };
+  }
+
+  // Everything the page shows for a choice of distance (null for any) and whether opposites are wanted.
+  function view(data, choice) {
+    const { settings, me } = data;
+    const profile = mine(me.vector, data.traits);
+    if (!me.vector) {
+      return { ready: false, mine: profile, thin: '你的資料還不夠（有效品項少於 ' + settings.min_items + ' 筆），先累積更多發票，再來找同好。' };
+    }
+    const entries = scored(data), located = me.areas.length > 0, range = located ? choice.range : null;
+    const list = opposite => {
+      const result = pick(entries, settings, opposite, range);
+      return { status: status(result, settings, opposite), cards: result.shown.map(entry => card(entry, data)) };
+    };
     return {
-      ...blank, options,
-      status: '目前沒有 ' + whole(thresholds.match) + '% 以上的人。放寬到 ' + whole(thresholds.nearby) + '%，要找多遠？',
-      note: me.areas.length ? '以你的常消費地區為準：' + me.areas.join('、') + '。' : '推測不出你的常消費地區，只能選「不限」。',
-      cards: maxDistance === null ? [] : cards(recommend(candidates, maxDistance, thresholds), true),
+      ready: true, mine: profile,
+      note: located ? '你的生活圈：' + me.areas.join('、') : '看不出你的生活圈，只能選「不限」。',
+      ranges: RANGES.map(option => ({ ...option, disabled: option.level !== null && !located })),
+      match: list(false), opposite: choice.opposite ? list(true) : null,
     };
   }
-  const api = Object.freeze({ recommend, view });
+
+  const api = Object.freeze({ RANGES, signed, scored, pick, phrase, reasons, mine, status, view });
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.MatchFilter = api;
 })(globalThis);

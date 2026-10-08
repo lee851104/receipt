@@ -7,7 +7,7 @@ from src.receipt.demo import build_demo
 from src.receipt.personas import PERIOD, build_friends, build_personas
 from src.receipt.signals import measure
 from src.receipt.similarity import compare
-from src.receipt.traits import build_vector, dated, load_context, relative, similarity_model, typical
+from src.receipt.traits import build_vector, dated, load_context, population_vectors, relative, similarity_model
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTEXT = load_context(ROOT)
@@ -31,11 +31,10 @@ class PersonaTests(unittest.TestCase):
     def setUpClass(cls):
         cls.people = build_personas(CONTEXT["calendar"])
         cls.friends = build_friends(CONTEXT["calendar"])
-        cls.raw = {person["name"]: build_vector(person["rows"], list(PERIOD), CONTEXT) for person in cls.people + cls.friends}
-        centers = typical([cls.raw[person["name"]] for person in cls.people], CONTEXT["traits"])
-        cls.vectors = {name: relative(vector, centers) for name, vector in cls.raw.items()}
+        vectors = population_vectors(cls.people, list(PERIOD), CONTEXT, extra=cls.friends)
+        cls.raw, cls.vectors = vectors["raw"], vectors["relative"]
         rows, period = dated(build_demo(CATALOG))
-        cls.me = relative(build_vector(rows, period, CONTEXT), centers)
+        cls.me = relative(build_vector(rows, period, CONTEXT), vectors["centers"])
         cls.types = {}
         for person in cls.people:
             cls.types.setdefault(person["type"], []).append(person["name"])

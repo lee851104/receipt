@@ -91,3 +91,17 @@ def relative(vector, centers):
     if vector is None:
         return None
     return [None if value is None else max(-1.0, min(1.0, value - center)) for value, center in zip(vector, centers)]
+
+
+def population_vectors(people, period, context, extra=()):
+    """The average person from `people`, and everyone's raw and relative vectors, people first and then `extra`.
+
+    Names must be unique, so no one can silently replace someone else.
+    """
+    everyone = [*people, *extra]
+    names = [person["name"] for person in everyone]
+    if len(set(names)) != len(names):
+        raise ValueError("Every person needs a unique name")
+    raw = {person["name"]: build_vector(person["rows"], period, context) for person in everyone}
+    centers = typical([raw[person["name"]] for person in people], context["traits"])
+    return {"centers": centers, "raw": raw, "relative": {name: relative(vector, centers) for name, vector in raw.items()}}

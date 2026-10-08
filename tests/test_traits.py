@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 
 from src.receipt.signals import calendar_days, category_counts
-from src.receipt.traits import between, build_vector, load_context, relative, trait_value, typical
+from src.receipt.traits import between, build_vector, load_context, population_vectors, relative, trait_value, typical
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTEXT = load_context(ROOT)
@@ -48,6 +48,10 @@ class ConfigTests(unittest.TestCase):
             self.assertEqual(trait["weight"], 1)
         self.assertEqual(CONTEXT["traits"]["min_items"], 20)
         self.assertEqual(CONTEXT["traits"]["similarity"], {"shrink": 0.25, "min_shared_two_sided": 5})
+        self.assertEqual(CONTEXT["traits"]["match"], {"min_score": 0.3, "top": 5})
+        self.assertEqual({trait["id"]: trait["habit"] for trait in TRAITS if trait["kind"] == "level"},
+                         {"sport": "運動", "driving": "開車騎車", "lifestyle": "生活小物", "tech": "3C", "fun": "娛樂",
+                          "pets_cat": "養貓", "pets_dog": "養狗", "alcohol": "小酌"})
         self.assertEqual(CONTEXT["calendar"]["holidays"], ["2026-04-03", "2026-04-06"])
 
 
@@ -190,6 +194,18 @@ class TypicalTests(unittest.TestCase):
         self.assertEqual(relative([1.0, 0.5, None], centers), [1.0, 0.5, None])
         self.assertAlmostEqual(relative([0.0, 0.0, 0.3], centers)[0], 0.2)
         self.assertIsNone(relative(None, centers))
+
+    def test_the_average_comes_from_the_population_and_extra_people_get_vectors_too(self):
+        people = [{"name": "測試甲", "rows": bought(lunches())},
+                  {"name": "測試乙", "rows": bought((WORKDAYS[:24], "測試全糖紅茶", 1, 40, "測試飲料店", HOME))}]
+        friend = {"name": "測試丙", "rows": bought((WORKDAYS[:24], "測試冰美式", 1, 60, "測試咖啡館", HOME))}
+        vectors = population_vectors(people, PERIOD, CONTEXT, extra=[friend])
+        raw = vectors["raw"]
+        self.assertEqual(list(raw), ["測試甲", "測試乙", "測試丙"])
+        self.assertEqual(vectors["centers"], typical([raw["測試甲"], raw["測試乙"]], CONTEXT["traits"]))
+        self.assertEqual(vectors["relative"]["測試丙"], relative(raw["測試丙"], vectors["centers"]))
+        with self.assertRaises(ValueError):
+            population_vectors(people, PERIOD, CONTEXT, extra=[{**friend, "name": "測試甲"}])
 
 
 if __name__ == "__main__":

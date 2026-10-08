@@ -3,7 +3,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from src.receipt.signals import calendar_days
+from src.receipt.signals import calendar_days, category_counts
 from src.receipt.traits import between, build_vector, load_context, relative, trait_value, typical
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -169,6 +169,16 @@ class TraitTests(unittest.TestCase):
         rows = bought(lunches(), (WORKDAYS[20:22], "測試精品手沖", 1, 180, "測試咖啡館", HOME))
         rows[-1]["quantity"] = 0
         self.assertIsNotNone(build_vector(rows, PERIOD, CONTEXT))
+
+
+class CategoryCountTests(unittest.TestCase):
+    def test_valid_items_per_category_once_per_bill(self):
+        rows = bought((WORKDAYS[:3], "測試排骨便當", 0, 100, "測試便當店", HOME),
+                      (WORKDAYS[3:5], "測試紅茶", 1, 30, "測試飲料店", HOME))
+        rows.append(dict(rows[0]))                                    # the same item again on the same bill
+        rows.append({**rows[0], "name": "測試贈品", "amount": 0})        # a free gift
+        rows.append({**rows[0], "name": "測試未分類", "category": 10, "provisional": True})
+        self.assertEqual(category_counts(rows), [3, 2, 0, 0, 0, 0, 0, 0, 0, 0])
 
 
 class TypicalTests(unittest.TestCase):

@@ -53,11 +53,16 @@ def ranked(counter):
     return sorted(counter.items(), key=lambda item: (-item[1], item[0]))
 
 
-def home_cities(located):
-    """Cities of the districts holding at least a fifth of the located bills (two at most): where someone lives and works."""
+def home_districts(located):
+    """Districts holding at least a fifth of the located bills (two at most), most bills first: where someone lives and works."""
     districts = Counter(invoice["district"] for invoice in located)
     total = sum(districts.values())
-    return {district[:3] for district, seen in ranked(districts)[:2] if seen >= total * 0.2}
+    return [district for district, seen in ranked(districts)[:2] if seen >= total * 0.2]
+
+
+def home_cities(located):
+    """Cities of the home districts."""
+    return {district[:3] for district in home_districts(located)}
 
 
 def gather(rows, context):
@@ -94,6 +99,14 @@ def valid_items(lines):
             seen.add(key)
             items.append(line)
     return items
+
+
+def category_counts(rows):
+    """Valid items per confirmed category, for the category comparison on the connection page."""
+    counts = [0] * CONFIRMED
+    for item in valid_items(rows):
+        counts[item["category"]] += 1
+    return counts
 
 
 def average(values):

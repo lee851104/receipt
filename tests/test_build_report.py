@@ -80,6 +80,7 @@ class StandaloneBuildTests(unittest.TestCase):
             self.assertEqual(payload["me"]["months"], ["2026-03", "2026-04"])
             self.assertEqual(payload["me"]["areas"], ["高雄市苓雅區", "高雄市新興區"])
             self.assertEqual(len(payload["me"]["counts"]), 10)
+            self.assertEqual(set(payload["me"]), {"vector", "months", "areas", "counts"})
             self.assertEqual(len(payload["people"]), 40)
             for person in payload["people"]:
                 self.assertEqual(set(person), {"name", "vector", "distance", "place", "counts"})
@@ -145,6 +146,7 @@ class StandaloneBuildTests(unittest.TestCase):
             self.assertFalse(payload["isDemo"])
             self.assertIn("這份私人報告的其他頁面仍有完整交易明細", match_page)
             self.assertIsNone(payload["me"]["vector"])
+            self.assertEqual(set(payload["me"]), {"vector", "months", "areas", "counts"})
             self.assertEqual(len(payload["people"]), 40)
             self.assertTrue((project / "data" / "private" / "report-data.js").is_file())
             self.assertNotIn('"PRIVATE-INVOICE-001"', (project / "src" / "web" / "invoice-insights.html").read_text(encoding="utf-8"))

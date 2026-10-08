@@ -91,7 +91,7 @@ def gather(rows, context):
 
 
 def valid_items(lines):
-    """Paid, confirmed lines; one portion per item and invoice, as in the match tags."""
+    """Paid, confirmed lines; one portion per item and invoice."""
     seen, items = set(), []
     for line in lines:
         key = (line["invoice"], line["name"])

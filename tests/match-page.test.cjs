@@ -32,6 +32,7 @@ test('the demo lists the three sweet-toothed students and two holiday travellers
 test('within the same city only the three students remain', () => {
   const shown = view(data, { range: 1, opposite: false });
   assert.deepEqual(shown.match.cards.map(card => card.name), ['手搖學生 A', '手搖學生 B', '手搖學生 C']);
+  assert.equal(shown.match.status, '3 位品味相似度 +30% 以上。');
 });
 
 test('the opposite list is the five thrifty office workers', () => {

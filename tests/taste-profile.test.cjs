@@ -23,7 +23,7 @@ test('reject incompatible, oversized, empty and malformed profiles',()=>{
 test('category comparison has defined zero overlap and volume-independent identical distributions',()=>{
  assert.equal(taste.cosine([1,0],[0,1]),0);assert.ok(Math.abs(taste.cosine([2,1],[4,2])-1)<1e-12);assert.equal(taste.cosine([0,0],[1,1]),null);
 });
-test('one portion per item and invoice, as in the match tags',()=>{
+test('one portion per item and invoice, as the taste traits count them',()=>{
  const report={isDemo:false,categories:[{name:'飲品'},{name:'正餐'}],months:{'2026-03':{rows:[
   {category:0,amount:50,invoice:'A',name:'紅茶'},{category:0,amount:50,invoice:'A',name:'紅茶'},
   {category:0,amount:50,invoice:'B',name:'紅茶'},{category:1,amount:90,invoice:'A',name:'便當'}]}}};

@@ -112,6 +112,8 @@ test('the page lists matches, and opposites only when asked', () => {
 test('the page explains an empty distance, missing home districts, nobody close and thin data', () => {
   assert.equal(view(data, { range: 0, opposite: true }).opposite.status,
     '這個距離內沒有品味相似度 ' + MINUS + '30% 以下的人，試試放寬距離。');
+  assert.equal(view({ ...data, people: [{ ...data.people[0], distance: 3 }] }, { range: 0, opposite: false }).match.status,
+    '這個距離內沒有品味相似度 +30% 以上的人，試試放寬距離。');
   const homeless = view({ ...data, me: { ...data.me, areas: [] } }, { range: 0, opposite: false });
   assert.equal(homeless.note, '看不出你的生活圈，只能選「不限」。');
   assert.deepEqual(homeless.ranges.map(option => option.disabled), [false, true, true, true]);

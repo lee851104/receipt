@@ -16,7 +16,7 @@
   for(const month of Object.values(report.months))for(const row of month.rows){
    const i=categories.indexOf(report.categories[row.category]?.name);
    if(i<0||row.provisional||!Number.isFinite(row.amount)||row.amount<=0)continue;
-   // One portion per item and invoice, as in the match tags; rows without an invoice code each count.
+   // One portion per item and invoice, as the taste traits count them; rows without an invoice code each count.
    if(row.invoice!==undefined){const key=JSON.stringify([row.invoice,row.name]);if(seen.has(key))continue;seen.add(key);}
    counts[i]++;
   }

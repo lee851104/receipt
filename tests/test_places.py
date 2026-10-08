@@ -45,6 +45,8 @@ class DistanceTests(unittest.TestCase):
         self.assertEqual(place_distance("高雄市苓雅區", "高雄市左營區", REGIONS), 1)
         self.assertEqual(place_distance("高雄市苓雅區", "屏東縣恆春鎮", REGIONS), 2)
         self.assertEqual(place_distance("高雄市苓雅區", "臺北市信義區", REGIONS), 3)
+        # Two cities missing from the table do not count as one region.
+        self.assertEqual(place_distance("高雄市苓雅區", "臺北市信義區", {}), 3)
 
     def test_the_closest_pair_counts_and_no_home_is_far(self):
         self.assertEqual(distance(["臺北市信義區", "高雄市新興區"], ["高雄市苓雅區"], REGIONS), 1)
@@ -55,6 +57,8 @@ class DistanceTests(unittest.TestCase):
         self.assertEqual(REGIONS["高雄市"], "南部")
         self.assertEqual(REGIONS["新竹縣"], "北部")
         self.assertEqual(len(REGIONS), 22)
+        # Districts are matched to cities by their first three characters, so every city name must be three long.
+        self.assertTrue(all(len(city) == 3 for city in REGIONS))
 
 
 if __name__ == "__main__":

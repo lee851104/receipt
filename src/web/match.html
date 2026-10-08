@@ -11,21 +11,20 @@ main{max-width:880px;margin:0 auto;padding:24px 18px 56px}
 .eyebrow{color:var(--pink);font-size:11px;letter-spacing:2px;margin:0 0 6px}
 h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 8px}h3{font-size:17px;margin:0}
 .note{color:var(--muted);font-size:12px;margin:0}
-.matches{margin-top:26px}.status{margin:0 0 4px}
+.mine{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 18px}.mine h2{margin:0 0 2px}.mine p{margin:0}
+.matches,.opposites{margin-top:26px}.status{margin:0 0 4px}
 .ranges{display:flex;flex-wrap:wrap;gap:8px 18px;margin:12px 0 4px}
 .ranges label{display:flex;align-items:center;gap:6px;cursor:pointer}.ranges input{accent-color:var(--teal);width:16px;height:16px;margin:0}
 .ranges label.off{color:#77756f;cursor:not-allowed}
+.switch{display:flex;align-items:center;gap:8px;margin-top:22px;cursor:pointer;width:max-content}.switch input{accent-color:var(--amber);width:16px;height:16px;margin:0}
 .card{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-top:12px;cursor:pointer}
 .card:hover,.card:focus-visible{border-color:var(--teal);outline:none}
 .card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-.score{font-size:24px;font-weight:600;color:var(--teal)}
+.score{font-size:24px;font-weight:600;color:var(--teal)}.score.opposite{color:var(--amber)}
 .place{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:0 9px;font-size:11px;font-weight:400;color:var(--muted);margin-left:8px;vertical-align:middle}
 .pair{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:10px 0 0;font-size:13px}
 .pair dt{color:var(--muted)}.pair dd{margin:0;min-width:0;overflow-wrap:anywhere}.pair .like{color:var(--teal)}.pair .unlike{color:var(--amber)}
-.empty{color:var(--muted);margin-top:16px}
 details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor:pointer}details p{margin:8px 0}
-.chips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:10px 0 0;padding:0}
-.chips li{border:1px solid var(--line);border-radius:999px;padding:3px 11px;color:var(--ink)}.chips small{color:var(--muted);margin-right:5px}
 @media(max-width:640px){h1{font-size:23px}.card{padding:14px}}
 </style>
 </head>
@@ -35,16 +34,29 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
 <p class="eyebrow">FIND YOUR PEOPLE · 找到同好</p>
 <h1>從消費習慣，找到合拍的人。</h1>
 <p class="note" id="match-note"></p>
+<section class="mine" aria-labelledby="mine-title">
+<h2 id="mine-title">你的品味特質</h2>
+<p id="my-lean"></p>
+<p class="note" id="my-habits" hidden></p>
+</section>
 <section class="matches" aria-labelledby="matches-title">
 <h2 id="matches-title">和你最合拍的人</h2>
 <p class="status" id="match-status" role="status" aria-live="polite"></p>
-<p class="note" id="range-note" hidden></p>
-<div class="ranges" id="ranges" role="radiogroup" aria-label="要找多遠" hidden></div>
+<div id="filters" hidden>
+<p class="note" id="range-note"></p>
+<div class="ranges" id="ranges" role="radiogroup" aria-label="要找多遠"></div>
+</div>
 <div id="match-list"></div>
+<label class="switch" id="opposite-switch" hidden><input type="checkbox" id="show-opposites">也看看跟你相反的人</label>
 </section>
-<details><summary>你的消費標籤</summary><ul class="chips" id="my-tags"></ul></details>
+<section class="opposites" id="opposites" aria-labelledby="opposites-title" hidden>
+<h2 id="opposites-title">和你最不一樣的人</h2>
+<p class="status" id="opposite-status" role="status" aria-live="polite"></p>
+<div id="opposite-list"></div>
+</section>
 <details><summary>怎麼算的？</summary><div id="method"></div></details>
 </main>
+<script src="trait-similarity.js"></script>
 <script src="match-filter.js"></script>
 <script src="match-data.js"></script>
 <script>
@@ -52,7 +64,6 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
 (function () {
   const data = matchReportData, settings = data.settings;
   const $ = id => document.getElementById(id);
-  const pct = value => Math.round(value * 100) + '%';
   const pageHost = window.parent !== window && window.frameElement?.id === 'match-frame' ? window.parent : null;
   function make(tag, text, className) {
     const node = document.createElement(tag);
@@ -60,70 +71,76 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
     if (className) node.className = className;
     return node;
   }
-  function pairFor(candidate) {
+  function pairFor(card) {
     return {
-      score: candidate.score,
+      score: card.percent,
       left: { name: '你', demo: data.isDemo, months: data.me.months, counts: data.me.counts },
-      right: { name: candidate.name, demo: true, months: data.personaMonths, counts: candidate.counts },
+      right: { name: card.name, demo: true, months: data.personaMonths, counts: card.person.counts },
     };
   }
-  function card({ candidate, place }) {
+  function cardButton(card) {
     const button = make('button', undefined, 'card');
     button.type = 'button';
-    button.title = '查看你和' + candidate.name + '的連線圖';
-    const title = make('h3', candidate.name);
-    if (place) title.append(make('span', place, 'place'));
+    button.title = '查看你和' + card.name + '的連線圖';
+    const title = make('h3', card.name);
+    if (card.place) title.append(make('span', card.place, 'place'));
     const head = make('div', undefined, 'card-head');
-    head.append(title, make('span', candidate.score + '%', 'score'));
+    head.append(title, make('span', card.score, card.opposite ? 'score opposite' : 'score'));
     const pair = make('dl', undefined, 'pair');
-    for (const [label, tag, className] of [['最像你', candidate.like, 'like'], ['最不像你', candidate.unlike, 'unlike']]) {
-      if (tag) pair.append(make('dt', label), make('dd', tag.dimension + '：' + tag.text, className));
+    for (const [label, text, className] of [['最像你', card.alike, 'like'], ['最不像你', card.unlike, 'unlike']]) {
+      if (text) pair.append(make('dt', label), make('dd', text, className));
     }
     button.append(head, pair);
-    button.addEventListener('click', () => pageHost?.ReceiptPages.showConnection?.(pairFor(candidate)));
+    button.addEventListener('click', () => pageHost?.ReceiptPages.showConnection?.(pairFor(card)));
     return button;
   }
-  let range = null;
-  function renderList() {
-    const shown = MatchFilter.view(data, range);
-    $('match-list').replaceChildren(...(shown.cards.length ? shown.cards.map(card)
-      : shown.empty ? [make('p', shown.empty, 'empty')] : []));
+  const choice = { range: null, opposite: false };
+  function fill(statusId, listId, list) {
+    $(statusId).textContent = list.status;
+    $(listId).replaceChildren(...list.cards.map(cardButton));
   }
-  const first = MatchFilter.view(data, null);
-  $('match-status').textContent = first.status;
-  $('range-note').textContent = first.note;
-  $('range-note').hidden = !first.note;
-  $('ranges').hidden = !first.options.length;
-  for (const option of first.options) {
-    const label = make('label', undefined, option.disabled ? 'off' : undefined), input = make('input');
-    input.type = 'radio';
-    input.name = 'range';
-    input.disabled = option.disabled;
-    input.addEventListener('change', () => { range = option.level; renderList(); });
-    label.append(input, option.label + ' · ' + option.count + ' 位');
-    $('ranges').append(label);
+  function render() {
+    const shown = MatchFilter.view(data, choice);
+    fill('match-status', 'match-list', shown.match);
+    $('opposites').hidden = !shown.opposite;
+    if (shown.opposite) fill('opposite-status', 'opposite-list', shown.opposite);
   }
-  renderList();
+  const first = MatchFilter.view(data, choice);
+  $('my-lean').textContent = first.mine.lean;
+  $('my-lean').hidden = !first.mine.lean;
+  $('my-habits').textContent = first.mine.habits;
+  $('my-habits').hidden = !first.mine.habits;
+  if (first.ready) {
+    $('filters').hidden = false;
+    $('opposite-switch').hidden = false;
+    $('range-note').textContent = first.note;
+    for (const option of first.ranges) {
+      const label = make('label', undefined, option.disabled ? 'off' : undefined), input = make('input');
+      input.type = 'radio';
+      input.name = 'range';
+      input.checked = option.level === null;
+      input.disabled = option.disabled;
+      input.addEventListener('change', () => { choice.range = option.level; render(); });
+      label.append(input, option.label);
+      $('ranges').append(label);
+    }
+    $('show-opposites').addEventListener('change', event => { choice.opposite = event.target.checked; render(); });
+    render();
+  } else {
+    $('match-status').textContent = first.thin;
+  }
   $('match-note').textContent = '配對對象是 ' + data.population + ' 位虛構示範用戶。'
-    + (data.isDemo ? '「我」也是虛構示範資料。' : '你的標籤來自這份私人報告，只存在這個檔案裡。') + '點一個人，看你們的連線圖。';
-  const mine = $('my-tags');
-  for (const tag of data.me.tags) {
-    const item = make('li');
-    item.append(make('small', tag.dimension), tag.text);
-    mine.append(item);
-  }
-  if (!data.me.tags.length) mine.replaceWith(make('p', '資料還不夠產生標籤。'));
-  const weights = settings.weights, levels = settings.price_levels;
+    + (data.isDemo ? '「我」也是虛構示範資料。' : '你的品味特質來自這份私人報告，只存在這個檔案裡。') + '點一個人，看你們的連線圖。';
+  const signed = MatchFilter.signed;
   $('method').append(
-    make('p', '配對分數：品類、品牌、葷素紀錄、消費檔次依 ' + [weights.category, weights.brand, weights.flavor, weights.price]
-      .map(weight => Math.round(weight * 100)).join('：') + ' 加權，缺資料的面向不計分，權重分給其他面向。地區不算分。'),
-    make('p', '品類一定要能比較（各自至少 ' + settings.category_min_items + ' 筆已分類品項），另外至少再有品牌、葷素紀錄、消費檔次其中一項，才會配對。'),
-    make('p', '配對分數 ' + pct(settings.thresholds.match) + ' 以上直接推薦。沒有人達到時，可以選要找多遠（同一區、同縣市、同地區或不限），範圍內 '
-      + pct(settings.thresholds.nearby) + ' 以上的人會被推薦；距離依你和對方的常消費地區判斷。'),
-    make('p', '消費檔次只看有正餐的發票：用正餐份數估計幾人份，再取每人每餐花費的中位數。' + levels[0].label + '未滿 ' + levels[0].below
-      + ' 元，' + levels[1].label + '未滿 ' + levels[1].below + ' 元，其餘為' + levels[2].label + '。合菜會讓每人金額偏低。'),
-    make('p', '「最像你」「最不像你」取自對方自己的標籤，常消費地區不當成理由。同一張發票的同一品項只算一次。'),
-    make('p', '此配對頁只用行政區與連鎖品牌，不顯示分店、日期或金額。'
+    make('p', '每個人的發票先整理成 17 項品味特質（18 格），例如「省錢 ↔ 享受」「清爽 ↔ 香甜」「運動投入」。兩端型特質減去 '
+      + data.population + ' 位虛構用戶的平均，表示跟一般人比偏哪一邊。'),
+    make('p', '兩個人的相似度用餘弦相似度計算，範圍 ' + signed(-1) + '～' + signed(1) + '，負數表示品味方向相反。特質都很淡的人，分數會往 0 收斂。'),
+    make('p', '相似度 ' + signed(settings.min_score) + ' 以上才列為合拍，最多 ' + settings.top + ' 位。打開「也看看跟你相反的人」，會另外列出 '
+      + signed(-settings.min_score) + ' 以下的人。'),
+    make('p', '距離看生活圈：占你發票 20% 以上的行政區，最多兩個。同一區、同縣市、同地區依兩人生活圈最接近的一組判斷。'),
+    make('p', '「最像你」「最不像你」是對分數加分最多與扣分最多的特質。'),
+    make('p', '此配對頁只用行政區與特質分數，不顯示店名、品名、日期或金額。'
       + (data.isDemo ? '' : '這份私人報告的其他頁面仍有完整交易明細，分享整份檔案就會一併分享。')
       + '配對對象皆為虛構示範用戶。'));
   if (pageHost) {

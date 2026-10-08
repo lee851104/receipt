@@ -7,11 +7,11 @@ from pathlib import Path
 
 from .invoices import build_month
 from .demo import build_demo
-from .matching import eligible, ready
-from .personas import MONTHS, PERIOD, build_friends, build_personas
+from .personas import PERIOD, build_friends, build_personas
+from .places import areas_of, distance, load_regions
+from .signals import category_counts
 from .similarity import compare, percent
-from .tags import build_profile
-from .traits import build_vector, dated, load_context, relative, similarity_model, typical
+from .traits import build_vector, dated, load_context, population_vectors, relative, similarity_model
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / "src" / "web"
@@ -47,33 +47,46 @@ def script_constant(name, value):
     return f"'use strict';\nconst {name} = " + payload + ";\n"
 
 
-def build_matches(months, categories, is_demo, population):
-    """Profile the report and keep only the scores and words the match page shows."""
-    settings = json.loads((ROOT / "configs" / "tags.json").read_text(encoding="utf-8"))
-    brands = json.loads((ROOT / "configs" / "brands.json").read_text(encoding="utf-8"))
-    me = build_profile([row for month in months.values() for row in month["rows"]], categories, brands, settings)
-    people = [{"name": person["name"], "profile": build_profile(person["rows"], categories, brands, settings)}
-              for person in population]
+def trait_words(settings):
+    """How the match page names each trait: its two ends, or the short word for a habit."""
+    words = []
+    for trait in settings["traits"]:
+        entry = {"id": trait["id"], "name": trait["name"], "kind": trait["kind"]}
+        entry.update({"ends": trait["ends"]} if trait["kind"] == "two_sided" else {"habit": trait["habit"]})
+        words.append(entry)
+    return words
+
+
+def build_matches(months, population, context, regions, is_demo):
+    """Everyone's taste vector, measured from the average person, for the match page to score in the browser."""
+    settings = context["traits"]
+    vectors = population_vectors(population, list(PERIOD), context)
+    rows, period = dated(months)
+    mine = areas_of(rows, context)
+    people = []
+    for person in population:
+        areas = areas_of(person["rows"], context)
+        people.append({"name": person["name"], "vector": vectors["relative"][person["name"]],
+                       "distance": distance(mine, areas, regions), "place": areas[0] if areas else None,
+                       "counts": category_counts(person["rows"])})
     return {
         "isDemo": is_demo, "population": len(people),
-        "personaMonths": [f"{year}-{month:02}" for year, month, _ in MONTHS],
-        "settings": {key: settings[key] for key in ("weights", "thresholds", "price_levels", "top_matches", "category_min_items")},
-        "me": {"ready": ready(me), "item_count": me["item_count"], "months": sorted(months), "areas": me["areas"],
-               "tags": [{"dimension": tag["dimension"], "text": tag["text"]} for tag in me["tags"]],
-               "counts": me["category_counts"]},
-        "candidates": eligible(me, people, settings) if ready(me) else [],
+        "personaMonths": [f"{year}-{month:02}" for year, month in PERIOD],
+        "model": similarity_model(settings), "traits": trait_words(settings),
+        "settings": {**settings["match"], "min_items": settings["min_items"]},
+        "me": {"vector": relative(build_vector(rows, period, context), vectors["centers"]), "months": sorted(months),
+               "areas": mine, "counts": category_counts(rows)},
+        "people": people,
     }
 
 
 def taste_summary(months, population, friends, context):
     """My taste vector and my similarity to each fictional person, all measured from the average person."""
-    settings = context["traits"]
-    raw = {person["name"]: build_vector(person["rows"], list(PERIOD), context) for person in population + friends}
-    centers = typical([raw[person["name"]] for person in population], settings)
+    vectors = population_vectors(population, list(PERIOD), context, extra=friends)
     rows, period = dated(months)
-    me = relative(build_vector(rows, period, context), centers)
-    model = similarity_model(settings)
-    scores = [compare(me, relative(raw[person["name"]], centers), model)["score"] for person in population]
+    me = relative(build_vector(rows, period, context), vectors["centers"])
+    model = similarity_model(context["traits"])
+    scores = [compare(me, vectors["relative"][person["name"]], model)["score"] for person in population]
     return me, sorted(score for score in scores if score is not None)
 
 
@@ -109,8 +122,9 @@ def main():
     html = embed_page(html, "taste-page-source", comparison)
     context = load_context(ROOT)
     population = build_personas(context["calendar"])
-    matches = build_matches(months, config["categories"], not args.private, population)
+    matches = build_matches(months, population, context, load_regions(ROOT), not args.private)
     match_page = embed_scripts((WEB / "match.html").read_text(encoding="utf-8"), {
+        "trait-similarity.js": (WEB / "trait-similarity.js").read_text(encoding="utf-8"),
         "match-filter.js": (WEB / "match-filter.js").read_text(encoding="utf-8"),
         "match-data.js": script_constant("matchReportData", matches)})
     html = embed_page(html, "match-page-source", match_page)
@@ -121,7 +135,6 @@ def main():
     (ROOT / output).write_text(html, encoding="utf-8")
     for key, month in months.items():
         print(key, len(month["rows"]), "rows; total", sum(row["amount"] for row in month["rows"]))
-    print("match candidates:", len(matches["candidates"]), "of", matches["population"], "fictional people")
     me, scores = taste_summary(months, population, build_friends(context["calendar"]), context)
     if me is None or not scores:
         print("taste vector: not enough data to compare")

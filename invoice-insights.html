@@ -552,7 +552,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
   return validate({schema,name:name.trim()||&#x27;我的偏好&#x27;,demo:report.isDemo===true,months,counts});
  }
  function fromPair(pair){
-  if(!pair||!Number.isSafeInteger(pair.score)||pair.score&lt;0||pair.score&gt;100)throw new Error(&#x27;配對資料不正確，請回配對清單重新選擇。&#x27;);
+  if(!pair||!Number.isSafeInteger(pair.score)||pair.score&lt;-100||pair.score&gt;100)throw new Error(&#x27;配對資料不正確，請回配對清單重新選擇。&#x27;);
   return {score:pair.score,left:validate({schema,...pair.left}),right:validate({schema,...pair.right})};
  }
  function toURL(profile,base){
@@ -623,7 +623,7 @@ function prepareMode(){
  if(categoryMode&amp;&amp;[&#x27;dumplings&#x27;,&#x27;sweetness&#x27;].includes(category)){category=&#x27;all&#x27;;$(&#x27;category&#x27;).value=&#x27;all&#x27;;}
  $(&#x27;category-method&#x27;).hidden=!categoryMode;$(&#x27;demo-method&#x27;).hidden=categoryMode;
  document.querySelector(&#x27;.subtitle&#x27;).textContent=categoryMode?&#x27;每個點是一類消費偏好。看看你們常買的類型，有多少交集。&#x27;:&#x27;每個點是一種消費品項。看看哪些選擇，讓你們有了交集。&#x27;;
- document.querySelector(&#x27;.overall-label&#x27;).textContent=pair?&#x27;配對分數&#x27;:categoryMode?&#x27;消費類型相似度&#x27;:&#x27;綜合品味相似指數&#x27;;
+ document.querySelector(&#x27;.overall-label&#x27;).textContent=pair?&#x27;品味相似度&#x27;:categoryMode?&#x27;消費類型相似度&#x27;:&#x27;綜合品味相似指數&#x27;;
  document.querySelector(&#x27;.legend-item&#x27;).lastChild.textContent=categoryMode?&#x27;點越大，品項筆數越多&#x27;:&#x27;點越大，消費次數越多&#x27;;
  document.querySelector(&#x27;.negative-label&#x27;).hidden=categoryMode;
  document.querySelector(&#x27;.legend-explain&#x27;).textContent=categoryMode?&#x27;目前比較的是消費類型，還不能辨認甜度或餡料。只有相同類別會連線；兩人在該類的消費占比越接近，線越粗。&#x27;:&#x27;同款也能選得不同：可篩選「同店不同餡」或「半糖與無糖」。餡料與甜度各自比較，差異不代表兩人整體品味相反。&#x27;;
@@ -718,7 +718,7 @@ function draw(){
  prepareMode();
  const mobile=matchMedia(&#x27;(max-width:640px)&#x27;).matches,svg=$(&#x27;network&#x27;),indices=items.map((_,i)=&gt;i).filter(i=&gt;category===&#x27;all&#x27;||(category===&#x27;dumplings&#x27;?items[i].dumpling:category===&#x27;sweetness&#x27;?items[i].sweetness:items[i].c===category)).filter(i=&gt;!loadedSides().length||loadedSides().some(side=&gt;profiles[keyFor(side)].counts[i]&gt;0));svg.replaceChildren();const chartWidth=mobile?600:1200,chartHeight=mobile&amp;&amp;loadedSides().length&amp;&amp;indices.length&gt;4?160+indices.length*76:570;svg.setAttribute(&#x27;viewBox&#x27;,`0 0 ${chartWidth} ${chartHeight}`);nodes=[];edges=[];selected=null;
  const overall=similarity(items.map((_,i)=&gt;i));$(&#x27;overall-score&#x27;).textContent=overall===null?&#x27;—&#x27;:indexPercent(overall);$(&#x27;score-unit&#x27;).hidden=overall===null;$(&#x27;overall-score&#x27;).parentElement.classList.toggle(&#x27;waiting&#x27;,overall===null);$(&#x27;overall-note&#x27;).textContent=hasBoth()?(categoryMode?&#x27;全類別評估 · 分類偏好摘要&#x27;:&#x27;全類別評估 · 虛構示範&#x27;):loadedSides().length?&#x27;等待另一人匯入&#x27;:&#x27;先匯入偏好資料&#x27;;
- if(pair){$(&#x27;overall-score&#x27;).textContent=pair.score;$(&#x27;overall-note&#x27;).textContent=&#x27;消費類型相似度 &#x27;+indexPercent(overall)+&#x27;%（下圖）&#x27;;}
+ if(pair){$(&#x27;overall-score&#x27;).textContent=(pair.score&gt;0?&#x27;+&#x27;:pair.score&lt;0?String.fromCharCode(0x2212):&#x27;&#x27;)+Math.abs(pair.score);$(&#x27;overall-note&#x27;).textContent=&#x27;消費類型相似度 &#x27;+indexPercent(overall)+&#x27;%（下圖）&#x27;;}
  const scopeScore=similarity(indices),count=loadedSides().length;
  $(&#x27;scope&#x27;).textContent=(category===&#x27;all&#x27;?&#x27;全類別&#x27;:category===&#x27;dumplings&#x27;?&#x27;同店不同餡&#x27;:category===&#x27;sweetness&#x27;?&#x27;半糖與無糖&#x27;:category)+&#x27; · &#x27;+(!count?&#x27;尚未匯入資料&#x27;:!indices.length?&#x27;目前無資料&#x27;:loadedSides().reduce((n,side)=&gt;n+indices.filter(i=&gt;profiles[keyFor(side)].counts[i]&gt;0).length,0)+(categoryMode?&#x27; 個類別點 · &#x27;:&#x27; 個品項點 · &#x27;)+(scopeScore===null?(hasBoth()?&#x27;此範圍有一側無資料&#x27;:&#x27;尚待另一人匯入&#x27;):categoryMode&amp;&amp;category!==&#x27;all&#x27;?&#x27;綜合分數仍計算全部類別&#x27;:&#x27;範圍相似 &#x27;+indexPercent(scopeScore)+&#x27;%&#x27;));
  renderSummary(overall);
@@ -773,21 +773,20 @@ main{max-width:880px;margin:0 auto;padding:24px 18px 56px}
 .eyebrow{color:var(--pink);font-size:11px;letter-spacing:2px;margin:0 0 6px}
 h1{font-size:28px;line-height:1.3;margin:0 0 8px}h2{font-size:15px;margin:0 0 8px}h3{font-size:17px;margin:0}
 .note{color:var(--muted);font-size:12px;margin:0}
-.matches{margin-top:26px}.status{margin:0 0 4px}
+.mine{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 18px}.mine h2{margin:0 0 2px}.mine p{margin:0}
+.matches,.opposites{margin-top:26px}.status{margin:0 0 4px}
 .ranges{display:flex;flex-wrap:wrap;gap:8px 18px;margin:12px 0 4px}
 .ranges label{display:flex;align-items:center;gap:6px;cursor:pointer}.ranges input{accent-color:var(--teal);width:16px;height:16px;margin:0}
 .ranges label.off{color:#77756f;cursor:not-allowed}
+.switch{display:flex;align-items:center;gap:8px;margin-top:22px;cursor:pointer;width:max-content}.switch input{accent-color:var(--amber);width:16px;height:16px;margin:0}
 .card{display:block;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-top:12px;cursor:pointer}
 .card:hover,.card:focus-visible{border-color:var(--teal);outline:none}
 .card-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-.score{font-size:24px;font-weight:600;color:var(--teal)}
+.score{font-size:24px;font-weight:600;color:var(--teal)}.score.opposite{color:var(--amber)}
 .place{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:0 9px;font-size:11px;font-weight:400;color:var(--muted);margin-left:8px;vertical-align:middle}
 .pair{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:10px 0 0;font-size:13px}
 .pair dt{color:var(--muted)}.pair dd{margin:0;min-width:0;overflow-wrap:anywhere}.pair .like{color:var(--teal)}.pair .unlike{color:var(--amber)}
-.empty{color:var(--muted);margin-top:16px}
 details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor:pointer}details p{margin:8px 0}
-.chips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:10px 0 0;padding:0}
-.chips li{border:1px solid var(--line);border-radius:999px;padding:3px 11px;color:var(--ink)}.chips small{color:var(--muted);margin-right:5px}
 @media(max-width:640px){h1{font-size:23px}.card{padding:14px}}
 &lt;/style&gt;
 &lt;/head&gt;
@@ -797,59 +796,156 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
 &lt;p class=&quot;eyebrow&quot;&gt;FIND YOUR PEOPLE · 找到同好&lt;/p&gt;
 &lt;h1&gt;從消費習慣，找到合拍的人。&lt;/h1&gt;
 &lt;p class=&quot;note&quot; id=&quot;match-note&quot;&gt;&lt;/p&gt;
+&lt;section class=&quot;mine&quot; aria-labelledby=&quot;mine-title&quot;&gt;
+&lt;h2 id=&quot;mine-title&quot;&gt;你的品味特質&lt;/h2&gt;
+&lt;p id=&quot;my-lean&quot;&gt;&lt;/p&gt;
+&lt;p class=&quot;note&quot; id=&quot;my-habits&quot; hidden&gt;&lt;/p&gt;
+&lt;/section&gt;
 &lt;section class=&quot;matches&quot; aria-labelledby=&quot;matches-title&quot;&gt;
 &lt;h2 id=&quot;matches-title&quot;&gt;和你最合拍的人&lt;/h2&gt;
 &lt;p class=&quot;status&quot; id=&quot;match-status&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/p&gt;
-&lt;p class=&quot;note&quot; id=&quot;range-note&quot; hidden&gt;&lt;/p&gt;
-&lt;div class=&quot;ranges&quot; id=&quot;ranges&quot; role=&quot;radiogroup&quot; aria-label=&quot;要找多遠&quot; hidden&gt;&lt;/div&gt;
+&lt;div id=&quot;filters&quot; hidden&gt;
+&lt;p class=&quot;note&quot; id=&quot;range-note&quot;&gt;&lt;/p&gt;
+&lt;div class=&quot;ranges&quot; id=&quot;ranges&quot; role=&quot;radiogroup&quot; aria-label=&quot;要找多遠&quot;&gt;&lt;/div&gt;
+&lt;/div&gt;
 &lt;div id=&quot;match-list&quot;&gt;&lt;/div&gt;
+&lt;label class=&quot;switch&quot; id=&quot;opposite-switch&quot; hidden&gt;&lt;input type=&quot;checkbox&quot; id=&quot;show-opposites&quot;&gt;也看看跟你相反的人&lt;/label&gt;
 &lt;/section&gt;
-&lt;details&gt;&lt;summary&gt;你的消費標籤&lt;/summary&gt;&lt;ul class=&quot;chips&quot; id=&quot;my-tags&quot;&gt;&lt;/ul&gt;&lt;/details&gt;
+&lt;section class=&quot;opposites&quot; id=&quot;opposites&quot; aria-labelledby=&quot;opposites-title&quot; hidden&gt;
+&lt;h2 id=&quot;opposites-title&quot;&gt;和你最不一樣的人&lt;/h2&gt;
+&lt;p class=&quot;status&quot; id=&quot;opposite-status&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/p&gt;
+&lt;div id=&quot;opposite-list&quot;&gt;&lt;/div&gt;
+&lt;/section&gt;
 &lt;details&gt;&lt;summary&gt;怎麼算的？&lt;/summary&gt;&lt;div id=&quot;method&quot;&gt;&lt;/div&gt;&lt;/details&gt;
 &lt;/main&gt;
-&lt;script data-source=&quot;match-filter.js&quot;&gt;
-/* Who the match page shows and what it says, shared by the page and its tests. */
+&lt;script data-source=&quot;trait-similarity.js&quot;&gt;
+/* Taste-vector similarity, mirrored from src/receipt/similarity.py; both run tests/fixtures/similarity-cases.json. */
 (function (root) {
   &#x27;use strict&#x27;;
-  const RANGES = [&#x27;同一區&#x27;, &#x27;同縣市&#x27;, &#x27;同地區&#x27;, &#x27;不限&#x27;];
-  const PLACES = [&#x27;同一區&#x27;, &#x27;同縣市&#x27;, &#x27;同地區&#x27;, &#x27;其他地區&#x27;];
-  const whole = value =&gt; Math.round(value * 100);
-  function recommend(candidates, maxDistance, thresholds) {
-    const strong = candidates.filter(candidate =&gt; candidate.score &gt;= whole(thresholds.match));
-    if (strong.length) return strong;
-    if (maxDistance === null) return [];
-    return candidates.filter(candidate =&gt; candidate.score &gt;= whole(thresholds.nearby) &amp;&amp; candidate.distance &lt;= maxDistance);
+  const NOT_COMPARABLE = Object.freeze({ comparable: false, score: null, parts: null });
+  function compare(mine, theirs, model) {
+    if (!mine || !theirs) return { ...NOT_COMPARABLE };
+    const cells = model.cells;
+    const shared = mine.map((value, index) =&gt; index).filter(index =&gt; mine[index] !== null &amp;&amp; theirs[index] !== null);
+    if (shared.filter(index =&gt; cells[index].kind === &#x27;two_sided&#x27;).length &lt; model.min_shared_two_sided) return { ...NOT_COMPARABLE };
+    const norm = values =&gt; Math.sqrt(shared.reduce((sum, index) =&gt; sum + cells[index].weight * values[index] ** 2, 0));
+    const denominator = norm(mine) * norm(theirs) + model.shrink;
+    const parts = mine.map(() =&gt; null);
+    for (const index of shared) parts[index] = cells[index].weight * mine[index] * theirs[index] / denominator;
+    return { comparable: true, score: shared.reduce((sum, index) =&gt; sum + parts[index], 0), parts };
   }
-  function view(data, maxDistance) {
-    const { settings, me, candidates } = data;
-    const { thresholds, top_matches: top } = settings;
-    const blank = { status: &#x27;&#x27;, note: &#x27;&#x27;, options: [], cards: [], empty: &#x27;&#x27; };
-    const cards = (list, withPlace) =&gt; list.slice(0, top)
-      .map(candidate =&gt; ({ candidate, place: withPlace ? PLACES[candidate.distance] : null }));
-    if (!me.ready) {
-      return { ...blank, empty: &#x27;資料不足，還不能配對：需要至少 &#x27; + settings.category_min_items + &#x27; 筆已分類品項（目前 &#x27;
-        + me.item_count + &#x27; 筆），以及品牌、葷素紀錄或消費檔次其中一項。多掃幾張發票再看看。&#x27; };
-    }
-    const strong = recommend(candidates, null, thresholds);
-    if (strong.length) {
-      return { ...blank, cards: cards(strong, false), status: strong.length + &#x27; 位配對分數 &#x27; + whole(thresholds.match) + &#x27;% 以上&#x27;
-        + (strong.length &gt; top ? &#x27;，顯示前 &#x27; + top + &#x27; 位&#x27; : &#x27;&#x27;) + &#x27;。&#x27; };
-    }
-    if (!candidates.some(candidate =&gt; candidate.score &gt;= whole(thresholds.nearby))) {
-      return { ...blank, empty: &#x27;目前沒有夠相似的人，多掃幾張發票再看看。&#x27; };
-    }
-    const options = RANGES.map((label, level) =&gt; {
-      const count = recommend(candidates, level, thresholds).length;
-      return { level, label, count, disabled: count === 0 };
+  // Whole percentage, rounding halves up like percent() in similarity.py.
+  const percent = score =&gt; Math.floor(score * 100 + 0.5);
+  const api = Object.freeze({ compare, percent });
+  if (typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports) module.exports = api; else root.TraitSimilarity = api;
+})(globalThis);
+&lt;/script&gt;
+&lt;script data-source=&quot;match-filter.js&quot;&gt;
+/* Who the match page shows and what it says; the page and its tests share these pure functions. */
+(function (root) {
+  &#x27;use strict&#x27;;
+  const similarity = typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports ? require(&#x27;./trait-similarity.js&#x27;) : root.TraitSimilarity;
+  const MINUS = String.fromCharCode(0x2212);  // the minus sign, not a hyphen
+  const RANGES = Object.freeze([
+    { level: null, label: &#x27;不限&#x27; }, { level: 0, label: &#x27;同一區&#x27; }, { level: 1, label: &#x27;同縣市&#x27; }, { level: 2, label: &#x27;同地區&#x27; }]);
+  // Code-point order, as Python sorts names, so both sides break ties the same way.
+  const byName = (a, b) =&gt; (a &lt; b ? -1 : a &gt; b ? 1 : 0);
+
+  // +62%, −42% or 0%, rounding halves up as percent() does.
+  function signed(score) {
+    const whole = similarity.percent(score);
+    return (whole &gt; 0 ? &#x27;+&#x27; : whole &lt; 0 ? MINUS : &#x27;&#x27;) + Math.abs(whole) + &#x27;%&#x27;;
+  }
+
+  // Everyone who can be compared with me, in the payload&#x27;s order, with their score and each cell&#x27;s share of it.
+  function scored(data) {
+    return data.people.map(person =&gt; ({ person, ...similarity.compare(data.me.vector, person.vector, data.model) }))
+      .filter(entry =&gt; entry.comparable);
+  }
+
+  // People past the threshold on one side, then within the chosen distance; strongest first, ties by name.
+  function pick(entries, settings, opposite, range) {
+    const eligible = entries.filter(entry =&gt; (opposite ? entry.score &lt;= -settings.min_score : entry.score &gt;= settings.min_score));
+    const within = eligible.filter(entry =&gt; range === null || entry.person.distance &lt;= range)
+      .sort((a, b) =&gt; (opposite ? a.score - b.score : b.score - a.score) || byName(a.person.name, b.person.name));
+    return { eligible: eligible.length, within: within.length, shown: within.slice(0, settings.top) };
+  }
+
+  const end = (trait, value) =&gt; trait.ends[value &gt; 0 ? 1 : 0];
+  const latin = /[A-Za-z0-9]/;
+  // Chinese next to Latin letters or digits gets a space, as the report writes 「3C 投入」.
+  function words(...pieces) {
+    return pieces.reduce((text, piece) =&gt; {
+      const gap = text &amp;&amp; piece &amp;&amp; latin.test(text[text.length - 1]) !== latin.test(piece[0]);
+      return text + (gap ? &#x27; &#x27; : &#x27;&#x27;) + piece;
+    }, &#x27;&#x27;);
+  }
+
+  // How one cell reads on a card: a habit both have, both on one side, or opposite sides.
+  function phrase(trait, mine, theirs) {
+    if (trait.kind === &#x27;level&#x27;) return words(&#x27;都有&#x27;, trait.habit, &#x27;的紀錄&#x27;);
+    if (mine * theirs &gt; 0) return &#x27;都偏&#x27; + end(trait, mine);
+    return &#x27;你偏&#x27; + end(trait, mine) + &#x27;，對方偏&#x27; + end(trait, theirs);
+  }
+
+  // The cell that adds most to the score and the one that takes most away; null when there is none.
+  function reasons(entry, me, traits) {
+    let best = null, worst = null;
+    entry.parts.forEach((part, index) =&gt; {
+      if (part === null) return;
+      if (part &gt; 0 &amp;&amp; (best === null || part &gt; entry.parts[best])) best = index;
+      if (part &lt; 0 &amp;&amp; (worst === null || part &lt; entry.parts[worst])) worst = index;
     });
+    const describe = index =&gt; (index === null ? null : phrase(traits[index], me[index], entry.person.vector[index]));
+    return { alike: describe(best), unlike: describe(worst) };
+  }
+
+  // My three most distinctive two-sided traits (at least 0.2 from the average) and the habits on record.
+  function mine(vector, traits) {
+    if (!vector) return { lean: &#x27;資料還不夠，看不出品味特質&#x27;, habits: &#x27;&#x27; };
+    const leaning = traits.map((trait, index) =&gt; ({ trait, index, value: vector[index] }))
+      .filter(({ trait, value }) =&gt; trait.kind === &#x27;two_sided&#x27; &amp;&amp; value !== null &amp;&amp; Math.abs(value) &gt;= 0.2)
+      .sort((a, b) =&gt; Math.abs(b.value) - Math.abs(a.value) || a.index - b.index)
+      .slice(0, 3).map(({ trait, value }) =&gt; &#x27;偏&#x27; + end(trait, value));
+    const habits = traits.filter((trait, index) =&gt; trait.kind === &#x27;level&#x27; &amp;&amp; vector[index] &gt; 0).map(trait =&gt; trait.habit);
+    if (!leaning.length &amp;&amp; !habits.length) return { lean: &#x27;跟一般人差不多&#x27;, habits: &#x27;&#x27; };
+    return { lean: leaning.length ? &#x27;跟一般人比：&#x27; + leaning.join(&#x27;・&#x27;) : &#x27;&#x27;, habits: habits.length ? words(&#x27;也有&#x27;, habits.join(&#x27;、&#x27;), &#x27;的紀錄&#x27;) : &#x27;&#x27; };
+  }
+
+  function status(result, settings, opposite) {
+    const line = signed(opposite ? -settings.min_score : settings.min_score) + (opposite ? &#x27; 以下&#x27; : &#x27; 以上&#x27;);
+    if (!result.eligible) return opposite ? &#x27;目前沒有和你明顯相反的人（&#x27; + line + &#x27;）。&#x27; : &#x27;目前沒有品味夠相似的人（&#x27; + line + &#x27;）。&#x27;;
+    if (!result.within) return &#x27;這個距離內沒有品味相似度 &#x27; + line + &#x27;的人，試試放寬距離。&#x27;;
+    return result.within + &#x27; 位品味相似度 &#x27; + line + (result.within &gt; settings.top ? &#x27;，顯示前 &#x27; + settings.top + &#x27; 位&#x27; : &#x27;&#x27;) + &#x27;。&#x27;;
+  }
+
+  function card(entry, data) {
+    const why = reasons(entry, data.me.vector, data.traits);
+    return { person: entry.person, name: entry.person.name, score: signed(entry.score), percent: similarity.percent(entry.score),
+      opposite: entry.score &lt; 0, place: entry.person.place, alike: why.alike, unlike: why.unlike };
+  }
+
+  // Everything the page shows for a choice of distance (null for any) and whether opposites are wanted.
+  function view(data, choice) {
+    const { settings, me } = data;
+    const profile = mine(me.vector, data.traits);
+    if (!me.vector) {
+      return { ready: false, mine: profile, thin: &#x27;你的資料還不夠（有效品項少於 &#x27; + settings.min_items + &#x27; 筆），先累積更多發票，再來找同好。&#x27; };
+    }
+    const entries = scored(data), located = me.areas.length &gt; 0, range = located ? choice.range : null;
+    const list = opposite =&gt; {
+      const result = pick(entries, settings, opposite, range);
+      return { status: status(result, settings, opposite), cards: result.shown.map(entry =&gt; card(entry, data)) };
+    };
     return {
-      ...blank, options,
-      status: &#x27;目前沒有 &#x27; + whole(thresholds.match) + &#x27;% 以上的人。放寬到 &#x27; + whole(thresholds.nearby) + &#x27;%，要找多遠？&#x27;,
-      note: me.areas.length ? &#x27;以你的常消費地區為準：&#x27; + me.areas.join(&#x27;、&#x27;) + &#x27;。&#x27; : &#x27;推測不出你的常消費地區，只能選「不限」。&#x27;,
-      cards: maxDistance === null ? [] : cards(recommend(candidates, maxDistance, thresholds), true),
+      ready: true, mine: profile,
+      note: located ? &#x27;你的生活圈：&#x27; + me.areas.join(&#x27;、&#x27;) : &#x27;看不出你的生活圈，只能選「不限」。&#x27;,
+      ranges: RANGES.map(option =&gt; ({ ...option, disabled: option.level !== null &amp;&amp; !located })),
+      match: list(false), opposite: choice.opposite ? list(true) : null,
     };
   }
-  const api = Object.freeze({ recommend, view });
+
+  const api = Object.freeze({ RANGES, signed, scored, pick, phrase, reasons, mine, status, view });
   if (typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports) module.exports = api; else root.MatchFilter = api;
 })(globalThis);
 &lt;/script&gt;
@@ -862,36 +958,268 @@ const matchReportData = {
     &quot;2026-03&quot;,
     &quot;2026-04&quot;
   ],
-  &quot;settings&quot;: {
-    &quot;weights&quot;: {
-      &quot;category&quot;: 0.35,
-      &quot;brand&quot;: 0.15,
-      &quot;flavor&quot;: 0.1,
-      &quot;price&quot;: 0.1
-    },
-    &quot;thresholds&quot;: {
-      &quot;match&quot;: 0.8,
-      &quot;nearby&quot;: 0.7
-    },
-    &quot;price_levels&quot;: [
+  &quot;model&quot;: {
+    &quot;cells&quot;: [
       {
-        &quot;label&quot;: &quot;小資型&quot;,
-        &quot;below&quot;: 100
+        &quot;id&quot;: &quot;spend&quot;,
+        &quot;kind&quot;: &quot;two_sided&quot;,
+        &quot;weight&quot;: 1
       },
       {
-        &quot;label&quot;: &quot;均衡型&quot;,
-        &quot;below&quot;: 300
+        &quot;id&quot;: &quot;meals&quot;,
+        &quot;kind&quot;: &quot;two_sided&quot;,
+        &quot;weight&quot;: 1
       },
       {
-        &quot;label&quot;: &quot;享受型&quot;
+        &quot;id&quot;: &quot;motive&quot;,
+        &quot;kind&quot;: &quot;two_sided&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;cooking&quot;,
+        &quot;kind&quot;: &quot;two_sided&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;sweet&quot;,
+        &quot;kind&quot;: &quot;two_sided&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;routine&quot;,
+        &quot;kind&quot;: &quot;two_sided&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;sport&quot;,
+        &quot;kind&quot;: &quot;level&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;driving&quot;,
+        &quot;kind&quot;: &quot;level&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;travel&quot;,
+        &quot;kind&quot;: &quot;two_sided&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;stock&quot;,
+        &quot;kind&quot;: &quot;two_sided&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;lifestyle&quot;,
+        &quot;kind&quot;: &quot;level&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;tech&quot;,
+        &quot;kind&quot;: &quot;level&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;days&quot;,
+        &quot;kind&quot;: &quot;two_sided&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;holiday&quot;,
+        &quot;kind&quot;: &quot;two_sided&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;fun&quot;,
+        &quot;kind&quot;: &quot;level&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;pets_cat&quot;,
+        &quot;kind&quot;: &quot;level&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;pets_dog&quot;,
+        &quot;kind&quot;: &quot;level&quot;,
+        &quot;weight&quot;: 1
+      },
+      {
+        &quot;id&quot;: &quot;alcohol&quot;,
+        &quot;kind&quot;: &quot;level&quot;,
+        &quot;weight&quot;: 1
       }
     ],
-    &quot;top_matches&quot;: 5,
-    &quot;category_min_items&quot;: 10
+    &quot;shrink&quot;: 0.25,
+    &quot;min_shared_two_sided&quot;: 5
+  },
+  &quot;traits&quot;: [
+    {
+      &quot;id&quot;: &quot;spend&quot;,
+      &quot;name&quot;: &quot;省錢 ↔ 享受&quot;,
+      &quot;kind&quot;: &quot;two_sided&quot;,
+      &quot;ends&quot;: [
+        &quot;省錢&quot;,
+        &quot;享受&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;meals&quot;,
+      &quot;name&quot;: &quot;快速解決 ↔ 好好吃飯&quot;,
+      &quot;kind&quot;: &quot;two_sided&quot;,
+      &quot;ends&quot;: [
+        &quot;快速解決&quot;,
+        &quot;好好吃飯&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;motive&quot;,
+      &quot;name&quot;: &quot;超商：省錢 ↔ 省時&quot;,
+      &quot;kind&quot;: &quot;two_sided&quot;,
+      &quot;ends&quot;: [
+        &quot;為了省錢&quot;,
+        &quot;為了省時&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;cooking&quot;,
+      &quot;name&quot;: &quot;外食 ↔ 自己煮&quot;,
+      &quot;kind&quot;: &quot;two_sided&quot;,
+      &quot;ends&quot;: [
+        &quot;外食&quot;,
+        &quot;自己煮&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;sweet&quot;,
+      &quot;name&quot;: &quot;清爽 ↔ 香甜&quot;,
+      &quot;kind&quot;: &quot;two_sided&quot;,
+      &quot;ends&quot;: [
+        &quot;清爽&quot;,
+        &quot;香甜&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;routine&quot;,
+      &quot;name&quot;: &quot;固定習慣 ↔ 喜歡嘗鮮&quot;,
+      &quot;kind&quot;: &quot;two_sided&quot;,
+      &quot;ends&quot;: [
+        &quot;固定習慣&quot;,
+        &quot;喜歡嘗鮮&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;sport&quot;,
+      &quot;name&quot;: &quot;運動投入&quot;,
+      &quot;kind&quot;: &quot;level&quot;,
+      &quot;habit&quot;: &quot;運動&quot;
+    },
+    {
+      &quot;id&quot;: &quot;driving&quot;,
+      &quot;name&quot;: &quot;自己開車騎車&quot;,
+      &quot;kind&quot;: &quot;level&quot;,
+      &quot;habit&quot;: &quot;開車騎車&quot;
+    },
+    {
+      &quot;id&quot;: &quot;travel&quot;,
+      &quot;name&quot;: &quot;待在生活圈 ↔ 常出遊&quot;,
+      &quot;kind&quot;: &quot;two_sided&quot;,
+      &quot;ends&quot;: [
+        &quot;待在生活圈&quot;,
+        &quot;常出遊&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;stock&quot;,
+      &quot;name&quot;: &quot;囤貨 ↔ 少量即買&quot;,
+      &quot;kind&quot;: &quot;two_sided&quot;,
+      &quot;ends&quot;: [
+        &quot;囤貨&quot;,
+        &quot;少量即買&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;lifestyle&quot;,
+      &quot;name&quot;: &quot;生活質感小物&quot;,
+      &quot;kind&quot;: &quot;level&quot;,
+      &quot;habit&quot;: &quot;生活小物&quot;
+    },
+    {
+      &quot;id&quot;: &quot;tech&quot;,
+      &quot;name&quot;: &quot;3C 投入&quot;,
+      &quot;kind&quot;: &quot;level&quot;,
+      &quot;habit&quot;: &quot;3C&quot;
+    },
+    {
+      &quot;id&quot;: &quot;days&quot;,
+      &quot;name&quot;: &quot;上班日型 ↔ 休假日型&quot;,
+      &quot;kind&quot;: &quot;two_sided&quot;,
+      &quot;ends&quot;: [
+        &quot;上班日型&quot;,
+        &quot;休假日型&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;holiday&quot;,
+      &quot;name&quot;: &quot;避開連假 ↔ 連假出遊&quot;,
+      &quot;kind&quot;: &quot;two_sided&quot;,
+      &quot;ends&quot;: [
+        &quot;避開連假&quot;,
+        &quot;連假出遊&quot;
+      ]
+    },
+    {
+      &quot;id&quot;: &quot;fun&quot;,
+      &quot;name&quot;: &quot;娛樂體驗&quot;,
+      &quot;kind&quot;: &quot;level&quot;,
+      &quot;habit&quot;: &quot;娛樂&quot;
+    },
+    {
+      &quot;id&quot;: &quot;pets_cat&quot;,
+      &quot;name&quot;: &quot;有養寵物（貓）&quot;,
+      &quot;kind&quot;: &quot;level&quot;,
+      &quot;habit&quot;: &quot;養貓&quot;
+    },
+    {
+      &quot;id&quot;: &quot;pets_dog&quot;,
+      &quot;name&quot;: &quot;有養寵物（狗）&quot;,
+      &quot;kind&quot;: &quot;level&quot;,
+      &quot;habit&quot;: &quot;養狗&quot;
+    },
+    {
+      &quot;id&quot;: &quot;alcohol&quot;,
+      &quot;name&quot;: &quot;小酌&quot;,
+      &quot;kind&quot;: &quot;level&quot;,
+      &quot;habit&quot;: &quot;小酌&quot;
+    }
+  ],
+  &quot;settings&quot;: {
+    &quot;min_score&quot;: 0.3,
+    &quot;top&quot;: 5,
+    &quot;min_items&quot;: 20
   },
   &quot;me&quot;: {
-    &quot;ready&quot;: true,
-    &quot;item_count&quot;: 97,
+    &quot;vector&quot;: [
+      -0.25219212211399716,
+      0.4998601762911261,
+      null,
+      0.4679470944144068,
+      1.0,
+      0.6469212357726551,
+      0.375,
+      0.0,
+      0.6074907866749777,
+      -0.04580745341614908,
+      0.3,
+      0.3373333333333334,
+      -0.0670710589383515,
+      -1.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
     &quot;months&quot;: [
       &quot;2026-03&quot;,
       &quot;2026-04&quot;
@@ -899,56 +1227,6 @@ const matchReportData = {
     &quot;areas&quot;: [
       &quot;高雄市苓雅區&quot;,
       &quot;高雄市新興區&quot;
-    ],
-    &quot;tags&quot;: [
-      {
-        &quot;dimension&quot;: &quot;品類偏好&quot;,
-        &quot;text&quot;: &quot;常買正餐（25%）&quot;
-      },
-      {
-        &quot;dimension&quot;: &quot;品類偏好&quot;,
-        &quot;text&quot;: &quot;常買飲品（22%）&quot;
-      },
-      {
-        &quot;dimension&quot;: &quot;常消費地區&quot;,
-        &quot;text&quot;: &quot;高雄市苓雅區&quot;
-      },
-      {
-        &quot;dimension&quot;: &quot;常消費地區&quot;,
-        &quot;text&quot;: &quot;高雄市新興區&quot;
-      },
-      {
-        &quot;dimension&quot;: &quot;常去品牌&quot;,
-        &quot;text&quot;: &quot;示範客運（12 次）&quot;
-      },
-      {
-        &quot;dimension&quot;: &quot;常去品牌&quot;,
-        &quot;text&quot;: &quot;示範運動館（10 次）&quot;
-      },
-      {
-        &quot;dimension&quot;: &quot;常去品牌&quot;,
-        &quot;text&quot;: &quot;示範茶屋（7 次）&quot;
-      },
-      {
-        &quot;dimension&quot;: &quot;常去品牌&quot;,
-        &quot;text&quot;: &quot;示範生活館（5 次）&quot;
-      },
-      {
-        &quot;dimension&quot;: &quot;常去品牌&quot;,
-        &quot;text&quot;: &quot;示範餐坊（5 次）&quot;
-      },
-      {
-        &quot;dimension&quot;: &quot;常去品牌&quot;,
-        &quot;text&quot;: &quot;示範烘焙店（4 次）&quot;
-      },
-      {
-        &quot;dimension&quot;: &quot;消費檔次&quot;,
-        &quot;text&quot;: &quot;均衡型&quot;
-      },
-      {
-        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-        &quot;text&quot;: &quot;素食品項較多&quot;
-      }
     ],
     &quot;counts&quot;: [
       24,
@@ -963,19 +1241,586 @@ const matchReportData = {
       2
     ]
   },
-  &quot;candidates&quot;: [
+  &quot;people&quot;: [
+    {
+      &quot;name&quot;: &quot;省錢上班族 A&quot;,
+      &quot;vector&quot;: [
+        -0.7834421221139971,
+        -1.0,
+        -1.0,
+        -0.4923703659030535,
+        -0.5785805308895282,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        -1.0,
+        0.0,
+        0.0,
+        -0.12659457605716265,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 0,
+      &quot;place&quot;: &quot;高雄市前鎮區&quot;,
+      &quot;counts&quot;: [
+        43,
+        23,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;省錢上班族 B&quot;,
+      &quot;vector&quot;: [
+        -0.7834421221139971,
+        -1.0,
+        -1.0,
+        -0.4923703659030535,
+        -0.5785805308895282,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        -1.0,
+        0.0,
+        0.0,
+        -0.10779171564046716,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 0,
+      &quot;place&quot;: &quot;高雄市前鎮區&quot;,
+      &quot;counts&quot;: [
+        38,
+        23,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        5,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;省錢上班族 C&quot;,
+      &quot;vector&quot;: [
+        -0.7834421221139971,
+        -1.0,
+        -1.0,
+        -0.4923703659030535,
+        -0.5785805308895282,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        -1.0,
+        0.0,
+        0.0,
+        -0.2119400153949245,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 0,
+      &quot;place&quot;: &quot;高雄市前鎮區&quot;,
+      &quot;counts&quot;: [
+        43,
+        24,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;省錢上班族 D&quot;,
+      &quot;vector&quot;: [
+        -0.7834421221139971,
+        -1.0,
+        -1.0,
+        -0.4923703659030535,
+        -0.5785805308895282,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        0.9184782608695653,
+        0.0,
+        0.0,
+        -0.6982957744243192,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 0,
+      &quot;place&quot;: &quot;高雄市前鎮區&quot;,
+      &quot;counts&quot;: [
+        39,
+        23,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        7,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;省錢上班族 E&quot;,
+      &quot;vector&quot;: [
+        -0.7834421221139971,
+        -1.0,
+        -1.0,
+        -0.4923703659030535,
+        -0.5785805308895282,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        0.9184782608695653,
+        0.0,
+        0.0,
+        -0.5789035688124148,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 0,
+      &quot;place&quot;: &quot;高雄市前鎮區&quot;,
+      &quot;counts&quot;: [
+        42,
+        24,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        7,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;忙碌工程師 A&quot;,
+      &quot;vector&quot;: [
+        -0.40844212211399716,
+        -1.0,
+        1.0,
+        -0.4923703659030535,
+        0.9258529666474178,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        0.9541925465838509,
+        0.1,
+        1.0,
+        -0.005963510310455666,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;新竹市東區&quot;,
+      &quot;counts&quot;: [
+        52,
+        29,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        7
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;忙碌工程師 B&quot;,
+      &quot;vector&quot;: [
+        -0.40844212211399716,
+        -1.0,
+        1.0,
+        -0.4923703659030535,
+        0.8821337548247576,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        0.9541925465838509,
+        0.0,
+        1.0,
+        -0.11306719595508491,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;新竹市東區&quot;,
+      &quot;counts&quot;: [
+        53,
+        32,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        9,
+        6
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;忙碌工程師 C&quot;,
+      &quot;vector&quot;: [
+        -0.40844212211399716,
+        -1.0,
+        1.0,
+        -0.4923703659030535,
+        0.9357051833961862,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        0.9541925465838509,
+        0.30000000000000004,
+        1.0,
+        -0.016320046813002365,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;新竹市東區&quot;,
+      &quot;counts&quot;: [
+        51,
+        28,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        8,
+        6
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;忙碌工程師 D&quot;,
+      &quot;vector&quot;: [
+        -0.31121989989177495,
+        -1.0,
+        1.0,
+        -0.469381860155927,
+        0.9455574001449547,
+        -0.2248520050371171,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        0.9541925465838509,
+        0.4,
+        1.0,
+        -0.015548182471315897,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.56875
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;新竹市東區&quot;,
+      &quot;counts&quot;: [
+        51,
+        36,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        9,
+        7
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;忙碌工程師 E&quot;,
+      &quot;vector&quot;: [
+        -0.3175330312049062,
+        -1.0,
+        1.0,
+        -0.4923703659030535,
+        0.9039591516501544,
+        -0.21020759284553514,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        0.9541925465838509,
+        0.1,
+        1.0,
+        0.019720700215860143,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.48749999999999993
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;新竹市東區&quot;,
+      &quot;counts&quot;: [
+        52,
+        33,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        9,
+        6
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;咖啡上班族 A&quot;,
+      &quot;vector&quot;: [
+        0.62370073502886,
+        0.4998601762911261,
+        null,
+        -0.32570369923638687,
+        -0.47143767374667095,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        null,
+        0.0,
+        0.0,
+        -0.7021739528513483,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市信義區&quot;,
+      &quot;counts&quot;: [
+        35,
+        26,
+        9,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;咖啡上班族 B&quot;,
+      &quot;vector&quot;: [
+        0.7022721636002887,
+        0.4998601762911261,
+        null,
+        -0.2914571238939211,
+        -0.4986718550904414,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        null,
+        0.0,
+        0.0,
+        -0.7255770398642738,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市信義區&quot;,
+      &quot;counts&quot;: [
+        35,
+        31,
+        7,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;咖啡上班族 C&quot;,
+      &quot;vector&quot;: [
+        0.6844150207431458,
+        0.4998601762911261,
+        null,
+        -0.25427512780781536,
+        -0.4952471975561949,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        null,
+        0.0,
+        0.0,
+        -0.6465373979664949,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市信義區&quot;,
+      &quot;counts&quot;: [
+        32,
+        31,
+        7,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;咖啡上班族 D&quot;,
+      &quot;vector&quot;: [
+        0.7272721636002886,
+        0.4998601762911261,
+        null,
+        -0.3004511739838617,
+        0.7307989784899813,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        null,
+        0.0,
+        0.0,
+        -0.6111776707356849,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市信義區&quot;,
+      &quot;counts&quot;: [
+        32,
+        26,
+        8,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;咖啡上班族 E&quot;,
+      &quot;vector&quot;: [
+        0.7308435921717171,
+        0.4998601762911261,
+        null,
+        -0.2780846516173392,
+        0.7357051833961862,
+        -0.22636143899938121,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        null,
+        0.0,
+        0.0,
+        -0.701440732505629,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市信義區&quot;,
+      &quot;counts&quot;: [
+        33,
+        28,
+        9,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
     {
       &quot;name&quot;: &quot;手搖學生 A&quot;,
-      &quot;score&quot;: 86,
+      &quot;vector&quot;: [
+        -0.32094212211399714,
+        0.4998601762911261,
+        null,
+        -0.14454427894653177,
+        1.0,
+        0.7323475617633952,
+        0.22499999999999998,
+        0.0,
+        -0.1945294153452244,
+        null,
+        0.15,
+        0.0,
+        -0.0656669535725924,
+        null,
+        0.6625,
+        0.0,
+        0.0,
+        0.0
+      ],
       &quot;distance&quot;: 0,
-      &quot;like&quot;: {
-        &quot;dimension&quot;: &quot;常去品牌&quot;,
-        &quot;text&quot;: &quot;示範客運（12 次）&quot;
-      },
-      &quot;unlike&quot;: {
-        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-        &quot;text&quot;: &quot;葷素品項都有&quot;
-      },
+      &quot;place&quot;: &quot;高雄市苓雅區&quot;,
       &quot;counts&quot;: [
         27,
         28,
@@ -990,67 +1835,29 @@ const matchReportData = {
       ]
     },
     {
-      &quot;name&quot;: &quot;手搖學生 E&quot;,
-      &quot;score&quot;: 85,
-      &quot;distance&quot;: 0,
-      &quot;like&quot;: {
-        &quot;dimension&quot;: &quot;常去品牌&quot;,
-        &quot;text&quot;: &quot;示範客運（10 次）&quot;
-      },
-      &quot;unlike&quot;: {
-        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-        &quot;text&quot;: &quot;葷素品項都有&quot;
-      },
-      &quot;counts&quot;: [
-        26,
-        28,
-        13,
-        0,
-        5,
-        7,
-        10,
-        0,
-        5,
-        0
-      ]
-    },
-    {
-      &quot;name&quot;: &quot;手搖學生 D&quot;,
-      &quot;score&quot;: 82,
-      &quot;distance&quot;: 0,
-      &quot;like&quot;: {
-        &quot;dimension&quot;: &quot;常去品牌&quot;,
-        &quot;text&quot;: &quot;示範客運（11 次）&quot;
-      },
-      &quot;unlike&quot;: {
-        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-        &quot;text&quot;: &quot;葷素品項都有&quot;
-      },
-      &quot;counts&quot;: [
-        29,
-        29,
-        13,
-        0,
-        5,
-        7,
-        11,
-        0,
-        5,
-        0
-      ]
-    },
-    {
       &quot;name&quot;: &quot;手搖學生 B&quot;,
-      &quot;score&quot;: 81,
+      &quot;vector&quot;: [
+        -0.34594212211399716,
+        0.4998601762911261,
+        null,
+        -0.15413507178540642,
+        1.0,
+        0.6542919802630605,
+        0.15,
+        0.0,
+        -0.1945294153452244,
+        null,
+        0.15,
+        0.0,
+        -0.06478404920216899,
+        null,
+        0.5875,
+        0.0,
+        0.0,
+        0.0
+      ],
       &quot;distance&quot;: 0,
-      &quot;like&quot;: {
-        &quot;dimension&quot;: &quot;常去品牌&quot;,
-        &quot;text&quot;: &quot;示範客運（12 次）&quot;
-      },
-      &quot;unlike&quot;: {
-        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-        &quot;text&quot;: &quot;葷食品項較多&quot;
-      },
+      &quot;place&quot;: &quot;高雄市苓雅區&quot;,
       &quot;counts&quot;: [
         27,
         28,
@@ -1066,16 +1873,28 @@ const matchReportData = {
     },
     {
       &quot;name&quot;: &quot;手搖學生 C&quot;,
-      &quot;score&quot;: 80,
+      &quot;vector&quot;: [
+        -0.33656712211399714,
+        0.4998601762911261,
+        null,
+        -0.1391365350572824,
+        1.0,
+        0.5121026132882005,
+        0.1875,
+        0.0,
+        -0.1945294153452244,
+        0.5791925465838509,
+        0.3,
+        0.0,
+        0.17413604980170505,
+        null,
+        0.85,
+        0.0,
+        0.0,
+        0.0
+      ],
       &quot;distance&quot;: 0,
-      &quot;like&quot;: {
-        &quot;dimension&quot;: &quot;常去品牌&quot;,
-        &quot;text&quot;: &quot;示範客運（10 次）&quot;
-      },
-      &quot;unlike&quot;: {
-        &quot;dimension&quot;: &quot;葷素紀錄&quot;,
-        &quot;text&quot;: &quot;葷食品項較多&quot;
-      },
+      &quot;place&quot;: &quot;高雄市苓雅區&quot;,
       &quot;counts&quot;: [
         26,
         29,
@@ -1088,6 +1907,820 @@ const matchReportData = {
         5,
         0
       ]
+    },
+    {
+      &quot;name&quot;: &quot;手搖學生 D&quot;,
+      &quot;vector&quot;: [
+        -0.34594212211399716,
+        0.4998601762911261,
+        null,
+        -0.17312153961197374,
+        -0.42599837126511503,
+        0.5050293176650728,
+        0.1875,
+        0.0,
+        -0.1945294153452244,
+        0.5791925465838509,
+        0.3,
+        0.0,
+        -0.012028104929696831,
+        null,
+        0.7625,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 0,
+      &quot;place&quot;: &quot;高雄市苓雅區&quot;,
+      &quot;counts&quot;: [
+        29,
+        29,
+        13,
+        0,
+        5,
+        7,
+        11,
+        0,
+        5,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;手搖學生 E&quot;,
+      &quot;vector&quot;: [
+        -0.3084421221139971,
+        0.4998601762911261,
+        null,
+        -0.1391365350572824,
+        -0.41688898860097084,
+        0.5639646479571404,
+        0.1875,
+        0.0,
+        -0.1945294153452244,
+        0.5791925465838509,
+        0.3,
+        0.0,
+        0.1974803166818353,
+        null,
+        0.7625,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 0,
+      &quot;place&quot;: &quot;高雄市苓雅區&quot;,
+      &quot;counts&quot;: [
+        26,
+        28,
+        13,
+        0,
+        5,
+        7,
+        10,
+        0,
+        5,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 A&quot;,
+      &quot;vector&quot;: [
+        -0.16469212211399714,
+        0.4998601762911261,
+        0.0,
+        0.7647724912398037,
+        -0.5785805308895282,
+        -0.22636143899938121,
+        0.6625,
+        0.0,
+        -0.1945294153452244,
+        null,
+        0.0,
+        0.0,
+        0.008268047733838907,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 1,
+      &quot;place&quot;: &quot;高雄市左營區&quot;,
+      &quot;counts&quot;: [
+        17,
+        19,
+        0,
+        14,
+        21,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 B&quot;,
+      &quot;vector&quot;: [
+        -0.16156712211399715,
+        0.4998601762911261,
+        0.0,
+        0.718999896487617,
+        -0.5785805308895282,
+        -0.22636143899938121,
+        0.6625,
+        0.0,
+        -0.1945294153452244,
+        null,
+        0.0,
+        0.0,
+        -0.002875052235143033,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 1,
+      &quot;place&quot;: &quot;高雄市前鎮區&quot;,
+      &quot;counts&quot;: [
+        18,
+        18,
+        0,
+        13,
+        19,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 C&quot;,
+      &quot;vector&quot;: [
+        -0.1459421221139971,
+        0.4998601762911261,
+        0.0,
+        0.7754867769540894,
+        -0.5785805308895282,
+        -0.18272507536301763,
+        0.6625,
+        0.0,
+        -0.1945294153452244,
+        null,
+        0.0,
+        0.0,
+        0.2769314216283418,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 1,
+      &quot;place&quot;: &quot;高雄市前鎮區&quot;,
+      &quot;counts&quot;: [
+        17,
+        17,
+        0,
+        14,
+        18,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 D&quot;,
+      &quot;vector&quot;: [
+        -0.19594212211399714,
+        0.4998601762911261,
+        0.0,
+        0.8004867769540893,
+        -0.5785805308895282,
+        -0.0030074017323004076,
+        0.6625,
+        0.775,
+        -0.1945294153452244,
+        null,
+        0.0,
+        0.0,
+        0.08235883647216988,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 1,
+      &quot;place&quot;: &quot;高雄市前鎮區&quot;,
+      &quot;counts&quot;: [
+        17,
+        18,
+        0,
+        15,
+        19,
+        0,
+        19,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;健身族 E&quot;,
+      &quot;vector&quot;: [
+        -0.18656712211399717,
+        0.4998601762911261,
+        0.0,
+        0.7845975641261009,
+        -0.5785805308895282,
+        -0.022551915189857552,
+        0.6625,
+        0.775,
+        -0.1945294153452244,
+        null,
+        0.0,
+        0.0,
+        0.10909619778330812,
+        null,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 1,
+      &quot;place&quot;: &quot;高雄市前鎮區&quot;,
+      &quot;counts&quot;: [
+        16,
+        19,
+        0,
+        14,
+        19,
+        0,
+        16,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;家庭下廚 A&quot;,
+      &quot;vector&quot;: [
+        0.007182877886002831,
+        null,
+        0.0,
+        1.0,
+        0.08808613577713859,
+        0.09306713242919029,
+        0.0,
+        0.44999999999999996,
+        -0.1945294153452244,
+        -1.0,
+        0.0,
+        0.0,
+        0.872983858110597,
+        null,
+        0.0,
+        0.0,
+        0.75,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;桃園市中壢區&quot;,
+      &quot;counts&quot;: [
+        6,
+        8,
+        0,
+        22,
+        0,
+        0,
+        6,
+        0,
+        11,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;家庭下廚 B&quot;,
+      &quot;vector&quot;: [
+        0.27370073502886,
+        null,
+        null,
+        1.0,
+        0.08808613577713859,
+        0.18845337581543364,
+        0.0,
+        0.525,
+        -0.1945294153452244,
+        -1.0,
+        0.0,
+        0.0,
+        0.872983858110597,
+        null,
+        0.0,
+        0.0,
+        0.75,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;桃園市中壢區&quot;,
+      &quot;counts&quot;: [
+        4,
+        6,
+        0,
+        23,
+        0,
+        0,
+        7,
+        0,
+        12,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;家庭下廚 C&quot;,
+      &quot;vector&quot;: [
+        0.2879864493145743,
+        null,
+        null,
+        1.0,
+        0.08808613577713859,
+        -0.04007572471366705,
+        0.0,
+        0.6,
+        -0.1945294153452244,
+        -1.0,
+        0.0,
+        0.0,
+        0.8207864690510219,
+        null,
+        0.0,
+        0.0,
+        0.75,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;桃園市中壢區&quot;,
+      &quot;counts&quot;: [
+        5,
+        7,
+        0,
+        22,
+        0,
+        0,
+        8,
+        0,
+        11,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;家庭下廚 D&quot;,
+      &quot;vector&quot;: [
+        0.12905787788600281,
+        null,
+        null,
+        1.0,
+        0.08808613577713859,
+        0.10047764146038907,
+        0.0,
+        0.44999999999999996,
+        -0.1945294153452244,
+        -1.0,
+        0.0,
+        0.0,
+        0.8107799743270004,
+        null,
+        0.0,
+        0.7,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;桃園市中壢區&quot;,
+      &quot;counts&quot;: [
+        6,
+        7,
+        0,
+        22,
+        0,
+        0,
+        6,
+        0,
+        12,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;家庭下廚 E&quot;,
+      &quot;vector&quot;: [
+        0.4879864493145743,
+        null,
+        0.0,
+        1.0,
+        0.08808613577713859,
+        0.040305227667285504,
+        0.0,
+        0.525,
+        -0.1945294153452244,
+        -1.0,
+        0.0,
+        0.0,
+        0.7726839807989908,
+        null,
+        0.0,
+        0.7,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;桃園市中壢區&quot;,
+      &quot;counts&quot;: [
+        5,
+        8,
+        0,
+        24,
+        0,
+        0,
+        7,
+        0,
+        12,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;連假旅人 A&quot;,
+      &quot;vector&quot;: [
+        -0.27094212211399715,
+        0.4998601762911261,
+        0.0,
+        -0.4923703659030535,
+        -0.5785805308895282,
+        -0.12113921677715911,
+        0.0,
+        0.0,
+        1.0,
+        null,
+        0.0,
+        0.0,
+        0.12096427426726772,
+        0.8,
+        0.25,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市內湖區&quot;,
+      &quot;counts&quot;: [
+        25,
+        12,
+        0,
+        0,
+        0,
+        2,
+        2,
+        2,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;連假旅人 B&quot;,
+      &quot;vector&quot;: [
+        -0.23969212211399715,
+        0.4998601762911261,
+        0.0,
+        -0.4923703659030535,
+        -0.5785805308895282,
+        -0.10806732135232233,
+        0.0,
+        0.0,
+        1.0,
+        null,
+        0.0,
+        0.0,
+        0.26922445961435637,
+        0.8,
+        0.25,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市內湖區&quot;,
+      &quot;counts&quot;: [
+        26,
+        10,
+        0,
+        0,
+        0,
+        2,
+        2,
+        2,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;連假旅人 C&quot;,
+      &quot;vector&quot;: [
+        -0.25844212211399714,
+        0.4998601762911261,
+        0.0,
+        -0.4923703659030535,
+        -0.5785805308895282,
+        -0.11914424442924565,
+        0.0,
+        0.0,
+        1.0,
+        null,
+        0.0,
+        0.0,
+        0.3001564407299361,
+        0.8,
+        0.25,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市內湖區&quot;,
+      &quot;counts&quot;: [
+        25,
+        11,
+        0,
+        0,
+        0,
+        2,
+        2,
+        3,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;連假旅人 D&quot;,
+      &quot;vector&quot;: [
+        -0.2865671221139972,
+        0.4998601762911261,
+        0.0,
+        -0.4923703659030535,
+        -0.5785805308895282,
+        0.10668203926148823,
+        0.0,
+        0.0,
+        1.0,
+        null,
+        0.0,
+        0.0,
+        -0.8658358475774209,
+        -1.0,
+        0.25,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市內湖區&quot;,
+      &quot;counts&quot;: [
+        30,
+        9,
+        0,
+        0,
+        0,
+        2,
+        2,
+        4,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;連假旅人 E&quot;,
+      &quot;vector&quot;: [
+        -0.3084421221139971,
+        0.4998601762911261,
+        0.0,
+        -0.4923703659030535,
+        -0.5785805308895282,
+        0.2225911301705792,
+        0.0,
+        0.0,
+        1.0,
+        null,
+        0.0,
+        0.0,
+        -0.7952798440541438,
+        -1.0,
+        0.25,
+        0.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市內湖區&quot;,
+      &quot;counts&quot;: [
+        27,
+        11,
+        0,
+        0,
+        0,
+        2,
+        2,
+        3,
+        0,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;質感貓奴 A&quot;,
+      &quot;vector&quot;: [
+        1.0,
+        0.4998601762911261,
+        null,
+        -0.16697354050622815,
+        0.08808613577713859,
+        0.21363856100061884,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        -0.04580745341614908,
+        1.0,
+        0.0,
+        0.4641168314263956,
+        null,
+        0.0,
+        0.7,
+        0.0,
+        0.6499999999999999
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市內湖區&quot;,
+      &quot;counts&quot;: [
+        17,
+        25,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        15,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;質感貓奴 B&quot;,
+      &quot;vector&quot;: [
+        0.8879864493145744,
+        0.4998601762911261,
+        null,
+        -0.2066560801887678,
+        0.08808613577713859,
+        0.1603052276672856,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        0.07919254658385091,
+        1.0,
+        0.0,
+        0.22944652004865707,
+        null,
+        0.0,
+        1.0,
+        0.0,
+        0.56875
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市內湖區&quot;,
+      &quot;counts&quot;: [
+        18,
+        24,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        18,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;質感貓奴 C&quot;,
+      &quot;vector&quot;: [
+        1.0,
+        0.4998601762911261,
+        null,
+        -0.21886609239878008,
+        0.08808613577713859,
+        0.31697189433395223,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        -0.04580745341614908,
+        1.0,
+        0.0,
+        0.555296540748606,
+        null,
+        0.0,
+        1.0,
+        0.0,
+        0.6499999999999999
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市內湖區&quot;,
+      &quot;counts&quot;: [
+        17,
+        22,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        19,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;質感貓奴 D&quot;,
+      &quot;vector&quot;: [
+        1.0,
+        0.4998601762911261,
+        null,
+        -0.3482262217589094,
+        0.08808613577713859,
+        0.0496499570120148,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        -0.04580745341614908,
+        1.0,
+        0.0,
+        0.046400897919793016,
+        null,
+        0.0,
+        0.85,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市內湖區&quot;,
+      &quot;counts&quot;: [
+        19,
+        18,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        16,
+        0
+      ]
+    },
+    {
+      &quot;name&quot;: &quot;質感貓奴 E&quot;,
+      &quot;vector&quot;: [
+        0.9772721636002886,
+        0.4998601762911261,
+        null,
+        -0.3495132230459106,
+        0.08808613577713859,
+        -0.03268622532416765,
+        0.0,
+        0.0,
+        -0.1945294153452244,
+        0.07919254658385091,
+        1.0,
+        0.0,
+        0.06398555590346616,
+        null,
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      &quot;distance&quot;: 3,
+      &quot;place&quot;: &quot;臺北市內湖區&quot;,
+      &quot;counts&quot;: [
+        18,
+        17,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        18,
+        0
+      ]
     }
   ]
 };
@@ -1097,7 +2730,6 @@ const matchReportData = {
 (function () {
   const data = matchReportData, settings = data.settings;
   const $ = id =&gt; document.getElementById(id);
-  const pct = value =&gt; Math.round(value * 100) + &#x27;%&#x27;;
   const pageHost = window.parent !== window &amp;&amp; window.frameElement?.id === &#x27;match-frame&#x27; ? window.parent : null;
   function make(tag, text, className) {
     const node = document.createElement(tag);
@@ -1105,70 +2737,76 @@ const matchReportData = {
     if (className) node.className = className;
     return node;
   }
-  function pairFor(candidate) {
+  function pairFor(card) {
     return {
-      score: candidate.score,
+      score: card.percent,
       left: { name: &#x27;你&#x27;, demo: data.isDemo, months: data.me.months, counts: data.me.counts },
-      right: { name: candidate.name, demo: true, months: data.personaMonths, counts: candidate.counts },
+      right: { name: card.name, demo: true, months: data.personaMonths, counts: card.person.counts },
     };
   }
-  function card({ candidate, place }) {
+  function cardButton(card) {
     const button = make(&#x27;button&#x27;, undefined, &#x27;card&#x27;);
     button.type = &#x27;button&#x27;;
-    button.title = &#x27;查看你和&#x27; + candidate.name + &#x27;的連線圖&#x27;;
-    const title = make(&#x27;h3&#x27;, candidate.name);
-    if (place) title.append(make(&#x27;span&#x27;, place, &#x27;place&#x27;));
+    button.title = &#x27;查看你和&#x27; + card.name + &#x27;的連線圖&#x27;;
+    const title = make(&#x27;h3&#x27;, card.name);
+    if (card.place) title.append(make(&#x27;span&#x27;, card.place, &#x27;place&#x27;));
     const head = make(&#x27;div&#x27;, undefined, &#x27;card-head&#x27;);
-    head.append(title, make(&#x27;span&#x27;, candidate.score + &#x27;%&#x27;, &#x27;score&#x27;));
+    head.append(title, make(&#x27;span&#x27;, card.score, card.opposite ? &#x27;score opposite&#x27; : &#x27;score&#x27;));
     const pair = make(&#x27;dl&#x27;, undefined, &#x27;pair&#x27;);
-    for (const [label, tag, className] of [[&#x27;最像你&#x27;, candidate.like, &#x27;like&#x27;], [&#x27;最不像你&#x27;, candidate.unlike, &#x27;unlike&#x27;]]) {
-      if (tag) pair.append(make(&#x27;dt&#x27;, label), make(&#x27;dd&#x27;, tag.dimension + &#x27;：&#x27; + tag.text, className));
+    for (const [label, text, className] of [[&#x27;最像你&#x27;, card.alike, &#x27;like&#x27;], [&#x27;最不像你&#x27;, card.unlike, &#x27;unlike&#x27;]]) {
+      if (text) pair.append(make(&#x27;dt&#x27;, label), make(&#x27;dd&#x27;, text, className));
     }
     button.append(head, pair);
-    button.addEventListener(&#x27;click&#x27;, () =&gt; pageHost?.ReceiptPages.showConnection?.(pairFor(candidate)));
+    button.addEventListener(&#x27;click&#x27;, () =&gt; pageHost?.ReceiptPages.showConnection?.(pairFor(card)));
     return button;
   }
-  let range = null;
-  function renderList() {
-    const shown = MatchFilter.view(data, range);
-    $(&#x27;match-list&#x27;).replaceChildren(...(shown.cards.length ? shown.cards.map(card)
-      : shown.empty ? [make(&#x27;p&#x27;, shown.empty, &#x27;empty&#x27;)] : []));
+  const choice = { range: null, opposite: false };
+  function fill(statusId, listId, list) {
+    $(statusId).textContent = list.status;
+    $(listId).replaceChildren(...list.cards.map(cardButton));
   }
-  const first = MatchFilter.view(data, null);
-  $(&#x27;match-status&#x27;).textContent = first.status;
-  $(&#x27;range-note&#x27;).textContent = first.note;
-  $(&#x27;range-note&#x27;).hidden = !first.note;
-  $(&#x27;ranges&#x27;).hidden = !first.options.length;
-  for (const option of first.options) {
-    const label = make(&#x27;label&#x27;, undefined, option.disabled ? &#x27;off&#x27; : undefined), input = make(&#x27;input&#x27;);
-    input.type = &#x27;radio&#x27;;
-    input.name = &#x27;range&#x27;;
-    input.disabled = option.disabled;
-    input.addEventListener(&#x27;change&#x27;, () =&gt; { range = option.level; renderList(); });
-    label.append(input, option.label + &#x27; · &#x27; + option.count + &#x27; 位&#x27;);
-    $(&#x27;ranges&#x27;).append(label);
+  function render() {
+    const shown = MatchFilter.view(data, choice);
+    fill(&#x27;match-status&#x27;, &#x27;match-list&#x27;, shown.match);
+    $(&#x27;opposites&#x27;).hidden = !shown.opposite;
+    if (shown.opposite) fill(&#x27;opposite-status&#x27;, &#x27;opposite-list&#x27;, shown.opposite);
   }
-  renderList();
+  const first = MatchFilter.view(data, choice);
+  $(&#x27;my-lean&#x27;).textContent = first.mine.lean;
+  $(&#x27;my-lean&#x27;).hidden = !first.mine.lean;
+  $(&#x27;my-habits&#x27;).textContent = first.mine.habits;
+  $(&#x27;my-habits&#x27;).hidden = !first.mine.habits;
+  if (first.ready) {
+    $(&#x27;filters&#x27;).hidden = false;
+    $(&#x27;opposite-switch&#x27;).hidden = false;
+    $(&#x27;range-note&#x27;).textContent = first.note;
+    for (const option of first.ranges) {
+      const label = make(&#x27;label&#x27;, undefined, option.disabled ? &#x27;off&#x27; : undefined), input = make(&#x27;input&#x27;);
+      input.type = &#x27;radio&#x27;;
+      input.name = &#x27;range&#x27;;
+      input.checked = option.level === null;
+      input.disabled = option.disabled;
+      input.addEventListener(&#x27;change&#x27;, () =&gt; { choice.range = option.level; render(); });
+      label.append(input, option.label);
+      $(&#x27;ranges&#x27;).append(label);
+    }
+    $(&#x27;show-opposites&#x27;).addEventListener(&#x27;change&#x27;, event =&gt; { choice.opposite = event.target.checked; render(); });
+    render();
+  } else {
+    $(&#x27;match-status&#x27;).textContent = first.thin;
+  }
   $(&#x27;match-note&#x27;).textContent = &#x27;配對對象是 &#x27; + data.population + &#x27; 位虛構示範用戶。&#x27;
-    + (data.isDemo ? &#x27;「我」也是虛構示範資料。&#x27; : &#x27;你的標籤來自這份私人報告，只存在這個檔案裡。&#x27;) + &#x27;點一個人，看你們的連線圖。&#x27;;
-  const mine = $(&#x27;my-tags&#x27;);
-  for (const tag of data.me.tags) {
-    const item = make(&#x27;li&#x27;);
-    item.append(make(&#x27;small&#x27;, tag.dimension), tag.text);
-    mine.append(item);
-  }
-  if (!data.me.tags.length) mine.replaceWith(make(&#x27;p&#x27;, &#x27;資料還不夠產生標籤。&#x27;));
-  const weights = settings.weights, levels = settings.price_levels;
+    + (data.isDemo ? &#x27;「我」也是虛構示範資料。&#x27; : &#x27;你的品味特質來自這份私人報告，只存在這個檔案裡。&#x27;) + &#x27;點一個人，看你們的連線圖。&#x27;;
+  const signed = MatchFilter.signed;
   $(&#x27;method&#x27;).append(
-    make(&#x27;p&#x27;, &#x27;配對分數：品類、品牌、葷素紀錄、消費檔次依 &#x27; + [weights.category, weights.brand, weights.flavor, weights.price]
-      .map(weight =&gt; Math.round(weight * 100)).join(&#x27;：&#x27;) + &#x27; 加權，缺資料的面向不計分，權重分給其他面向。地區不算分。&#x27;),
-    make(&#x27;p&#x27;, &#x27;品類一定要能比較（各自至少 &#x27; + settings.category_min_items + &#x27; 筆已分類品項），另外至少再有品牌、葷素紀錄、消費檔次其中一項，才會配對。&#x27;),
-    make(&#x27;p&#x27;, &#x27;配對分數 &#x27; + pct(settings.thresholds.match) + &#x27; 以上直接推薦。沒有人達到時，可以選要找多遠（同一區、同縣市、同地區或不限），範圍內 &#x27;
-      + pct(settings.thresholds.nearby) + &#x27; 以上的人會被推薦；距離依你和對方的常消費地區判斷。&#x27;),
-    make(&#x27;p&#x27;, &#x27;消費檔次只看有正餐的發票：用正餐份數估計幾人份，再取每人每餐花費的中位數。&#x27; + levels[0].label + &#x27;未滿 &#x27; + levels[0].below
-      + &#x27; 元，&#x27; + levels[1].label + &#x27;未滿 &#x27; + levels[1].below + &#x27; 元，其餘為&#x27; + levels[2].label + &#x27;。合菜會讓每人金額偏低。&#x27;),
-    make(&#x27;p&#x27;, &#x27;「最像你」「最不像你」取自對方自己的標籤，常消費地區不當成理由。同一張發票的同一品項只算一次。&#x27;),
-    make(&#x27;p&#x27;, &#x27;此配對頁只用行政區與連鎖品牌，不顯示分店、日期或金額。&#x27;
+    make(&#x27;p&#x27;, &#x27;每個人的發票先整理成 17 項品味特質（18 格），例如「省錢 ↔ 享受」「清爽 ↔ 香甜」「運動投入」。兩端型特質減去 &#x27;
+      + data.population + &#x27; 位虛構用戶的平均，表示跟一般人比偏哪一邊。&#x27;),
+    make(&#x27;p&#x27;, &#x27;兩個人的相似度用餘弦相似度計算，範圍 &#x27; + signed(-1) + &#x27;～&#x27; + signed(1) + &#x27;，負數表示品味方向相反。特質都很淡的人，分數會往 0 收斂。&#x27;),
+    make(&#x27;p&#x27;, &#x27;相似度 &#x27; + signed(settings.min_score) + &#x27; 以上才列為合拍，最多 &#x27; + settings.top + &#x27; 位。打開「也看看跟你相反的人」，會另外列出 &#x27;
+      + signed(-settings.min_score) + &#x27; 以下的人。&#x27;),
+    make(&#x27;p&#x27;, &#x27;距離看生活圈：占你發票 20% 以上的行政區，最多兩個。同一區、同縣市、同地區依兩人生活圈最接近的一組判斷。&#x27;),
+    make(&#x27;p&#x27;, &#x27;「最像你」「最不像你」是對分數加分最多與扣分最多的特質。&#x27;),
+    make(&#x27;p&#x27;, &#x27;此配對頁只用行政區與特質分數，不顯示店名、品名、日期或金額。&#x27;
       + (data.isDemo ? &#x27;&#x27; : &#x27;這份私人報告的其他頁面仍有完整交易明細，分享整份檔案就會一併分享。&#x27;)
       + &#x27;配對對象皆為虛構示範用戶。&#x27;));
   if (pageHost) {
@@ -2838,7 +4476,7 @@ refreshComparisonMonths();
   return validate({schema,name:name.trim()||'我的偏好',demo:report.isDemo===true,months,counts});
  }
  function fromPair(pair){
-  if(!pair||!Number.isSafeInteger(pair.score)||pair.score<0||pair.score>100)throw new Error('配對資料不正確，請回配對清單重新選擇。');
+  if(!pair||!Number.isSafeInteger(pair.score)||pair.score<-100||pair.score>100)throw new Error('配對資料不正確，請回配對清單重新選擇。');
   return {score:pair.score,left:validate({schema,...pair.left}),right:validate({schema,...pair.right})};
  }
  function toURL(profile,base){

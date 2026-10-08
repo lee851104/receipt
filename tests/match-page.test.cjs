@@ -41,4 +41,6 @@ test('the opposite list is the five thrifty office workers', () => {
   assert.deepEqual(summary(shown.opposite.cards), [['省錢上班族 E', MINUS + '42%'], ['省錢上班族 B', MINUS + '41%'],
     ['省錢上班族 A', MINUS + '41%'], ['省錢上班族 D', MINUS + '41%'], ['省錢上班族 C', MINUS + '41%']]);
   assert.ok(shown.opposite.cards.every(card => card.alike === '都偏省錢' && card.unlike === '你偏香甜，對方偏清爽'));
+  // They pass 同一區 through their second home district, so the card shows that one.
+  assert.ok(shown.opposite.cards.every(card => card.place === '高雄市苓雅區'));
 });

@@ -29,3 +29,12 @@ def place_distance(a, b, regions):
 def distance(mine, theirs, regions):
     """The closest pair of home districts; 3 when either side has none."""
     return min((place_distance(a, b, regions) for a in mine for b in theirs), default=3)
+
+
+def closest_area(mine, theirs, regions):
+    """Their home district closest to mine, keeping their order on ties; their first one when I have none."""
+    if not theirs:
+        return None
+    if not mine:
+        return theirs[0]
+    return min(theirs, key=lambda area: min(place_distance(area, own, regions) for own in mine))

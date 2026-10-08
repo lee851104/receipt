@@ -8,7 +8,7 @@ from pathlib import Path
 from .invoices import build_month
 from .demo import build_demo
 from .personas import PERIOD, build_friends, build_personas
-from .places import areas_of, distance, load_regions
+from .places import areas_of, closest_area, distance, load_regions
 from .signals import category_counts
 from .similarity import compare, percent
 from .traits import build_vector, dated, load_context, population_vectors, relative, similarity_model
@@ -67,7 +67,7 @@ def build_matches(months, population, context, regions, is_demo):
     for person in population:
         areas = areas_of(person["rows"], context)
         people.append({"name": person["name"], "vector": vectors["relative"][person["name"]],
-                       "distance": distance(mine, areas, regions), "place": areas[0] if areas else None,
+                       "distance": distance(mine, areas, regions), "place": closest_area(mine, areas, regions),
                        "counts": category_counts(person["rows"])})
     return {
         "isDemo": is_demo, "population": len(people),

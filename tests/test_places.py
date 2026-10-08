@@ -3,7 +3,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from src.receipt.places import areas_of, distance, load_regions, place_distance
+from src.receipt.places import areas_of, closest_area, distance, load_regions, place_distance
 from src.receipt.traits import load_context
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -47,6 +47,14 @@ class DistanceTests(unittest.TestCase):
         self.assertEqual(place_distance("高雄市苓雅區", "臺北市信義區", REGIONS), 3)
         # Two cities missing from the table do not count as one region.
         self.assertEqual(place_distance("高雄市苓雅區", "臺北市信義區", {}), 3)
+
+    def test_cards_show_their_district_closest_to_mine(self):
+        mine = ["高雄市苓雅區", "高雄市新興區"]
+        self.assertEqual(closest_area(mine, ["高雄市前鎮區", "高雄市苓雅區"], REGIONS), "高雄市苓雅區")
+        # Equally far districts keep their own order.
+        self.assertEqual(closest_area(["臺北市信義區"], ["高雄市前鎮區", "高雄市苓雅區"], REGIONS), "高雄市前鎮區")
+        self.assertEqual(closest_area([], ["高雄市前鎮區", "高雄市苓雅區"], REGIONS), "高雄市前鎮區")
+        self.assertIsNone(closest_area(mine, [], REGIONS))
 
     def test_the_closest_pair_counts_and_no_home_is_far(self):
         self.assertEqual(distance(["臺北市信義區", "高雄市新興區"], ["高雄市苓雅區"], REGIONS), 1)

@@ -68,6 +68,7 @@ class StandaloneBuildTests(unittest.TestCase):
             self.assertIn('data-source="trait-similarity.js"', match_page)
             self.assertIn('data-source="match-filter.js"', match_page)
             self.assertIn("此配對頁只用行政區與特質分數", match_page)
+            self.assertIn("[hidden]{display:none!important}", match_page)
             payload = json.loads(re.search(r"const matchReportData = (.*?);\n</script>", match_page, re.S).group(1))
             self.assertTrue(payload["isDemo"])
             self.assertEqual(payload["population"], 40)

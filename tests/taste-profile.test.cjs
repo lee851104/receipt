@@ -30,10 +30,11 @@ test('one portion per item and invoice, as in the match tags',()=>{
  const p=taste.fromReport(report,'小明');
  assert.equal(p.counts[1],2);assert.equal(p.counts[0],1);
 });
-test('a match pair carries a whole-number score and two valid profiles',()=>{
+test('a match pair carries a whole-number score from -100 to 100 and two valid profiles',()=>{
  const side=(name,demo)=>({name,demo,months:['2026-03','2026-04'],counts:[3,2,0,0,0,0,0,0,0,0]});
- const pair=taste.fromPair({score:81,left:side('你',false),right:side('手搖學生 D',true)});
- assert.equal(pair.score,81);assert.equal(pair.left.name,'你');assert.equal(pair.right.schema,taste.schema);
- for(const invalid of [null,{score:81.5,left:side('你',false),right:side('D',true)},{score:101,left:side('你',false),right:side('D',true)},
-  {score:81,left:side('你',false),right:{...side('D',true),counts:[1]}}])assert.throws(()=>taste.fromPair(invalid));
+ const pair=taste.fromPair({score:62,left:side('你',false),right:side('手搖學生 A',true)});
+ assert.equal(pair.score,62);assert.equal(pair.left.name,'你');assert.equal(pair.right.schema,taste.schema);
+ for(const score of [-100,-42,0,100])assert.equal(taste.fromPair({score,left:side('你',false),right:side('A',true)}).score,score);
+ for(const invalid of [null,{score:61.5,left:side('你',false),right:side('A',true)},{score:101,left:side('你',false),right:side('A',true)},
+  {score:-101,left:side('你',false),right:side('A',true)},{score:62,left:side('你',false),right:{...side('A',true),counts:[1]}}])assert.throws(()=>taste.fromPair(invalid));
 });

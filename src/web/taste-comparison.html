@@ -88,7 +88,7 @@ function prepareMode(){
  if(categoryMode&&['dumplings','sweetness'].includes(category)){category='all';$('category').value='all';}
  $('category-method').hidden=!categoryMode;$('demo-method').hidden=categoryMode;
  document.querySelector('.subtitle').textContent=categoryMode?'每個點是一類消費偏好。看看你們常買的類型，有多少交集。':'每個點是一種消費品項。看看哪些選擇，讓你們有了交集。';
- document.querySelector('.overall-label').textContent=pair?'配對分數':categoryMode?'消費類型相似度':'綜合品味相似指數';
+ document.querySelector('.overall-label').textContent=pair?'品味相似度':categoryMode?'消費類型相似度':'綜合品味相似指數';
  document.querySelector('.legend-item').lastChild.textContent=categoryMode?'點越大，品項筆數越多':'點越大，消費次數越多';
  document.querySelector('.negative-label').hidden=categoryMode;
  document.querySelector('.legend-explain').textContent=categoryMode?'目前比較的是消費類型，還不能辨認甜度或餡料。只有相同類別會連線；兩人在該類的消費占比越接近，線越粗。':'同款也能選得不同：可篩選「同店不同餡」或「半糖與無糖」。餡料與甜度各自比較，差異不代表兩人整體品味相反。';
@@ -183,7 +183,7 @@ function draw(){
  prepareMode();
  const mobile=matchMedia('(max-width:640px)').matches,svg=$('network'),indices=items.map((_,i)=>i).filter(i=>category==='all'||(category==='dumplings'?items[i].dumpling:category==='sweetness'?items[i].sweetness:items[i].c===category)).filter(i=>!loadedSides().length||loadedSides().some(side=>profiles[keyFor(side)].counts[i]>0));svg.replaceChildren();const chartWidth=mobile?600:1200,chartHeight=mobile&&loadedSides().length&&indices.length>4?160+indices.length*76:570;svg.setAttribute('viewBox',`0 0 ${chartWidth} ${chartHeight}`);nodes=[];edges=[];selected=null;
  const overall=similarity(items.map((_,i)=>i));$('overall-score').textContent=overall===null?'—':indexPercent(overall);$('score-unit').hidden=overall===null;$('overall-score').parentElement.classList.toggle('waiting',overall===null);$('overall-note').textContent=hasBoth()?(categoryMode?'全類別評估 · 分類偏好摘要':'全類別評估 · 虛構示範'):loadedSides().length?'等待另一人匯入':'先匯入偏好資料';
- if(pair){$('overall-score').textContent=pair.score;$('overall-note').textContent='消費類型相似度 '+indexPercent(overall)+'%（下圖）';}
+ if(pair){$('overall-score').textContent=(pair.score>0?'+':pair.score<0?String.fromCharCode(0x2212):'')+Math.abs(pair.score);$('overall-note').textContent='消費類型相似度 '+indexPercent(overall)+'%（下圖）';}
  const scopeScore=similarity(indices),count=loadedSides().length;
  $('scope').textContent=(category==='all'?'全類別':category==='dumplings'?'同店不同餡':category==='sweetness'?'半糖與無糖':category)+' · '+(!count?'尚未匯入資料':!indices.length?'目前無資料':loadedSides().reduce((n,side)=>n+indices.filter(i=>profiles[keyFor(side)].counts[i]>0).length,0)+(categoryMode?' 個類別點 · ':' 個品項點 · ')+(scopeScore===null?(hasBoth()?'此範圍有一側無資料':'尚待另一人匯入'):categoryMode&&category!=='all'?'綜合分數仍計算全部類別':'範圍相似 '+indexPercent(scopeScore)+'%'));
  renderSummary(overall);

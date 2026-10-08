@@ -23,7 +23,7 @@
   return validate({schema,name:name.trim()||'我的偏好',demo:report.isDemo===true,months,counts});
  }
  function fromPair(pair){
-  if(!pair||!Number.isSafeInteger(pair.score)||pair.score<0||pair.score>100)throw new Error('配對資料不正確，請回配對清單重新選擇。');
+  if(!pair||!Number.isSafeInteger(pair.score)||pair.score<-100||pair.score>100)throw new Error('配對資料不正確，請回配對清單重新選擇。');
   return {score:pair.score,left:validate({schema,...pair.left}),right:validate({schema,...pair.right})};
  }
  function toURL(profile,base){

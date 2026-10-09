@@ -108,33 +108,3 @@ def similarity_model(settings):
     return {"cells": [{"id": trait["id"], "kind": trait["kind"], "weight": trait["weight"]} for trait in settings["traits"]],
             "shrink": settings["similarity"]["shrink"],
             "min_shared_two_sided": settings["similarity"]["min_shared_two_sided"]}
-
-
-def typical(vectors, settings):
-    """The average person: the mean of each two-sided trait over a reference population; level traits stay at 0."""
-    centers = []
-    for index, trait in enumerate(settings["traits"]):
-        values = [vector[index] for vector in vectors if vector is not None and vector[index] is not None]
-        centers.append(sum(values) / len(values) if trait["kind"] == "two_sided" and values else 0.0)
-    return centers
-
-
-def relative(vector, centers):
-    """Each trait measured from the average person, kept within -1 and +1."""
-    if vector is None:
-        return None
-    return [None if value is None else max(-1.0, min(1.0, value - center)) for value, center in zip(vector, centers)]
-
-
-def population_vectors(people, period, context, extra=()):
-    """The average person from `people`, and everyone's raw and relative vectors, people first and then `extra`.
-
-    Names must be unique, so no one can silently replace someone else.
-    """
-    everyone = [*people, *extra]
-    names = [person["name"] for person in everyone]
-    if len(set(names)) != len(names):
-        raise ValueError("Every person needs a unique name")
-    raw = {person["name"]: build_vector(person["rows"], period, context) for person in everyone}
-    centers = typical([raw[person["name"]] for person in people], context["traits"])
-    return {"centers": centers, "raw": raw, "relative": {name: relative(vector, centers) for name, vector in raw.items()}}

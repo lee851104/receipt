@@ -14,9 +14,14 @@
       .filter(entry => entry.comparable);
   }
 
-  // People past the threshold on one side, then within the chosen distance; strongest first, ties by name.
+  // The bar on one side, as the whole percentage the page prints: +30% for matches, −10% for opposites.
+  const bar = (settings, opposite) => (opposite ? -settings.opposite_score : settings.min_score);
+
+  // People past the bar on one side, then within the chosen distance; strongest first, ties by name.
+  // The bar is checked on the printed whole percentage, so a card reading +30% is always on the list.
   function pick(entries, settings, opposite, range) {
-    const eligible = entries.filter(entry => (opposite ? entry.score <= -settings.min_score : entry.score >= settings.min_score));
+    const line = similarity.percent(bar(settings, opposite));
+    const eligible = entries.filter(entry => (opposite ? similarity.percent(entry.score) <= line : similarity.percent(entry.score) >= line));
     const within = eligible.filter(entry => range === null || entry.person.distance <= range)
       .sort((a, b) => (opposite ? a.score - b.score : b.score - a.score) || byName(a.person.name, b.person.name));
     return { eligible: eligible.length, within: within.length, shown: within.slice(0, settings.top) };
@@ -51,7 +56,7 @@
     return { alike: describe(best), unlike: describe(worst) };
   }
 
-  // My three most distinctive two-sided traits (at least 0.2 from the average) and the habits on record.
+  // My three strongest two-sided leanings (at least 0.2 either way) and the habits on record.
   function mine(vector, traits) {
     if (!vector) return { lean: '資料還不夠，看不出品味特質', habits: '' };
     const leaning = traits.map((trait, index) => ({ trait, index, value: vector[index] }))
@@ -59,12 +64,12 @@
       .sort((a, b) => Math.abs(b.value) - Math.abs(a.value) || a.index - b.index)
       .slice(0, 3).map(({ trait, value }) => '偏' + end(trait, value));
     const habits = traits.filter((trait, index) => trait.kind === 'level' && vector[index] > 0).map(trait => trait.habit);
-    if (!leaning.length && !habits.length) return { lean: '跟一般人差不多', habits: '' };
-    return { lean: leaning.length ? '跟一般人比：' + leaning.join('・') : '', habits: habits.length ? words('也有', habits.join('、'), '的紀錄') : '' };
+    if (!leaning.length && !habits.length) return { lean: '品味特質還不明顯', habits: '' };
+    return { lean: leaning.join('・'), habits: habits.length ? words('也有', habits.join('、'), '的紀錄') : '' };
   }
 
   function status(result, settings, opposite) {
-    const line = signed(opposite ? -settings.min_score : settings.min_score) + (opposite ? ' 以下' : ' 以上');
+    const line = signed(bar(settings, opposite)) + (opposite ? ' 以下' : ' 以上');
     if (!result.eligible) return opposite ? '目前沒有和你明顯相反的人（' + line + '）。' : '目前沒有品味夠相似的人（' + line + '）。';
     if (!result.within) return '這個距離內沒有品味相似度 ' + line + '的人，試試放寬距離。';
     return result.within + ' 位品味相似度 ' + line + (result.within > settings.top ? '，顯示前 ' + settings.top + ' 位' : '') + '。';

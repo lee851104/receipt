@@ -72,7 +72,7 @@ class StandaloneBuildTests(unittest.TestCase):
             payload = json.loads(re.search(r"const matchReportData = (.*?);\n</script>", match_page, re.S).group(1))
             self.assertTrue(payload["isDemo"])
             self.assertEqual(payload["population"], 40)
-            self.assertEqual(payload["settings"], {"min_score": 0.3, "top": 5, "min_items": 20})
+            self.assertEqual(payload["settings"], {"min_score": 0.3, "opposite_score": 0.1, "top": 5, "min_items": 20})
             self.assertEqual(payload["personaMonths"], ["2026-03", "2026-04"])
             self.assertEqual(len(payload["model"]["cells"]), 18)
             self.assertEqual([trait["id"] for trait in payload["traits"]], [cell["id"] for cell in payload["model"]["cells"]])

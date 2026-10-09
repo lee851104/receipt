@@ -7,7 +7,7 @@ from src.receipt.demo import build_demo
 from src.receipt.personas import PERIOD, build_friends, build_personas
 from src.receipt.signals import measure
 from src.receipt.similarity import compare
-from src.receipt.traits import build_vector, dated, load_context, population_vectors, relative, similarity_model
+from src.receipt.traits import dated, explain, load_context, population, similarity_model
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTEXT = load_context(ROOT)
@@ -31,10 +31,10 @@ class PersonaTests(unittest.TestCase):
     def setUpClass(cls):
         cls.people = build_personas(CONTEXT["calendar"])
         cls.friends = build_friends(CONTEXT["calendar"])
-        vectors = population_vectors(cls.people, list(PERIOD), CONTEXT, extra=cls.friends)
-        cls.raw, cls.vectors = vectors["raw"], vectors["relative"]
+        tastes = population([*cls.people, *cls.friends], list(PERIOD), CONTEXT)
+        cls.vectors = {name: taste["vector"] for name, taste in tastes.items()}
         rows, period = dated(build_demo(CATALOG))
-        cls.me = relative(build_vector(rows, period, CONTEXT), vectors["centers"])
+        cls.me = explain(rows, period, CONTEXT)["vector"]
         cls.types = {}
         for person in cls.people:
             cls.types.setdefault(person["type"], []).append(person["name"])
@@ -50,13 +50,13 @@ class PersonaTests(unittest.TestCase):
         self.assertTrue(all(row["merchant"].startswith("示範") and row["name"].startswith("示範") for row in rows))
         self.assertTrue(all((row["date"].year, row["date"].month) in PERIOD and row["day"] == row["date"].day for row in rows))
         self.assertEqual([friend["name"] for friend in self.friends], ["小安", "小宇", "小林"])
-        self.assertTrue(all(self.raw[name] is not None for name in self.raw))
+        self.assertTrue(all(vector is not None for vector in self.vectors.values()))
 
     def test_each_type_shares_its_dominant_traits(self):
         for kind, limits in DOMINANT.items():
             for name in self.types[kind]:
                 for trait, (low, high) in limits.items():
-                    value = self.raw[name][INDEX[trait]]
+                    value = self.vectors[name][INDEX[trait]]
                     with self.subTest(name=name, trait=trait):
                         if low is not None:
                             self.assertGreaterEqual(value, low)
@@ -77,18 +77,18 @@ class PersonaTests(unittest.TestCase):
     def test_family_cooks_show_the_pet_they_keep(self):
         cooks = self.types["家庭下廚"]
         for name in cooks[:3]:
-            self.assertGreaterEqual(self.raw[name][INDEX["pets_dog"]], 0.5, name)
+            self.assertGreaterEqual(self.vectors[name][INDEX["pets_dog"]], 0.5, name)
         for name in cooks[3:]:
-            self.assertGreaterEqual(self.raw[name][INDEX["pets_cat"]], 0.5, name)
+            self.assertGreaterEqual(self.vectors[name][INDEX["pets_cat"]], 0.5, name)
 
-    def test_clearance_shoppers_and_rice_ball_eaters_both_live_at_the_convenience_store_but_differ(self):
+    def test_clearance_shoppers_and_rice_ball_eaters_both_live_at_the_convenience_store_but_do_not_match(self):
         saving, hurried = self.types["省錢上班族"], self.types["忙碌工程師"]
         for name in saving + hurried:
             person = next(person for person in self.people if person["name"] == name)
             self.assertGreaterEqual(measure(person["rows"], list(PERIOD), CONTEXT)["signals"]["store_meal_share"], 0.8)
         for name in saving[:3]:
             for other in hurried:
-                self.assertLess(self.score(name, other), 0, (name, other))
+                self.assertLess(self.score(name, other), CONTEXT["traits"]["match"]["min_score"], (name, other))
         for name in saving:
             best_teammate = max(self.score(name, other) for other in saving if other != name)
             self.assertLess(max(self.score(name, other) for other in hurried), best_teammate, name)
@@ -97,7 +97,7 @@ class PersonaTests(unittest.TestCase):
         scored = sorted((compare(self.me, self.vectors[person["name"]], MODEL)["score"], person["type"]) for person in self.people)
         self.assertGreaterEqual(scored[-1][0], 0.5)
         self.assertEqual(scored[-1][1], "手搖學生")
-        self.assertLessEqual(scored[0][0], -0.3)
+        self.assertLessEqual(scored[0][0], -CONTEXT["traits"]["match"]["opposite_score"])
         self.assertEqual(scored[0][1], "省錢上班族")
 
     def test_friends_an_and_yu_are_alike_except_for_sweetness(self):

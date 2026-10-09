@@ -133,12 +133,14 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
   $('match-note').textContent = '配對對象是 ' + data.population + ' 位虛構示範用戶。'
     + (data.isDemo ? '「我」也是虛構示範資料。' : '你的品味特質來自這份私人報告，只存在這個檔案裡。') + '點一個人，看你們的連線圖。';
   const signed = TraitSimilarity.signed;
+  // Traits that share a group, such as cats and dogs, count as one.
+  const traitCount = new Set(data.traits.map(trait => trait.group ?? trait.id)).size;
   $('method').append(
-    make('p', '每個人的發票先整理成 17 項品味特質（18 格），例如「省錢 ↔ 享受」「清爽 ↔ 香甜」「運動投入」。兩端型特質減去 '
-      + data.population + ' 位虛構用戶的平均，表示跟一般人比偏哪一邊。'),
+    make('p', '每個人的發票先整理成 ' + traitCount + ' 項品味特質（' + data.traits.length
+      + ' 格），例如「省錢 ↔ 享受」「低甜度 ↔ 高甜度」「運動投入」。兩端型特質看偏向哪一端，程度型特質看有多投入。'),
     make('p', '兩個人的相似度用餘弦相似度計算，範圍 ' + signed(-1) + '～' + signed(1) + '，負數表示品味方向相反。特質都很淡的人，分數會往 0 收斂。'),
     make('p', '相似度 ' + signed(settings.min_score) + ' 以上才列為合拍，最多 ' + settings.top + ' 位。打開「也看看跟你相反的人」，會另外列出 '
-      + signed(-settings.min_score) + ' 以下的人。'),
+      + signed(-settings.opposite_score) + ' 以下的人。'),
     make('p', '距離看生活圈：占你發票 20% 以上的行政區，最多兩個。同一區、同縣市、同地區依兩人生活圈最接近的一組判斷。'),
     make('p', '「最像你」「最不像你」是對分數加分最多與扣分最多的特質。'),
     make('p', '此配對頁只用行政區與特質分數，不顯示店名、品名、日期或金額。'

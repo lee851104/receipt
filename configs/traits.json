@@ -1,7 +1,7 @@
 {
   "min_items": 20,
   "similarity": {"shrink": 0.25, "min_shared_two_sided": 5},
-  "match": {"min_score": 0.3, "top": 5},
+  "match": {"min_score": 0.3, "opposite_score": 0.1, "top": 5},
   "traits": [
     {"id": "spend", "name": "省錢 ↔ 享受", "ends": ["省錢", "享受"], "kind": "two_sided", "weight": 1,
      "requires": {"food_items": 10},
@@ -30,7 +30,7 @@
        {"id": "ready_meal_share", "weight": 0.3, "toward": -1, "full": 0.6},
        {"id": "kitchen_per_month", "weight": 0.2, "toward": 1, "full": 2}
      ]},
-    {"id": "sweet", "name": "清爽 ↔ 香甜", "ends": ["清爽", "香甜"], "kind": "two_sided", "weight": 1,
+    {"id": "sweet", "name": "低甜度 ↔ 高甜度", "ends": ["低甜度", "高甜度"], "kind": "two_sided", "weight": 1,
      "requires": {"known_sugar_drinks": 3},
      "signals": [
        {"id": "sugar_mean", "weight": 0.8, "scale": [0, 0.3, 1]},

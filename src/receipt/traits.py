@@ -41,33 +41,66 @@ def reaches(signal, direction):
     return "scale" in signal or signal["toward"] == direction
 
 
+def trait_parts(trait, measured):
+    """A trait and how far each of its signals pushed it, in the trait's signal order.
+
+    Signals that cannot be measured push nothing (None) and hand their weight to the rest; a trait
+    without enough data is None, and so is every push.
+    """
+    signals, counts, constants = measured["signals"], measured["counts"], measured["constants"]
+    nothing = (None, [None] * len(trait["signals"]))
+    if any(counts[name] < minimum for name, minimum in trait.get("requires", {}).items()):
+        return nothing
+    raw = [None if signals[signal["id"]] is None else signal["weight"] * push(signals[signal["id"]], signal, constants)
+           for signal in trait["signals"]]
+    available = [signal for signal, value in zip(trait["signals"], raw) if value is not None]
+    if not available:
+        return nothing
+    total = sum(value for value in raw if value is not None)
+    if trait["kind"] == "level":
+        scale = sum(signal["weight"] for signal in available)
+    elif total == 0:
+        return 0.0, raw
+    else:
+        # Divide by what the available signals could reach on this side, so both ends stay reachable.
+        direction = 1 if total > 0 else -1
+        scale = sum(signal["weight"] for signal in available if reaches(signal, direction))
+    return total / scale, [None if value is None else value / scale for value in raw]
+
+
 def trait_value(trait, measured):
     """A trait from its signals; signals that cannot be measured hand their weight to the rest."""
-    signals, counts, constants = measured["signals"], measured["counts"], measured["constants"]
-    if any(counts[name] < minimum for name, minimum in trait.get("requires", {}).items()):
-        return None
-    parts = [(signal, signals[signal["id"]]) for signal in trait["signals"] if signals[signal["id"]] is not None]
-    if not parts:
-        return None
-    total = sum(signal["weight"] * push(value, signal, constants) for signal, value in parts)
-    if trait["kind"] == "level":
-        return total / sum(signal["weight"] for signal, _ in parts)
-    if total == 0:
-        return 0.0
-    # Divide by what the available signals could reach on this side, so both ends stay reachable.
-    direction = 1 if total > 0 else -1
-    return total / sum(signal["weight"] for signal, _ in parts if reaches(signal, direction))
+    return trait_parts(trait, measured)[0]
 
 
-def build_vector(rows, period, context):
-    """One value per trait (None where data is thin), or None when the person has too little data at all."""
+def explain(rows, period, context):
+    """One person's taste: the vector, each signal's push on each trait, and the measured signals.
+
+    None when the person has too little data at all.
+    """
     if not period:
         return None
     settings = context["traits"]
     measured = measure(rows, period, context)
     if measured["counts"]["items"] < settings["min_items"]:
         return None
-    return [trait_value(trait, measured) for trait in settings["traits"]]
+    parts = [trait_parts(trait, measured) for trait in settings["traits"]]
+    return {"vector": [value for value, _ in parts], "pushes": [pushes for _, pushes in parts],
+            "signals": measured["signals"]}
+
+
+def build_vector(rows, period, context):
+    """One value per trait (None where data is thin), or None when the person has too little data at all."""
+    explained = explain(rows, period, context)
+    return None if explained is None else explained["vector"]
+
+
+def population(people, period, context):
+    """Everyone's explained taste by name, None for those with too little data; names must be unique."""
+    names = [person["name"] for person in people]
+    if len(set(names)) != len(names):
+        raise ValueError("Every person needs a unique name")
+    return {person["name"]: explain(person["rows"], period, context) for person in people}
 
 
 def similarity_model(settings):

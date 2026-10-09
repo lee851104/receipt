@@ -1,10 +1,14 @@
 """Taste traits on small fictional purchase sets, one behaviour at a time."""
+import json
 import unittest
 from datetime import date
 from pathlib import Path
 
+from src.receipt.demo import build_demo
+from src.receipt.personas import build_friends, build_personas
 from src.receipt.signals import calendar_days, category_counts
-from src.receipt.traits import between, build_vector, load_context, population_vectors, relative, trait_value, typical
+from src.receipt.traits import (between, build_vector, dated, explain, load_context, population, population_vectors, relative,
+                                trait_parts, trait_value, typical)
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTEXT = load_context(ROOT)
@@ -173,6 +177,60 @@ class TraitTests(unittest.TestCase):
         rows = bought(lunches(), (WORKDAYS[20:22], "測試精品手沖", 1, 180, "測試咖啡館", HOME))
         rows[-1]["quantity"] = 0
         self.assertIsNotNone(build_vector(rows, PERIOD, CONTEXT))
+
+
+class ExplainTests(unittest.TestCase):
+    def test_each_trait_is_the_sum_of_its_signal_pushes(self):
+        catalog = json.loads((ROOT / "configs" / "item-categories.json").read_text(encoding="utf-8"))
+        rows, period = dated(build_demo(catalog))
+        people = [*build_personas(CONTEXT["calendar"]), *build_friends(CONTEXT["calendar"]), {"name": "我", "rows": rows}]
+        for name, person in population(people, period, CONTEXT).items():
+            for trait, value, pushes in zip(TRAITS, person["vector"], person["pushes"]):
+                with self.subTest(name=name, trait=trait["id"]):
+                    self.assertEqual(len(pushes), len(trait["signals"]))
+                    if value is None:
+                        self.assertEqual(pushes, [None] * len(pushes))
+                    else:
+                        self.assertAlmostEqual(sum(push for push in pushes if push is not None), value, delta=1e-9)
+
+    def test_a_thin_trait_pushes_nothing_and_an_unmeasured_signal_pushes_none(self):
+        person = explain(bought(lunches()), PERIOD, CONTEXT)
+        self.assertIsNone(person["vector"][INDEX["holiday"]])
+        self.assertEqual(person["pushes"][INDEX["holiday"]], [None])
+        # Twenty lunches and no drinks: the share of premium drinks cannot be measured.
+        self.assertIsNone(person["signals"]["premium_drink_share"])
+        self.assertEqual(person["pushes"][INDEX["spend"]], [-0.625, 0.0, None])
+        self.assertEqual(set(person["signals"]), {signal["id"] for trait in TRAITS for signal in trait["signals"]})
+
+    def test_one_signal_pushes_two_traits(self):
+        person = explain(bought((WORKDAYS[:24], "測試鮪魚飯糰", 0, 45, "示範超商", HOME)), PERIOD, CONTEXT)
+        for trait_id, sign in (("meals", -1), ("motive", 1)):
+            ids = [signal["id"] for signal in TRAITS[INDEX[trait_id]]["signals"]]
+            self.assertGreater(sign * person["pushes"][INDEX[trait_id]][ids.index("weekday_quick_share")], 0, trait_id)
+
+    def test_level_traits_are_only_pushed_up(self):
+        person = explain(bought(lunches(), (WORKDAYS[20:24], "測試貓飼料", 8, 400, "測試寵物店", HOME)), PERIOD, CONTEXT)
+        for trait, pushes in zip(TRAITS, person["pushes"]):
+            if trait["kind"] == "level":
+                self.assertTrue(all(push is None or push >= 0 for push in pushes), trait["id"])
+        self.assertGreater(person["vector"][INDEX["pets_cat"]], 0)
+
+    def test_pushes_that_cancel_out_leave_the_trait_at_zero(self):
+        motive = TRAITS[INDEX["motive"]]
+        measured = {"counts": {"store_food_items": 8}, "constants": {},
+                    "signals": {"store_clearance_share": 0.2, "weekday_quick_share": 0.3}}
+        self.assertEqual(trait_parts(motive, measured), (0.0, [-0.25, 0.25]))
+
+    def test_too_little_data_explains_nothing_and_names_must_be_unique(self):
+        self.assertIsNone(explain([], [], CONTEXT))
+        self.assertIsNone(explain(bought(lunches(19)), PERIOD, CONTEXT))
+        people = [{"name": "測試甲", "rows": bought(lunches())}, {"name": "測試乙", "rows": bought(lunches(19))}]
+        explained = population(people, PERIOD, CONTEXT)
+        self.assertEqual(list(explained), ["測試甲", "測試乙"])
+        self.assertEqual(explained["測試甲"]["vector"], build_vector(people[0]["rows"], PERIOD, CONTEXT))
+        self.assertIsNone(explained["測試乙"])
+        with self.assertRaises(ValueError):
+            population([*people, {"name": "測試甲", "rows": []}], PERIOD, CONTEXT)
 
 
 class CategoryCountTests(unittest.TestCase):

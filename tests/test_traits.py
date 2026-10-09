@@ -59,6 +59,29 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(CONTEXT["calendar"]["holidays"], ["2026-04-03", "2026-04-06"])
 
 
+class WordingTests(unittest.TestCase):
+    def test_every_signal_has_a_label_and_a_unit_and_every_trait_its_lines(self):
+        units = {"share", "sugar", "money", "money_month", "times_month", "items_month", "kinds"}
+        seen = {}
+        for trait in TRAITS:
+            for signal in trait["signals"]:
+                with self.subTest(signal=signal["id"]):
+                    self.assertIn(signal["unit"], units)
+                    self.assertLessEqual(len(signal["label"]), 6)
+                    # A signal shared by two traits reads the same in both.
+                    self.assertEqual(seen.setdefault(signal["id"], (signal["label"], signal["unit"])), (signal["label"], signal["unit"]))
+            with self.subTest(trait=trait["id"]):
+                if trait["kind"] == "two_sided":
+                    self.assertTrue(trait["short"])
+                    self.assertEqual(len(trait["lines"]["both"]), 2)
+                    self.assertTrue(trait["lines"]["split"])
+                else:
+                    self.assertIsInstance(trait["lines"]["both"], str)
+        labels = [label for label, _ in seen.values()]
+        self.assertEqual(len(labels), len(set(labels)))
+        self.assertEqual(CONTEXT["traits"]["readout"], {"no_alike": "共同話題還在找。", "no_unlike": "難得這麼合拍。"})
+
+
 class CalendarTests(unittest.TestCase):
     def test_spring_2026_long_weekend_and_days_off(self):
         self.assertEqual(LONG_DAYS, [date(2026, 4, 3), date(2026, 4, 4), date(2026, 4, 5), date(2026, 4, 6)])

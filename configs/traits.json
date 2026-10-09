@@ -2,117 +2,136 @@
   "min_items": 20,
   "similarity": {"shrink": 0.25, "min_shared_two_sided": 5},
   "match": {"min_score": 0.3, "opposite_score": 0.1, "top": 5},
+  "readout": {"no_alike": "共同話題還在找。", "no_unlike": "難得這麼合拍。"},
   "traits": [
-    {"id": "spend", "name": "省錢 ↔ 享受", "ends": ["省錢", "享受"], "kind": "two_sided", "weight": 1,
+    {"id": "spend", "name": "省錢 ↔ 享受", "ends": ["省錢", "享受"], "short": "花費", "kind": "two_sided", "weight": 1,
      "requires": {"food_items": 10},
+     "lines": {"both": ["精打細算，錢包同盟。", "對自己好，從不打折。"], "split": "一個看價錢，一個看心情。"},
      "signals": [
-       {"id": "meal_cost", "weight": 0.5, "scale": [100, 200, 300]},
-       {"id": "clearance_share", "weight": 0.3, "toward": -1, "full": 0.3},
-       {"id": "premium_drink_share", "weight": 0.2, "toward": 1, "full": 0.5}
+       {"id": "meal_cost", "weight": 0.5, "scale": [100, 200, 300], "label": "每餐花費", "unit": "money"},
+       {"id": "clearance_share", "weight": 0.3, "toward": -1, "full": 0.3, "label": "即期食品", "unit": "share"},
+       {"id": "premium_drink_share", "weight": 0.2, "toward": 1, "full": 0.5, "label": "百元飲料", "unit": "share"}
      ]},
-    {"id": "meals", "name": "快速解決 ↔ 好好吃飯", "ends": ["快速解決", "好好吃飯"], "kind": "two_sided", "weight": 1,
+    {"id": "meals", "name": "快速解決 ↔ 好好吃飯", "ends": ["快速解決", "好好吃飯"], "short": "吃飯", "kind": "two_sided", "weight": 1,
      "requires": {"meal_items": 8},
+     "lines": {"both": ["五分鐘吃完，效率一百分。", "吃飯這件事，從不將就。"], "split": "一個在趕路，一個在等上菜。"},
      "signals": [
-       {"id": "store_meal_share", "weight": 0.4, "toward": -1, "full": 0.8},
-       {"id": "weekday_quick_share", "weight": 0.3, "toward": -1, "full": 0.6},
-       {"id": "shop_meal_share", "weight": 0.3, "toward": 1, "full": 0.8}
+       {"id": "store_meal_share", "weight": 0.4, "toward": -1, "full": 0.8, "label": "超商正餐", "unit": "share"},
+       {"id": "weekday_quick_share", "weight": 0.3, "toward": -1, "full": 0.6, "label": "平日固定速食", "unit": "share"},
+       {"id": "shop_meal_share", "weight": 0.3, "toward": 1, "full": 0.8, "label": "餐廳正餐", "unit": "share"}
      ]},
-    {"id": "motive", "name": "超商：省錢 ↔ 省時", "ends": ["為了省錢", "為了省時"], "kind": "two_sided", "weight": 1,
+    {"id": "motive", "name": "超商：省錢 ↔ 省時", "ends": ["為了省錢", "為了省時"], "short": "超商動機", "kind": "two_sided", "weight": 1,
      "requires": {"store_food_items": 8},
+     "lines": {"both": ["即期區的老朋友。", "超商是續命補給站。"], "split": "同一家超商，不同的理由。"},
      "signals": [
-       {"id": "store_clearance_share", "weight": 0.5, "toward": -1, "full": 0.4},
-       {"id": "weekday_quick_share", "weight": 0.5, "toward": 1, "full": 0.6}
+       {"id": "store_clearance_share", "weight": 0.5, "toward": -1, "full": 0.4, "label": "超商即期", "unit": "share"},
+       {"id": "weekday_quick_share", "weight": 0.5, "toward": 1, "full": 0.6, "label": "平日固定速食", "unit": "share"}
      ]},
-    {"id": "cooking", "name": "外食 ↔ 自己煮", "ends": ["外食", "自己煮"], "kind": "two_sided", "weight": 1,
+    {"id": "cooking", "name": "外食 ↔ 自己煮", "ends": ["外食", "自己煮"], "short": "下廚", "kind": "two_sided", "weight": 1,
      "requires": {"food_items": 10},
+     "lines": {"both": ["廚房是裝飾，外食是日常。", "冰箱滿滿，鍋鏟不閒。"], "split": "一個在家開伙，一個在外覓食。"},
      "signals": [
-       {"id": "fresh_share", "weight": 0.5, "toward": 1, "full": 0.4},
-       {"id": "ready_meal_share", "weight": 0.3, "toward": -1, "full": 0.6},
-       {"id": "kitchen_per_month", "weight": 0.2, "toward": 1, "full": 2}
+       {"id": "fresh_share", "weight": 0.5, "toward": 1, "full": 0.4, "label": "生鮮食材", "unit": "share"},
+       {"id": "ready_meal_share", "weight": 0.3, "toward": -1, "full": 0.6, "label": "現成餐點", "unit": "share"},
+       {"id": "kitchen_per_month", "weight": 0.2, "toward": 1, "full": 2, "label": "廚房用品", "unit": "items_month"}
      ]},
-    {"id": "sweet", "name": "低甜度 ↔ 高甜度", "ends": ["低甜度", "高甜度"], "kind": "two_sided", "weight": 1,
+    {"id": "sweet", "name": "低甜度 ↔ 高甜度", "ends": ["低甜度", "高甜度"], "short": "甜度", "kind": "two_sided", "weight": 1,
      "requires": {"known_sugar_drinks": 3},
+     "lines": {"both": ["無糖派，清爽到底。", "糖分補給，雙人同行。"], "split": "一個加糖，一個讓糖罐放假。"},
      "signals": [
-       {"id": "sugar_mean", "weight": 0.8, "scale": [0, 0.3, 1]},
-       {"id": "dessert_share", "weight": 0.2, "toward": 1, "full": 0.3}
+       {"id": "sugar_mean", "weight": 0.8, "scale": [0, 0.3, 1], "label": "飲料甜度", "unit": "sugar"},
+       {"id": "dessert_share", "weight": 0.2, "toward": 1, "full": 0.3, "label": "甜點", "unit": "share"}
      ]},
-    {"id": "routine", "name": "固定習慣 ↔ 喜歡嘗鮮", "ends": ["固定習慣", "喜歡嘗鮮"], "kind": "two_sided", "weight": 1,
+    {"id": "routine", "name": "固定習慣 ↔ 喜歡嘗鮮", "ends": ["固定習慣", "喜歡嘗鮮"], "short": "新鮮感", "kind": "two_sided", "weight": 1,
      "requires": {"items": 20},
+     "lines": {"both": ["老地方、老樣子，最安心。", "新店開幕，都想搶第一。"], "split": "一個點老樣子，一個點新口味。"},
      "signals": [
-       {"id": "repeat_rate", "weight": 0.4, "scale": [0.7, 0.45, 0.2]},
-       {"id": "shop_focus", "weight": 0.3, "scale": [0.8, 0.55, 0.3]},
-       {"id": "new_shop_share", "weight": 0.3, "scale": [0.2, 0.4, 0.6]}
+       {"id": "repeat_rate", "weight": 0.4, "scale": [0.7, 0.45, 0.2], "label": "重複購買", "unit": "share"},
+       {"id": "shop_focus", "weight": 0.3, "scale": [0.8, 0.55, 0.3], "label": "常去店家", "unit": "share"},
+       {"id": "new_shop_share", "weight": 0.3, "scale": [0.2, 0.4, 0.6], "label": "新店家", "unit": "share"}
      ]},
     {"id": "sport", "name": "運動投入", "habit": "運動", "kind": "level", "weight": 1,
+     "lines": {"both": "流汗也有伴。"},
      "signals": [
-       {"id": "sport_visits", "weight": 0.6, "toward": 1, "full": 8},
-       {"id": "sport_supplies", "weight": 0.25, "toward": 1, "full": 4},
-       {"id": "sport_gear", "weight": 0.15, "toward": 1, "full": 1}
+       {"id": "sport_visits", "weight": 0.6, "toward": 1, "full": 8, "label": "運動消費", "unit": "times_month"},
+       {"id": "sport_supplies", "weight": 0.25, "toward": 1, "full": 4, "label": "運動補給", "unit": "items_month"},
+       {"id": "sport_gear", "weight": 0.15, "toward": 1, "full": 1, "label": "運動裝備", "unit": "items_month"}
      ]},
     {"id": "driving", "name": "自己開車騎車", "habit": "開車騎車", "kind": "level", "weight": 1,
+     "lines": {"both": "油錢停車費，都不陌生。"},
      "signals": [
-       {"id": "fuel_visits", "weight": 0.6, "toward": 1, "full": 4},
-       {"id": "parking_visits", "weight": 0.25, "toward": 1, "full": 4},
-       {"id": "car_care", "weight": 0.15, "toward": 1, "full": 1}
+       {"id": "fuel_visits", "weight": 0.6, "toward": 1, "full": 4, "label": "加油", "unit": "times_month"},
+       {"id": "parking_visits", "weight": 0.25, "toward": 1, "full": 4, "label": "停車", "unit": "times_month"},
+       {"id": "car_care", "weight": 0.15, "toward": 1, "full": 1, "label": "汽機車保養", "unit": "items_month"}
      ]},
-    {"id": "travel", "name": "待在生活圈 ↔ 常出遊", "ends": ["待在生活圈", "常出遊"], "kind": "two_sided", "weight": 1,
+    {"id": "travel", "name": "待在生活圈 ↔ 常出遊", "ends": ["待在生活圈", "常出遊"], "short": "出遊", "kind": "two_sided", "weight": 1,
      "requires": {"district_invoices": 10},
+     "lines": {"both": ["家附近就是全世界。", "行李箱常備，說走就走。"], "split": "一個守著巷口，一個奔向遠方。"},
      "signals": [
-       {"id": "away_share", "weight": 0.5, "scale": [0, 0.1, 0.3]},
-       {"id": "stays", "weight": 0.3, "toward": 1, "full": 1},
-       {"id": "long_trips", "weight": 0.2, "toward": 1, "full": 2}
+       {"id": "away_share", "weight": 0.5, "scale": [0, 0.1, 0.3], "label": "外地消費", "unit": "share"},
+       {"id": "stays", "weight": 0.3, "toward": 1, "full": 1, "label": "住宿", "unit": "times_month"},
+       {"id": "long_trips", "weight": 0.2, "toward": 1, "full": 2, "label": "長途交通", "unit": "times_month"}
      ]},
-    {"id": "stock", "name": "囤貨 ↔ 少量即買", "ends": ["囤貨", "少量即買"], "kind": "two_sided", "weight": 1,
+    {"id": "stock", "name": "囤貨 ↔ 少量即買", "ends": ["囤貨", "少量即買"], "short": "囤貨", "kind": "two_sided", "weight": 1,
      "requires": {"daily_items": 3},
+     "lines": {"both": ["量販推車，一推就滿。", "用完再買，櫃子清爽。"], "split": "一個整箱扛，一個買一包。"},
      "signals": [
-       {"id": "convenience_share", "weight": 0.5, "scale": [0, 0.5, 1]},
-       {"id": "bulk_share", "weight": 0.3, "toward": -1, "full": 0.5},
-       {"id": "small_daily_visits", "weight": 0.2, "toward": 1, "full": 4}
+       {"id": "convenience_share", "weight": 0.5, "scale": [0, 0.5, 1], "label": "超商買日用品", "unit": "share"},
+       {"id": "bulk_share", "weight": 0.3, "toward": -1, "full": 0.5, "label": "大包裝", "unit": "share"},
+       {"id": "small_daily_visits", "weight": 0.2, "toward": 1, "full": 4, "label": "小額日用品", "unit": "times_month"}
      ]},
     {"id": "lifestyle", "name": "生活質感小物", "habit": "生活小物", "kind": "level", "weight": 1,
+     "lines": {"both": "生活要有點小確幸。"},
      "signals": [
-       {"id": "home_items", "weight": 0.4, "toward": 1, "full": 2},
-       {"id": "stationery_items", "weight": 0.3, "toward": 1, "full": 2},
-       {"id": "select_visits", "weight": 0.3, "toward": 1, "full": 2}
+       {"id": "home_items", "weight": 0.4, "toward": 1, "full": 2, "label": "居家小物", "unit": "items_month"},
+       {"id": "stationery_items", "weight": 0.3, "toward": 1, "full": 2, "label": "文具", "unit": "items_month"},
+       {"id": "select_visits", "weight": 0.3, "toward": 1, "full": 2, "label": "選物店", "unit": "times_month"}
      ]},
     {"id": "tech", "name": "3C 投入", "habit": "3C", "kind": "level", "weight": 1,
+     "lines": {"both": "新規格一出，雙雙心動。"},
      "signals": [
-       {"id": "tech_items", "weight": 0.4, "toward": 1, "full": 3},
-       {"id": "tech_spend", "weight": 0.4, "toward": 1, "full": 3000},
-       {"id": "tech_visits", "weight": 0.2, "toward": 1, "full": 2}
+       {"id": "tech_items", "weight": 0.4, "toward": 1, "full": 3, "label": "3C 件數", "unit": "items_month"},
+       {"id": "tech_spend", "weight": 0.4, "toward": 1, "full": 3000, "label": "3C 花費", "unit": "money_month"},
+       {"id": "tech_visits", "weight": 0.2, "toward": 1, "full": 2, "label": "3C 門市", "unit": "times_month"}
      ]},
-    {"id": "days", "name": "上班日型 ↔ 休假日型", "ends": ["上班日型", "休假日型"], "kind": "two_sided", "weight": 1,
+    {"id": "days", "name": "上班日型 ↔ 休假日型", "ends": ["上班日型", "休假日型"], "short": "假日", "kind": "two_sided", "weight": 1,
      "requires": {"invoices": 10},
+     "lines": {"both": ["上班日的錢包最忙。", "平日存著，假日再花。"], "split": "花錢的日子剛好錯開。"},
      "signals": [
-       {"id": "offday_invoice_share", "weight": 0.6, "scale": [0, "offday_share", "offday_double"]},
-       {"id": "offday_amount_share", "weight": 0.4, "scale": [0, "offday_share", "offday_double"]}
+       {"id": "offday_invoice_share", "weight": 0.6, "scale": [0, "offday_share", "offday_double"], "label": "假日消費次數", "unit": "share"},
+       {"id": "offday_amount_share", "weight": 0.4, "scale": [0, "offday_share", "offday_double"], "label": "假日消費金額", "unit": "share"}
      ]},
-    {"id": "holiday", "name": "避開連假 ↔ 連假出遊", "ends": ["避開連假", "連假出遊"], "kind": "two_sided", "weight": 1,
+    {"id": "holiday", "name": "避開連假 ↔ 連假出遊", "ends": ["避開連假", "連假出遊"], "short": "連假", "kind": "two_sided", "weight": 1,
      "requires": {"trip_days": 2, "long_holidays": 1},
+     "lines": {"both": ["連假人擠人？不去。", "連假一到，人就不見。"], "split": "一個連假出門，一個連假顧家。"},
      "signals": [
-       {"id": "holiday_trip_share", "weight": 1, "scale": [0, "long_holiday_share", 1]}
+       {"id": "holiday_trip_share", "weight": 1, "scale": [0, "long_holiday_share", 1], "label": "連假出遊", "unit": "share"}
      ]},
     {"id": "fun", "name": "娛樂體驗", "habit": "娛樂", "kind": "level", "weight": 1,
+     "lines": {"both": "看展看戲，都不缺席。"},
      "signals": [
-       {"id": "fun_visits", "weight": 0.7, "toward": 1, "full": 4},
-       {"id": "fun_kinds", "weight": 0.3, "toward": 1, "full": 4}
+       {"id": "fun_visits", "weight": 0.7, "toward": 1, "full": 4, "label": "娛樂消費", "unit": "times_month"},
+       {"id": "fun_kinds", "weight": 0.3, "toward": 1, "full": 4, "label": "娛樂種類", "unit": "kinds"}
      ]},
     {"id": "pets_cat", "name": "有養寵物（貓）", "habit": "養貓", "group": "有養寵物", "kind": "level", "weight": 1,
+     "lines": {"both": "都有主子要伺候。"},
      "signals": [
-       {"id": "pet_food_cat", "weight": 0.6, "toward": 1, "full": 2},
-       {"id": "pet_supply_cat", "weight": 0.25, "toward": 1, "full": 1},
-       {"id": "pet_visits_cat", "weight": 0.15, "toward": 1, "full": 1}
+       {"id": "pet_food_cat", "weight": 0.6, "toward": 1, "full": 2, "label": "貓食", "unit": "items_month"},
+       {"id": "pet_supply_cat", "weight": 0.25, "toward": 1, "full": 1, "label": "貓用品", "unit": "items_month"},
+       {"id": "pet_visits_cat", "weight": 0.15, "toward": 1, "full": 1, "label": "寵物店（貓）", "unit": "times_month"}
      ]},
     {"id": "pets_dog", "name": "有養寵物（狗）", "habit": "養狗", "group": "有養寵物", "kind": "level", "weight": 1,
+     "lines": {"both": "散步路線可以一起走。"},
      "signals": [
-       {"id": "pet_food_dog", "weight": 0.6, "toward": 1, "full": 2},
-       {"id": "pet_supply_dog", "weight": 0.25, "toward": 1, "full": 1},
-       {"id": "pet_visits_dog", "weight": 0.15, "toward": 1, "full": 1}
+       {"id": "pet_food_dog", "weight": 0.6, "toward": 1, "full": 2, "label": "狗食", "unit": "items_month"},
+       {"id": "pet_supply_dog", "weight": 0.25, "toward": 1, "full": 1, "label": "狗用品", "unit": "items_month"},
+       {"id": "pet_visits_dog", "weight": 0.15, "toward": 1, "full": 1, "label": "寵物店（狗）", "unit": "times_month"}
      ]},
     {"id": "alcohol", "name": "小酌", "habit": "小酌", "kind": "level", "weight": 1,
+     "lines": {"both": "下班後，來一杯。"},
      "signals": [
-       {"id": "alcohol_items", "weight": 0.7, "toward": 1, "full": 8},
-       {"id": "bar_visits", "weight": 0.3, "toward": 1, "full": 4}
+       {"id": "alcohol_items", "weight": 0.7, "toward": 1, "full": 8, "label": "酒類", "unit": "items_month"},
+       {"id": "bar_visits", "weight": 0.3, "toward": 1, "full": 4, "label": "酒吧", "unit": "times_month"}
      ]}
   ]
 }

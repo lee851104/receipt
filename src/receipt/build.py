@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .invoices import build_month
 from .demo import build_demo
-from .personas import PERIOD, build_personas
+from .personas import PERIOD, build_friends, build_personas
 from .places import areas_of, closest_area, distance, load_regions
 from .signals import category_counts
 from .similarity import compare, percent
@@ -105,6 +105,27 @@ def build_matches(rows, months, people, tastes, me, context, regions, is_demo):
     }
 
 
+def trait_network_data(settings, tastes, friends):
+    """What the connection page needs to draw the network graph by itself: the model, every trait with its
+    words, lines and signal ids, every signal's label and unit, the readout fallbacks, and the three demo friends."""
+    order = signal_ids(settings)
+    labels = {}
+    traits = trait_words(settings)
+    for entry, trait in zip(traits, settings["traits"]):
+        if "short" in trait:
+            entry["short"] = trait["short"]
+        entry["lines"] = trait["lines"]
+        entry["signals"] = [signal["id"] for signal in trait["signals"]]
+        for signal in trait["signals"]:
+            labels.setdefault(signal["id"], {"id": signal["id"], "label": signal["label"], "unit": signal["unit"]})
+    return {
+        "model": similarity_model(settings), "traits": traits, "signals": [labels[key] for key in order],
+        "readout": settings["readout"],
+        "friends": {friend["name"]: {"vector": vector_of(tastes[friend["name"]]), **drawing_of(tastes[friend["name"]], order)}
+                    for friend in friends},
+    }
+
+
 def taste_summary(me, people, tastes, context):
     """My similarity to each fictional person, lowest first; empty when I have too little data."""
     if me is None:
@@ -141,13 +162,15 @@ def main():
         raise ValueError("Expected exactly one stylesheet link in the HTML template")
     stylesheet = (WEB / "styles.css").read_text(encoding="utf-8")
     html = embed_scripts(template.replace(style_link, "<style>" + stylesheet + "</style>", 1), scripts)
-    comparison = (WEB / "taste-comparison.html").read_text(encoding="utf-8")
-    comparison = embed_scripts(comparison, {"taste-profile.js": scripts["taste-profile.js"]})
-    html = embed_page(html, "taste-page-source", comparison)
     context = load_context(ROOT)
     people = build_personas(context["calendar"])
-    # Everyone's taste is worked out once, here, and shared by the match page and the summary below.
-    tastes = population(people, list(PERIOD), context)
+    friends = build_friends(context["calendar"])
+    # Everyone's taste is worked out once, here, and shared by both pages and the summary below.
+    tastes = population([*people, *friends], list(PERIOD), context)
+    comparison = embed_scripts((WEB / "taste-comparison.html").read_text(encoding="utf-8"), {
+        "taste-profile.js": scripts["taste-profile.js"],
+        "trait-network-data.js": script_constant("traitNetworkData", trait_network_data(context["traits"], tastes, friends))})
+    html = embed_page(html, "taste-page-source", comparison)
     rows, period = dated(months)
     me = explain(rows, period, context)
     matches = build_matches(rows, months, people, tastes, me, context, load_regions(ROOT), not args.private)

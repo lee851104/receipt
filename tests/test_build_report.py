@@ -58,7 +58,8 @@ class StandaloneBuildTests(unittest.TestCase):
             compared.feed(comparison)
             self.assertEqual(compared.external, [])
             self.assertIn("receipt-taste/categories-v1", comparison)
-            self.assertIn('data-source="trait-network-data.js"', comparison)
+            for name in ("trait-similarity.js", "match-filter.js", "trait-network.js", "trait-network-data.js"):
+                self.assertIn(f'data-source="{name}"', comparison)
             network = json.loads(re.search(r"const traitNetworkData = (.*?);\n</script>", comparison, re.S).group(1))
             self.assertEqual(set(network), {"model", "traits", "signals", "readout", "friends"})
             self.assertEqual(len(network["traits"]), 18)

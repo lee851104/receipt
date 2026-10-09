@@ -30,11 +30,12 @@ test('one portion per item and invoice, as the taste traits count them',()=>{
  const p=taste.fromReport(report,'小明');
  assert.equal(p.counts[1],2);assert.equal(p.counts[0],1);
 });
-test('a match pair carries a whole-number score from -100 to 100 and two valid profiles',()=>{
- const side=(name,demo)=>({name,demo,months:['2026-03','2026-04'],counts:[3,2,0,0,0,0,0,0,0,0]});
- const pair=taste.fromPair({score:62,left:side('你',false),right:side('手搖學生 A',true)});
- assert.equal(pair.score,62);assert.equal(pair.left.name,'你');assert.equal(pair.right.schema,taste.schema);
- for(const score of [-100,-42,0,100])assert.equal(taste.fromPair({score,left:side('你',false),right:side('A',true)}).score,score);
- for(const invalid of [null,{score:61.5,left:side('你',false),right:side('A',true)},{score:101,left:side('你',false),right:side('A',true)},
-  {score:-101,left:side('你',false),right:side('A',true)},{score:62,left:side('你',false),right:{...side('A',true),counts:[1]}}])assert.throws(()=>taste.fromPair(invalid));
+test('a match pair carries two valid profiles and hands their taste traits on untouched',()=>{
+ const side=(name,demo)=>({name,demo,months:['2026-03','2026-04'],counts:[3,2,0,0,0,0,0,0,0,0],traits:{vector:[0.5]}});
+ const pair=taste.fromPair({left:side('你',false),right:side('手搖學生 A',true)});
+ assert.equal(pair.left.name,'你');assert.equal(pair.right.schema,taste.schema);
+ assert.equal('traits' in pair.left,false);assert.equal('score' in pair,false);
+ assert.deepEqual(pair.traits,[{vector:[0.5]},{vector:[0.5]}]);
+ assert.deepEqual(taste.fromPair({left:{...side('你',false),traits:undefined},right:side('A',true)}).traits,[null,{vector:[0.5]}]);
+ for(const invalid of [null,{left:side('你',false)},{left:side('你',false),right:{...side('A',true),counts:[1]}}])assert.throws(()=>taste.fromPair(invalid));
 });

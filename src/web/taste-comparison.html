@@ -20,6 +20,8 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 .import-title-row h2{font-size:12px;margin-bottom:8px}.imports{gap:12px;margin-bottom:18px}.import-card{padding:11px 14px;border-radius:11px}.import-heading{margin-bottom:5px}.import-heading label{font-size:12px}.import-clear{font-size:10px;min-height:24px}.import-fields{gap:7px}.import-fields input{padding:7px 10px;min-height:36px}.import-submit{padding:7px 14px;min-height:36px}.examples{gap:6px;margin-top:7px}.examples button{padding:1px 8px;min-height:24px}.import-status{margin:5px 0 0;min-height:15px;line-height:1.5}
 @media(max-width:640px){main{padding-top:20px}.intro h1{font-size:25px}.intro h1 em{display:inline}.intro .eyebrow{font-size:9px}.comparison-overview{grid-template-columns:1fr;gap:12px;padding:16px;margin-bottom:17px}.comparison-overview .overall{border-right:0;border-bottom:1px solid #463435;padding:0 0 12px;display:grid;grid-template-columns:1fr auto;align-items:center}.comparison-overview .score{font-size:52px}.comparison-overview .readout{padding:0}.readout p{font-size:12px}.readout #summary{font-size:13px}.imports{gap:8px}.import-card{padding:10px 12px}.import-title-row span{font-size:9px}}
 .return-report{display:inline-block;color:var(--muted);font-size:12px;text-decoration:none;margin-bottom:14px}.return-report:hover{color:var(--pink)}
+.views{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}.view-button{background:none;border:0;padding:7px 15px;font-size:12px;color:var(--muted);min-height:36px}.view-button[aria-pressed="true"]{background:#2b2626;color:var(--ink)}.view-button:disabled{opacity:.4;cursor:not-allowed}.views-note{font-size:11px;color:var(--muted)}.toolbar-left{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.t-label{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.t-trait,.t-signal{stroke-width:1.4}.t-link,.t-cell{fill:none;stroke-linecap:round;transition:opacity .15s}.detail-text{white-space:pre-line}
 </style>
 </head>
 <body>
@@ -27,20 +29,24 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 <main>
 <a id="return-report" class="return-report" href="#report" hidden>← 返回消費洞察</a>
 <div class="intro"><div><p class="eyebrow"><span>TASTE CONNECTIONS</span> 從消費，看見彼此</p><h1>把你的喜歡，<em>和我的連起來。</em></h1><p class="subtitle">每個點是一種消費品項。看看哪些選擇，讓你們有了交集。</p></div></div>
-<section class="comparison-overview" aria-label="評分與綜合解讀"><div class="overall"><div class="overall-label">綜合品味相似指數</div><div class="score"><span id="overall-score">—</span><small id="score-unit">%</small></div><div class="overall-note" id="overall-note">等待另一人匯入</div></div><div class="readout"><span class="readout-number">綜合解讀</span><div><p id="summary"></p><p class="summary-case"><strong class="summary-best-label">臭味相投</strong><span id="summary-best"></span></p><p class="summary-case"><strong class="summary-worst-label">背道而馳</strong><span id="summary-worst"></span></p><small id="summary-note">這是消費偏好的相似指數，不代表同樣比例的喜好完全相同，也不是關係契合度。</small></div></div>
+<section class="comparison-overview" aria-label="評分與綜合解讀"><div class="overall"><div class="overall-label">品味相似度</div><div class="score"><span id="overall-score">—</span><small id="score-unit">%</small></div><div class="overall-note" id="overall-note">等待另一人匯入</div></div><div class="readout"><span class="readout-number">綜合解讀</span><div><p id="summary"></p><p class="summary-case"><strong class="summary-best-label">臭味相投</strong><span id="summary-best"></span></p><p class="summary-case"><strong class="summary-worst-label">背道而馳</strong><span id="summary-worst"></span></p><small id="summary-note">這是消費偏好的相似指數，不代表同樣比例的喜好完全相同，也不是關係契合度。</small></div></div>
 </section>
 <div class="import-title-row"><h2>匯入偏好</h2><span>貼上連結，或用示範人物試看</span></div><section class="imports" aria-label="匯入兩人的偏好網址"><form class="import-card" id="import-a" novalidate><div class="import-heading"><label for="profile-url-a">左側 · 你的偏好</label><button class="import-clear" id="clear-a" type="button">移除資料</button></div><div class="import-fields"><input id="profile-url-a" type="text" inputmode="url" placeholder="貼上偏好分享網址" autocomplete="off" spellcheck="false" aria-describedby="import-status-a"><button class="import-submit" type="submit">匯入</button></div><div class="examples"><span>示範：</span><button type="button" data-demo-side="a" data-demo-key="an">小安</button><button type="button" data-demo-side="a" data-demo-key="yu">小宇</button><button type="button" data-demo-side="a" data-demo-key="lin">小林</button></div><p class="import-status" id="import-status-a" role="status" aria-live="polite"></p></form><form class="import-card right" id="import-b" novalidate><div class="import-heading"><label for="profile-url-b">右側 · 朋友的偏好</label><button class="import-clear" id="clear-b" type="button">移除資料</button></div><div class="import-fields"><input id="profile-url-b" type="text" inputmode="url" placeholder="貼上偏好分享網址" autocomplete="off" spellcheck="false" aria-describedby="import-status-b"><button class="import-submit" type="submit">匯入</button></div><div class="examples"><span>示範：</span><button type="button" data-demo-side="b" data-demo-key="an">小安</button><button type="button" data-demo-side="b" data-demo-key="yu">小宇</button><button type="button" data-demo-side="b" data-demo-key="lin">小林</button></div><p class="import-status" id="import-status-b" role="status" aria-live="polite"></p></form></section>
 <section class="graph-card" aria-label="兩人的消費品項連結圖">
-<div class="toolbar"><div class="controls"><label for="category">篩選消費種類<select id="category"><option value="all">全部類別</option><option value="dumplings">案例：同店不同餡</option><option value="sweetness">案例：半糖與無糖</option><option>正餐</option><option>飲品</option><option>零食甜點</option><option>生鮮食材</option><option>運動</option><option>其他服務</option><option>交通</option><option>住宿</option><option>日用品</option><option>電子產品</option></select></label></div><div class="scope" id="scope" role="status" aria-live="polite"></div></div>
-<div class="legend"><span class="legend-item"><span class="size-key" aria-hidden="true"><i></i><i></i><i></i></span>點越大，消費次數越多</span><span class="legend-item positive-label"><span class="sign-key" aria-hidden="true"></span>正相關</span><span class="legend-item negative-label"><span class="sign-key negative" aria-hidden="true"></span>負相關</span><span class="legend-item"><span class="line-key" aria-hidden="true"><i></i><i></i></span>線越粗，關聯越強</span><span class="legend-hint">點選查看關聯，點空白處取消</span></div>
+<div class="toolbar"><div class="toolbar-left"><div class="views" role="group" aria-label="選擇要看的圖"><button type="button" class="view-button" data-view="traits" aria-pressed="true">品味特質</button><button type="button" class="view-button" data-view="items" aria-pressed="false">品項細節</button></div><span class="views-note" id="views-note" hidden>這份連結還沒有品味特質</span><div class="controls"><label for="category">篩選消費種類<select id="category"><option value="all">全部類別</option><option value="dumplings">案例：同店不同餡</option><option value="sweetness">案例：半糖與無糖</option><option>正餐</option><option>飲品</option><option>零食甜點</option><option>生鮮食材</option><option>運動</option><option>其他服務</option><option>交通</option><option>住宿</option><option>日用品</option><option>電子產品</option></select></label></div></div><div class="scope" id="scope" role="status" aria-live="polite"></div></div>
+<div class="legend" id="item-legend"><span class="legend-item"><span class="size-key" aria-hidden="true"><i></i><i></i><i></i></span>點越大，消費次數越多</span><span class="legend-item positive-label"><span class="sign-key" aria-hidden="true"></span>正相關</span><span class="legend-item negative-label"><span class="sign-key negative" aria-hidden="true"></span>負相關</span><span class="legend-item"><span class="line-key" aria-hidden="true"><i></i><i></i></span>線越粗，關聯越強</span><span class="legend-hint">點選查看關聯，點空白處取消</span></div>
+<div class="legend" id="trait-legend" hidden><span class="legend-item">訊號線：實線往右端推、虛線往左端推</span><span class="legend-item positive-label">中間：綠線加分、橘虛線扣分</span><span class="legend-item">越粗影響越大</span><span class="legend-item">空心：資料不足</span><span class="legend-hint">點選查看連線，點空白處取消</span></div>
 <p class="legend-explain"><b>同款也能選得不同：</b>可篩選「同店不同餡」或「半糖與無糖」。餡料與甜度各自比較，差異不代表兩人整體品味相反。</p>
 <div class="canvas"><svg id="network" viewBox="0 0 1200 570" role="group" aria-label="左側粉紅是你的資料，右側藍色是朋友的資料；匯入後可點選圓點或連線"></svg></div>
 <div class="detail"><span class="detail-icon" aria-hidden="true">↔</span><div class="detail-text" id="detail" role="status" aria-live="polite">點選一個圓點或一條線，看看你們買了什麼、相似在哪裡。</div><button class="reset" id="reset" type="button">顯示全部連線</button></div>
 </section>
-<details class="method"><summary>資料來源與相似百分比怎麼算？</summary><div id="category-method" hidden><p>報告連結包含暱稱、涵蓋月份與 10 類已確認消費品項的筆數，同一張發票的同一品項只算一次，不計折扣、贈品及待確認分類。沒有店家、品名、單筆日期、金額或發票號碼，但摘要仍可被取得連結的人讀取；編碼並非加密。</p><p>分類模式使用 10 類筆數向量計算餘弦相似度（Cosine Similarity），再乘以 100。100% 表示各類的比例相同，0% 表示沒有共同類別。這不是實際品味重疊比例，無法分辨同一類中的半糖與無糖、蔬菜餡與鮮蝦餡；分類沒有負值，因此不會產生負相關連線。</p><p>圓點面積代表品項筆數；只有相同類別會連線。線的強弱為兩人該類占比的較小值除以較大值，越接近就越粗。綜合分數使用全部分類，不隨篩選改變。若混用示範人物，會先將其虛構次數彙整至相同 10 類，用於操作示範。不同月份或資料量會影響比較，請留意兩側資料範圍。</p></div><div id="demo-method"><p>人物、消費次數與特徵分數皆為虛構；八方雲集與水餃名稱取自討論案例，不代表真實購買紀錄或實際配方。尚未接入語意嵌入（Semantic Embedding）模型。本案例把「蔬菜餡取向」設為 +1、「鮮蝦餡取向」設為 −1；另把同一家虛構茶舖、同款紅茶的「半糖」與「無糖」設為甜度對比的 +1 與 −1。這不是實際含糖量，也不代表不同甜度必然互斥；店家、料理形式與類別保留較小的共同權重。這個對比軸是人工設計，不能從點蔬菜水餃推論為素食者，也不能從一筆選擇推論整體品味。</p><p>品項以 36 維示範特徵表示，先將向量長度縮放為 1，再計算內積（Inner Product）；此時等同餘弦相似度（Cosine Similarity）。正值用亮薄荷綠實線（正相關）、負值用亮橘色虛線（負相關），線寬隨絕對值增加；圖例中的「正相關／負相關」表示本示範特徵的同向／反向，不是從多筆觀測估計的統計相關係數。0 表示這組特徵沒有方向關聯，不畫線。所有非零連線皆保留。圓點面積代表消費次數，位置只為排版。</p><p>整體先依次數彙整特徵，再把 −1 到 +1 的分數以 <code>(分數 + 1) ÷ 2 × 100</code> 映射為 0—100%：50% 表示方向無關、100% 表示同向、0% 表示完全反向。這是未校準的示範指數，不是實際喜好重疊比例。綜合解讀從全類別可直接對照的品項配對中，選出分數最高與最低的一組；同分時優先選雙方共同次數較多的配對。篩選只更新範圍指數，綜合分數仍涵蓋全部類別；無資料不當作 0 分。<a href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html" target="_blank" rel="noopener noreferrer">計算定義參考</a>。</p></div></details>
+<details class="method"><summary>資料來源與相似百分比怎麼算？</summary><div id="trait-method" hidden><p id="trait-method-text"></p></div><div id="category-method" hidden><p>報告連結包含暱稱、涵蓋月份與 10 類已確認消費品項的筆數，同一張發票的同一品項只算一次，不計折扣、贈品及待確認分類。沒有店家、品名、單筆日期、金額或發票號碼，但摘要仍可被取得連結的人讀取；編碼並非加密。</p><p>分類模式使用 10 類筆數向量計算餘弦相似度（Cosine Similarity），再乘以 100。100% 表示各類的比例相同，0% 表示沒有共同類別。這不是實際品味重疊比例，無法分辨同一類中的半糖與無糖、蔬菜餡與鮮蝦餡；分類沒有負值，因此不會產生負相關連線。</p><p>圓點面積代表品項筆數；只有相同類別會連線。線的強弱為兩人該類占比的較小值除以較大值，越接近就越粗。綜合分數使用全部分類，不隨篩選改變。若混用示範人物，會先將其虛構次數彙整至相同 10 類，用於操作示範。不同月份或資料量會影響比較，請留意兩側資料範圍。</p></div><div id="demo-method"><p>人物、消費次數與特徵分數皆為虛構；八方雲集與水餃名稱取自討論案例，不代表真實購買紀錄或實際配方。尚未接入語意嵌入（Semantic Embedding）模型。本案例把「蔬菜餡取向」設為 +1、「鮮蝦餡取向」設為 −1；另把同一家虛構茶舖、同款紅茶的「半糖」與「無糖」設為甜度對比的 +1 與 −1。這不是實際含糖量，也不代表不同甜度必然互斥；店家、料理形式與類別保留較小的共同權重。這個對比軸是人工設計，不能從點蔬菜水餃推論為素食者，也不能從一筆選擇推論整體品味。</p><p>品項以 36 維示範特徵表示，先將向量長度縮放為 1，再計算內積（Inner Product）；此時等同餘弦相似度（Cosine Similarity）。正值用亮薄荷綠實線（正相關）、負值用亮橘色虛線（負相關），線寬隨絕對值增加；圖例中的「正相關／負相關」表示本示範特徵的同向／反向，不是從多筆觀測估計的統計相關係數。0 表示這組特徵沒有方向關聯，不畫線。所有非零連線皆保留。圓點面積代表消費次數，位置只為排版。</p><p>整體先依次數彙整特徵，再把 −1 到 +1 的分數以 <code>(分數 + 1) ÷ 2 × 100</code> 映射為 0—100%：50% 表示方向無關、100% 表示同向、0% 表示完全反向。這是未校準的示範指數，不是實際喜好重疊比例。綜合解讀從全類別可直接對照的品項配對中，選出分數最高與最低的一組；同分時優先選雙方共同次數較多的配對。篩選只更新範圍指數，綜合分數仍涵蓋全部類別；無資料不當作 0 分。<a href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html" target="_blank" rel="noopener noreferrer">計算定義參考</a>。</p></div></details>
 </main><footer><span id="comparison-footer">2026.01—03 · 同期間比較 · 僅供視覺與互動討論</span><span>You are what you buy. / TASTE CONNECTIONS</span></footer>
 <noscript><p>請開啟 JavaScript 以查看點線圖。</p></noscript>
 <script src="taste-profile.js"></script>
+<script src="trait-similarity.js"></script>
+<script src="match-filter.js"></script>
+<script src="trait-network.js"></script>
 <script src="trait-network-data.js"></script>
 <script>
 'use strict';
@@ -66,15 +72,18 @@ const demoItems=[
 const profiles={an:{name:'小安',counts:[24,5,13,11,7,3,13,8,6,4,3,3,16,15]},yu:{name:'小宇',counts:[17,13,10,8,4,9,18,7,3,3,4,4,18,17]},lin:{name:'小林',counts:[5,24,7,3,4,17,4,3,9,14,6,4,18,17]}};
 const positions=[[350,130],[180,107],[265,224],[430,281],[132,300],[310,343],[200,411],[424,442],[300,498],[99,439],[100,203],[440,184],[232,302],[455,358]];
 const $=id=>document.getElementById(id);const svgNS='http://www.w3.org/2000/svg';let items=demoItems,categoryMode=false,category='all',leftKey='an',rightKey='yu',nodes=[],edges=[],selected=null;
+// The network data exists only inside the built report; opened on its own, the page shows item details only.
+const network=typeof traitNetworkData==='undefined'?null:traitNetworkData;let chosenView='traits',traitGraph=null;
 for(const person of Object.values(profiles)){
  person.demoCounts=[...person.counts];person.categoryCounts=TasteProfile.categories.map(name=>demoItems.reduce((n,item,i)=>n+(item.c===name?person.counts[i]:0),0));
+ person.traits=network&&network.friends[person.name]?TraitNetwork.validate(network.friends[person.name],network):null;
 }
-// Opened from the match list: the sides are fixed to you and that match, and the big number is the match score.
+// Opened from the match list: the sides are fixed to you and that match, each with the taste traits it was matched on.
 let pair=null;
 if(hostFrame==='connection-frame'){
- try{pair=TasteProfile.fromPair(pageHost.ReceiptPages.connection());}catch(error){pageHost.ReceiptPages.showMatches();}
+ try{pair=TasteProfile.fromPair(pageHost.ReceiptPages.connection());pair.traits=pair.traits.map(person=>TraitNetwork.validate(person,network));}catch(error){pair=null;pageHost.ReceiptPages.showMatches();}
  if(pair){
-  profiles.me={name:pair.left.name,payload:pair.left};profiles.match={name:pair.right.name,payload:pair.right};leftKey='me';rightKey='match';
+  profiles.me={name:pair.left.name,payload:pair.left,traits:pair.traits[0]};profiles.match={name:pair.right.name,payload:pair.right,traits:pair.traits[1]};leftKey='me';rightKey='match';
   for(const part of document.querySelectorAll('.import-title-row, .imports'))part.hidden=true;
  }
 }
@@ -89,7 +98,6 @@ function prepareMode(){
  if(categoryMode&&['dumplings','sweetness'].includes(category)){category='all';$('category').value='all';}
  $('category-method').hidden=!categoryMode;$('demo-method').hidden=categoryMode;
  document.querySelector('.subtitle').textContent=categoryMode?'每個點是一類消費偏好。看看你們常買的類型，有多少交集。':'每個點是一種消費品項。看看哪些選擇，讓你們有了交集。';
- document.querySelector('.overall-label').textContent=pair?'品味相似度':categoryMode?'消費類型相似度':'綜合品味相似指數';
  document.querySelector('.legend-item').lastChild.textContent=categoryMode?'點越大，品項筆數越多':'點越大，消費次數越多';
  document.querySelector('.negative-label').hidden=categoryMode;
  document.querySelector('.legend-explain').textContent=categoryMode?'目前比較的是消費類型，還不能辨認甜度或餡料。只有相同類別會連線；兩人在該類的消費占比越接近，線越粗。':'同款也能選得不同：可篩選「同店不同餡」或「半糖與無糖」。餡料與甜度各自比較，差異不代表兩人整體品味相反。';
@@ -99,71 +107,70 @@ function prepareMode(){
 }
 function shareFor(side,i){const counts=profiles[keyFor(side)].counts;return counts[i]/counts.reduce((a,b)=>a+b,0);}
 function connectionScore(a,b){if(!categoryMode)return dot(feature(a.i,'a'),feature(b.i,'b'));if(a.i!==b.i)return 0;const x=shareFor('a',a.i),y=shareFor('b',b.i);return Math.min(x,y)/Math.max(x,y);}
-function renderCategorySummary(overall){
- document.querySelector('.summary-best-label').textContent='臭味相投';document.querySelector('.summary-worst-label').textContent='背道而馳';
- const rows=items.map((item,i)=>({name:item.c,a:shareFor('a',i),b:shareFor('b',i)}));
- const closeness=r=>Math.max(r.a,r.b)?Math.min(r.a,r.b)/Math.max(r.a,r.b):0;
- const best=[...rows].sort((a,b)=>closeness(b)-closeness(a)||Math.min(b.a,b.b)-Math.min(a.a,a.b))[0];
- const worst=[...rows].sort((a,b)=>Math.abs(b.a-b.b)-Math.abs(a.a-a.b))[0];
- const percent=n=>(n*100).toFixed(1)+'%';
- $('summary').textContent=`${profiles[leftKey].name} × ${profiles[rightKey].name} · 看看你們常買的類型有多像。`;
- $('summary-best').textContent=Math.min(best.a,best.b)>0?`「${best.name}」${percent(best.a)} ↔ ${percent(best.b)}，購物車有默契。`:'沒有共同類別，購物車活在平行宇宙。';
- $('summary-worst').textContent=Math.abs(worst.a-worst.b)>1e-9?`「${worst.name}」${percent(worst.a)} ↔ ${percent(worst.b)}，一位常客、一位路過。`:'比例都相同，像拿同一張購物清單。';
- const mixed=loadedSides().some(side=>isDemoProfile(keyFor(side)));
- const samePeriod=JSON.stringify(profileMonths(leftKey))===JSON.stringify(profileMonths(rightKey));
- $('summary-note').textContent=(mixed?'含示範資料 · ':'')+(samePeriod?'':'月份不同 · ')+'僅比較消費類型，不含甜度、餡料。';
-}
 function keyFor(side){return side==='a'?leftKey:rightKey;}
 function hasBoth(){return leftKey!==null&&rightKey!==null;}
 function loadedSides(){return ['a','b'].filter(side=>keyFor(side)!==null);}
-function cosine(a,b){const n=Math.hypot(...a)*Math.hypot(...b);return n?a.reduce((s,x,i)=>s+x*b[i],0)/n:null;}
 function unit(v){const n=Math.hypot(...v);return n?v.map(x=>x/n):v;}
 function feature(i,side){if(categoryMode){const vector=Array(36).fill(0);vector[i]=1;return vector;}const key=keyFor(side);const v=Array(36).fill(0);if(items[i].sweetness){v[33]=.35;v[34]=.25;v[12]=.2;v[35]=key==='yu'?-1:1;return unit(v);}if(items[i].dumpling){v[30]=.25;v[31]=.35;v[13]=.2;v[32]=key==='yu'?-1:1;return unit(v);}v[i]=1;v[12+items[i].g]=.4;const base=unit(v);if(key!=='an'){for(let k=0;k<base.length;k++)base[k]*=items[i].s;base[18+i]=Math.sqrt(1-items[i].s**2);}return base;}
 function dot(a,b){return a.reduce((total,x,i)=>total+x*b[i],0);}
-function indexPercent(score){return score===null?null:Math.round(categoryMode?Math.max(0,Math.min(1,score))*100:(Math.max(-1,Math.min(1,score))+1)*50);}
 function edgeColor(score){return score>0?'#5eeac7':'#ffb65c';}
 function edgeWidth(score){return 1.4+6*Math.abs(score)**2;}
 function signed(score){return (score>0?'+':'−')+Math.abs(score).toFixed(2);}
 function productName(i,side){const key=keyFor(side);if(items[i].dumpling||items[i].sweetness)return key==='yu'?items[i].b:items[i].a;return key==='an'?items[i].a:items[i].b;}
 function relation(edge){if(categoryMode)return '占比接近度 '+Math.round(edge.score*100)+'%';return (edge.score>0?'正相關':'負相關')+' '+signed(edge.score);}
-function aggregate(person,side,indices){const result=Array(36).fill(0);for(const i of indices){const v=feature(i,side);for(let k=0;k<v.length;k++)result[k]+=v[k]*person.counts[i];}return result;}
-function similarity(indices){return hasBoth()?cosine(aggregate(profiles[leftKey],'a',indices),aggregate(profiles[rightKey],'b',indices)):null;}
 function el(tag,attrs={},text){const n=document.createElementNS(svgNS,tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;return n;}
 function path(a,b){const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),p={x:a.x+dx/d*(a.r+3),y:a.y+dy/d*(a.r+3)},q={x:b.x-dx/d*(b.r+3),y:b.y-dy/d*(b.r+3)};return `M ${p.x} ${p.y} C ${p.x+(q.x-p.x)*.42} ${p.y}, ${q.x-(q.x-p.x)*.42} ${q.y}, ${q.x} ${q.y}`;}
-function clearSelection(){selected=null;for(const edge of edges){edge.line.style.opacity=String(.5+Math.abs(edge.score)*.45);edge.line.style.stroke=edgeColor(edge.score);}for(const node of nodes){node.group.classList.remove('dim','is-selected');}$('detail').textContent=!loadedSides().length?'先在上方貼上網址，或點選一位示範人物。':!nodes.length?'這個類別目前沒有示範資料，請選擇其他種類。':hasBoth()?'點選一個圓點或一條線，看看你們買了什麼、相似在哪裡。':'已顯示一人的消費品項；另一人匯入後，才會出現比較連線。';}
+function clearSelection(){selected=null;if(traitGraph){for(const item of [...traitGraph.links,...traitGraph.cells])item.el.style.opacity=String(item.base);for(const item of [...traitGraph.signals,...traitGraph.traits]){item.el.style.opacity='1';if(item.labelEl)item.labelEl.style.opacity='1';}$('detail').textContent='點一個訊號或特質，看看它怎麼一路連到分數。';return;}for(const edge of edges){edge.line.style.opacity=String(.5+Math.abs(edge.score)*.45);edge.line.style.stroke=edgeColor(edge.score);}for(const node of nodes){node.group.classList.remove('dim','is-selected');}$('detail').textContent=!loadedSides().length?'先在上方貼上網址，或點選一位示範人物。':!nodes.length?'這個類別目前沒有示範資料，請選擇其他種類。':hasBoth()?'點選一個圓點或一條線，看看你們買了什麼、相似在哪裡。':'已顯示一人的消費品項；另一人匯入後，才會出現比較連線。';}
 function highlight(edgeList,nodeIds){for(const edge of edges){const active=edgeList.includes(edge);edge.line.style.opacity=active?'1':'.09';edge.line.style.stroke=edgeColor(edge.score);}for(const node of nodes){node.group.classList.toggle('dim',!nodeIds.includes(node.id));node.group.classList.toggle('is-selected',nodeIds.includes(node.id));}}
 function selectNode(node){selected=node.id;const matches=edges.filter(e=>e.a.id===node.id||e.b.id===node.id);highlight(matches,[node.id,...matches.flatMap(e=>[e.a.id,e.b.id])]);const person=profiles[keyFor(node.side)].name;const counterpart=matches.map(e=>{const other=e.a===node?e.b:e.a;return `${other.name}（${relation(e)}）`;}).join('、');$('detail').textContent=`${person} · ${node.name} · ${node.count} ${categoryMode?'筆品項':'次'}${counterpart?'　↔　品項對比：'+counterpart:hasBoth()?'　· 目前沒有可比較的連線':'　· 尚待另一人匯入，暫不比較'}`;}
 function selectEdge(edge){if(categoryMode){selected=edge.a.id+'-'+edge.b.id;highlight([edge],[edge.a.id,edge.b.id]);$('detail').textContent=`${edge.a.name} · ${profiles[leftKey].name} ${edge.a.count} 筆（占 ${(shareFor('a',edge.a.i)*100).toFixed(1)}%） ↔ ${profiles[rightKey].name} ${edge.b.count} 筆（占 ${(shareFor('b',edge.b.i)*100).toFixed(1)}%） · ${relation(edge)}`;return;}selected=edge.a.id+'-'+edge.b.id;highlight([edge],[edge.a.id,edge.b.id]);let extra='';if(edge.a.i===edge.b.i&&(items[edge.a.i].dumpling||items[edge.a.i].sweetness)){extra=edge.a.name===edge.b.name?' · 同店、同款、同樣的選擇。':items[edge.a.i].dumpling?' · 同為八方雲集水餃，餡料取向不同。':' · 同店、同款紅茶，半糖與無糖的甜度選擇不同。';}$('detail').textContent=`${profiles[leftKey].name}：${edge.a.name} ${edge.a.count} 次　↔　${profiles[rightKey].name}：${edge.b.name} ${edge.b.count} 次　·　${relation(edge)}（示範）${extra}`;}
 function bind(group,callback){group.addEventListener('click',callback);group.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();callback();}});}
-function summaryJoke(pair,best){
- const item=items[pair.i],same=productName(pair.i,'a')===productName(pair.i,'b');
- if(same)return '直接點兩份。';
- if(item.dumpling)return '一個逛菜園，一個出海。';
- if(item.sweetness)return '一個加糖，一個讓糖罐放假。';
- if(pair.i===0)return '開機鍵都叫咖啡。';
- if(pair.i===11)return '同團出遊，睡覺不同門派。';
- return best?'各點各的，也很合拍。':'各有主張，不搶最後一份。';
+function traitsOf(side){const key=keyFor(side);return key===null?null:profiles[key].traits||null;}
+function traitPair(){const a=traitsOf('a'),b=traitsOf('b');return a&&b?[a,b]:null;}
+function allDemo(){const loaded=loadedSides();return loaded.length>0&&loaded.every(side=>isDemoProfile(keyFor(side)));}
+// Cards call the two 你 and 對方; friends are called by name.
+function pairNames(){return pair?['你','對方']:[profiles[leftKey].name,profiles[rightKey].name];}
+function currentView(){return traitPair()?chosenView:'items';}
+function prepareView(){
+ const available=Boolean(traitPair()),traits=currentView()==='traits';
+ for(const button of document.querySelectorAll('[data-view]')){button.setAttribute('aria-pressed',String(button.dataset.view===currentView()));if(button.dataset.view==='traits')button.disabled=!available;}
+ $('views-note').hidden=available||!hasBoth();
+ $('item-legend').hidden=traits;$('trait-legend').hidden=!traits;document.querySelector('.legend-explain').hidden=traits;document.querySelector('.controls').hidden=traits;
+ $('trait-method').hidden=!traits;
+ if(traits){$('category-method').hidden=true;$('demo-method').hidden=true;document.querySelector('.subtitle').textContent='每個點是一個消費訊號或品味特質。看看你們的品味，怎麼連起來。';}
 }
-function renderSummary(overall){
- if(!categoryMode){document.querySelector('.summary-best-label').textContent='臭味相投';document.querySelector('.summary-worst-label').textContent='背道而馳';$('summary-note').textContent='虛構示範 · 分數不代表關係契合度。';}
- document.querySelectorAll('.summary-case').forEach(node=>node.hidden=!hasBoth());
- $('summary-note').hidden=!hasBoth();
- if(!hasBoth()){
-  const side=loadedSides()[0];$('summary-best').textContent='';$('summary-worst').textContent='';
-  $('summary').textContent=side?`已載入${profiles[keyFor(side)].name}，再匯入朋友的連結就能比較。`:'貼上兩人的連結，看看品味有多像。';return;
- }
- if(categoryMode){renderCategorySummary(overall);return;}
- const pairs=items.map((item,i)=>({i,score:dot(feature(i,'a'),feature(i,'b')),shared:Math.min(profiles[leftKey].counts[i],profiles[rightKey].counts[i])})).filter(pair=>pair.shared>0);
- const tieBreak=(a,b)=>b.shared-a.shared||a.i-b.i;
- const best=[...pairs].sort((a,b)=>Math.abs(a.score-b.score)<1e-9?tieBreak(a,b):b.score-a.score)[0];
- const worst=[...pairs].sort((a,b)=>Math.abs(a.score-b.score)<1e-9?tieBreak(a,b):a.score-b.score)[0];
+// The readout always explains the big number, the taste similarity, whichever graph is showing.
+function renderSummary(result,both){
+ const cases=document.querySelectorAll('.summary-case'),show=on=>{cases.forEach(node=>node.hidden=!on);$('summary-note').hidden=!on||!allDemo();};
+ if(!hasBoth()){show(false);const side=loadedSides()[0];$('summary').textContent=side?`已載入${profiles[keyFor(side)].name}，再匯入朋友的連結就能比較。`:'貼上兩人的連結，看看品味有多像。';return;}
+ if(!both){show(false);$('summary').textContent=`已載入${profiles[leftKey].name}和${profiles[rightKey].name}。品味特質要兩邊都有才能比較，下面可以看消費類別的比較。`;return;}
+ if(!result.comparable){show(false);$('summary').textContent=`${profiles[leftKey].name} × ${profiles[rightKey].name} · 兩人共同的特質太少，還不能比較。`;return;}
+ show(true);
  $('summary').textContent=leftKey===rightKey?`${profiles[leftKey].name} × 自己 · 這輪是自己對答案。`:`${profiles[leftKey].name} × ${profiles[rightKey].name} · 合拍的、各有主張的，都在這裡。`;
- for(const [id,pair,isBest] of [['summary-best',best,true],['summary-worst',worst,false]]){
-  if(!isBest&&Math.abs(best.score-worst.score)<1e-9){$(id).textContent='各組一樣合拍，差異不用硬加戲。';$(id).removeAttribute('data-item');continue;}
-  const item=items[pair.i],same=productName(pair.i,'a')===productName(pair.i,'b');
-  const choices=same?`都選${productName(pair.i,'a')}`:`${productName(pair.i,'a')} ↔ ${productName(pair.i,'b')}`;
-  $(id).textContent=choices+'；'+summaryJoke(pair,isBest);$(id).dataset.item=String(pair.i);
+ const lines=TraitNetwork.readout(network,both[0],both[1],pairNames(),result);
+ $('summary-best').textContent=lines.alike;$('summary-worst').textContent=lines.unlike;$('summary-note').textContent='虛構示範 · 分數不代表關係契合度。';
+}
+// The taste network: signals fan out from each person's traits, and the middle lines are the score's cells.
+function drawTraits(svg,mobile,both){
+ const graph=TraitNetwork.layout(network,both[0],both[1],mobile),shape=TraitNetwork.SHAPES[mobile?'mobile':'desktop'],color={a:'#ff9aa7',b:'#9bbcff'};
+ svg.setAttribute('viewBox',`0 0 ${graph.width} ${graph.height}`);
+ const names=el('g',{'aria-hidden':'true'});
+ for(const side of ['a','b']){
+  const [cx]=shape.centers[side==='a'?0:1],x=mobile?cx:cx+(side==='a'?-130:130),y=mobile?(side==='a'?28:graph.height-14):30;
+  names.append(el('text',{x,y,'text-anchor':'middle',class:'person-name'},chartName(keyFor(side),mobile)+(pair?(side==='a'?'':' · 配對對象'):' · '+(side==='a'?'你':'朋友'))));
  }
+ const lines=el('g'),middles=el('g'),dots=el('g'),labels=el('g'),view={graph,links:[],cells:[],signals:[],traits:[]};
+ for(const link of graph.links){const zero=link.push===0,base=zero?.3:.85;const path=el('path',{d:link.d,class:'t-link',stroke:color[link.side],'stroke-width':zero?.6:(.8+6*Math.abs(link.push)).toFixed(2),'stroke-dasharray':link.push<0?'5 4':'none',opacity:base});lines.append(path);view.links.push({...link,el:path,base});}
+ for(const cell of graph.cells){const zero=cell.part===0,base=zero?.45:.9;const path=el('path',{d:cell.d,class:'t-cell',stroke:cell.part>0?'#5eeac7':cell.part<0?'#ffb65c':'#77736c','stroke-width':zero?.6:(.8+20*Math.abs(cell.part)).toFixed(2),'stroke-dasharray':cell.part<0?'7 5':'none',opacity:base});middles.append(path);view.cells.push({...cell,el:path,base});}
+ for(const side of graph.sides){
+  for(const signal of side.signals){const dot=el('circle',{cx:signal.x.toFixed(1),cy:signal.y.toFixed(1),r:mobile?4:3,class:'t-signal',fill:signal.value===null?'#101010':color[side.side],stroke:color[side.side]});dots.append(dot);view.signals.push({...signal,side:side.side,el:dot});}
+  for(const trait of side.traits){
+   const dot=el('circle',{cx:trait.x.toFixed(1),cy:trait.y.toFixed(1),r:trait.r.toFixed(1),class:'t-trait',fill:trait.hollow?'#101010':color[side.side],stroke:color[side.side]});dots.append(dot);
+   const label=trait.labelShown?el('text',{x:trait.labelX.toFixed(1),y:trait.labelY.toFixed(1),'text-anchor':trait.labelAnchor,class:'t-label','font-size':graph.font},trait.label):null;if(label)labels.append(label);
+   view.traits.push({...trait,side:side.side,el:dot,labelEl:label});
+  }
+ }
+ svg.append(names,lines,middles,dots,labels);traitGraph=view;clearSelection();
 }
 function updateImport(side,message='',error=false){
  const key=keyFor(side),status=$('import-status-'+side);$('clear-'+side).disabled=key===null;
@@ -181,13 +188,17 @@ function importProfile(side){
 }
 function removeProfile(side){if(side==='a')leftKey=null;else rightKey=null;$('profile-url-'+side).value='';updateImport(side);draw();}
 function draw(){
- prepareMode();
- const mobile=matchMedia('(max-width:640px)').matches,svg=$('network'),indices=items.map((_,i)=>i).filter(i=>category==='all'||(category==='dumplings'?items[i].dumpling:category==='sweetness'?items[i].sweetness:items[i].c===category)).filter(i=>!loadedSides().length||loadedSides().some(side=>profiles[keyFor(side)].counts[i]>0));svg.replaceChildren();const chartWidth=mobile?600:1200,chartHeight=mobile&&loadedSides().length&&indices.length>4?160+indices.length*76:570;svg.setAttribute('viewBox',`0 0 ${chartWidth} ${chartHeight}`);nodes=[];edges=[];selected=null;
- const overall=similarity(items.map((_,i)=>i));$('overall-score').textContent=overall===null?'—':indexPercent(overall);$('score-unit').hidden=overall===null;$('overall-score').parentElement.classList.toggle('waiting',overall===null);$('overall-note').textContent=hasBoth()?(categoryMode?'全類別評估 · 分類偏好摘要':'全類別評估 · 虛構示範'):loadedSides().length?'等待另一人匯入':'先匯入偏好資料';
- if(pair){$('overall-score').textContent=(pair.score>0?'+':pair.score<0?String.fromCharCode(0x2212):'')+Math.abs(pair.score);$('overall-note').textContent='消費類型相似度 '+indexPercent(overall)+'%（下圖）';}
- const scopeScore=similarity(indices),count=loadedSides().length;
- $('scope').textContent=(category==='all'?'全類別':category==='dumplings'?'同店不同餡':category==='sweetness'?'半糖與無糖':category)+' · '+(!count?'尚未匯入資料':!indices.length?'目前無資料':loadedSides().reduce((n,side)=>n+indices.filter(i=>profiles[keyFor(side)].counts[i]>0).length,0)+(categoryMode?' 個類別點 · ':' 個品項點 · ')+(scopeScore===null?(hasBoth()?'此範圍有一側無資料':'尚待另一人匯入'):categoryMode&&category!=='all'?'綜合分數仍計算全部類別':'範圍相似 '+indexPercent(scopeScore)+'%'));
- renderSummary(overall);
+ prepareMode();prepareView();
+ const mobile=matchMedia('(max-width:640px)').matches,svg=$('network');svg.replaceChildren();nodes=[];edges=[];selected=null;traitGraph=null;
+ // One big number everywhere: the taste similarity of the two people's trait vectors.
+ const both=traitPair(),result=both?TraitSimilarity.compare(both[0].vector,both[1].vector,network.model):null,scored=Boolean(result&&result.comparable);
+ $('overall-score').textContent=scored?TraitSimilarity.signed(result.score).slice(0,-1):'—';$('score-unit').hidden=!scored;$('overall-score').parentElement.classList.toggle('waiting',!scored);
+ $('overall-note').textContent=scored?'依 '+TraitNetwork.traitCount(network.traits)+' 項品味特質計算'+(allDemo()?' · 虛構示範':''):hasBoth()?(both?'兩人共同的特質太少，無法計算品味相似度':'舊版連結沒有品味特質，無法計算品味相似度'):loadedSides().length?'等待另一人匯入':'先匯入偏好資料';
+ renderSummary(result,both);
+ if(currentView()==='traits'){$('scope').textContent=TraitNetwork.traitCount(network.traits)+' 項品味特質 · '+network.signals.length+' 個訊號';drawTraits(svg,mobile,both);return;}
+ const indices=items.map((_,i)=>i).filter(i=>category==='all'||(category==='dumplings'?items[i].dumpling:category==='sweetness'?items[i].sweetness:items[i].c===category)).filter(i=>!loadedSides().length||loadedSides().some(side=>profiles[keyFor(side)].counts[i]>0));const chartWidth=mobile?600:1200,chartHeight=mobile&&loadedSides().length&&indices.length>4?160+indices.length*76:570;svg.setAttribute('viewBox',`0 0 ${chartWidth} ${chartHeight}`);
+ const count=loadedSides().length;
+ $('scope').textContent=(category==='all'?'全類別':category==='dumplings'?'同店不同餡':category==='sweetness'?'半糖與無糖':category)+' · '+(!count?'尚未匯入資料':!indices.length?'目前無資料':loadedSides().reduce((n,side)=>n+indices.filter(i=>profiles[keyFor(side)].counts[i]>0).length,0)+(categoryMode?' 個類別點':' 個品項點'));
  if(!indices.length){svg.append(el('text',{x:chartWidth/2,y:chartHeight/2-25,class:'empty-title'},'這個類別，還沒有資料。'),el('text',{x:chartWidth/2,y:chartHeight/2+20,class:'empty-note'},'換個消費種類，看看你們的交集。'));clearSelection();return;}
  const decorations=el('g',{'aria-hidden':'true'});for(const side of ['a','b']){
   const key=keyFor(side),x=mobile?(side==='a'?145:455):(side==='a'?275:925),y=mobile?chartHeight/2+15:300;
@@ -213,7 +224,8 @@ for(const side of ['a','b']){
  $('profile-url-'+side).value=keyFor(side)?'demo://'+keyFor(side):'';updateImport(side);
 }
 document.querySelectorAll('[data-demo-side]').forEach(button=>button.addEventListener('click',()=>{const side=button.dataset.demoSide;$('profile-url-'+side).value='demo://'+button.dataset.demoKey;importProfile(side);}));
-$('category').addEventListener('change',event=>{category=event.target.value;draw();});$('reset').addEventListener('click',clearSelection);$('network').addEventListener('keydown',event=>{if(event.key==='Escape')clearSelection();});matchMedia('(max-width:640px)').addEventListener('change',draw);const requestedCase=new URLSearchParams(pageLocation().search).get('case');if(['dumplings','sweetness'].includes(requestedCase)){category=requestedCase;$('category').value=category;}
+$('category').addEventListener('change',event=>{category=event.target.value;draw();});document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{chosenView=button.dataset.view;draw();}));
+if(network)$('trait-method-text').textContent='品味相似度是 '+TraitNetwork.traitCount(network.traits)+' 項品味特質（'+network.traits.length+' 格）的餘弦相似度，範圍 '+TraitSimilarity.signed(-1)+'～'+TraitSimilarity.signed(1)+'。每項特質由幾個消費訊號加權而成，訊號線越粗，代表這個訊號推得越多；中間每條線是那一格對分數的加減，全部加起來就是品味相似度。';$('reset').addEventListener('click',clearSelection);$('network').addEventListener('keydown',event=>{if(event.key==='Escape')clearSelection();});matchMedia('(max-width:640px)').addEventListener('change',draw);const requestedCase=new URLSearchParams(pageLocation().search).get('case');if(['dumplings','sweetness'].includes(requestedCase)){category=requestedCase;$('category').value=category;chosenView='items';}
 function importHash(){if(!pageLocation().hash.startsWith('#taste='))return;leftKey=null;$('profile-url-a').value=pageLocation().href;updateImport('a');draw();importProfile('a');}
 window.refreshTasteFromLocation=importHash;
 if(pageHost){

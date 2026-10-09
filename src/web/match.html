@@ -72,11 +72,12 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
     if (className) node.className = className;
     return node;
   }
+  // The connection page draws the network from both people's taste and works out the score itself.
+  const taste = person => ({ vector: person.vector, pushes: person.pushes, signals: person.signals });
   function pairFor(card) {
     return {
-      score: card.percent,
-      left: { name: '你', demo: data.isDemo, months: data.me.months, counts: data.me.counts },
-      right: { name: card.name, demo: true, months: data.personaMonths, counts: card.person.counts },
+      left: { name: '你', demo: data.isDemo, months: data.me.months, counts: data.me.counts, traits: taste(data.me) },
+      right: { name: card.name, demo: true, months: data.personaMonths, counts: card.person.counts, traits: taste(card.person) },
     };
   }
   function cardButton(card) {

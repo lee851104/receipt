@@ -167,17 +167,17 @@ def main():
     friends = build_friends(context["calendar"])
     # Everyone's taste is worked out once, here, and shared by both pages and the summary below.
     tastes = population([*people, *friends], list(PERIOD), context)
+    shared = {name: (WEB / name).read_text(encoding="utf-8") for name in ("trait-similarity.js", "match-filter.js")}
     comparison = embed_scripts((WEB / "taste-comparison.html").read_text(encoding="utf-8"), {
-        "taste-profile.js": scripts["taste-profile.js"],
+        "taste-profile.js": scripts["taste-profile.js"], **shared,
+        "trait-network.js": (WEB / "trait-network.js").read_text(encoding="utf-8"),
         "trait-network-data.js": script_constant("traitNetworkData", trait_network_data(context["traits"], tastes, friends))})
     html = embed_page(html, "taste-page-source", comparison)
     rows, period = dated(months)
     me = explain(rows, period, context)
     matches = build_matches(rows, months, people, tastes, me, context, load_regions(ROOT), not args.private)
     match_page = embed_scripts((WEB / "match.html").read_text(encoding="utf-8"), {
-        "trait-similarity.js": (WEB / "trait-similarity.js").read_text(encoding="utf-8"),
-        "match-filter.js": (WEB / "match-filter.js").read_text(encoding="utf-8"),
-        "match-data.js": script_constant("matchReportData", matches)})
+        **shared, "match-data.js": script_constant("matchReportData", matches)})
     html = embed_page(html, "match-page-source", match_page)
     processed = ROOT / "data" / ("private" if args.private else "processed")
     processed.mkdir(parents=True, exist_ok=True)

@@ -837,7 +837,13 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
   }
   // Whole percentage, rounding halves up like percent() in similarity.py.
   const percent = score =&gt; Math.floor(score * 100 + 0.5);
-  const api = Object.freeze({ compare, percent });
+  const MINUS = String.fromCharCode(0x2212);  // the minus sign, not a hyphen
+  // +71%, −12% or 0%: the whole percentage with its sign, as every page shows a similarity.
+  function signed(score) {
+    const whole = percent(score);
+    return (whole &gt; 0 ? &#x27;+&#x27; : whole &lt; 0 ? MINUS : &#x27;&#x27;) + Math.abs(whole) + &#x27;%&#x27;;
+  }
+  const api = Object.freeze({ compare, percent, signed });
   if (typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports) module.exports = api; else root.TraitSimilarity = api;
 })(globalThis);
 &lt;/script&gt;
@@ -846,17 +852,11 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
 (function (root) {
   &#x27;use strict&#x27;;
   const similarity = typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports ? require(&#x27;./trait-similarity.js&#x27;) : root.TraitSimilarity;
-  const MINUS = String.fromCharCode(0x2212);  // the minus sign, not a hyphen
   const RANGES = Object.freeze([
     { level: null, label: &#x27;不限&#x27; }, { level: 0, label: &#x27;同一區&#x27; }, { level: 1, label: &#x27;同縣市&#x27; }, { level: 2, label: &#x27;同地區&#x27; }]);
   // Code-point order, as Python sorts names, so both sides break ties the same way.
   const byName = (a, b) =&gt; (a &lt; b ? -1 : a &gt; b ? 1 : 0);
-
-  // +62%, −42% or 0%, rounding halves up as percent() does.
-  function signed(score) {
-    const whole = similarity.percent(score);
-    return (whole &gt; 0 ? &#x27;+&#x27; : whole &lt; 0 ? MINUS : &#x27;&#x27;) + Math.abs(whole) + &#x27;%&#x27;;
-  }
+  const signed = similarity.signed;
 
   // Everyone who can be compared with me, in the payload&#x27;s order, with their score and each cell&#x27;s share of it.
   function scored(data) {
@@ -946,7 +946,7 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
     };
   }
 
-  const api = Object.freeze({ RANGES, signed, scored, pick, phrase, reasons, mine, status, view });
+  const api = Object.freeze({ RANGES, scored, pick, phrase, reasons, mine, status, view });
   if (typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports) module.exports = api; else root.MatchFilter = api;
 })(globalThis);
 &lt;/script&gt;
@@ -2798,7 +2798,7 @@ const matchReportData = {
   }
   $(&#x27;match-note&#x27;).textContent = &#x27;配對對象是 &#x27; + data.population + &#x27; 位虛構示範用戶。&#x27;
     + (data.isDemo ? &#x27;「我」也是虛構示範資料。&#x27; : &#x27;你的品味特質來自這份私人報告，只存在這個檔案裡。&#x27;) + &#x27;點一個人，看你們的連線圖。&#x27;;
-  const signed = MatchFilter.signed;
+  const signed = TraitSimilarity.signed;
   $(&#x27;method&#x27;).append(
     make(&#x27;p&#x27;, &#x27;每個人的發票先整理成 17 項品味特質（18 格），例如「省錢 ↔ 享受」「清爽 ↔ 香甜」「運動投入」。兩端型特質減去 &#x27;
       + data.population + &#x27; 位虛構用戶的平均，表示跟一般人比偏哪一邊。&#x27;),

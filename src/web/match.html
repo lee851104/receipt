@@ -132,7 +132,7 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
   }
   $('match-note').textContent = '配對對象是 ' + data.population + ' 位虛構示範用戶。'
     + (data.isDemo ? '「我」也是虛構示範資料。' : '你的品味特質來自這份私人報告，只存在這個檔案裡。') + '點一個人，看你們的連線圖。';
-  const signed = MatchFilter.signed;
+  const signed = TraitSimilarity.signed;
   $('method').append(
     make('p', '每個人的發票先整理成 17 項品味特質（18 格），例如「省錢 ↔ 享受」「清爽 ↔ 香甜」「運動投入」。兩端型特質減去 '
       + data.population + ' 位虛構用戶的平均，表示跟一般人比偏哪一邊。'),

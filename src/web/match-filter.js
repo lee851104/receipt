@@ -2,17 +2,11 @@
 (function (root) {
   'use strict';
   const similarity = typeof module !== 'undefined' && module.exports ? require('./trait-similarity.js') : root.TraitSimilarity;
-  const MINUS = String.fromCharCode(0x2212);  // the minus sign, not a hyphen
   const RANGES = Object.freeze([
     { level: null, label: '不限' }, { level: 0, label: '同一區' }, { level: 1, label: '同縣市' }, { level: 2, label: '同地區' }]);
   // Code-point order, as Python sorts names, so both sides break ties the same way.
   const byName = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
-
-  // +62%, −42% or 0%, rounding halves up as percent() does.
-  function signed(score) {
-    const whole = similarity.percent(score);
-    return (whole > 0 ? '+' : whole < 0 ? MINUS : '') + Math.abs(whole) + '%';
-  }
+  const signed = similarity.signed;
 
   // Everyone who can be compared with me, in the payload's order, with their score and each cell's share of it.
   function scored(data) {
@@ -102,6 +96,6 @@
     };
   }
 
-  const api = Object.freeze({ RANGES, signed, scored, pick, phrase, reasons, mine, status, view });
+  const api = Object.freeze({ RANGES, scored, pick, phrase, reasons, mine, status, view });
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.MatchFilter = api;
 })(globalThis);

@@ -15,6 +15,12 @@
   }
   // Whole percentage, rounding halves up like percent() in similarity.py.
   const percent = score => Math.floor(score * 100 + 0.5);
-  const api = Object.freeze({ compare, percent });
+  const MINUS = String.fromCharCode(0x2212);  // the minus sign, not a hyphen
+  // +71%, −12% or 0%: the whole percentage with its sign, as every page shows a similarity.
+  function signed(score) {
+    const whole = percent(score);
+    return (whole > 0 ? '+' : whole < 0 ? MINUS : '') + Math.abs(whole) + '%';
+  }
+  const api = Object.freeze({ compare, percent, signed });
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.TraitSimilarity = api;
 })(globalThis);

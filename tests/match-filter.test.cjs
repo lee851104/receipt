@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { RANGES, signed, pick, phrase, reasons, mine, view } = require('../src/web/match-filter.js');
+const { RANGES, pick, phrase, reasons, mine, view } = require('../src/web/match-filter.js');
 
 const MINUS = String.fromCharCode(0x2212);
 const traits = [
@@ -30,14 +30,6 @@ const data = {
     { name: '測試丁', vector: [0.5, null, null, 0.5, 0.5, 0.5, 0.4], distance: 0, place: null, counts },
   ],
 };
-
-test('scores read +62%, −42% and 0%, halves rounding up', () => {
-  assert.equal(signed(0.6227), '+62%');
-  assert.equal(signed(-0.4193), MINUS + '42%');
-  assert.equal(signed(0), '0%');
-  assert.equal(signed(-0.004), '0%');
-  assert.equal(signed(0.625), '+63%');
-});
 
 test('the match list keeps people at +30% or more, strongest first, ties by name, five at most', () => {
   const entries = [entry('F', 0.31), entry('B', 0.6), entry('A', 0.6), entry('C', 0.45), entry('D', 0.3), entry('E', 0.9),

@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { compare, percent } = require('../src/web/trait-similarity.js');
+const { compare, percent, signed } = require('../src/web/trait-similarity.js');
 
 const fixture = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'similarity-cases.json'), 'utf8'));
 
@@ -27,4 +27,13 @@ test('percent rounds halves up, as the Python side does', () => {
   assert.equal(percent(0.625), 63);
   assert.equal(percent(-0.355), -35);
   assert.equal(percent(0.1234), 12);
+});
+
+test('signed shows the whole percentage with a plus or a true minus sign', () => {
+  const MINUS = String.fromCharCode(0x2212);
+  assert.equal(signed(0.7101), '+71%');
+  assert.equal(signed(-0.1197), MINUS + '12%');
+  assert.equal(signed(0), '0%');
+  assert.equal(signed(-0.004), '0%');
+  assert.equal(signed(0.625), '+63%');
 });

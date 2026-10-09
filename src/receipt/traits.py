@@ -103,6 +103,14 @@ def population(people, period, context):
     return {person["name"]: explain(person["rows"], period, context) for person in people}
 
 
+def signal_ids(settings):
+    """Every signal once, in the order it first appears among the traits; embedded signal lists follow it."""
+    ids = []
+    for trait in settings["traits"]:
+        ids += [signal["id"] for signal in trait["signals"] if signal["id"] not in ids]
+    return ids
+
+
 def similarity_model(settings):
     """What compare() needs: each cell's kind and weight, the shrink constant and the minimum overlap."""
     return {"cells": [{"id": trait["id"], "kind": trait["kind"], "weight": trait["weight"]} for trait in settings["traits"]],

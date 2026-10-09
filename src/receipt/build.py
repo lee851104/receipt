@@ -11,7 +11,7 @@ from .personas import PERIOD, build_personas
 from .places import areas_of, closest_area, distance, load_regions
 from .signals import category_counts
 from .similarity import compare, percent
-from .traits import dated, explain, load_context, population, similarity_model
+from .traits import dated, explain, load_context, population, signal_ids, similarity_model
 
 ROOT = Path(__file__).resolve().parents[2]
 WEB = ROOT / "src" / "web"
@@ -42,8 +42,8 @@ def embed_page(html, template_id, page):
 
 
 def script_constant(name, value):
-    # A product name must not be able to introduce an HTML script element.
-    payload = json.dumps(value, ensure_ascii=False, indent=2).replace("<", "\\u003c")
+    # Compact JSON keeps the single-file report small; a product name must not be able to introduce a script element.
+    payload = json.dumps(value, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
     return f"'use strict';\nconst {name} = " + payload + ";\n"
 
 
@@ -64,14 +64,34 @@ def vector_of(explained):
     return None if explained is None else explained["vector"]
 
 
+def rounded(value):
+    """Four decimals, through lists and dicts: pushes and signals only draw lines and fill sentences."""
+    if isinstance(value, dict):
+        return {key: rounded(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [rounded(item) for item in value]
+    # Adding 0.0 turns -0.0 into 0.0, so a push of nothing never prints as negative.
+    return round(value, 4) + 0.0 if isinstance(value, float) else value
+
+
+def drawing_of(explained, order):
+    """What the network graph draws for one person: each signal's push on each trait, and the measured signals
+    listed in signal_ids() order so their names are not repeated for everyone."""
+    if explained is None:
+        return {"pushes": None, "signals": None}
+    return {"pushes": rounded(explained["pushes"]), "signals": [rounded(explained["signals"][key]) for key in order]}
+
+
 def build_matches(rows, months, people, tastes, me, context, regions, is_demo):
     """Everyone's taste vector for the match page to score in the browser."""
     settings = context["traits"]
+    order = signal_ids(settings)
     mine = areas_of(rows, context)
     entries = []
     for person in people:
         areas = areas_of(person["rows"], context)
         entries.append({"name": person["name"], "vector": vector_of(tastes[person["name"]]),
+                        **drawing_of(tastes[person["name"]], order),
                         "distance": distance(mine, areas, regions), "place": closest_area(mine, areas, regions),
                         "counts": category_counts(person["rows"])})
     return {
@@ -79,7 +99,8 @@ def build_matches(rows, months, people, tastes, me, context, regions, is_demo):
         "personaMonths": [f"{year}-{month:02}" for year, month in PERIOD],
         "model": similarity_model(settings), "traits": trait_words(settings),
         "settings": {**settings["match"], "min_items": settings["min_items"]},
-        "me": {"vector": vector_of(me), "months": sorted(months), "areas": mine, "counts": category_counts(rows)},
+        "me": {"vector": vector_of(me), **drawing_of(me, order), "months": sorted(months), "areas": mine,
+               "counts": category_counts(rows)},
         "people": entries,
     }
 

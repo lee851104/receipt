@@ -7,7 +7,8 @@ from pathlib import Path
 from src.receipt.demo import build_demo
 from src.receipt.personas import build_friends, build_personas
 from src.receipt.signals import calendar_days, category_counts
-from src.receipt.traits import between, build_vector, dated, explain, load_context, population, trait_parts, trait_value
+from src.receipt.traits import (between, build_vector, dated, explain, load_context, population, signal_ids, trait_parts,
+                                trait_value)
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTEXT = load_context(ROOT)
@@ -219,6 +220,13 @@ class ExplainTests(unittest.TestCase):
         measured = {"counts": {"store_food_items": 8}, "constants": {},
                     "signals": {"store_clearance_share": 0.2, "weekday_quick_share": 0.3}}
         self.assertEqual(trait_parts(motive, measured), (0.0, [-0.25, 0.25]))
+
+    def test_signals_are_listed_once_in_the_order_they_first_appear(self):
+        ids = signal_ids(CONTEXT["traits"])
+        self.assertEqual(len(ids), 46)
+        self.assertEqual(len(set(ids)), 46)
+        self.assertEqual(ids[:7], ["meal_cost", "clearance_share", "premium_drink_share", "store_meal_share",
+                                   "weekday_quick_share", "shop_meal_share", "store_clearance_share"])
 
     def test_too_little_data_explains_nothing_and_names_must_be_unique(self):
         self.assertIsNone(explain([], [], CONTEXT))

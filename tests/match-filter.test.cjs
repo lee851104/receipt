@@ -68,6 +68,8 @@ test('a card says which way both lean, which way each leans, or which habit both
   assert.equal(phrase(traits[2], 0.61, -0.19), '你偏常出遊，對方偏待在生活圈');
   assert.equal(phrase(traits[6], 0.4, 0.7), '都有養貓的紀錄');
   assert.equal(phrase({ kind: 'level', habit: '3C' }, 0.3, 0.5), '都有 3C 的紀錄');
+  // The connection page names both people instead of 你 and 對方, spacing a Latin letter from the Chinese after it.
+  assert.equal(phrase(traits[2], 0.61, -0.19, ['小安', '手搖學生 A']), '小安偏常出遊，手搖學生 A 偏待在生活圈');
 });
 
 test('the most and least alike cells come from the largest and smallest parts, or nothing', () => {

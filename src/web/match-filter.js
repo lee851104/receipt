@@ -37,11 +37,11 @@
     }, '');
   }
 
-  // How one cell reads on a card: a habit both have, both on one side, or opposite sides.
-  function phrase(trait, mine, theirs) {
+  // How one cell reads: a habit both have, both on one side, or opposite sides; cards call the two 你 and 對方.
+  function phrase(trait, mine, theirs, names = ['你', '對方']) {
     if (trait.kind === 'level') return words('都有', trait.habit, '的紀錄');
     if (mine * theirs > 0) return '都偏' + end(trait, mine);
-    return '你偏' + end(trait, mine) + '，對方偏' + end(trait, theirs);
+    return words(names[0], '偏' + end(trait, mine)) + '，' + words(names[1], '偏' + end(trait, theirs));
   }
 
   // The cell that adds most to the score and the one that takes most away; null when there is none.
@@ -101,6 +101,6 @@
     };
   }
 
-  const api = Object.freeze({ RANGES, scored, pick, phrase, reasons, mine, status, view });
+  const api = Object.freeze({ RANGES, scored, pick, words, phrase, reasons, mine, status, view });
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.MatchFilter = api;
 })(globalThis);

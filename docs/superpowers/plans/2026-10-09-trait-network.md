@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended) or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 連線頁改成像神經網路的星雲圖：兩人各自的 46 個消費訊號連到 18 格品味特質，同一格特質在兩人之間相連，線的粗細與顏色就是推力與加減分；相似度改用原本的向量（不減平均），大字分數全站統一成品味相似度，綜合解讀配上每項特質的俏皮話。
+**Goal:** 連線頁改成像神經網路的星雲圖：兩人各自的 46 個消費訊號連到 18 格品味特質，同一格特質在兩人之間相連，線的粗細與顏色就是推力與加減分；相似度改用原本的向量（不減平均），大字分數全站統一成品味相似度，綜合解讀配上每項特質的俏皮話。甜度特質「清爽 ↔ 香甜」改名為「低甜度 ↔ 高甜度」（使用者決定，Task 3）。
 
 **Architecture:** Python 的 `traits.explain` 算出每個人的向量、每個訊號對每項特質的推力與量測值，`build.py` 只算一次並嵌入配對頁（`matchReportData`）與連線頁（`traitNetworkData`）。新的 `trait-network.js` 是純函式：版面位置、標籤避讓、說明列與綜合解讀的文字、資料檢查；`taste-comparison.html` 只負責把結果畫成 SVG、切換「品味特質｜品項細節」與處理點選。配對頁的門檻改用畫面上的整數百分比，相反名單改成 −10%。
 
@@ -51,9 +51,9 @@
   2026-04 53 rows; total 8095
   taste similarity to 40 fictional people: highest 71%, median 14%, lowest -12%
   ```
-- 示範配對頁：合拍「14 位品味相似度 +30% 以上，顯示前 5 位。」手搖學生 B（+71%）、A（+71%）、C（+67%）、咖啡上班族 D（+40%）、E（+40%）；同一區是手搖學生 B、A、C、D（+32%）、E（+32%）；相反「6 位品味相似度 −10% 以下，顯示前 5 位。」省錢上班族 D、E（−12%）、C、A、B（−11%）。你的品味特質「偏好好吃飯・偏避開連假・偏香甜」「也有運動、生活小物、3C 的紀錄」。
-- 連線頁（點第一張卡片手搖學生 B）：大字 +71，「依 17 項品味特質計算 · 虛構示範」；臭味相投「都偏好好吃飯（加 32 分）— 吃飯這件事，從不將就。」；背道而馳「沒有扣分的特質 — 難得這麼合拍。」；圖上 85 條訊號線、15 條中間的線。點左邊「飲料甜度」，說明列三行：「你：飲料甜度 約 8 分糖，往「香甜」推 0.61」「手搖學生 B：飲料甜度 約 10 分糖，往「香甜」推 0.80」「「清爽 ↔ 香甜」這一格：你偏香甜 0.70、手搖學生 B 偏香甜 0.93，加 21 分 — 糖分補給，雙人同行。」
-- 朋友比較預設小安 × 小宇 +80%；背道而馳「小安偏清爽，小宇偏香甜（扣 6 分）— 一個加糖，一個讓糖罐放假。」貼上自己匯出的連結後，大字「—」，品味特質按鈕停用。
+- 示範配對頁：合拍「14 位品味相似度 +30% 以上，顯示前 5 位。」手搖學生 B（+71%）、A（+71%）、C（+67%）、咖啡上班族 D（+40%）、E（+40%）；同一區是手搖學生 B、A、C、D（+32%）、E（+32%）；相反「6 位品味相似度 −10% 以下，顯示前 5 位。」省錢上班族 D、E（−12%）、C、A、B（−11%）。你的品味特質「偏好好吃飯・偏避開連假・偏高甜度」「也有運動、生活小物、3C 的紀錄」。
+- 連線頁（點第一張卡片手搖學生 B）：大字 +71，「依 17 項品味特質計算 · 虛構示範」；臭味相投「都偏好好吃飯（加 32 分）— 吃飯這件事，從不將就。」；背道而馳「沒有扣分的特質 — 難得這麼合拍。」；圖上 85 條訊號線、15 條中間的線。點左邊「飲料甜度」，說明列三行：「你：飲料甜度 約 8 分糖，往「高甜度」推 0.61」「手搖學生 B：飲料甜度 約 10 分糖，往「高甜度」推 0.80」「「低甜度 ↔ 高甜度」這一格：你偏高甜度 0.70、手搖學生 B 偏高甜度 0.93，加 21 分 — 糖分補給，雙人同行。」
+- 朋友比較預設小安 × 小宇 +80%；背道而馳「小安偏低甜度，小宇偏高甜度（扣 6 分）— 一個加糖，一個讓糖罐放假。」貼上自己匯出的連結後，大字「—」，品味特質按鈕停用。
 - 報告從約 232 KB 變成約 277 KB；`matchReportData` 約 33 KB、`traitNetworkData` 約 10 KB。
 
 ## 檔案結構
@@ -62,7 +62,7 @@
 |---|---|---|
 | `src/web/trait-similarity.js` | 修改 | 共用的 `signed`（+71%、−12%、0%） |
 | `src/receipt/traits.py` | 修改 | `trait_parts`、`explain`、`population`、`signal_ids`；刪除減平均的 `typical`、`relative`、`population_vectors` |
-| `configs/traits.json` | 修改 | 相反門檻 `opposite_score`；每個訊號的 `label`、`unit`；兩端型 `short`；每項特質的 `lines`；`readout` |
+| `configs/traits.json` | 修改 | 相反門檻 `opposite_score`；甜度特質改名「低甜度 ↔ 高甜度」；每個訊號的 `label`、`unit`；兩端型 `short`；每項特質的 `lines`；`readout` |
 | `src/receipt/build.py` | 修改 | 只算一次；原本的向量；推力與訊號值；緊湊 JSON；`traitNetworkData`；連線頁嵌入三個程式 |
 | `src/web/match-filter.js` | 修改 | 用整數百分比比門檻；相反門檻；「你的品味特質」新寫法；`phrase` 可帶名字；公開 `words` |
 | `src/web/match.html` | 修改 | 「怎麼算的？」改寫；卡片把兩人的品味資料交給連線頁 |
@@ -408,6 +408,7 @@ git commit -m "feat: explain how far each signal pushes each taste trait" -m "Co
 - Consumes: Task 2 的 `traits.explain`、`traits.population`；Task 1 的 `TraitSimilarity.signed`
 - Produces:
   - `traits.json` 的 `"match": {"min_score": 0.3, "opposite_score": 0.1, "top": 5}`；`matchReportData.settings` 因此多了 `opposite_score`
+  - `traits.json` 的甜度特質改名：`"name": "低甜度 ↔ 高甜度"`、`"ends": ["低甜度", "高甜度"]`（`id` 仍是 `sweet`）。卡片因此寫「都偏高甜度」「你偏高甜度，對方偏低甜度」
   - `build.vector_of(explained) -> list | None`
   - `build.build_matches(rows, months, people, tastes, me, context, regions, is_demo)`：`tastes` 是 `population(...)` 的結果、`me` 是「我」的 `explain`
   - `build.taste_summary(me, people, tastes, context) -> list[float]`（由低到高，「我」資料不足時是空的）
@@ -492,7 +493,7 @@ git commit -m "feat: explain how far each signal pushes each taste trait" -m "Co
             self.assertEqual(payload["settings"], {"min_score": 0.3, "opposite_score": 0.1, "top": 5, "min_items": 20})
 ```
 
-`tests/match-filter.test.cjs`：
+`tests/match-filter.test.cjs`（照順序改，第 6 點最後做）：
 1. `const settings = { min_score: 0.3, top: 5, min_items: 20 };` 改成 `const settings = { min_score: 0.3, opposite_score: 0.1, top: 5, min_items: 20 };`
 2. 把整個測試 `test('the opposite list mirrors it at −30% or less, most opposite first', () => { … });` 換成：
 
@@ -512,14 +513,15 @@ git commit -m "feat: explain how far each signal pushes each taste trait" -m "Co
    ```
 
 3. 測試 `my traits list up to three leanings past 0.2, then the habits on record` 裡：
-   - `{ lean: '跟一般人比：偏香甜・偏待在生活圈・偏喜歡嘗鮮', habits: '也有養貓的紀錄' }` 改成 `{ lean: '偏香甜・偏待在生活圈・偏喜歡嘗鮮', habits: '也有養貓的紀錄' }`
+   - `{ lean: '跟一般人比：偏香甜・偏待在生活圈・偏喜歡嘗鮮', habits: '也有養貓的紀錄' }` 改成 `{ lean: '偏高甜度・偏待在生活圈・偏喜歡嘗鮮', habits: '也有養貓的紀錄' }`
    - `{ lean: '跟一般人差不多', habits: '' }` 改成 `{ lean: '品味特質還不明顯', habits: '' }`
 4. 測試 `the page lists matches, and opposites only when asked` 裡：
-   - `{ lean: '跟一般人比：偏享受・偏香甜・偏常出遊', habits: '也有養貓的紀錄' }` 改成 `{ lean: '偏享受・偏香甜・偏常出遊', habits: '也有養貓的紀錄' }`
+   - `{ lean: '跟一般人比：偏享受・偏香甜・偏常出遊', habits: '也有養貓的紀錄' }` 改成 `{ lean: '偏享受・偏高甜度・偏常出遊', habits: '也有養貓的紀錄' }`
    - `'1 位品味相似度 ' + MINUS + '30% 以下。'` 改成 `'1 位品味相似度 ' + MINUS + '10% 以下。'`
 5. 測試 `the page explains an empty distance, missing home districts, nobody close and thin data` 裡：
    - `'這個距離內沒有品味相似度 ' + MINUS + '30% 以下的人，試試放寬距離。'` 改成 `'這個距離內沒有品味相似度 ' + MINUS + '10% 以下的人，試試放寬距離。'`
    - `'目前沒有和你明顯相反的人（' + MINUS + '30% 以下）。'` 改成 `'目前沒有和你明顯相反的人（' + MINUS + '10% 以下）。'`
+6. 甜度的新名稱，把檔案裡剩下的舊名稱改掉：第 8 行測試特質的 `name: '清爽 ↔ 香甜'` 改成 `name: '低甜度 ↔ 高甜度'`、`ends: ['清爽', '香甜']` 改成 `ends: ['低甜度', '高甜度']`；`'都偏香甜'`（兩處）改成 `'都偏高甜度'`；`'都偏清爽'` 改成 `'都偏低甜度'`；`'你偏香甜，對方偏清爽'` 改成 `'你偏高甜度，對方偏低甜度'`。改完後檔案裡不再有「香甜」或「清爽」。
 
 `tests/match-page.test.cjs`：把從 `test('the demo lists the three sweet-toothed students and two holiday travellers', () => {` 到檔案結尾的三個測試，換成：
 
@@ -532,7 +534,7 @@ test('the demo lists the three sweet-toothed students and two coffee lovers', ()
   const [first, , , fourth] = shown.match.cards;
   assert.deepEqual([first.alike, first.unlike, first.place], ['都偏好好吃飯', null, '高雄市苓雅區']);
   assert.deepEqual([fourth.alike, fourth.unlike, fourth.place], ['都偏好好吃飯', '你偏省錢，對方偏享受', '臺北市信義區']);
-  assert.deepEqual(shown.mine, { lean: '偏好好吃飯・偏避開連假・偏香甜', habits: '也有運動、生活小物、3C 的紀錄' });
+  assert.deepEqual(shown.mine, { lean: '偏好好吃飯・偏避開連假・偏高甜度', habits: '也有運動、生活小物、3C 的紀錄' });
   assert.equal(shown.note, '你的生活圈：高雄市苓雅區、高雄市新興區');
 });
 
@@ -541,7 +543,7 @@ test('within the same district all five students remain', () => {
   assert.equal(shown.match.status, '5 位品味相似度 +30% 以上。');
   assert.deepEqual(summary(shown.match.cards), [['手搖學生 B', '+71%'], ['手搖學生 A', '+71%'], ['手搖學生 C', '+67%'],
     ['手搖學生 D', '+32%'], ['手搖學生 E', '+32%']]);
-  assert.equal(shown.match.cards[3].unlike, '你偏香甜，對方偏清爽');
+  assert.equal(shown.match.cards[3].unlike, '你偏高甜度，對方偏低甜度');
 });
 
 test('the opposite list is the thrifty office workers', () => {
@@ -549,7 +551,7 @@ test('the opposite list is the thrifty office workers', () => {
   assert.equal(shown.opposite.status, '6 位品味相似度 ' + MINUS + '10% 以下，顯示前 5 位。');
   assert.deepEqual(summary(shown.opposite.cards), [['省錢上班族 D', MINUS + '12%'], ['省錢上班族 E', MINUS + '12%'],
     ['省錢上班族 C', MINUS + '11%'], ['省錢上班族 A', MINUS + '11%'], ['省錢上班族 B', MINUS + '11%']]);
-  assert.ok(shown.opposite.cards.every(card => card.alike === '都偏省錢' && card.unlike === '你偏香甜，對方偏清爽'));
+  assert.ok(shown.opposite.cards.every(card => card.alike === '都偏省錢' && card.unlike === '你偏高甜度，對方偏低甜度'));
   // They pass 同一區 through their second home district, so the card shows that one.
   assert.ok(shown.opposite.cards.every(card => card.place === '高雄市苓雅區'));
 });
@@ -571,6 +573,12 @@ Expected: FAIL（相反門檻與「你的品味特質」的文字）
 
 ```json
   "match": {"min_score": 0.3, "opposite_score": 0.1, "top": 5},
+```
+
+甜度特質那一行（`{"id": "sweet", "name": "清爽 ↔ 香甜", "ends": ["清爽", "香甜"], "kind": "two_sided", "weight": 1,`）改成：
+
+```json
+    {"id": "sweet", "name": "低甜度 ↔ 高甜度", "ends": ["低甜度", "高甜度"], "kind": "two_sided", "weight": 1,
 ```
 
 `src/receipt/build.py`：
@@ -738,7 +746,7 @@ Expected: FAIL（相反門檻與「你的品味特質」的文字）
   const traitCount = new Set(data.traits.map(trait => trait.group ?? trait.id)).size;
   $('method').append(
     make('p', '每個人的發票先整理成 ' + traitCount + ' 項品味特質（' + data.traits.length
-      + ' 格），例如「省錢 ↔ 享受」「清爽 ↔ 香甜」「運動投入」。兩端型特質看偏向哪一端，程度型特質看有多投入。'),
+      + ' 格），例如「省錢 ↔ 享受」「低甜度 ↔ 高甜度」「運動投入」。兩端型特質看偏向哪一端，程度型特質看有多投入。'),
 ```
 
 並把 `+ signed(-settings.min_score) + ' 以下的人。'),` 改成 `+ signed(-settings.opposite_score) + ' 以下的人。'),`。
@@ -1090,7 +1098,7 @@ Expected: FAIL，`KeyError: 'unit'`；`test_build_report` 找不到 `trait-netwo
        {"id": "ready_meal_share", "weight": 0.3, "toward": -1, "full": 0.6, "label": "現成餐點", "unit": "share"},
        {"id": "kitchen_per_month", "weight": 0.2, "toward": 1, "full": 2, "label": "廚房用品", "unit": "items_month"}
      ]},
-    {"id": "sweet", "name": "清爽 ↔ 香甜", "ends": ["清爽", "香甜"], "short": "甜度", "kind": "two_sided", "weight": 1,
+    {"id": "sweet", "name": "低甜度 ↔ 高甜度", "ends": ["低甜度", "高甜度"], "short": "甜度", "kind": "two_sided", "weight": 1,
      "requires": {"known_sugar_drinks": 3},
      "lines": {"both": ["無糖派，清爽到底。", "糖分補給，雙人同行。"], "split": "一個加糖，一個讓糖罐放假。"},
      "signals": [
@@ -1304,7 +1312,7 @@ const { percent } = require('../src/web/trait-similarity.js');
 
 // Four traits and six signals are enough to exercise every rule; "quick" feeds two traits, like weekday_quick_share.
 const traits = [
-  { id: 'sweet', name: '清爽 ↔ 香甜', kind: 'two_sided', ends: ['清爽', '香甜'], short: '甜度', signals: ['sugar_mean', 'dessert_share'],
+  { id: 'sweet', name: '低甜度 ↔ 高甜度', kind: 'two_sided', ends: ['低甜度', '高甜度'], short: '甜度', signals: ['sugar_mean', 'dessert_share'],
     lines: { both: ['無糖派，清爽到底。', '糖分補給，雙人同行。'], split: '一個加糖，一個讓糖罐放假。' } },
   { id: 'meals', name: '快速解決 ↔ 好好吃飯', kind: 'two_sided', ends: ['快速解決', '好好吃飯'], short: '吃飯', signals: ['quick', 'shop_meal'],
     lines: { both: ['五分鐘吃完，效率一百分。', '吃飯這件事，從不將就。'], split: '一個在趕路，一個在等上菜。' } },
@@ -1414,8 +1422,8 @@ test('labels never cover each other, and the strongest trait always keeps its la
 });
 
 test('labels name the end a trait leans to, else its short name or habit', () => {
-  assert.equal(TN.traitLabel(traits[0], 0.7), '香甜');
-  assert.equal(TN.traitLabel(traits[0], -0.2), '清爽');
+  assert.equal(TN.traitLabel(traits[0], 0.7), '高甜度');
+  assert.equal(TN.traitLabel(traits[0], -0.2), '低甜度');
   assert.equal(TN.traitLabel(traits[0], 0), '甜度');
   assert.equal(TN.traitLabel(traits[2], null), '超商動機');
   assert.equal(TN.traitLabel(traits[3], 0), '運動');
@@ -1431,15 +1439,15 @@ test('each unit reads naturally in the detail line', () => {
   assert.equal(TN.formatSignal(0.333, 'items_month'), '每月 0.3 件');
   assert.equal(TN.formatSignal(3, 'kinds'), '3 種');
   assert.throws(() => TN.formatSignal(1, 'stars'));
-  assert.equal(TN.traitText(traits[0], 0.7), '偏香甜 0.70');
-  assert.equal(TN.traitText(traits[0], -0.58), '偏清爽 0.58');
+  assert.equal(TN.traitText(traits[0], 0.7), '偏高甜度 0.70');
+  assert.equal(TN.traitText(traits[0], -0.58), '偏低甜度 0.58');
   assert.equal(TN.traitText(traits[0], 0), '0.00');
   assert.equal(TN.traitText(traits[3], 0.375), '0.38');
   assert.equal(TN.traitText(traits[2], null), '資料不足');
 });
 
 test('a signal sentence says its value and how far it pushed each trait it feeds', () => {
-  assert.equal(TN.signalSentence(data, me, '你', 'sugar_mean'), '你：飲料甜度 約 8 分糖，往「香甜」推 0.61');
+  assert.equal(TN.signalSentence(data, me, '你', 'sugar_mean'), '你：飲料甜度 約 8 分糖，往「高甜度」推 0.61');
   assert.equal(TN.signalSentence(data, them, '對方', 'quick'), '對方：平日固定速食 36%，往「快速解決」推 0.18；往「為了省時」推 0.60');
   assert.equal(TN.signalSentence(data, me, '你', 'quick'), '你：平日固定速食 0%，沒有推動「快速解決 ↔ 好好吃飯」；「超商：省錢 ↔ 省時」資料不足');
   assert.equal(TN.signalSentence(data, me, '你', 'clearance'), '你：超商即期，「超商：省錢 ↔ 省時」資料不足');
@@ -1451,13 +1459,13 @@ test('a signal sentence says its value and how far it pushed each trait it feeds
 test('a cell sentence gives both values, the points it added or took, and its line', () => {
   const alike = TN.layout(data, me, them, false).result, apart = TN.layout(data, me, light, false).result;
   assert.equal(TN.cellSentence(data, 0, me, them, ['你', '對方'], alike.parts[0]),
-    '「清爽 ↔ 香甜」這一格：你偏香甜 0.70、對方偏香甜 0.94，加 ' + percent(alike.parts[0]) + ' 分 — 糖分補給，雙人同行。');
+    '「低甜度 ↔ 高甜度」這一格：你偏高甜度 0.70、對方偏高甜度 0.94，加 ' + percent(alike.parts[0]) + ' 分 — 糖分補給，雙人同行。');
   assert.equal(TN.cellSentence(data, 0, me, light, ['小安', '小宇'], apart.parts[0]),
-    '「清爽 ↔ 香甜」這一格：小安偏香甜 0.70、小宇偏清爽 0.58，扣 ' + -percent(apart.parts[0]) + ' 分 — 一個加糖，一個讓糖罐放假。');
+    '「低甜度 ↔ 高甜度」這一格：小安偏高甜度 0.70、小宇偏低甜度 0.58，扣 ' + -percent(apart.parts[0]) + ' 分 — 一個加糖，一個讓糖罐放假。');
   assert.equal(TN.cellSentence(data, 2, me, them, ['你', '對方'], null), '「超商：省錢 ↔ 省時」這一格：你資料不足，這一格不計分');
   assert.equal(TN.cellSentence(data, 2, me, me, ['你', '手搖學生 A'], null), '「超商：省錢 ↔ 省時」這一格：你和手搖學生 A 資料不足，這一格不計分');
   assert.equal(TN.cellSentence(data, 3, me, light, ['你', '對方'], 0), '「運動投入」這一格：你 0.38、對方 0.00，不加也不扣');
-  assert.equal(TN.cellSentence(data, 0, me, them, ['你', '對方'], null), '「清爽 ↔ 香甜」這一格：兩人共同的特質太少，無法計分');
+  assert.equal(TN.cellSentence(data, 0, me, them, ['你', '對方'], null), '「低甜度 ↔ 高甜度」這一格：兩人共同的特質太少，無法計分');
 });
 
 test('the readout names the cell that adds most and the one that takes most away', () => {
@@ -1467,7 +1475,7 @@ test('the readout names the cell that adds most and the one that takes most away
     unlike: '沒有扣分的特質 — 難得這麼合拍。' });
   const apart = TN.layout(data, me, light, false).result;
   assert.equal(TN.readout(data, me, light, ['小安', '小宇'], apart).unlike,
-    '小安偏香甜，小宇偏清爽（扣 ' + -percent(apart.parts[0]) + ' 分）— 一個加糖，一個讓糖罐放假。');
+    '小安偏高甜度，小宇偏低甜度（扣 ' + -percent(apart.parts[0]) + ' 分）— 一個加糖，一個讓糖罐放假。');
   const habitOnly = { ...data, model: { ...data.model, min_shared_two_sided: 0 } };
   const sporty = { vector: [null, null, null, 0.5], pushes: [[null, null], [null, null], [null, null], [0.5]], signals: [null, null, null, null, null, 4] };
   const both = TN.layout(habitOnly, sporty, sporty, false).result;
@@ -2263,7 +2271,7 @@ Expected: 輸出同「試做結果」的三行；`git status` 只看到未追蹤
 
 主控用無頭 Chrome（DevTools 協定）實際操作 `invoice-insights.html`，逐項截圖確認：
 
-- 配對頁：名單與「試做結果」相同；「你的品味特質」是「偏好好吃飯・偏避開連假・偏香甜」；打開「也看看跟你相反的人」出現省錢上班族 D、E、C、A、B。
+- 配對頁：名單與「試做結果」相同；「你的品味特質」是「偏好好吃飯・偏避開連假・偏高甜度」；打開「也看看跟你相反的人」出現省錢上班族 D、E、C、A、B。
 - 點手搖學生 B：品味特質圖、大字 +71、綜合解讀；點左邊「飲料甜度」與「快速解決 ↔ 好好吃飯」那一格，說明列與「試做結果」相同；Esc 取消；切到品項細節是 10 類圖、大字不變；返回配對清單後開關與距離仍保留。
 - 點省錢上班族 D：大字是負的，中間有橘色虛線。
 - 朋友比較：小安 × 小宇 +80%；品項細節的兩個案例；匯出自己的品味連結再貼到右側，大字「—」、品味特質停用。

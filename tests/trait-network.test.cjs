@@ -114,6 +114,22 @@ test('labels never cover each other, and the strongest trait always keeps its la
   rects.forEach((rect, k) => rects.slice(k + 1).forEach(other => assert.ok(!overlap(rect, other))));
 });
 
+test('on phones a label hangs away from the middle of the fan, so the strongest trait keeps its label', () => {
+  // Twenty habits all at 1.0: every dot sits on the outer ring, crowding its neighbours.
+  const crowd = Array.from({ length: 20 }, (_, k) => ({ id: 't' + k, name: '測試' + k, kind: 'level', habit: '測試習慣' + k,
+    signals: ['s' + k], lines: { both: '測試。' } }));
+  const busy = { ...data, traits: crowd, signals: crowd.map((_, k) => ({ id: 's' + k, label: '訊號' + k, unit: 'share' })),
+    model: { ...data.model, cells: crowd.map(trait => ({ id: trait.id, kind: 'level', weight: 1 })), min_shared_two_sided: 0 } };
+  const person = { vector: crowd.map(() => 1), pushes: crowd.map(() => [1]), signals: crowd.map(() => 1) };
+  for (const side of TN.layout(busy, person, person, true).sides) {
+    assert.equal(side.traits[0].labelShown, true);
+    const shown = side.traits.filter(trait => trait.labelShown);
+    assert.ok(shown.every(trait => trait.labelAnchor === (trait.angle > 0 ? 'end' : 'start')));
+    const rects = shown.map(trait => TN.labelRect(trait.label, TN.SHAPES.mobile.font, trait.labelX, trait.labelY, trait.labelAnchor));
+    rects.forEach((rect, k) => rects.slice(k + 1).forEach(other => assert.ok(!overlap(rect, other))));
+  }
+});
+
 test('labels name the end a trait leans to, else its short name or habit', () => {
   assert.equal(TN.traitLabel(traits[0], 0.7), '高甜度');
   assert.equal(TN.traitLabel(traits[0], -0.2), '低甜度');
@@ -159,6 +175,9 @@ test('a cell sentence gives both values, the points it added or took, and its li
   assert.equal(TN.cellSentence(data, 2, me, me, ['你', '手搖學生 A'], null), '「超商：省錢 ↔ 省時」這一格：你和手搖學生 A 資料不足，這一格不計分');
   assert.equal(TN.cellSentence(data, 3, me, light, ['你', '對方'], 0), '「運動投入」這一格：你 0.38、對方 0.00，不加也不扣');
   assert.equal(TN.cellSentence(data, 0, me, them, ['你', '對方'], null), '「低甜度 ↔ 高甜度」這一格：兩人共同的特質太少，無法計分');
+  // A number never runs into a name that ends in a Latin letter.
+  assert.equal(TN.cellSentence(data, 3, me, them, ['你', '手搖學生 A'], alike.parts[3]),
+    '「運動投入」這一格：你 0.38、手搖學生 A 0.20，加 ' + percent(alike.parts[3]) + ' 分 — 流汗也有伴。');
 });
 
 test('the readout names the cell that adds most and the one that takes most away', () => {

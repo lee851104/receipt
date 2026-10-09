@@ -77,7 +77,9 @@
       for (let step = 0; step <= LABEL_STEPS && !trait.labelShown; step++) {
         const at = place(shape, side, trait.distance + step * shape.font * 1.2, trait.angle);
         let box;
-        if (shape === SHAPES.mobile) box = { x: at.x + trait.r + 4, y: at.y + shape.font * 0.35, anchor: 'start' };
+        // Phones hang a label away from the middle of the fan, so moving it outwards never lands it on its own dot.
+        if (shape === SHAPES.mobile && trait.angle > 0) box = { x: at.x - trait.r - 4, y: at.y + shape.font * 0.35, anchor: 'end' };
+        else if (shape === SHAPES.mobile) box = { x: at.x + trait.r + 4, y: at.y + shape.font * 0.35, anchor: 'start' };
         else if (side === 'a') box = { x: at.x - trait.r - 4, y: at.y - 6, anchor: 'end' };
         else box = { x: at.x + trait.r + 4, y: at.y - 6, anchor: 'start' };
         const rect = labelRect(trait.label, shape.font, box.x, box.y, box.anchor);
@@ -172,6 +174,9 @@
 
   const points = part => Math.abs(similarity.percent(part));
 
+  // A name with a trait value: 你偏高甜度 0.70, 你 0.38, 手搖學生 A 0.22; a number always stands apart from the name.
+  const valued = (name, text) => (/^\d/.test(text) ? name + ' ' + text : cards.words(name, text));
+
   // What one person's signal did: its value, and how far it pushed each trait it feeds.
   function signalSentence(data, person, name, id) {
     const order = data.signals.findIndex(signal => signal.id === id);
@@ -196,7 +201,7 @@
     const missing = names.filter((name, k) => [left, right][k].vector[index] === null);
     if (missing.length) return head + cards.words(missing.join('和'), '資料不足，這一格不計分');
     if (part === null) return head + '兩人共同的特質太少，無法計分';
-    const values = cards.words(names[0], traitText(trait, left.vector[index])) + '、' + cards.words(names[1], traitText(trait, right.vector[index]));
+    const values = valued(names[0], traitText(trait, left.vector[index])) + '、' + valued(names[1], traitText(trait, right.vector[index]));
     if (part === 0) return head + values + '，不加也不扣';
     return head + values + '，' + (part > 0 ? '加 ' : '扣 ') + points(part) + ' 分 — ' + line(trait, left.vector[index], right.vector[index]);
   }

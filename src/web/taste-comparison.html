@@ -21,7 +21,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 @media(max-width:640px){main{padding-top:20px}.intro h1{font-size:25px}.intro h1 em{display:inline}.intro .eyebrow{font-size:9px}.comparison-overview{grid-template-columns:1fr;gap:12px;padding:16px;margin-bottom:17px}.comparison-overview .overall{border-right:0;border-bottom:1px solid #463435;padding:0 0 12px;display:grid;grid-template-columns:1fr auto;align-items:center}.comparison-overview .score{font-size:52px}.comparison-overview .readout{padding:0}.readout p{font-size:12px}.readout #summary{font-size:13px}.imports{gap:8px}.import-card{padding:10px 12px}.import-title-row span{font-size:9px}}
 .return-report{display:inline-block;color:var(--muted);font-size:12px;text-decoration:none;margin-bottom:14px}.return-report:hover{color:var(--pink)}
 .views{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}.view-button{background:none;border:0;padding:7px 15px;font-size:12px;color:var(--muted);min-height:36px}.view-button[aria-pressed="true"]{background:#2b2626;color:var(--ink)}.view-button:disabled{opacity:.4;cursor:not-allowed}.views-note{font-size:11px;color:var(--muted)}.toolbar-left{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.t-label{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.t-trait,.t-signal{stroke-width:1.4}.t-link,.t-cell{fill:none;stroke-linecap:round;transition:opacity .15s}.detail-text{white-space:pre-line}
+.t-label{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.t-trait,.t-signal{stroke-width:1.4}.t-link,.t-cell{fill:none;stroke-linecap:round;transition:opacity .15s}.t-hit{cursor:pointer;outline:none;transition:opacity .15s}.t-hit:focus-visible .t-signal,.t-hit:focus-visible .t-trait{stroke:#fff;stroke-width:2.5}.t-cell-hit{fill:none;stroke:transparent;stroke-width:14}.t-tip{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.detail-text{white-space:pre-line}
 </style>
 </head>
 <body>
@@ -120,7 +120,7 @@ function productName(i,side){const key=keyFor(side);if(items[i].dumpling||items[
 function relation(edge){if(categoryMode)return '占比接近度 '+Math.round(edge.score*100)+'%';return (edge.score>0?'正相關':'負相關')+' '+signed(edge.score);}
 function el(tag,attrs={},text){const n=document.createElementNS(svgNS,tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;return n;}
 function path(a,b){const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),p={x:a.x+dx/d*(a.r+3),y:a.y+dy/d*(a.r+3)},q={x:b.x-dx/d*(b.r+3),y:b.y-dy/d*(b.r+3)};return `M ${p.x} ${p.y} C ${p.x+(q.x-p.x)*.42} ${p.y}, ${q.x-(q.x-p.x)*.42} ${q.y}, ${q.x} ${q.y}`;}
-function clearSelection(){selected=null;if(traitGraph){for(const item of [...traitGraph.links,...traitGraph.cells])item.el.style.opacity=String(item.base);for(const item of [...traitGraph.signals,...traitGraph.traits]){item.el.style.opacity='1';if(item.labelEl)item.labelEl.style.opacity='1';}$('detail').textContent='點一個訊號或特質，看看它怎麼一路連到分數。';return;}for(const edge of edges){edge.line.style.opacity=String(.5+Math.abs(edge.score)*.45);edge.line.style.stroke=edgeColor(edge.score);}for(const node of nodes){node.group.classList.remove('dim','is-selected');}$('detail').textContent=!loadedSides().length?'先在上方貼上網址，或點選一位示範人物。':!nodes.length?'這個類別目前沒有示範資料，請選擇其他種類。':hasBoth()?'點選一個圓點或一條線，看看你們買了什麼、相似在哪裡。':'已顯示一人的消費品項；另一人匯入後，才會出現比較連線。';}
+function clearSelection(){selected=null;if(traitGraph){clearPins();hideHover();for(const item of [...traitGraph.links,...traitGraph.cells])item.el.style.opacity=String(item.base);for(const item of [...traitGraph.signals,...traitGraph.traits]){item.el.style.opacity='1';if(item.labelEl)item.labelEl.style.opacity='1';}$('detail').textContent='點一個訊號或特質，看看它怎麼一路連到分數。';return;}for(const edge of edges){edge.line.style.opacity=String(.5+Math.abs(edge.score)*.45);edge.line.style.stroke=edgeColor(edge.score);}for(const node of nodes){node.group.classList.remove('dim','is-selected');}$('detail').textContent=!loadedSides().length?'先在上方貼上網址，或點選一位示範人物。':!nodes.length?'這個類別目前沒有示範資料，請選擇其他種類。':hasBoth()?'點選一個圓點或一條線，看看你們買了什麼、相似在哪裡。':'已顯示一人的消費品項；另一人匯入後，才會出現比較連線。';}
 function highlight(edgeList,nodeIds){for(const edge of edges){const active=edgeList.includes(edge);edge.line.style.opacity=active?'1':'.09';edge.line.style.stroke=edgeColor(edge.score);}for(const node of nodes){node.group.classList.toggle('dim',!nodeIds.includes(node.id));node.group.classList.toggle('is-selected',nodeIds.includes(node.id));}}
 function selectNode(node){selected=node.id;const matches=edges.filter(e=>e.a.id===node.id||e.b.id===node.id);highlight(matches,[node.id,...matches.flatMap(e=>[e.a.id,e.b.id])]);const person=profiles[keyFor(node.side)].name;const counterpart=matches.map(e=>{const other=e.a===node?e.b:e.a;return `${other.name}（${relation(e)}）`;}).join('、');$('detail').textContent=`${person} · ${node.name} · ${node.count} ${categoryMode?'筆品項':'次'}${counterpart?'　↔　品項對比：'+counterpart:hasBoth()?'　· 目前沒有可比較的連線':'　· 尚待另一人匯入，暫不比較'}`;}
 function selectEdge(edge){if(categoryMode){selected=edge.a.id+'-'+edge.b.id;highlight([edge],[edge.a.id,edge.b.id]);$('detail').textContent=`${edge.a.name} · ${profiles[leftKey].name} ${edge.a.count} 筆（占 ${(shareFor('a',edge.a.i)*100).toFixed(1)}%） ↔ ${profiles[rightKey].name} ${edge.b.count} 筆（占 ${(shareFor('b',edge.b.i)*100).toFixed(1)}%） · ${relation(edge)}`;return;}selected=edge.a.id+'-'+edge.b.id;highlight([edge],[edge.a.id,edge.b.id]);let extra='';if(edge.a.i===edge.b.i&&(items[edge.a.i].dumpling||items[edge.a.i].sweetness)){extra=edge.a.name===edge.b.name?' · 同店、同款、同樣的選擇。':items[edge.a.i].dumpling?' · 同為八方雲集水餃，餡料取向不同。':' · 同店、同款紅茶，半糖與無糖的甜度選擇不同。';}$('detail').textContent=`${profiles[leftKey].name}：${edge.a.name} ${edge.a.count} 次　↔　${profiles[rightKey].name}：${edge.b.name} ${edge.b.count} 次　·　${relation(edge)}（示範）${extra}`;}
@@ -152,25 +152,81 @@ function renderSummary(result,both){
 }
 // The taste network: signals fan out from each person's traits, and the middle lines are the score's cells.
 function drawTraits(svg,mobile,both){
- const graph=TraitNetwork.layout(network,both[0],both[1],mobile),shape=TraitNetwork.SHAPES[mobile?'mobile':'desktop'],color={a:'#ff9aa7',b:'#9bbcff'};
+ const graph=TraitNetwork.layout(network,both[0],both[1],mobile),shape=TraitNetwork.SHAPES[mobile?'mobile':'desktop'],color={a:'#ff9aa7',b:'#9bbcff'},who=sideNames();
  svg.setAttribute('viewBox',`0 0 ${graph.width} ${graph.height}`);
  const names=el('g',{'aria-hidden':'true'});
  for(const side of ['a','b']){
   const [cx]=shape.centers[side==='a'?0:1],x=mobile?cx:cx+(side==='a'?-130:130),y=mobile?(side==='a'?28:graph.height-14):30;
   names.append(el('text',{x,y,'text-anchor':'middle',class:'person-name'},chartName(keyFor(side),mobile)+(pair?(side==='a'?'':' · 配對對象'):' · '+(side==='a'?'你':'朋友'))));
  }
- const lines=el('g'),middles=el('g'),dots=el('g'),labels=el('g'),view={graph,links:[],cells:[],signals:[],traits:[]};
+ const lines=el('g'),middles=el('g'),dots=el('g'),labels=el('g'),tips=el('g'),view={graph,links:[],cells:[],signals:[],traits:[],tips,pinned:[],hover:null};
  for(const link of graph.links){const zero=link.push===0,base=zero?.3:.85;const path=el('path',{d:link.d,class:'t-link',stroke:color[link.side],'stroke-width':zero?.6:(.8+6*Math.abs(link.push)).toFixed(2),'stroke-dasharray':link.push<0?'5 4':'none',opacity:base});lines.append(path);view.links.push({...link,el:path,base});}
- for(const cell of graph.cells){const zero=cell.part===0,base=zero?.45:.9;const path=el('path',{d:cell.d,class:'t-cell',stroke:cell.part>0?'#5eeac7':cell.part<0?'#ffb65c':'#77736c','stroke-width':zero?.6:(.8+20*Math.abs(cell.part)).toFixed(2),'stroke-dasharray':cell.part<0?'7 5':'none',opacity:base});middles.append(path);view.cells.push({...cell,el:path,base});}
+ for(const cell of graph.cells){
+  const zero=cell.part===0,base=zero?.45:.9,trait=network.traits[cell.trait];
+  const path=el('path',{d:cell.d,class:'t-cell',stroke:cell.part>0?'#5eeac7':cell.part<0?'#ffb65c':'#77736c','stroke-width':zero?.6:(.8+20*Math.abs(cell.part)).toFixed(2),'stroke-dasharray':cell.part<0?'7 5':'none',opacity:base});
+  const hit=el('g',{class:'t-hit',tabindex:'0',role:'button','aria-label':`「${trait.name}」這一格，${cell.part>0?'加':cell.part<0?'扣':'不加也不扣'}${cell.part?' '+Math.abs(TraitSimilarity.percent(cell.part))+' 分':''}，查看連線`});
+  hit.append(el('path',{d:cell.d,class:'t-cell-hit'}),el('title',{},trait.name));bind(hit,()=>selectTrait(cell.trait));
+  middles.append(path,hit);view.cells.push({...cell,el:path,base});
+ }
  for(const side of graph.sides){
-  for(const signal of side.signals){const dot=el('circle',{cx:signal.x.toFixed(1),cy:signal.y.toFixed(1),r:mobile?4:3,class:'t-signal',fill:signal.value===null?'#101010':color[side.side],stroke:color[side.side]});dots.append(dot);view.signals.push({...signal,side:side.side,el:dot});}
+  const name=who[side.side==='a'?0:1];
+  for(const signal of side.signals){
+   const meta=network.signals[signal.order],value=signal.value===null?'':'（'+TraitNetwork.formatSignal(signal.value,meta.unit)+'）',item={...signal,side:side.side};
+   const group=el('g',{class:'t-hit',tabindex:'0',role:'button','aria-label':`${name}的${meta.label}${value}，查看連線`});
+   group.append(el('circle',{cx:signal.x.toFixed(1),cy:signal.y.toFixed(1),r:mobile?12:8,fill:'transparent'}),el('circle',{cx:signal.x.toFixed(1),cy:signal.y.toFixed(1),r:mobile?4:3,class:'t-signal',fill:signal.value===null?'#101010':color[side.side],stroke:color[side.side]}),el('title',{},meta.label+value));
+   bind(group,()=>selectSignal(signal.id));hoverable(group,item,meta.label);
+   dots.append(group);view.signals.push({...item,el:group});
+  }
   for(const trait of side.traits){
-   const dot=el('circle',{cx:trait.x.toFixed(1),cy:trait.y.toFixed(1),r:trait.r.toFixed(1),class:'t-trait',fill:trait.hollow?'#101010':color[side.side],stroke:color[side.side]});dots.append(dot);
+   const data=network.traits[trait.index],item={...trait,side:side.side};
+   const group=el('g',{class:'t-hit',tabindex:'0',role:'button','aria-label':`${name}，${data.name}：${TraitNetwork.traitText(data,trait.value)}，查看這一格`});
+   group.append(el('circle',{cx:trait.x.toFixed(1),cy:trait.y.toFixed(1),r:Math.max(trait.r+5,10).toFixed(1),fill:'transparent'}),el('circle',{cx:trait.x.toFixed(1),cy:trait.y.toFixed(1),r:trait.r.toFixed(1),class:'t-trait',fill:trait.hollow?'#101010':color[side.side],stroke:color[side.side]}),el('title',{},data.name));
+   bind(group,()=>selectTrait(trait.index));if(!trait.labelShown)hoverable(group,item,trait.label);
    const label=trait.labelShown?el('text',{x:trait.labelX.toFixed(1),y:trait.labelY.toFixed(1),'text-anchor':trait.labelAnchor,class:'t-label','font-size':graph.font},trait.label):null;if(label)labels.append(label);
-   view.traits.push({...trait,side:side.side,el:dot,labelEl:label});
+   dots.append(group);view.traits.push({...item,el:group,labelEl:label});
   }
  }
- svg.append(names,lines,middles,dots,labels);traitGraph=view;clearSelection();
+ svg.append(names,lines,middles,dots,labels,tips);traitGraph=view;clearSelection();
+}
+// The detail sentences name both people; cards and the readout say 你 and 對方 instead.
+function sideNames(){return [profiles[leftKey].name,profiles[rightKey].name];}
+// A name next to a dot: a signal's name, or a trait label that had no room.
+function tipText(item,text){
+ const font=traitGraph.graph.font,mobile=traitGraph.graph.width===TraitNetwork.SHAPES.mobile.width,gap=item.r===undefined?8:item.r+4;
+ let x,y,anchor;
+ if(mobile){x=item.x+gap;y=item.y+font*.35;anchor='start';}
+ else{x=item.side==='a'?item.x-gap:item.x+gap;y=item.r===undefined?item.y+4:item.y-6;anchor=item.side==='a'?'end':'start';}
+ return el('text',{x:x.toFixed(1),y:y.toFixed(1),'text-anchor':anchor,class:'t-tip','font-size':font},text);
+}
+function hideHover(){if(traitGraph&&traitGraph.hover){traitGraph.hover.remove();traitGraph.hover=null;}}
+function hoverable(group,item,text){
+ const show=()=>{hideHover();traitGraph.hover=tipText(item,text);traitGraph.tips.append(traitGraph.hover);};
+ group.addEventListener('mouseenter',show);group.addEventListener('focus',show);group.addEventListener('mouseleave',hideHover);group.addEventListener('blur',hideHover);
+}
+function pin(item,text){const tip=tipText(item,text);traitGraph.tips.append(tip);traitGraph.pinned.push(tip);}
+function clearPins(){if(!traitGraph)return;for(const tip of traitGraph.pinned)tip.remove();traitGraph.pinned=[];}
+// Light the chosen traits and their signals; a chosen signal shows at full strength and the traits' other signals at half.
+function lightTraits(indexes,focus){
+ const lit=new Set(indexes),feeds=new Set(traitGraph.links.filter(link=>lit.has(link.trait)).map(link=>link.signal));
+ for(const link of traitGraph.links)link.el.style.opacity=!lit.has(link.trait)?'.06':focus===null||link.signal===focus?'1':'.45';
+ for(const cell of traitGraph.cells)cell.el.style.opacity=lit.has(cell.trait)?'1':'.06';
+ for(const signal of traitGraph.signals)signal.el.style.opacity=signal.id===focus||(focus===null&&feeds.has(signal.id))?'1':feeds.has(signal.id)?'.5':'.15';
+ for(const trait of traitGraph.traits){const on=lit.has(trait.index);trait.el.style.opacity=on?'1':'.2';if(trait.labelEl)trait.labelEl.style.opacity=on?'1':'.2';}
+}
+function selectSignal(id){
+ clearPins();selected='signal:'+id;
+ const feeds=network.traits.map((trait,index)=>(trait.signals.includes(id)?index:-1)).filter(index=>index>=0);
+ lightTraits(feeds,id);
+ const label=network.signals.find(signal=>signal.id===id).label,[left,right]=traitPair(),names=sideNames(),parts=traitGraph.graph.result.parts;
+ for(const signal of traitGraph.signals)if(signal.id===id)pin(signal,label);
+ $('detail').textContent=[TraitNetwork.signalSentence(network,left,names[0],id),TraitNetwork.signalSentence(network,right,names[1],id),
+  ...feeds.map(index=>TraitNetwork.cellSentence(network,index,left,right,names,parts?parts[index]:null))].join('\n');
+}
+function selectTrait(index){
+ clearPins();selected='trait:'+index;lightTraits([index],null);
+ for(const trait of traitGraph.traits)if(trait.index===index&&!trait.labelShown)pin(trait,trait.label);
+ const [left,right]=traitPair(),parts=traitGraph.graph.result.parts;
+ $('detail').textContent=TraitNetwork.cellSentence(network,index,left,right,sideNames(),parts?parts[index]:null);
 }
 function updateImport(side,message='',error=false){
  const key=keyFor(side),status=$('import-status-'+side);$('clear-'+side).disabled=key===null;

@@ -38,10 +38,13 @@
     return { vector: [...vector], pushes: pushes.map(list => [...list]), signals: [...signals] };
   }
 
+  // A value that prints as 0.00 leans nowhere, so the words treat it as 0.
+  const faint = value => Math.abs(value) < 0.005;
+
   // The label a trait wears: the end it leans to, or its short name or habit word.
   function traitLabel(trait, value) {
     if (trait.kind === 'level') return trait.habit;
-    if (value === null || value === 0) return trait.short;
+    if (value === null || faint(value)) return trait.short;
     return trait.ends[value > 0 ? 1 : 0];
   }
 
@@ -162,7 +165,7 @@
   // A trait's value with its direction: 偏高甜度 0.70, 0.38 for a habit, or 資料不足.
   function traitText(trait, value) {
     if (value === null) return '資料不足';
-    if (trait.kind === 'level' || value === 0) return Math.abs(value).toFixed(2);
+    if (trait.kind === 'level' || faint(value)) return Math.abs(value).toFixed(2);
     return '偏' + trait.ends[value > 0 ? 1 : 0] + ' ' + Math.abs(value).toFixed(2);
   }
 
@@ -188,7 +191,7 @@
       const push = person.pushes[index][slot];
       if (person.vector[index] === null) effects.push('「' + trait.name + '」資料不足');
       else if (push === null) effects.push('沒有紀錄');
-      else if (push === 0) effects.push('沒有推動「' + trait.name + '」');
+      else if (faint(push)) effects.push('沒有推動「' + trait.name + '」');
       else effects.push('往「' + (trait.kind === 'level' ? trait.habit : trait.ends[push > 0 ? 1 : 0]) + '」推 ' + Math.abs(push).toFixed(2));
     });
     const shown = value === null ? '' : ' ' + formatSignal(value, signal.unit);
@@ -202,7 +205,8 @@
     if (missing.length) return head + cards.words(missing.join('和'), '資料不足，這一格不計分');
     if (part === null) return head + '兩人共同的特質太少，無法計分';
     const values = valued(names[0], traitText(trait, left.vector[index])) + '、' + valued(names[1], traitText(trait, right.vector[index]));
-    if (part === 0) return head + values + '，不加也不扣';
+    // A part that rounds to 0 points neither adds nor takes away on the page.
+    if (points(part) === 0) return head + values + '，不加也不扣';
     return head + values + '，' + (part > 0 ? '加 ' : '扣 ') + points(part) + ' 分 — ' + line(trait, left.vector[index], right.vector[index]);
   }
 
@@ -210,7 +214,7 @@
   function readout(data, left, right, names, result) {
     let best = null, worst = null;
     (result.parts || []).forEach((part, index) => {
-      if (part === null) return;
+      if (part === null || points(part) === 0) return;
       if (part > 0 && (best === null || part > result.parts[best])) best = index;
       if (part < 0 && (worst === null || part < result.parts[worst])) worst = index;
     });

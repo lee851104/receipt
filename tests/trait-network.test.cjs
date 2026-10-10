@@ -136,6 +136,8 @@ test('labels name the end a trait leans to, else its short name or habit', () =>
   assert.equal(TN.traitLabel(traits[0], 0), '甜度');
   assert.equal(TN.traitLabel(traits[2], null), '超商動機');
   assert.equal(TN.traitLabel(traits[3], 0), '運動');
+  // A value that prints as 0.00 leans nowhere.
+  assert.equal(TN.traitLabel(traits[0], -0.004), '甜度');
 });
 
 test('each unit reads naturally in the detail line', () => {
@@ -153,6 +155,7 @@ test('each unit reads naturally in the detail line', () => {
   assert.equal(TN.traitText(traits[0], 0), '0.00');
   assert.equal(TN.traitText(traits[3], 0.375), '0.38');
   assert.equal(TN.traitText(traits[2], null), '資料不足');
+  assert.equal(TN.traitText(traits[0], 0.004), '0.00');
 });
 
 test('a signal sentence says its value and how far it pushed each trait it feeds', () => {
@@ -163,6 +166,9 @@ test('a signal sentence says its value and how far it pushed each trait it feeds
   assert.equal(TN.signalSentence(data, them, '手搖學生 A', 'sport_visits'), '手搖學生 A：運動消費 每月 2 次，往「運動」推 0.20');
   const unmeasured = { ...them, pushes: [[0.8, null], [-0.18, 1], [-0.1, 0.6], [0.2]], signals: [1, null, 0.36, 1, 0.1, 2] };
   assert.equal(TN.signalSentence(data, unmeasured, '對方', 'dessert_share'), '對方：甜點，沒有紀錄');
+  // A push that prints as 0.00 moved nothing.
+  const faintPush = { ...them, pushes: [[0.004, 0.14], [-0.18, 1], [-0.1, 0.6], [0.2]] };
+  assert.equal(TN.signalSentence(data, faintPush, '對方', 'sugar_mean'), '對方：飲料甜度 約 10 分糖，沒有推動「低甜度 ↔ 高甜度」');
 });
 
 test('a cell sentence gives both values, the points it added or took, and its line', () => {
@@ -178,6 +184,13 @@ test('a cell sentence gives both values, the points it added or took, and its li
   // A number never runs into a name that ends in a Latin letter.
   assert.equal(TN.cellSentence(data, 3, me, them, ['你', '手搖學生 A'], alike.parts[3]),
     '「運動投入」這一格：你 0.38、手搖學生 A 0.20，加 ' + percent(alike.parts[3]) + ' 分 — 流汗也有伴。');
+  // A part that rounds to 0 points neither adds nor takes away.
+  assert.equal(TN.cellSentence(data, 3, me, them, ['你', '對方'], 0.004), '「運動投入」這一格：你 0.38、對方 0.20，不加也不扣');
+  // Both leaning to the left end read the left line.
+  const lowMe = { ...me, vector: [-0.6, 1, null, 0.375] }, lowThem = { ...them, vector: [-0.5, 0.82, 0.5, 0.2] };
+  const low = TN.layout(data, lowMe, lowThem, false).result;
+  assert.equal(TN.cellSentence(data, 0, lowMe, lowThem, ['你', '對方'], low.parts[0]),
+    '「低甜度 ↔ 高甜度」這一格：你偏低甜度 0.60、對方偏低甜度 0.50，加 ' + percent(low.parts[0]) + ' 分 — 無糖派，清爽到底。');
 });
 
 test('the readout names the cell that adds most and the one that takes most away', () => {
@@ -193,6 +206,9 @@ test('the readout names the cell that adds most and the one that takes most away
   const both = TN.layout(habitOnly, sporty, sporty, false).result;
   assert.equal(TN.readout(habitOnly, sporty, sporty, ['你', '對方'], both).alike, '都有運動的紀錄（加 ' + percent(both.parts[3]) + ' 分）— 流汗也有伴。');
   assert.deepEqual(TN.readout(data, me, them, ['你', '對方'], { comparable: false, score: null, parts: null }),
+    { alike: '沒有加分的特質 — 共同話題還在找。', unlike: '沒有扣分的特質 — 難得這麼合拍。' });
+  // A cell that rounds to 0 points is neither the most alike nor the most apart.
+  assert.deepEqual(TN.readout(data, me, them, ['你', '對方'], { comparable: true, score: 0.004, parts: [0.004, null, null, -0.004] }),
     { alike: '沒有加分的特質 — 共同話題還在找。', unlike: '沒有扣分的特質 — 難得這麼合拍。' });
 });
 

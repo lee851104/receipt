@@ -35,7 +35,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 <section class="graph-card" aria-label="兩人的消費品項連結圖">
 <div class="toolbar"><div class="toolbar-left"><div class="views" role="group" aria-label="選擇要看的圖"><button type="button" class="view-button" data-view="traits" aria-pressed="true">品味特質</button><button type="button" class="view-button" data-view="items" aria-pressed="false">品項細節</button></div><span class="views-note" id="views-note" hidden>這份連結還沒有品味特質</span><div class="controls"><label for="category">篩選消費種類<select id="category"><option value="all">全部類別</option><option value="dumplings">案例：同店不同餡</option><option value="sweetness">案例：半糖與無糖</option><option>正餐</option><option>飲品</option><option>零食甜點</option><option>生鮮食材</option><option>運動</option><option>其他服務</option><option>交通</option><option>住宿</option><option>日用品</option><option>電子產品</option></select></label></div></div><div class="scope" id="scope" role="status" aria-live="polite"></div></div>
 <div class="legend" id="item-legend"><span class="legend-item"><span class="size-key" aria-hidden="true"><i></i><i></i><i></i></span>點越大，消費次數越多</span><span class="legend-item positive-label"><span class="sign-key" aria-hidden="true"></span>正相關</span><span class="legend-item negative-label"><span class="sign-key negative" aria-hidden="true"></span>負相關</span><span class="legend-item"><span class="line-key" aria-hidden="true"><i></i><i></i></span>線越粗，關聯越強</span><span class="legend-hint">點選查看關聯，點空白處取消</span></div>
-<div class="legend" id="trait-legend" hidden><span class="legend-item">訊號線：實線往右端推、虛線往左端推</span><span class="legend-item positive-label">中間：綠線加分、橘虛線扣分</span><span class="legend-item">越粗影響越大</span><span class="legend-item">空心：資料不足</span><span class="legend-hint">點選查看連線，點空白處取消</span></div>
+<div class="legend" id="trait-legend" hidden><span class="legend-item">訊號線：實線往右端推、虛線往左端推</span><span class="legend-item positive-label">中間：綠線加分</span><span class="legend-item negative-label">橘虛線扣分</span><span class="legend-item">越粗影響越大</span><span class="legend-item">空心：資料不足</span><span class="legend-hint">點選查看連線，點空白處取消</span></div>
 <p class="legend-explain"><b>同款也能選得不同：</b>可篩選「同店不同餡」或「半糖與無糖」。餡料與甜度各自比較，差異不代表兩人整體品味相反。</p>
 <div class="canvas"><svg id="network" viewBox="0 0 1200 570" role="group" aria-label="左側粉紅是你的資料，右側藍色是朋友的資料；匯入後可點選圓點或連線"></svg></div>
 <div class="detail"><span class="detail-icon" aria-hidden="true">↔</span><div class="detail-text" id="detail" role="status" aria-live="polite">點選一個圓點或一條線，看看你們買了什麼、相似在哪裡。</div><button class="reset" id="reset" type="button">顯示全部連線</button></div>
@@ -137,7 +137,7 @@ function prepareView(){
  $('views-note').hidden=available||!hasBoth();
  $('item-legend').hidden=traits;$('trait-legend').hidden=!traits;document.querySelector('.legend-explain').hidden=traits;document.querySelector('.controls').hidden=traits;
  $('trait-method').hidden=!available;
- if(traits){$('category-method').hidden=true;$('demo-method').hidden=true;document.querySelector('.subtitle').textContent='每個點是一個消費訊號或品味特質。看看你們的品味，怎麼連起來。';}
+ if(traits){$('category-method').hidden=true;$('demo-method').hidden=true;document.querySelector('.subtitle').textContent='每個點是一個消費訊號或品味特質。看看你們的品味，怎麼連起來。';$('comparison-footer').textContent='品味特質比較 · 資料只在本頁處理，不上傳發票';}
 }
 // The readout always explains the big number, the taste similarity, whichever graph is showing.
 function renderSummary(result,both){
@@ -164,7 +164,7 @@ function drawTraits(svg,mobile,both){
  for(const cell of graph.cells){
   const zero=cell.part===0,base=zero?.45:.9,trait=network.traits[cell.trait];
   const path=el('path',{d:cell.d,class:'t-cell',stroke:cell.part>0?'#5eeac7':cell.part<0?'#ffb65c':'#77736c','stroke-width':zero?.6:(.8+20*Math.abs(cell.part)).toFixed(2),'stroke-dasharray':cell.part<0?'7 5':'none',opacity:base});
-  const hit=el('g',{class:'t-hit',tabindex:'0',role:'button','aria-label':`「${trait.name}」這一格，${cell.part>0?'加':cell.part<0?'扣':'不加也不扣'}${cell.part?' '+Math.abs(TraitSimilarity.percent(cell.part))+' 分':''}，查看連線`});
+  const cellPoints=TraitSimilarity.percent(cell.part),hit=el('g',{class:'t-hit',tabindex:'0',role:'button','aria-label':`「${trait.name}」這一格，${cellPoints>0?'加 '+cellPoints+' 分':cellPoints<0?'扣 '+Math.abs(cellPoints)+' 分':'不加也不扣'}，查看連線`});
   hit.append(el('path',{d:cell.d,class:'t-cell-hit'}),el('title',{},trait.name));bind(hit,()=>selectTrait(cell.trait));
   middles.append(path,hit);view.cells.push({...cell,el:path,base});
  }
@@ -172,7 +172,7 @@ function drawTraits(svg,mobile,both){
   const name=who[side.side==='a'?0:1];
   for(const signal of side.signals){
    const meta=network.signals[signal.order],value=signal.value===null?'':'（'+TraitNetwork.formatSignal(signal.value,meta.unit)+'）',item={...signal,side:side.side};
-   const group=el('g',{class:'t-hit',tabindex:'0',role:'button','aria-label':`${name}的${meta.label}${value}，查看連線`});
+   const group=el('g',{class:'t-hit',tabindex:'0',role:'button','aria-label':`${MatchFilter.words(name,'的'+meta.label)}${value}，查看連線`});
    group.append(el('circle',{cx:signal.x.toFixed(1),cy:signal.y.toFixed(1),r:mobile?12:8,fill:'transparent'}),el('circle',{cx:signal.x.toFixed(1),cy:signal.y.toFixed(1),r:mobile?4:3,class:'t-signal',fill:signal.value===null?'#101010':color[side.side],stroke:color[side.side]}),el('title',{},meta.label+value));
    bind(group,()=>selectSignal(signal.id));hoverable(group,item,meta.label);
    dots.append(group);view.signals.push({...item,el:group});
@@ -196,6 +196,8 @@ function tipText(item,text){
  let x,y,anchor;
  if(mobile){x=item.x+gap;y=item.y+font*.35;anchor='start';}
  else{x=item.side==='a'?item.x-gap:item.x+gap;y=item.r===undefined?item.y+4:item.y-6;anchor=item.side==='a'?'end':'start';}
+ // A name that would run past the edge of the graph hangs on the other side of its dot instead.
+ const box=TraitNetwork.labelRect(text,font,x,y,anchor);if(box.right>traitGraph.graph.width){x=item.x-gap;anchor='end';}else if(box.left<0){x=item.x+gap;anchor='start';}
  return el('text',{x:x.toFixed(1),y:y.toFixed(1),'text-anchor':anchor,class:'t-tip','font-size':font},text);
 }
 function hideHover(){if(traitGraph&&traitGraph.hover){traitGraph.hover.remove();traitGraph.hover=null;}}
@@ -281,7 +283,7 @@ for(const side of ['a','b']){
 }
 document.querySelectorAll('[data-demo-side]').forEach(button=>button.addEventListener('click',()=>{const side=button.dataset.demoSide;$('profile-url-'+side).value='demo://'+button.dataset.demoKey;importProfile(side);}));
 $('category').addEventListener('change',event=>{category=event.target.value;draw();});document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{chosenView=button.dataset.view;draw();}));
-if(network)$('trait-method-text').textContent='品味相似度是 '+TraitNetwork.traitCount(network.traits)+' 項品味特質（'+network.traits.length+' 格）的餘弦相似度，範圍 '+TraitSimilarity.signed(-1)+'～'+TraitSimilarity.signed(1)+'。每項特質由幾個消費訊號加權而成，訊號線越粗，代表這個訊號推得越多；中間每條線是那一格對分數的加減，全部加起來就是品味相似度。';$('reset').addEventListener('click',clearSelection);$('network').addEventListener('keydown',event=>{if(event.key==='Escape')clearSelection();});matchMedia('(max-width:640px)').addEventListener('change',draw);const requestedCase=new URLSearchParams(pageLocation().search).get('case');if(['dumplings','sweetness'].includes(requestedCase)){category=requestedCase;$('category').value=category;chosenView='items';}
+if(network)$('trait-method-text').textContent='品味相似度是 '+TraitNetwork.traitCount(network.traits)+' 項品味特質（'+network.traits.length+' 格）的餘弦相似度，範圍 '+TraitSimilarity.signed(-1)+'～'+TraitSimilarity.signed(1)+'。每項特質由幾個消費訊號加權而成，訊號線越粗，代表這個訊號推得越多；中間每條線是那一格對分數的加減，全部加起來就是品味相似度。';$('reset').addEventListener('click',clearSelection);$('network').addEventListener('keydown',event=>{if(event.key==='Escape')clearSelection();});matchMedia('(max-width:640px)').addEventListener('change',draw);const requestedCase=new URLSearchParams(pageLocation().search).get('case');if(!pair&&['dumplings','sweetness'].includes(requestedCase)){category=requestedCase;$('category').value=category;chosenView='items';}
 function importHash(){if(!pageLocation().hash.startsWith('#taste='))return;leftKey=null;$('profile-url-a').value=pageLocation().href;updateImport('a');draw();importProfile('a');}
 window.refreshTasteFromLocation=importHash;
 if(pageHost){

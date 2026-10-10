@@ -43,7 +43,7 @@ class StandaloneBuildTests(unittest.TestCase):
             command = [sys.executable, str(project / "scripts" / "build_report.py")]
             result = subprocess.run(command, cwd=folder, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn("taste similarity to 40 fictional people", result.stdout)
+            self.assertIn("taste similarity to 40 fictional people: highest 71%, median 14%, lowest -12%", result.stdout)
             html = (project / "invoice-insights.html").read_text(encoding="utf-8")
             self.assertIn('"isDemo":true', html)
             self.assertIn("虛構示範", html)
@@ -80,7 +80,7 @@ class StandaloneBuildTests(unittest.TestCase):
             self.assertEqual(matched.external, [])
             self.assertIn('data-source="trait-similarity.js"', match_page)
             self.assertIn('data-source="match-filter.js"', match_page)
-            self.assertIn("此配對頁只用行政區與特質分數", match_page)
+            self.assertIn("此配對頁與連線圖只用行政區、品味特質", match_page)
             self.assertIn("[hidden]{display:none!important}", match_page)
             text = re.search(r"const matchReportData = (.*?);\n</script>", match_page, re.S).group(1)
             # Compact JSON: no indentation and no space after a colon.

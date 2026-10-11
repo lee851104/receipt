@@ -44,10 +44,10 @@
   | Task 4 | 76 | 60 |
   | Task 5 | 76 | 60 |
   | Task 6 | 76 | 62 |
-  | Task 7 | 76 | 66 |
-  | Task 8 | 76 | 69 |
-  | Task 9 | 76 | 72 |
-  | Task 10 | 76 | 73 |
+  | Task 7 | 76 | 68 |
+  | Task 8 | 76 | 71 |
+  | Task 9 | 76 | 74 |
+  | Task 10 | 76 | 75 |
 
 - `python scripts/build_report.py` 每次都印出同樣三行（配對與分數完全不變）：
   ```text
@@ -70,13 +70,14 @@
 5. 規格沒寫到的三句：兩邊都沒有資料時按鈕旁寫「匯入兩邊的資料後才能看品味特質」；有品味特質但沒有任何品項時寫「連結裡沒有品名。」；匯出面板的說明由 `taste-export.js` 依設定填入（「17 項」「10 類」都由程式產生）。
 6. 煙霧測試直接在報告裡的配對頁點第一張卡片，拿配對頁真正交給連線頁的資料；所以配對頁漏傳品項時測試會失敗。
 7. 配對頁頁首那句搬到 `MatchFilter.intro(data, ready)`，才測得到「資料不足時不寫『點一個人…』」。
+8. **桌機的一小排會找空位**（Task 7 審查後補上）：第 1 點說「任何位置都不重疊」只比了同一排的名稱。扇面頂端的訊號（每餐花費、餐廳正餐、百元飲料）旁邊擠滿別的訊號與特質標籤，上面又是兩人的名字；原本的排法在 52 組配對裡有 49 個品項蓋到名字、172 個蓋到特質標籤、444 個蓋到別的訊號點。現在一小排先放在原位，擋到就每次上下挪半列（最多 4 列），再往外多走一列（最多 5 列）重找，直到不碰頂端名字那一帶（36 以上）、同一團的點與特質標籤；79% 的一小排留在原位，`viewBox` 不變。訊號名稱若會伸進名字那一帶，改放在點的下方；點選時收起滑過時出現的名稱；品項不攔滑鼠。
 
 ## 檔案結構
 
 | 檔案 | 動作 | 責任 |
 |---|---|---|
 | `tests/connection-page.test.cjs` | 新增 | 連線頁的煙霧測試：用假 DOM 跑報告裡的配對頁與連線頁，並把報告嵌入的每個人跑一次品味資料檢查 |
-| `tests/built-report.cjs` | 新增 | 測試共用：讀產生的報告與 `<template>` 裡的頁面（`match-page`、`connection-page`、`taste-export` 三個測試共用） |
+| `tests/built-report.cjs` | 新增 | 測試共用：讀產生的報告、`<template>` 裡的頁面與頁面嵌入的資料常數（`embedded`；`match-page`、`connection-page`、`trait-network`、`taste-export` 測試共用） |
 | `src/web/trait-network.js` | 修改 | 收緊 `validate`、檢查品項；品項點的位置與留白（`purchases`、`viewBox`、`shortName`）；說明列寫出品項 |
 | `src/receipt/signals.py` | 修改 | `measure` 多回傳 `purchases`（每個訊號背後的消費） |
 | `src/receipt/items.py` | 新增 | 品名規則與每個訊號的品項清單 |
@@ -1590,6 +1591,7 @@ git commit -m "feat: check every purchase list and hand it from the match card t
 - Modify: `src/web/trait-network.js`
 - Modify: `src/web/taste-comparison.html`
 - Test: `tests/trait-network.test.cjs`、`tests/connection-page.test.cjs`
+- Test（Step 8，審查後補上）：`tests/built-report.cjs`、`tests/match-page.test.cjs`
 - Regenerate: `invoice-insights.html`
 
 **Interfaces:**
@@ -1599,6 +1601,8 @@ git commit -m "feat: check every purchase list and hand it from the match card t
   - `TraitNetwork.purchases(data, graph, people, id, mobile) -> [{ side: 'a'|'b', signal: { x, y }, items: [{ name, count, text, r, width, x, y, anchor, labelX, labelY }] }]`：只列出有品項的那一側；`graph` 是 `layout(...)` 的結果，`people` 是 `[左, 右]`。
   - `TraitNetwork.viewBox(data, graph, people, mobile) -> 'left top width height'`：沒有任何品項時是 `'0 0 1200 640'`（手機 `'0 0 600 820'`）。
   - `SHAPES.desktop.item = { across: 60, step: 20, dot: [2.5, 3.5] }`、`SHAPES.mobile.item = { beyond: 30, step: 26, dot: [3, 4] }`。
+  - `SHAPES.desktop.top = 36`：桌機頂端兩人名字那一帶的下緣，點選後加上的東西都不高過它（Step 8）。
+  - `tests/built-report.cjs` 的 `embedded(id, name)`：讀 `<template id>` 頁面嵌入的資料常數（Step 8；Task 8 沿用）。
   - 連線頁：品項畫在 `<g class="t-outer" aria-hidden="true">` 裡（線 `t-buy-line`、點 `t-buy`、名稱 `t-tip`）。
 
 - [ ] **Step 1: Write the failing tests**
@@ -2057,6 +2061,396 @@ git add src/web/trait-network.js src/web/taste-comparison.html tests/trait-netwo
 git commit -m "feat: grow the purchases behind a picked signal in a short column outside it" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
+- [ ] **Step 8: Find each column a clear spot（審查後補上）**
+
+桌機上，扇面頂端的訊號展開品項時會蓋到兩人的名字、特質標籤與別的訊號點（見「與規格原稿不同的地方」第 8 點）。一小排先放在原位，擋到就上下挪、再往外多走一列重找；名字那一帶以上不放任何東西；點選時收起滑過時出現的名稱；品項不攔滑鼠。`tests/built-report.cjs` 多一個 `embedded(id, name)`。全部用編輯工具；`taste-comparison.html` 是 CRLF。
+
+先做測試的修改（8.8～8.14），執行 `node --test tests/trait-network.test.cjs tests/connection-page.test.cjs`：應該剛好 2 個失敗（`on desktop every column of purchases finds room clear of the names along the top, the dots and the trait labels`、`whichever signal is picked, its name and its purchases stay below the names along the top`）。再做 8.1～8.7。
+
+**8.1** `src/web/trait-network.js`
+
+Replace
+
+```js
+  // band `beyond` the fans on phones, rows `step` apart, dots from dot[0] to dot[0] + dot[1] across.
+  const SHAPES = Object.freeze({
+    desktop: Object.freeze({ width: 1200, height: 640, centers: [[430, 325], [770, 325]], stretch: [1, 0.86],
+      near: 110, far: 270, none: 72, ring: 312, stagger: 14, dot: [3.5, 9], font: 13,
+```
+
+with
+
+```js
+  // band `beyond` the fans on phones, rows `step` apart, dots from dot[0] to dot[0] + dot[1] across.
+  // Desktop writes the two people's names along the top, above `top`; nothing a click adds goes higher.
+  const SHAPES = Object.freeze({
+    desktop: Object.freeze({ width: 1200, height: 640, centers: [[430, 325], [770, 325]], stretch: [1, 0.86],
+      near: 110, far: 270, none: 72, ring: 312, stagger: 14, dot: [3.5, 9], font: 13, top: 36,
+```
+
+**8.2** `src/web/trait-network.js`
+
+Replace
+
+```js
+  const SPREAD = 0.045;                // radians between neighbouring signals of one trait
+```
+
+with
+
+```js
+  const SPREAD = 0.045;                // radians between neighbouring signals of one trait
+  const SLIDES = 8;                    // half rows a purchase column may slide down or up to find room
+  const REACH = 5;                     // rows a purchase column may step further out to find room
+  const SIGNAL_ROOM = 4;               // a desktop signal dot's radius (3) and a little room around it
+```
+
+**8.3** `src/web/trait-network.js` — the whole `purchases` function (and the comment above it) becomes `obstacles`, `reach` and the new `purchases`
+
+Replace
+
+```js
+  // The purchases behind one signal for each person who has any: a short column of dots outside the signal, most
+  // bought first, each with a line into the signal and its name beside it. Desktop stands the column beside the
+  // signal, away from the middle; phones stand it in a band above the top fan or below the bottom one.
+  function purchases(data, graph, people, id, mobile) {
+    const shape = mobile ? SHAPES.mobile : SHAPES.desktop, { across, beyond, step, dot } = shape.item;
+    const order = data.signals.findIndex(signal => signal.id === id);
+    return graph.sides.flatMap((side, k) => {
+      const list = (people[k].items || [])[order] || [];
+      if (!list.length) return [];
+      const signal = side.signals.find(entry => entry.id === id), most = Math.max(...list.map(([, count]) => count));
+      const rows = list.map(([name, count]) => ({ name, count, text: shortName(name) + ' ×' + count,
+        r: dot[0] + dot[1] * count / most, width: 0.7 + 2.2 * count / most }));
+      let x, first, anchor;
+      if (mobile) {
+        // The names must fit inside the phone's width; the band itself only makes the graph taller.
+        const widest = Math.max(...rows.map(row => row.r + 5 + textWidth(row.text, shape.font)));
+        x = Math.min(Math.max(signal.x, 20), graph.width - widest - 8);
+        first = side.side === 'a' ? -beyond - (rows.length - 1) * step : graph.height + beyond;
+        anchor = 'start';
+      } else {
+        x = side.side === 'a' ? signal.x - across : signal.x + across;
+        first = signal.y - (rows.length - 1) * step / 2;
+        anchor = side.side === 'a' ? 'end' : 'start';
+      }
+      const items = rows.map((row, slot) => {
+        const y = first + slot * step;
+        return { ...row, x, y, anchor, labelX: anchor === 'end' ? x - row.r - 5 : x + row.r + 5, labelY: y + shape.font * 0.35 };
+      });
+      return [{ side: side.side, signal: { x: signal.x, y: signal.y }, items }];
+    });
+  }
+```
+
+with
+
+```js
+  // What a purchase column on desktop must not cover: the names along the top, this side's dots and its trait labels.
+  function obstacles(side, shape) {
+    const dot = (x, y, r) => ({ left: x - r, right: x + r, top: y - r, bottom: y + r });
+    return [{ left: -Infinity, right: Infinity, top: -Infinity, bottom: shape.top },
+      ...side.signals.map(signal => dot(signal.x, signal.y, SIGNAL_ROOM)),
+      ...side.traits.map(trait => dot(trait.x, trait.y, trait.r)),
+      ...side.traits.filter(trait => trait.labelShown)
+        .map(trait => labelRect(trait.label, shape.font, trait.labelX, trait.labelY, trait.labelAnchor))];
+  }
+
+  // Everything one purchase covers on the graph: its dot and its name.
+  function reach(item, font) {
+    const box = labelRect(item.text, font, item.labelX, item.labelY, item.anchor);
+    return { left: Math.min(box.left, item.x - item.r), right: Math.max(box.right, item.x + item.r),
+      top: Math.min(box.top, item.y - item.r), bottom: Math.max(box.bottom, item.y + item.r) };
+  }
+
+  // The purchases behind one signal for each person who has any: a short column of dots outside the signal, most
+  // bought first, each with a line into the signal and its name beside it. Desktop stands the column beside the
+  // signal, away from the middle; phones stand it in a band above the top fan or below the bottom one.
+  function purchases(data, graph, people, id, mobile) {
+    const shape = mobile ? SHAPES.mobile : SHAPES.desktop, { across, beyond, step, dot } = shape.item;
+    const order = data.signals.findIndex(signal => signal.id === id);
+    return graph.sides.flatMap((side, k) => {
+      const list = (people[k].items || [])[order] || [];
+      if (!list.length) return [];
+      const signal = side.signals.find(entry => entry.id === id), most = Math.max(...list.map(([, count]) => count));
+      const rows = list.map(([name, count]) => ({ name, count, text: shortName(name) + ' ×' + count,
+        r: dot[0] + dot[1] * count / most, width: 0.7 + 2.2 * count / most }));
+      // Where the column may stand, best first: [x, y of its first row].
+      let spots, anchor;
+      if (mobile) {
+        // The names must fit inside the phone's width; the band itself only makes the graph taller.
+        const widest = Math.max(...rows.map(row => row.r + 5 + textWidth(row.text, shape.font)));
+        anchor = 'start';
+        spots = [[Math.min(Math.max(signal.x, 20), graph.width - widest - 8),
+          side.side === 'a' ? -beyond - (rows.length - 1) * step : graph.height + beyond]];
+      } else {
+        // Beside the signal and centred on it when there is room; otherwise the column slides down or up half a row at
+        // a time, then steps a row further out and slides again.
+        const out = side.side === 'a' ? -1 : 1, centred = signal.y - (rows.length - 1) * step / 2;
+        anchor = side.side === 'a' ? 'end' : 'start';
+        spots = [];
+        for (let far = 0; far <= REACH; far++) {
+          for (let slide = 0; slide <= SLIDES; slide++) {
+            for (const sign of slide ? [1, -1] : [1]) spots.push([signal.x + out * (across + far * step), centred + sign * slide * step / 2]);
+          }
+        }
+      }
+      const column = ([x, first]) => rows.map((row, slot) => {
+        const y = first + slot * step;
+        return { ...row, x, y, anchor, labelX: anchor === 'end' ? x - row.r - 5 : x + row.r + 5, labelY: y + shape.font * 0.35 };
+      });
+      const taken = mobile ? [] : obstacles(side, shape);
+      const fits = items => items.every(item => !taken.some(box => overlaps(reach(item, shape.font), box)));
+      const items = column(spots.find(spot => fits(column(spot))) || spots[0]);
+      return [{ side: side.side, signal: { x: signal.x, y: signal.y }, items }];
+    });
+  }
+```
+
+**8.4** `src/web/trait-network.js`
+
+Replace
+
+```js
+        for (const item of side.items) {
+          const box = labelRect(item.text, font, item.labelX, item.labelY, item.anchor);
+          left = Math.min(left, box.left, item.x - item.r);
+          right = Math.max(right, box.right, item.x + item.r);
+          top = Math.min(top, box.top, item.y - item.r);
+          bottom = Math.max(bottom, box.bottom, item.y + item.r);
+```
+
+with
+
+```js
+        for (const item of side.items) {
+          const box = reach(item, font);
+          left = Math.min(left, box.left);
+          right = Math.max(right, box.right);
+          top = Math.min(top, box.top);
+          bottom = Math.max(bottom, box.bottom);
+```
+
+**8.5** `src/web/taste-comparison.html` — inside the long `<style>` line; change only this part of it
+
+Replace
+
+```html
+.t-buy{fill-opacity:.35;stroke-width:1.2}
+```
+
+with
+
+```html
+.t-buy{fill-opacity:.35;stroke-width:1.2}.t-outer{pointer-events:none}
+```
+
+**8.6** `src/web/taste-comparison.html`
+
+Replace
+
+```js
+ else{const leftward=(item.side==='a')!==inward;x=leftward?item.x-gap:item.x+gap;y=item.r===undefined?item.y+(inward?-8:4):item.y-6;anchor=leftward?'end':'start';}
+```
+
+with
+
+```js
+ else{const leftward=(item.side==='a')!==inward;x=leftward?item.x-gap:item.x+gap;y=item.r===undefined?item.y+(inward?-8:4):item.y-6;anchor=leftward?'end':'start';
+  // The names along the top keep their band: a name that would reach into it hangs below its dot instead.
+  if(TraitNetwork.labelRect(text,font,x,y,anchor).top<TraitNetwork.SHAPES.desktop.top)y=item.y+gap+font;}
+```
+
+**8.7** `src/web/taste-comparison.html`
+
+Replace
+
+```js
+ clearPins();selected='signal:'+id;
+```
+
+with
+
+```js
+ clearPins();hideHover();selected='signal:'+id;
+```
+
+**8.8** `tests/built-report.cjs`
+
+Replace
+
+```js
+const scriptsOf = id => [...templateSource(id).matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(match => match[1]);
+
+module.exports = { html, between, templateSource, scriptsOf };
+```
+
+with
+
+```js
+const scriptsOf = id => [...templateSource(id).matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(match => match[1]);
+// A data constant such a page embeds, such as `matchReportData`, read back.
+const embedded = (id, name) => JSON.parse(between(templateSource(id), `const ${name} = `, '</script>').trim().replace(/;$/, ''));
+
+module.exports = { html, between, templateSource, scriptsOf, embedded };
+```
+
+**8.9** `tests/match-page.test.cjs`
+
+Replace
+
+```js
+const { between, templateSource } = require('./built-report.cjs');
+```
+
+with
+
+```js
+const { embedded } = require('./built-report.cjs');
+```
+
+**8.10** `tests/match-page.test.cjs`
+
+Replace
+
+```js
+const data = JSON.parse(between(templateSource('match-page-source'), 'const matchReportData = ', '</script>').trim().replace(/;$/, ''));
+```
+
+with
+
+```js
+const data = embedded('match-page-source', 'matchReportData');
+```
+
+**8.11** `tests/trait-network.test.cjs`
+
+Replace
+
+```js
+  assert.ok(theirs.items[0].r > theirs.items[1].r && theirs.items[0].width > theirs.items[1].width);
+  // Nothing bought, nothing drawn
+```
+
+with
+
+```js
+  assert.ok(theirs.items[0].r > theirs.items[1].r && theirs.items[0].width > theirs.items[1].width);
+  // With room to spare a column stands exactly `across` out, centred on its signal, its rows `step` apart.
+  const { across, step } = TN.SHAPES.desktop.item, at = items => items.map(item => [item.x.toFixed(3), item.y.toFixed(3)]);
+  const spot = (x, ...ys) => ys.map(y => [x.toFixed(3), y.toFixed(3)]);
+  assert.deepEqual(at(mine.items), spot(signal.x - across, signal.y - step, signal.y, signal.y + step));
+  assert.deepEqual(at(theirs.items), spot(theirs.signal.x + across, theirs.signal.y - step / 2, theirs.signal.y + step / 2));
+  // Phones stand my column in the band above the top fan and theirs in the band below the bottom one.
+  const phone = TN.layout(data, me, them, true), { beyond, step: row } = TN.SHAPES.mobile.item;
+  const [up, down] = TN.purchases(data, phone, [me, them], 'sugar_mean', true);
+  assert.deepEqual(up.items.map(item => item.y), [-beyond - 2 * row, -beyond - row, -beyond]);
+  assert.deepEqual(down.items.map(item => item.y), [phone.height + beyond, phone.height + beyond + row]);  // Nothing bought, nothing drawn
+```
+
+**8.12** `tests/trait-network.test.cjs`
+
+Replace
+
+```js
+  assert.equal(TN.viewBox(data, TN.layout(data, me, them, false), [bare(me), bare(them)], false), '0 0 1200 640');
+});
+```
+
+with
+
+```js
+  assert.equal(TN.viewBox(data, TN.layout(data, me, them, false), [bare(me), bare(them)], false), '0 0 1200 640');
+  assert.equal(TN.viewBox(data, TN.layout(data, me, them, true), [bare(me), bare(them)], true), '0 0 600 820');
+});
+
+test('on desktop every column of purchases finds room clear of the names along the top, the dots and the trait labels', () => {
+  const { embedded } = require('./built-report.cjs');
+  const network = embedded('taste-page-source', 'traitNetworkData'), match = embedded('match-page-source', 'matchReportData');
+  const { top, font, item: { across } } = TN.SHAPES.desktop;
+  const dot = (x, y, r) => ({ left: x - r, right: x + r, top: y - r, bottom: y + r });
+  let columns = 0;
+  // A side's columns depend only on that side's person, so drawing each person on both sides covers everyone.
+  for (const person of [match.me, ...match.people, ...Object.values(network.friends)].map(other => TN.validate(other, network))) {
+    const graph = TN.layout(network, person, person, false);
+    for (const signal of network.signals) {
+      for (const column of TN.purchases(network, graph, [person, person], signal.id, false)) {
+        const side = graph.sides.find(entry => entry.side === column.side);
+        const taken = [...side.signals.map(entry => dot(entry.x, entry.y, 3)), ...side.traits.map(trait => dot(trait.x, trait.y, trait.r)),
+          ...shownRects(side)];
+        for (const item of column.items) {
+          const marks = [TN.labelRect(item.text, font, item.labelX, item.labelY, item.anchor), dot(item.x, item.y, item.r)];
+          assert.ok(marks.every(mark => mark.top >= top && !taken.some(box => overlap(box, mark))), `${signal.id} ${item.text}`);
+          // However far it moved, the column still stands outside its signal.
+          assert.ok(Math.abs(item.x - column.signal.x) > across - 0.001, `${signal.id} ${item.text}`);
+        }
+        columns++;
+      }
+    }
+  }
+  assert.equal(columns, 1092);
+});
+```
+
+**8.13** `tests/trait-network.test.cjs`
+
+Replace
+
+```js
+  assert.equal(TN.shortName('測'.repeat(11)), '測'.repeat(9) + '…');
+```
+
+with
+
+```js
+  assert.equal(TN.shortName('測'.repeat(11)), '測'.repeat(9) + '…');
+  // Letters, not UTF-16 units: a character outside the basic plane still counts once.
+  assert.equal(TN.shortName('𠮷'.repeat(10)), '𠮷'.repeat(10));
+```
+
+**8.14** `tests/connection-page.test.cjs`
+
+Replace
+
+```js
+test('the friends page opens on 小安 and 小宇 with their taste score', () => {
+```
+
+with
+
+```js
+// Desktop writes both names along the top, so nothing a click adds may reach into that band.
+test('whichever signal is picked, its name and its purchases stay below the names along the top', () => {
+  const { top, font } = require('../src/web/trait-network.js').SHAPES.desktop;
+  const { get } = open({ pair: pairFromMatchList(0).pair });
+  const network = get('network');
+  const signals = findAll(network, node => node.attrs.class === 't-hit' && node.children.some(child => child.attrs.class === 't-signal'));
+  assert.equal(signals.length, 92);
+  for (const signal of signals) {
+    fire(signal, 'mouseenter');
+    fire(signal, 'click');
+    // The signal's name shows once on each side: the name the pointer brought up is gone.
+    assert.equal(findAll(network, node => node.attrs.class === 't-tip' && !node.textContent.includes('×')).length, 2);
+    for (const name of findAll(network, node => node.attrs.class === 't-tip')) assert.ok(Number(name.attrs.y) - font >= top, name.textContent);
+    for (const dot of findAll(network, node => node.attrs.class === 't-buy')) assert.ok(Number(dot.attrs.cy) - Number(dot.attrs.r) >= top);
+  }
+});
+
+test('the friends page opens on 小安 and 小宇 with their taste score', () => {
+```
+
+- [ ] **Step 9: Rebuild and run every test**
+
+Run: `python scripts/build_report.py && node --test tests/*.test.cjs && python -m unittest discover -s tests`
+Expected: 三行輸出同「試做結果」；68 tests pass；76 tests OK
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add src/web/trait-network.js src/web/taste-comparison.html tests/built-report.cjs tests/match-page.test.cjs tests/trait-network.test.cjs tests/connection-page.test.cjs invoice-insights.html
+git commit -m "fix: find each column of purchases a spot clear of the names, dots and trait labels" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
 ---
 
 ### Task 8: 新版連結的讀取（朋友比較頁）
@@ -2198,11 +2592,11 @@ const matchScripts = scriptsOf('match-page-source');
 換成
 
 ```js
-const { html, between, templateSource, scriptsOf } = require('./built-report.cjs');
+const { html, between, scriptsOf, embedded } = require('./built-report.cjs');
 
 const scripts = scriptsOf('taste-page-source');
 const matchScripts = scriptsOf('match-page-source');
-const matchData = JSON.parse(between(templateSource('match-page-source'), 'const matchReportData = ', '</script>').trim().replace(/;$/, ''));
+const matchData = embedded('match-page-source', 'matchReportData');
 const exported = JSON.parse(between(html, 'const tasteExportData = ', '</script>').trim().replace(/;$/, ''));
 
 // A taste link as the export button writes it for the demo me: the new kind with taste traits, or the old kind.
@@ -2294,7 +2688,7 @@ test('an old link, a thin report and a broken link each say why there is no tast
 
 ```js
   const TN = require('../src/web/trait-network.js');
-  const network = JSON.parse(between(templateSource('taste-page-source'), 'const traitNetworkData = ', '</script>').trim().replace(/;$/, ''));
+  const network = embedded('taste-page-source', 'traitNetworkData');
   const people = [['我', matchData.me], ...matchData.people.map(person => [person.name, person]), ...Object.entries(network.friends)];
 ```
 
@@ -2416,7 +2810,7 @@ if(network){
 - [ ] **Step 8: Rebuild and run everything**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs && python -m unittest discover -s tests`
-Expected: 69 tests pass；76 tests OK
+Expected: 71 tests pass；76 tests OK
 
 - [ ] **Step 9: Commit**
 
@@ -2597,7 +2991,7 @@ Expected: 3 failures（按鈕仍是停用）
 - [ ] **Step 5: Rebuild and run every Node test**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs`
-Expected: 72 tests pass
+Expected: 74 tests pass
 
 - [ ] **Step 6: Commit**
 
@@ -2763,7 +3157,7 @@ Expected: 第一行是 `.gitignore:…:/report-data.js	report-data.js`；`git st
 - [ ] **Step 6: Rebuild and run everything**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs && python -m unittest discover -s tests`
-Expected: 三行輸出同「試做結果」；73 tests pass；76 tests OK
+Expected: 三行輸出同「試做結果」；75 tests pass；76 tests OK
 
 - [ ] **Step 7: Commit**
 
@@ -2782,7 +3176,7 @@ Run: `python -m unittest discover -s tests`
 Expected: 76 tests OK
 
 Run: `node --test tests/*.test.cjs`
-Expected: 73 tests pass
+Expected: 75 tests pass
 
 - [ ] **Step 2: 產生結果可重現、只動到預期的檔案**
 

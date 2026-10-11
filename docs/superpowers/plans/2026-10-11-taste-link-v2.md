@@ -3316,6 +3316,48 @@ git add src/web/match-filter.js src/web/match.html tests/match-filter.test.cjs t
 git commit -m "feat: word the privacy notes for the new links and keep the private report data out of Git" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
+- [ ] **Step 8: Pin each pairing of the two flags（審查後補上）**
+
+`intro(data, ready)` 看兩個獨立的條件（誰的品味、有沒有名單），Step 1 的測試只測了兩個條件相同的組合，兩者對調也會過。補上另外兩種組合；建置測試也釘住隱私說明改寫後的後半句。只改測試，程式本來就對，所以一加上就通過。
+
+**8.1** 在 `tests/match-filter.test.cjs` 把
+
+```js
+  assert.equal(intro({ population: 40, isDemo: false }, false), '配對對象是 40 位虛構示範用戶。你的品味特質來自這份私人報告，只存在這個檔案裡。');
+});
+```
+
+換成
+
+```js
+  assert.equal(intro({ population: 40, isDemo: false }, false), '配對對象是 40 位虛構示範用戶。你的品味特質來自這份私人報告，只存在這個檔案裡。');
+  // Whose taste it is and whether there is a list are separate questions.
+  assert.equal(intro({ population: 40, isDemo: false }, true), '配對對象是 40 位虛構示範用戶。你的品味特質來自這份私人報告，只存在這個檔案裡。點一個人，看你們的連線圖。');
+  assert.equal(intro({ population: 40, isDemo: true }, false), '配對對象是 40 位虛構示範用戶。「我」也是虛構示範資料。');
+});
+```
+
+**8.2** 在 `tests/test_build_report.py` 把
+
+```python
+            self.assertIn("此配對頁與連線圖只用行政區、10 類消費筆數、品味特質", match_page)
+```
+
+換成
+
+```python
+            self.assertIn("此配對頁與連線圖只用行政區、10 類消費筆數、品味特質", match_page)
+            self.assertIn("以及每個訊號最常買的品名；不顯示店名、地址、日期或單筆金額。品名裡的地名已拿掉，住宿只寫「旅館住宿」。", match_page)
+```
+
+Run: `node --test tests/*.test.cjs && python -m unittest discover -s tests`
+Expected: 76 tests pass；76 tests OK
+
+```bash
+git add tests/match-filter.test.cjs tests/test_build_report.py
+git commit -m "test: check the match page's header for each pairing of whose taste and whether there is a list" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
 ---
 
 ### Task 11: 最終驗證與交接（由主控執行，不交給子代理）

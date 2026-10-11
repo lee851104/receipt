@@ -116,3 +116,14 @@ test('the friends page opens on 小安 and 小宇 with their taste score', () =>
   assert.equal(get('overall-score').textContent, '+80');
   assert.equal(get('summary-worst').textContent, '小安偏低甜度，小宇偏高甜度（扣 6 分）— 一個加糖，一個讓糖罐放假。');
 });
+
+// The friends page quietly drops a friend whose data fails the check, so this test is what notices one.
+test('everyone the report embeds passes the check the graph runs before drawing', () => {
+  const TN = require('../src/web/trait-network.js');
+  const { between, templateSource } = require('./built-report.cjs');
+  const constant = (page, name) => JSON.parse(between(templateSource(page), `const ${name} = `, '</script>').trim().replace(/;$/, ''));
+  const network = constant('taste-page-source', 'traitNetworkData'), match = constant('match-page-source', 'matchReportData');
+  const people = [['我', match.me], ...match.people.map(person => [person.name, person]), ...Object.entries(network.friends)];
+  assert.equal(people.length, 44);
+  for (const [name, person] of people) assert.doesNotThrow(() => TN.validate(person, network), name);
+});

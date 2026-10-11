@@ -6,11 +6,15 @@
   const cards = node ? require('./match-filter.js') : root.MatchFilter;
 
   // Desktop puts the two fans side by side; phones stack them, the left person on top. All sizes are SVG units.
+  // `item` places the purchases behind a picked signal: a column `across` from the signal on desktop, a column in a
+  // band `beyond` the fans on phones, rows `step` apart, dots from dot[0] to dot[0] + dot[1] across.
   const SHAPES = Object.freeze({
     desktop: Object.freeze({ width: 1200, height: 640, centers: [[430, 325], [770, 325]], stretch: [1, 0.86],
-      near: 110, far: 270, none: 72, ring: 312, stagger: 14, dot: [3.5, 9], font: 13 }),
+      near: 110, far: 270, none: 72, ring: 312, stagger: 14, dot: [3.5, 9], font: 13,
+      item: Object.freeze({ across: 60, step: 20, dot: [2.5, 3.5] }) }),
     mobile: Object.freeze({ width: 600, height: 820, centers: [[300, 290], [300, 530]], stretch: [1, 0.9],
-      near: 70, far: 190, none: 46, ring: 228, stagger: 12, dot: [5, 11], font: 18 }),
+      near: 70, far: 190, none: 46, ring: 228, stagger: 12, dot: [5, 11], font: 18,
+      item: Object.freeze({ beyond: 30, step: 26, dot: [3, 4] }) }),
   });
   const FAN = 78 * Math.PI / 180;      // each fan opens 78° either side of straight out
   const SPREAD = 0.045;                // radians between neighbouring signals of one trait
@@ -169,6 +173,59 @@
     return { width: shape.width, height: shape.height, font: shape.font, sides, links, cells, result };
   }
 
+  // A purchase name the graph can fit: ten letters at most, cut with an ellipsis; the detail line keeps it whole.
+  const shortName = name => (Array.from(name).length > 10 ? Array.from(name).slice(0, 9).join('') + '…' : name);
+
+  // The purchases behind one signal for each person who has any: a short column of dots outside the signal, most
+  // bought first, each with a line into the signal and its name beside it. Desktop stands the column beside the
+  // signal, away from the middle; phones stand it in a band above the top fan or below the bottom one.
+  function purchases(data, graph, people, id, mobile) {
+    const shape = mobile ? SHAPES.mobile : SHAPES.desktop, { across, beyond, step, dot } = shape.item;
+    const order = data.signals.findIndex(signal => signal.id === id);
+    return graph.sides.flatMap((side, k) => {
+      const list = (people[k].items || [])[order] || [];
+      if (!list.length) return [];
+      const signal = side.signals.find(entry => entry.id === id), most = Math.max(...list.map(([, count]) => count));
+      const rows = list.map(([name, count]) => ({ name, count, text: shortName(name) + ' ×' + count,
+        r: dot[0] + dot[1] * count / most, width: 0.7 + 2.2 * count / most }));
+      let x, first, anchor;
+      if (mobile) {
+        // The names must fit inside the phone's width; the band itself only makes the graph taller.
+        const widest = Math.max(...rows.map(row => row.r + 5 + textWidth(row.text, shape.font)));
+        x = Math.min(Math.max(signal.x, 20), graph.width - widest - 8);
+        first = side.side === 'a' ? -beyond - (rows.length - 1) * step : graph.height + beyond;
+        anchor = 'start';
+      } else {
+        x = side.side === 'a' ? signal.x - across : signal.x + across;
+        first = signal.y - (rows.length - 1) * step / 2;
+        anchor = side.side === 'a' ? 'end' : 'start';
+      }
+      const items = rows.map((row, slot) => {
+        const y = first + slot * step;
+        return { ...row, x, y, anchor, labelX: anchor === 'end' ? x - row.r - 5 : x + row.r + 5, labelY: y + shape.font * 0.35 };
+      });
+      return [{ side: side.side, signal: { x: signal.x, y: signal.y }, items }];
+    });
+  }
+
+  // The view box: the graph plus room for every purchase any signal could show, so picking one never rescales it.
+  function viewBox(data, graph, people, mobile) {
+    const font = (mobile ? SHAPES.mobile : SHAPES.desktop).font;
+    let left = 0, top = 0, right = graph.width, bottom = graph.height;
+    for (const signal of data.signals) {
+      for (const side of purchases(data, graph, people, signal.id, mobile)) {
+        for (const item of side.items) {
+          const box = labelRect(item.text, font, item.labelX, item.labelY, item.anchor);
+          left = Math.min(left, box.left, item.x - item.r);
+          right = Math.max(right, box.right, item.x + item.r);
+          top = Math.min(top, box.top, item.y - item.r);
+          bottom = Math.max(bottom, box.bottom, item.y + item.r);
+        }
+      }
+    }
+    return [Math.floor(left), Math.floor(top), Math.ceil(right) - Math.floor(left), Math.ceil(bottom) - Math.floor(top)].join(' ');
+  }
+
   // A measured signal as the detail line reads it.
   function formatSignal(value, unit) {
     const one = number => String(Number(number.toFixed(1)));
@@ -218,7 +275,11 @@
       else effects.push('往「' + (trait.kind === 'level' ? trait.habit : trait.ends[push > 0 ? 1 : 0]) + '」推 ' + Math.abs(push).toFixed(2));
     });
     const shown = value === null ? '' : ' ' + formatSignal(value, signal.unit);
-    return name + '：' + signal.label + shown + '，' + effects.join('；');
+    // What was bought follows the value; a signal about places says it lists nothing on purpose.
+    const list = (person.items || [])[order] || [];
+    const bought = signal.list_items === false ? (value === null ? '' : '（這個訊號不列品項）')
+      : list.length ? '（' + list.map(([item, count]) => item + ' ×' + count).join('、') + '）' : '';
+    return name + '：' + signal.label + shown + bought + '，' + effects.join('；');
   }
 
   // One cell of the score: both values and what it added or took away, with its line.
@@ -254,7 +315,7 @@
   // How many traits the page talks about: cats and dogs share one group, so 18 cells read as 17 traits.
   const traitCount = traits => new Set(traits.map(trait => trait.group ?? trait.id)).size;
 
-  const api = Object.freeze({ SHAPES, validate, traitLabel, labelRect, layout, formatSignal, traitText, signalSentence,
-    cellSentence, readout, traitCount });
+  const api = Object.freeze({ SHAPES, validate, traitLabel, labelRect, layout, shortName, purchases, viewBox, formatSignal,
+    traitText, signalSentence, cellSentence, readout, traitCount });
   if (node) module.exports = api; else root.TraitNetwork = api;
 })(globalThis);

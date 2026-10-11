@@ -214,17 +214,78 @@ test('each unit reads naturally in the detail line', () => {
   assert.equal(TN.traitText(traits[0], 0.004), '0.00');
 });
 
-test('a signal sentence says its value and how far it pushed each trait it feeds', () => {
-  assert.equal(TN.signalSentence(data, me, '你', 'sugar_mean'), '你：飲料甜度 約 8 分糖，往「高甜度」推 0.61');
-  assert.equal(TN.signalSentence(data, them, '對方', 'quick'), '對方：平日固定速食 36%，往「快速解決」推 0.18；往「為了省時」推 0.60');
+test('a signal sentence says its value, what was bought and how far it pushed each trait it feeds', () => {
+  assert.equal(TN.signalSentence(data, me, '你', 'sugar_mean'), '你：飲料甜度 約 8 分糖（半糖冬瓜青茶 ×7、百香果茶 ×7、花果茶 ×7），往「高甜度」推 0.61');
+  assert.equal(TN.signalSentence(data, them, '對方', 'quick'), '對方：平日固定速食 36%（鮪魚飯糰 ×9），往「快速解決」推 0.18；往「為了省時」推 0.60');
+  // Nothing bought adds nothing to the sentence.
   assert.equal(TN.signalSentence(data, me, '你', 'quick'), '你：平日固定速食 0%，沒有推動「快速解決 ↔ 好好吃飯」；「超商：省錢 ↔ 省時」資料不足');
   assert.equal(TN.signalSentence(data, me, '你', 'clearance'), '你：超商即期，「超商：省錢 ↔ 省時」資料不足');
-  assert.equal(TN.signalSentence(data, them, '手搖學生 A', 'sport_visits'), '手搖學生 A：運動消費 每月 2 次，往「運動」推 0.20');
-  const unmeasured = { ...them, pushes: [[0.8, null], [-0.18, 1], [-0.1, 0.6], [0.2]], signals: [1, null, 0.36, 1, 0.1, 2] };
+  assert.equal(TN.signalSentence(data, them, '手搖學生 A', 'sport_visits'), '手搖學生 A：運動消費 每月 2 次（體適能體驗票 ×4），往「運動」推 0.20');
+  const unmeasured = { ...them, pushes: [[0.8, null], [-0.18, 1], [-0.1, 0.6], [0.2]], signals: [1, null, 0.36, 1, 0.1, 2],
+    items: [them.items[0], [], ...them.items.slice(2)] };
   assert.equal(TN.signalSentence(data, unmeasured, '對方', 'dessert_share'), '對方：甜點，沒有紀錄');
   // A push that prints as 0.00 moved nothing.
   const faintPush = { ...them, pushes: [[0.004, 0.14], [-0.18, 1], [-0.1, 0.6], [0.2]] };
-  assert.equal(TN.signalSentence(data, faintPush, '對方', 'sugar_mean'), '對方：飲料甜度 約 10 分糖，沒有推動「低甜度 ↔ 高甜度」');
+  assert.equal(TN.signalSentence(data, faintPush, '對方', 'sugar_mean'), '對方：飲料甜度 約 10 分糖（冬瓜青茶 ×10、黑糖珍珠鮮奶 ×8），沒有推動「低甜度 ↔ 高甜度」');
+  // A signal about places says it lists nothing on purpose.
+  const placed = { ...data, signals: data.signals.map(signal => (signal.id === 'clearance' ? { ...signal, list_items: false } : signal)) };
+  assert.equal(TN.signalSentence(placed, { ...them, items: [...them.items.slice(0, 4), null, them.items[5]] }, '對方', 'clearance'),
+    '對方：超商即期 10%（這個訊號不列品項），往「為了省錢」推 0.10');
+});
+
+test('the purchases behind a signal stand in a short column outside it, most bought first and biggest', () => {
+  const graph = TN.layout(data, me, them, false);
+  const [mine, theirs] = TN.purchases(data, graph, [me, them], 'sugar_mean', false);
+  assert.deepEqual([mine.side, theirs.side], ['a', 'b']);
+  assert.deepEqual(mine.items.map(item => item.text), ['半糖冬瓜青茶 ×7', '百香果茶 ×7', '花果茶 ×7']);
+  const signal = graph.sides[0].signals.find(entry => entry.id === 'sugar_mean');
+  assert.deepEqual([mine.signal.x, mine.signal.y], [signal.x, signal.y]);
+  // My column stands left of my signal with its names further left; theirs mirrors it on the right.
+  assert.ok(mine.items.every(item => item.x < signal.x - 40 && item.anchor === 'end' && item.labelX < item.x));
+  assert.ok(theirs.items.every(item => item.x > graph.sides[1].signals.find(entry => entry.id === 'sugar_mean').x + 40
+    && item.anchor === 'start' && item.labelX > item.x));
+  mine.items.slice(1).forEach((item, k) => assert.ok(item.y > mine.items[k].y));
+  assert.ok(theirs.items[0].r > theirs.items[1].r && theirs.items[0].width > theirs.items[1].width);
+  // Nothing bought, nothing drawn: my 超商即期 list is empty, theirs is not.
+  assert.deepEqual(TN.purchases(data, graph, [me, them], 'clearance', false).map(side => side.side), ['b']);
+});
+
+test('purchase names never cover each other, on desktop or on phones, wherever the signal sits', () => {
+  const crowded = { ...me, items: me.items.map(() => [['測試品名一號', 30], ['測試品名二號', 20], ['測試品名三號', 10]]) };
+  for (const mobile of [false, true]) {
+    const font = TN.SHAPES[mobile ? 'mobile' : 'desktop'].font, graph = TN.layout(data, crowded, crowded, mobile);
+    for (const signal of data.signals) {
+      for (const side of TN.purchases(data, graph, [crowded, crowded], signal.id, mobile)) {
+        const rects = side.items.map(item => TN.labelRect(item.text, font, item.labelX, item.labelY, item.anchor));
+        rects.forEach((rect, k) => rects.slice(k + 1).forEach(other => assert.ok(!overlap(rect, other), signal.id)));
+      }
+    }
+  }
+});
+
+test('the view box leaves room for every purchase any signal could show, and phones only grow taller', () => {
+  for (const mobile of [false, true]) {
+    const font = TN.SHAPES[mobile ? 'mobile' : 'desktop'].font, graph = TN.layout(data, me, them, mobile);
+    const [left, top, width, height] = TN.viewBox(data, graph, [me, them], mobile).split(' ').map(Number);
+    for (const signal of data.signals) {
+      for (const side of TN.purchases(data, graph, [me, them], signal.id, mobile)) {
+        for (const item of side.items) {
+          const box = TN.labelRect(item.text, font, item.labelX, item.labelY, item.anchor);
+          assert.ok(box.left >= left && box.right <= left + width && box.top >= top && box.bottom <= top + height, signal.id);
+        }
+      }
+    }
+    if (mobile) assert.deepEqual([left, width], [0, 600]);
+  }
+  // Without any purchases the graph keeps its own size.
+  const bare = person => ({ ...person, items: person.items.map(() => []) });
+  assert.equal(TN.viewBox(data, TN.layout(data, me, them, false), [bare(me), bare(them)], false), '0 0 1200 640');
+});
+
+test('a long purchase name is cut to ten letters on the graph', () => {
+  assert.equal(TN.shortName('半糖冬瓜青茶'), '半糖冬瓜青茶');
+  assert.equal(TN.shortName('測'.repeat(10)), '測'.repeat(10));
+  assert.equal(TN.shortName('測'.repeat(11)), '測'.repeat(9) + '…');
 });
 
 test('a cell sentence gives both values, the points it added or took, and its line', () => {

@@ -507,7 +507,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 @media(max-width:640px){main{padding-top:20px}.intro h1{font-size:25px}.intro h1 em{display:inline}.intro .eyebrow{font-size:9px}.comparison-overview{grid-template-columns:1fr;gap:12px;padding:16px;margin-bottom:17px}.comparison-overview .overall{border-right:0;border-bottom:1px solid #463435;padding:0 0 12px;display:grid;grid-template-columns:1fr auto;align-items:center}.comparison-overview .score{font-size:52px}.comparison-overview .readout{padding:0}.readout p{font-size:12px}.readout #summary{font-size:13px}.imports{gap:8px}.import-card{padding:10px 12px}.import-title-row span{font-size:9px}}
 .return-report{display:inline-block;color:var(--muted);font-size:12px;text-decoration:none;margin-bottom:14px}.return-report:hover{color:var(--pink)}
 .views{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}.view-button{background:none;border:0;padding:7px 15px;font-size:12px;color:var(--muted);min-height:36px}.view-button[aria-pressed=&quot;true&quot;]{background:#2b2626;color:var(--ink)}.view-button:disabled{opacity:.4;cursor:not-allowed}.views-note{font-size:11px;color:var(--muted)}.toolbar-left{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.t-label{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.t-trait,.t-signal{stroke-width:1.4}.t-link,.t-cell{fill:none;stroke-linecap:round;transition:opacity .15s}.t-hit{cursor:pointer;outline:none;transition:opacity .15s}.t-hit:focus-visible .t-signal,.t-hit:focus-visible .t-trait{stroke:#fff;stroke-width:2.5}.t-cell-hit{fill:none;stroke:transparent;stroke-width:14}.t-hit:focus-visible .t-cell-hit{stroke:#fff;stroke-opacity:.35}.t-tip{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.detail-text{white-space:pre-line}
+.t-label{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.t-trait,.t-signal{stroke-width:1.4}.t-link,.t-cell{fill:none;stroke-linecap:round;transition:opacity .15s}.t-hit{cursor:pointer;outline:none;transition:opacity .15s}.t-hit:focus-visible .t-signal,.t-hit:focus-visible .t-trait{stroke:#fff;stroke-width:2.5}.t-cell-hit{fill:none;stroke:transparent;stroke-width:14}.t-hit:focus-visible .t-cell-hit{stroke:#fff;stroke-opacity:.35}.t-tip{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.detail-text{white-space:pre-line}.t-buy-line{fill:none;stroke-linecap:round;opacity:.85}.t-buy{fill-opacity:.35;stroke-width:1.2}
 &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
@@ -521,12 +521,12 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 &lt;section class=&quot;graph-card&quot; aria-label=&quot;兩人的消費品項連結圖&quot;&gt;
 &lt;div class=&quot;toolbar&quot;&gt;&lt;div class=&quot;toolbar-left&quot;&gt;&lt;div class=&quot;views&quot; role=&quot;group&quot; aria-label=&quot;選擇要看的圖&quot;&gt;&lt;button type=&quot;button&quot; class=&quot;view-button&quot; data-view=&quot;traits&quot; aria-pressed=&quot;true&quot;&gt;品味特質&lt;/button&gt;&lt;button type=&quot;button&quot; class=&quot;view-button&quot; data-view=&quot;items&quot; aria-pressed=&quot;false&quot;&gt;品項細節&lt;/button&gt;&lt;/div&gt;&lt;span class=&quot;views-note&quot; id=&quot;views-note&quot; hidden&gt;這份連結還沒有品味特質&lt;/span&gt;&lt;div class=&quot;controls&quot;&gt;&lt;label for=&quot;category&quot;&gt;篩選消費種類&lt;select id=&quot;category&quot;&gt;&lt;option value=&quot;all&quot;&gt;全部類別&lt;/option&gt;&lt;option value=&quot;dumplings&quot;&gt;案例：同店不同餡&lt;/option&gt;&lt;option value=&quot;sweetness&quot;&gt;案例：半糖與無糖&lt;/option&gt;&lt;option&gt;正餐&lt;/option&gt;&lt;option&gt;飲品&lt;/option&gt;&lt;option&gt;零食甜點&lt;/option&gt;&lt;option&gt;生鮮食材&lt;/option&gt;&lt;option&gt;運動&lt;/option&gt;&lt;option&gt;其他服務&lt;/option&gt;&lt;option&gt;交通&lt;/option&gt;&lt;option&gt;住宿&lt;/option&gt;&lt;option&gt;日用品&lt;/option&gt;&lt;option&gt;電子產品&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;scope&quot; id=&quot;scope&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;&lt;/div&gt;
 &lt;div class=&quot;legend&quot; id=&quot;item-legend&quot;&gt;&lt;span class=&quot;legend-item&quot;&gt;&lt;span class=&quot;size-key&quot; aria-hidden=&quot;true&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;點越大，消費次數越多&lt;/span&gt;&lt;span class=&quot;legend-item positive-label&quot;&gt;&lt;span class=&quot;sign-key&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;正相關&lt;/span&gt;&lt;span class=&quot;legend-item negative-label&quot;&gt;&lt;span class=&quot;sign-key negative&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;負相關&lt;/span&gt;&lt;span class=&quot;legend-item&quot;&gt;&lt;span class=&quot;line-key&quot; aria-hidden=&quot;true&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;線越粗，關聯越強&lt;/span&gt;&lt;span class=&quot;legend-hint&quot;&gt;點選查看關聯，點空白處取消&lt;/span&gt;&lt;/div&gt;
-&lt;div class=&quot;legend&quot; id=&quot;trait-legend&quot; hidden&gt;&lt;span class=&quot;legend-item&quot;&gt;訊號線：實線往右端推、虛線往左端推&lt;/span&gt;&lt;span class=&quot;legend-item positive-label&quot;&gt;中間：綠線加分&lt;/span&gt;&lt;span class=&quot;legend-item negative-label&quot;&gt;橘虛線扣分&lt;/span&gt;&lt;span class=&quot;legend-item&quot;&gt;越粗影響越大&lt;/span&gt;&lt;span class=&quot;legend-item&quot;&gt;空心：資料不足&lt;/span&gt;&lt;span class=&quot;legend-hint&quot;&gt;點選查看連線，點空白處取消&lt;/span&gt;&lt;/div&gt;
+&lt;div class=&quot;legend&quot; id=&quot;trait-legend&quot; hidden&gt;&lt;span class=&quot;legend-item&quot;&gt;訊號線：實線往右端推、虛線往左端推&lt;/span&gt;&lt;span class=&quot;legend-item positive-label&quot;&gt;中間：綠線加分&lt;/span&gt;&lt;span class=&quot;legend-item negative-label&quot;&gt;橘虛線扣分&lt;/span&gt;&lt;span class=&quot;legend-item&quot;&gt;越粗影響越大&lt;/span&gt;&lt;span class=&quot;legend-item&quot;&gt;空心：資料不足&lt;/span&gt;&lt;span class=&quot;legend-item&quot;&gt;外圈：常買的品項（點小點出現）&lt;/span&gt;&lt;span class=&quot;legend-hint&quot;&gt;點選查看連線，點空白處取消&lt;/span&gt;&lt;/div&gt;
 &lt;p class=&quot;legend-explain&quot;&gt;&lt;b&gt;同款也能選得不同：&lt;/b&gt;可篩選「同店不同餡」或「半糖與無糖」。餡料與甜度各自比較，差異不代表兩人整體品味相反。&lt;/p&gt;
 &lt;div class=&quot;canvas&quot;&gt;&lt;svg id=&quot;network&quot; viewBox=&quot;0 0 1200 570&quot; role=&quot;group&quot; aria-label=&quot;左側粉紅是你的資料，右側藍色是朋友的資料；匯入後可點選圓點或連線&quot;&gt;&lt;/svg&gt;&lt;/div&gt;
 &lt;div class=&quot;detail&quot;&gt;&lt;span class=&quot;detail-icon&quot; aria-hidden=&quot;true&quot;&gt;↔&lt;/span&gt;&lt;div class=&quot;detail-text&quot; id=&quot;detail&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;點選一個圓點或一條線，看看你們買了什麼、相似在哪裡。&lt;/div&gt;&lt;button class=&quot;reset&quot; id=&quot;reset&quot; type=&quot;button&quot;&gt;顯示全部連線&lt;/button&gt;&lt;/div&gt;
 &lt;/section&gt;
-&lt;details class=&quot;method&quot;&gt;&lt;summary&gt;資料來源與相似百分比怎麼算？&lt;/summary&gt;&lt;div id=&quot;trait-method&quot; hidden&gt;&lt;p id=&quot;trait-method-text&quot;&gt;&lt;/p&gt;&lt;/div&gt;&lt;div id=&quot;category-method&quot; hidden&gt;&lt;p&gt;報告連結包含暱稱、涵蓋月份與 10 類已確認消費品項的筆數，同一張發票的同一品項只算一次，不計折扣、贈品及待確認分類。沒有店家、品名、單筆日期、金額或發票號碼，但摘要仍可被取得連結的人讀取；編碼並非加密。&lt;/p&gt;&lt;p&gt;分類模式只用 10 類筆數畫圖，不另外計算分數；上方的品味相似度要兩人都有品味特質才算得出來。分類無法分辨同一類中的半糖與無糖、蔬菜餡與鮮蝦餡；分類沒有負值，因此不會產生負相關連線。&lt;/p&gt;&lt;p&gt;圓點面積代表品項筆數；只有相同類別會連線。線的強弱為兩人該類占比的較小值除以較大值，越接近就越粗。若混用示範人物，會先將其虛構次數彙整至相同 10 類，用於操作示範。不同月份或資料量會影響比較，請留意兩側資料範圍。&lt;/p&gt;&lt;/div&gt;&lt;div id=&quot;demo-method&quot;&gt;&lt;p&gt;人物、消費次數與特徵分數皆為虛構；八方雲集與水餃名稱取自討論案例，不代表真實購買紀錄或實際配方。尚未接入語意嵌入（Semantic Embedding）模型。本案例把「蔬菜餡取向」設為 +1、「鮮蝦餡取向」設為 −1；另把同一家虛構茶舖、同款紅茶的「半糖」與「無糖」設為甜度對比的 +1 與 −1。這不是實際含糖量，也不代表不同甜度必然互斥；店家、料理形式與類別保留較小的共同權重。這個對比軸是人工設計，不能從點蔬菜水餃推論為素食者，也不能從一筆選擇推論整體品味。&lt;/p&gt;&lt;p&gt;品項以 36 維示範特徵表示，先將向量長度縮放為 1，再計算內積（Inner Product）；此時等同餘弦相似度（Cosine Similarity）。正值用亮薄荷綠實線（正相關）、負值用亮橘色虛線（負相關），線寬隨絕對值增加；圖例中的「正相關／負相關」表示本示範特徵的同向／反向，不是從多筆觀測估計的統計相關係數。0 表示這組特徵沒有方向關聯，不畫線。所有非零連線皆保留。圓點面積代表消費次數，位置只為排版。&lt;/p&gt;&lt;p&gt;這張品項圖不另外計算分數，上方的大字是兩人的品味相似度；篩選只改變圖上顯示的品項。&lt;a href=&quot;https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;計算定義參考&lt;/a&gt;。&lt;/p&gt;&lt;/div&gt;&lt;/details&gt;
+&lt;details class=&quot;method&quot;&gt;&lt;summary&gt;資料來源與相似百分比怎麼算？&lt;/summary&gt;&lt;div id=&quot;trait-method&quot; hidden&gt;&lt;p id=&quot;trait-method-text&quot;&gt;&lt;/p&gt;&lt;p id=&quot;trait-graph-method&quot;&gt;&lt;/p&gt;&lt;/div&gt;&lt;div id=&quot;category-method&quot; hidden&gt;&lt;p&gt;報告連結包含暱稱、涵蓋月份與 10 類已確認消費品項的筆數，同一張發票的同一品項只算一次，不計折扣、贈品及待確認分類。沒有店家、品名、單筆日期、金額或發票號碼，但摘要仍可被取得連結的人讀取；編碼並非加密。&lt;/p&gt;&lt;p&gt;分類模式只用 10 類筆數畫圖，不另外計算分數；上方的品味相似度要兩人都有品味特質才算得出來。分類無法分辨同一類中的半糖與無糖、蔬菜餡與鮮蝦餡；分類沒有負值，因此不會產生負相關連線。&lt;/p&gt;&lt;p&gt;圓點面積代表品項筆數；只有相同類別會連線。線的強弱為兩人該類占比的較小值除以較大值，越接近就越粗。若混用示範人物，會先將其虛構次數彙整至相同 10 類，用於操作示範。不同月份或資料量會影響比較，請留意兩側資料範圍。&lt;/p&gt;&lt;/div&gt;&lt;div id=&quot;demo-method&quot;&gt;&lt;p&gt;人物、消費次數與特徵分數皆為虛構；八方雲集與水餃名稱取自討論案例，不代表真實購買紀錄或實際配方。尚未接入語意嵌入（Semantic Embedding）模型。本案例把「蔬菜餡取向」設為 +1、「鮮蝦餡取向」設為 −1；另把同一家虛構茶舖、同款紅茶的「半糖」與「無糖」設為甜度對比的 +1 與 −1。這不是實際含糖量，也不代表不同甜度必然互斥；店家、料理形式與類別保留較小的共同權重。這個對比軸是人工設計，不能從點蔬菜水餃推論為素食者，也不能從一筆選擇推論整體品味。&lt;/p&gt;&lt;p&gt;品項以 36 維示範特徵表示，先將向量長度縮放為 1，再計算內積（Inner Product）；此時等同餘弦相似度（Cosine Similarity）。正值用亮薄荷綠實線（正相關）、負值用亮橘色虛線（負相關），線寬隨絕對值增加；圖例中的「正相關／負相關」表示本示範特徵的同向／反向，不是從多筆觀測估計的統計相關係數。0 表示這組特徵沒有方向關聯，不畫線。所有非零連線皆保留。圓點面積代表消費次數，位置只為排版。&lt;/p&gt;&lt;p&gt;這張品項圖不另外計算分數，上方的大字是兩人的品味相似度；篩選只改變圖上顯示的品項。&lt;a href=&quot;https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;計算定義參考&lt;/a&gt;。&lt;/p&gt;&lt;/div&gt;&lt;/details&gt;
 &lt;/main&gt;&lt;footer&gt;&lt;span id=&quot;comparison-footer&quot;&gt;2026.01—03 · 同期間比較 · 僅供視覺與互動討論&lt;/span&gt;&lt;span&gt;You are what you buy. / TASTE CONNECTIONS&lt;/span&gt;&lt;/footer&gt;
 &lt;noscript&gt;&lt;p&gt;請開啟 JavaScript 以查看點線圖。&lt;/p&gt;&lt;/noscript&gt;
 &lt;script data-source=&quot;taste-profile.js&quot;&gt;
@@ -725,11 +725,15 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
   const cards = node ? require(&#x27;./match-filter.js&#x27;) : root.MatchFilter;
 
   // Desktop puts the two fans side by side; phones stack them, the left person on top. All sizes are SVG units.
+  // `item` places the purchases behind a picked signal: a column `across` from the signal on desktop, a column in a
+  // band `beyond` the fans on phones, rows `step` apart, dots from dot[0] to dot[0] + dot[1] across.
   const SHAPES = Object.freeze({
     desktop: Object.freeze({ width: 1200, height: 640, centers: [[430, 325], [770, 325]], stretch: [1, 0.86],
-      near: 110, far: 270, none: 72, ring: 312, stagger: 14, dot: [3.5, 9], font: 13 }),
+      near: 110, far: 270, none: 72, ring: 312, stagger: 14, dot: [3.5, 9], font: 13,
+      item: Object.freeze({ across: 60, step: 20, dot: [2.5, 3.5] }) }),
     mobile: Object.freeze({ width: 600, height: 820, centers: [[300, 290], [300, 530]], stretch: [1, 0.9],
-      near: 70, far: 190, none: 46, ring: 228, stagger: 12, dot: [5, 11], font: 18 }),
+      near: 70, far: 190, none: 46, ring: 228, stagger: 12, dot: [5, 11], font: 18,
+      item: Object.freeze({ beyond: 30, step: 26, dot: [3, 4] }) }),
   });
   const FAN = 78 * Math.PI / 180;      // each fan opens 78° either side of straight out
   const SPREAD = 0.045;                // radians between neighbouring signals of one trait
@@ -888,6 +892,59 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
     return { width: shape.width, height: shape.height, font: shape.font, sides, links, cells, result };
   }
 
+  // A purchase name the graph can fit: ten letters at most, cut with an ellipsis; the detail line keeps it whole.
+  const shortName = name =&gt; (Array.from(name).length &gt; 10 ? Array.from(name).slice(0, 9).join(&#x27;&#x27;) + &#x27;…&#x27; : name);
+
+  // The purchases behind one signal for each person who has any: a short column of dots outside the signal, most
+  // bought first, each with a line into the signal and its name beside it. Desktop stands the column beside the
+  // signal, away from the middle; phones stand it in a band above the top fan or below the bottom one.
+  function purchases(data, graph, people, id, mobile) {
+    const shape = mobile ? SHAPES.mobile : SHAPES.desktop, { across, beyond, step, dot } = shape.item;
+    const order = data.signals.findIndex(signal =&gt; signal.id === id);
+    return graph.sides.flatMap((side, k) =&gt; {
+      const list = (people[k].items || [])[order] || [];
+      if (!list.length) return [];
+      const signal = side.signals.find(entry =&gt; entry.id === id), most = Math.max(...list.map(([, count]) =&gt; count));
+      const rows = list.map(([name, count]) =&gt; ({ name, count, text: shortName(name) + &#x27; ×&#x27; + count,
+        r: dot[0] + dot[1] * count / most, width: 0.7 + 2.2 * count / most }));
+      let x, first, anchor;
+      if (mobile) {
+        // The names must fit inside the phone&#x27;s width; the band itself only makes the graph taller.
+        const widest = Math.max(...rows.map(row =&gt; row.r + 5 + textWidth(row.text, shape.font)));
+        x = Math.min(Math.max(signal.x, 20), graph.width - widest - 8);
+        first = side.side === &#x27;a&#x27; ? -beyond - (rows.length - 1) * step : graph.height + beyond;
+        anchor = &#x27;start&#x27;;
+      } else {
+        x = side.side === &#x27;a&#x27; ? signal.x - across : signal.x + across;
+        first = signal.y - (rows.length - 1) * step / 2;
+        anchor = side.side === &#x27;a&#x27; ? &#x27;end&#x27; : &#x27;start&#x27;;
+      }
+      const items = rows.map((row, slot) =&gt; {
+        const y = first + slot * step;
+        return { ...row, x, y, anchor, labelX: anchor === &#x27;end&#x27; ? x - row.r - 5 : x + row.r + 5, labelY: y + shape.font * 0.35 };
+      });
+      return [{ side: side.side, signal: { x: signal.x, y: signal.y }, items }];
+    });
+  }
+
+  // The view box: the graph plus room for every purchase any signal could show, so picking one never rescales it.
+  function viewBox(data, graph, people, mobile) {
+    const font = (mobile ? SHAPES.mobile : SHAPES.desktop).font;
+    let left = 0, top = 0, right = graph.width, bottom = graph.height;
+    for (const signal of data.signals) {
+      for (const side of purchases(data, graph, people, signal.id, mobile)) {
+        for (const item of side.items) {
+          const box = labelRect(item.text, font, item.labelX, item.labelY, item.anchor);
+          left = Math.min(left, box.left, item.x - item.r);
+          right = Math.max(right, box.right, item.x + item.r);
+          top = Math.min(top, box.top, item.y - item.r);
+          bottom = Math.max(bottom, box.bottom, item.y + item.r);
+        }
+      }
+    }
+    return [Math.floor(left), Math.floor(top), Math.ceil(right) - Math.floor(left), Math.ceil(bottom) - Math.floor(top)].join(&#x27; &#x27;);
+  }
+
   // A measured signal as the detail line reads it.
   function formatSignal(value, unit) {
     const one = number =&gt; String(Number(number.toFixed(1)));
@@ -937,7 +994,11 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
       else effects.push(&#x27;往「&#x27; + (trait.kind === &#x27;level&#x27; ? trait.habit : trait.ends[push &gt; 0 ? 1 : 0]) + &#x27;」推 &#x27; + Math.abs(push).toFixed(2));
     });
     const shown = value === null ? &#x27;&#x27; : &#x27; &#x27; + formatSignal(value, signal.unit);
-    return name + &#x27;：&#x27; + signal.label + shown + &#x27;，&#x27; + effects.join(&#x27;；&#x27;);
+    // What was bought follows the value; a signal about places says it lists nothing on purpose.
+    const list = (person.items || [])[order] || [];
+    const bought = signal.list_items === false ? (value === null ? &#x27;&#x27; : &#x27;（這個訊號不列品項）&#x27;)
+      : list.length ? &#x27;（&#x27; + list.map(([item, count]) =&gt; item + &#x27; ×&#x27; + count).join(&#x27;、&#x27;) + &#x27;）&#x27; : &#x27;&#x27;;
+    return name + &#x27;：&#x27; + signal.label + shown + bought + &#x27;，&#x27; + effects.join(&#x27;；&#x27;);
   }
 
   // One cell of the score: both values and what it added or took away, with its line.
@@ -973,8 +1034,8 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
   // How many traits the page talks about: cats and dogs share one group, so 18 cells read as 17 traits.
   const traitCount = traits =&gt; new Set(traits.map(trait =&gt; trait.group ?? trait.id)).size;
 
-  const api = Object.freeze({ SHAPES, validate, traitLabel, labelRect, layout, formatSignal, traitText, signalSentence,
-    cellSentence, readout, traitCount });
+  const api = Object.freeze({ SHAPES, validate, traitLabel, labelRect, layout, shortName, purchases, viewBox, formatSignal,
+    traitText, signalSentence, cellSentence, readout, traitCount });
   if (node) module.exports = api; else root.TraitNetwork = api;
 })(globalThis);
 &lt;/script&gt;
@@ -1071,7 +1132,7 @@ function prepareView(){
  for(const button of document.querySelectorAll(&#x27;[data-view]&#x27;)){button.setAttribute(&#x27;aria-pressed&#x27;,String(button.dataset.view===currentView()));if(button.dataset.view===&#x27;traits&#x27;)button.disabled=!available;}
  $(&#x27;views-note&#x27;).hidden=available||!hasBoth();
  $(&#x27;item-legend&#x27;).hidden=traits;$(&#x27;trait-legend&#x27;).hidden=!traits;document.querySelector(&#x27;.legend-explain&#x27;).hidden=traits;document.querySelector(&#x27;.controls&#x27;).hidden=traits;
- $(&#x27;trait-method&#x27;).hidden=!available;
+ $(&#x27;trait-method&#x27;).hidden=!available;$(&#x27;trait-graph-method&#x27;).hidden=!traits;
  if(traits){$(&#x27;category-method&#x27;).hidden=true;$(&#x27;demo-method&#x27;).hidden=true;document.querySelector(&#x27;.subtitle&#x27;).textContent=&#x27;每個點是一個消費訊號或品味特質。看看你們的品味，怎麼連起來。&#x27;;$(&#x27;comparison-footer&#x27;).textContent=&#x27;品味特質比較 · 資料只在本頁處理，不上傳發票&#x27;;}
 }
 // The readout always explains the big number, the taste similarity, whichever graph is showing.
@@ -1088,13 +1149,14 @@ function renderSummary(result,both){
 // The taste network: signals fan out from each person&#x27;s traits, and the middle lines are the score&#x27;s cells.
 function drawTraits(svg,mobile,both){
  const graph=TraitNetwork.layout(network,both[0],both[1],mobile),shape=TraitNetwork.SHAPES[mobile?&#x27;mobile&#x27;:&#x27;desktop&#x27;],color={a:&#x27;#ff9aa7&#x27;,b:&#x27;#9bbcff&#x27;},who=sideNames();
- svg.setAttribute(&#x27;viewBox&#x27;,`0 0 ${graph.width} ${graph.height}`);
+ // Room for every signal&#x27;s purchases is kept from the start, so picking a signal never rescales the graph.
+ svg.setAttribute(&#x27;viewBox&#x27;,TraitNetwork.viewBox(network,graph,both,mobile));
  const names=el(&#x27;g&#x27;,{&#x27;aria-hidden&#x27;:&#x27;true&#x27;});
  for(const side of [&#x27;a&#x27;,&#x27;b&#x27;]){
   const [cx]=shape.centers[side===&#x27;a&#x27;?0:1],x=mobile?cx:cx+(side===&#x27;a&#x27;?-130:130),y=mobile?(side===&#x27;a&#x27;?28:graph.height-14):30;
   names.append(el(&#x27;text&#x27;,{x,y,&#x27;text-anchor&#x27;:&#x27;middle&#x27;,class:&#x27;person-name&#x27;},chartName(keyFor(side),mobile)+(pair?(side===&#x27;a&#x27;?&#x27;&#x27;:&#x27; · 配對對象&#x27;):&#x27; · &#x27;+(side===&#x27;a&#x27;?&#x27;你&#x27;:&#x27;朋友&#x27;))));
  }
- const lines=el(&#x27;g&#x27;),middles=el(&#x27;g&#x27;),dots=el(&#x27;g&#x27;),labels=el(&#x27;g&#x27;),tips=el(&#x27;g&#x27;),view={graph,links:[],cells:[],signals:[],traits:[],tips,pinned:[],hover:null};
+ const lines=el(&#x27;g&#x27;),middles=el(&#x27;g&#x27;),dots=el(&#x27;g&#x27;),labels=el(&#x27;g&#x27;),outer=el(&#x27;g&#x27;,{class:&#x27;t-outer&#x27;,&#x27;aria-hidden&#x27;:&#x27;true&#x27;}),tips=el(&#x27;g&#x27;),view={graph,links:[],cells:[],signals:[],traits:[],outer,tips,pinned:[],hover:null};
  for(const link of graph.links){const zero=link.push===0,base=zero?.3:.85;const path=el(&#x27;path&#x27;,{d:link.d,class:&#x27;t-link&#x27;,stroke:color[link.side],&#x27;stroke-width&#x27;:zero?.6:(.8+6*Math.abs(link.push)).toFixed(2),&#x27;stroke-dasharray&#x27;:link.push&lt;0?&#x27;5 4&#x27;:&#x27;none&#x27;,opacity:base});lines.append(path);view.links.push({...link,el:path,base});}
  for(const cell of graph.cells){
   const zero=cell.part===0,base=zero?.45:.9,trait=network.traits[cell.trait];
@@ -1121,16 +1183,16 @@ function drawTraits(svg,mobile,both){
    dots.append(group);view.traits.push({...item,el:group,labelEl:label});
   }
  }
- svg.append(names,lines,middles,dots,labels,tips);traitGraph=view;clearSelection();
+ svg.append(names,lines,middles,dots,labels,outer,tips);traitGraph=view;clearSelection();
 }
 // The detail sentences name both people; cards and the readout say 你 and 對方 instead.
 function sideNames(){return [profiles[leftKey].name,profiles[rightKey].name];}
-// A name next to a dot: a signal&#x27;s name, or a trait label that had no room.
-function tipText(item,text){
+// A name next to a dot: a signal&#x27;s name, or a trait label that had no room. Inward puts it on the middle side.
+function tipText(item,text,inward=false){
  const font=traitGraph.graph.font,mobile=traitGraph.graph.width===TraitNetwork.SHAPES.mobile.width,gap=item.r===undefined?8:item.r+4;
  let x,y,anchor;
  if(mobile){x=item.x+gap;y=item.y+font*.35;anchor=&#x27;start&#x27;;}
- else{x=item.side===&#x27;a&#x27;?item.x-gap:item.x+gap;y=item.r===undefined?item.y+4:item.y-6;anchor=item.side===&#x27;a&#x27;?&#x27;end&#x27;:&#x27;start&#x27;;}
+ else{const leftward=(item.side===&#x27;a&#x27;)!==inward;x=leftward?item.x-gap:item.x+gap;y=item.r===undefined?item.y+(inward?-8:4):item.y-6;anchor=leftward?&#x27;end&#x27;:&#x27;start&#x27;;}
  // A name that would run past the edge of the graph hangs on the other side of its dot instead.
  const box=TraitNetwork.labelRect(text,font,x,y,anchor);if(box.right&gt;traitGraph.graph.width){x=item.x-gap;anchor=&#x27;end&#x27;;}else if(box.left&lt;0){x=item.x+gap;anchor=&#x27;start&#x27;;}
  return el(&#x27;text&#x27;,{x:x.toFixed(1),y:y.toFixed(1),&#x27;text-anchor&#x27;:anchor,class:&#x27;t-tip&#x27;,&#x27;font-size&#x27;:font},text);
@@ -1140,8 +1202,21 @@ function hoverable(group,item,text){
  const show=()=&gt;{hideHover();traitGraph.hover=tipText(item,text);traitGraph.tips.append(traitGraph.hover);};
  group.addEventListener(&#x27;mouseenter&#x27;,show);group.addEventListener(&#x27;focus&#x27;,show);group.addEventListener(&#x27;mouseleave&#x27;,hideHover);group.addEventListener(&#x27;blur&#x27;,hideHover);
 }
-function pin(item,text){const tip=tipText(item,text);traitGraph.tips.append(tip);traitGraph.pinned.push(tip);}
-function clearPins(){if(!traitGraph)return;for(const tip of traitGraph.pinned)tip.remove();traitGraph.pinned=[];}
+function pin(item,text,inward){const tip=tipText(item,text,inward);traitGraph.tips.append(tip);traitGraph.pinned.push(tip);}
+// Pinned names and the purchases of a picked signal both go when the choice changes.
+function clearPins(){if(!traitGraph)return;for(const tip of traitGraph.pinned)tip.remove();traitGraph.pinned=[];traitGraph.outer.replaceChildren();}
+// The purchases behind a picked signal: a short column of dots outside it on each side, each with a line in and its name.
+function showPurchases(id){
+ const mobile=traitGraph.graph.width===TraitNetwork.SHAPES.mobile.width,color={a:&#x27;#ff9aa7&#x27;,b:&#x27;#9bbcff&#x27;},sides=new Set();
+ for(const side of TraitNetwork.purchases(network,traitGraph.graph,traitPair(),id,mobile)){
+  sides.add(side.side);
+  for(const item of side.items)traitGraph.outer.append(
+   el(&#x27;path&#x27;,{d:`M${item.x.toFixed(1)} ${item.y.toFixed(1)} L${side.signal.x.toFixed(1)} ${side.signal.y.toFixed(1)}`,class:&#x27;t-buy-line&#x27;,stroke:color[side.side],&#x27;stroke-width&#x27;:item.width.toFixed(2)}),
+   el(&#x27;circle&#x27;,{cx:item.x.toFixed(1),cy:item.y.toFixed(1),r:item.r.toFixed(1),class:&#x27;t-buy&#x27;,fill:color[side.side],stroke:color[side.side]}),
+   el(&#x27;text&#x27;,{x:item.labelX.toFixed(1),y:item.labelY.toFixed(1),&#x27;text-anchor&#x27;:item.anchor,class:&#x27;t-tip&#x27;,&#x27;font-size&#x27;:traitGraph.graph.font},item.text));
+ }
+ return sides;
+}
 // Light the chosen traits and their signals; a chosen signal shows at full strength and the traits&#x27; other signals at half.
 function lightTraits(indexes,focus){
  const lit=new Set(indexes),feeds=new Set(traitGraph.links.filter(link=&gt;lit.has(link.trait)).map(link=&gt;link.signal));
@@ -1155,7 +1230,9 @@ function selectSignal(id){
  const feeds=network.traits.map((trait,index)=&gt;(trait.signals.includes(id)?index:-1)).filter(index=&gt;index&gt;=0);
  lightTraits(feeds,id);
  const label=network.signals.find(signal=&gt;signal.id===id).label,[left,right]=traitPair(),names=sideNames(),parts=traitGraph.graph.result.parts;
- for(const signal of traitGraph.signals)if(signal.id===id)pin(signal,label);
+ const bought=showPurchases(id),mobile=traitGraph.graph.width===TraitNetwork.SHAPES.mobile.width;
+ // On desktop a side&#x27;s purchases take the outside of its signal, so the signal&#x27;s name moves to the inside.
+ for(const signal of traitGraph.signals)if(signal.id===id)pin(signal,label,!mobile&amp;&amp;bought.has(signal.side));
  $(&#x27;detail&#x27;).textContent=[TraitNetwork.signalSentence(network,left,names[0],id),TraitNetwork.signalSentence(network,right,names[1],id),
   ...feeds.map(index=&gt;TraitNetwork.cellSentence(network,index,left,right,names,parts?parts[index]:null))].join(&#x27;\n&#x27;);
 }
@@ -1218,7 +1295,12 @@ for(const side of [&#x27;a&#x27;,&#x27;b&#x27;]){
 }
 document.querySelectorAll(&#x27;[data-demo-side]&#x27;).forEach(button=&gt;button.addEventListener(&#x27;click&#x27;,()=&gt;{const side=button.dataset.demoSide;$(&#x27;profile-url-&#x27;+side).value=&#x27;demo://&#x27;+button.dataset.demoKey;importProfile(side);}));
 $(&#x27;category&#x27;).addEventListener(&#x27;change&#x27;,event=&gt;{category=event.target.value;draw();});document.querySelectorAll(&#x27;[data-view]&#x27;).forEach(button=&gt;button.addEventListener(&#x27;click&#x27;,()=&gt;{chosenView=button.dataset.view;draw();}));
-if(network)$(&#x27;trait-method-text&#x27;).textContent=&#x27;品味相似度是 &#x27;+TraitNetwork.traitCount(network.traits)+&#x27; 項品味特質（&#x27;+network.traits.length+&#x27; 格）的餘弦相似度，範圍 &#x27;+TraitSimilarity.signed(-1)+&#x27;～&#x27;+TraitSimilarity.signed(1)+&#x27;。每項特質由幾個消費訊號加權而成，訊號線越粗，代表這個訊號推得越多；中間每條線是那一格對分數的加減，全部加起來就是品味相似度。&#x27;;$(&#x27;reset&#x27;).addEventListener(&#x27;click&#x27;,clearSelection);$(&#x27;network&#x27;).addEventListener(&#x27;keydown&#x27;,event=&gt;{if(event.key===&#x27;Escape&#x27;)clearSelection();});matchMedia(&#x27;(max-width:640px)&#x27;).addEventListener(&#x27;change&#x27;,draw);const requestedCase=new URLSearchParams(pageLocation().search).get(&#x27;case&#x27;);if(!pair&amp;&amp;[&#x27;dumplings&#x27;,&#x27;sweetness&#x27;].includes(requestedCase)){category=requestedCase;$(&#x27;category&#x27;).value=category;chosenView=&#x27;items&#x27;;}
+if(network){
+ // The score explains both graphs; the lines and the purchases only the taste network.
+ const unlisted=network.signals.filter(signal=&gt;signal.list_items===false).map(signal=&gt;signal.label);
+ $(&#x27;trait-method-text&#x27;).textContent=&#x27;品味相似度是 &#x27;+TraitNetwork.traitCount(network.traits)+&#x27; 項品味特質（&#x27;+network.traits.length+&#x27; 格）的餘弦相似度，範圍 &#x27;+TraitSimilarity.signed(-1)+&#x27;～&#x27;+TraitSimilarity.signed(1)+&#x27;。&#x27;;
+ $(&#x27;trait-graph-method&#x27;).textContent=&#x27;每項特質由幾個消費訊號加權而成，訊號線越粗，代表這個訊號推得越多；中間每條線是那一格對分數的加減，全部加起來就是品味相似度。點一個訊號，外圈會出現最常買的品項（最多 3 個，×N 是整段期間的次數）；&#x27;+unlisted.join(&#x27;、&#x27;)+&#x27;這 &#x27;+unlisted.length+&#x27; 個訊號不列品項。&#x27;;
+}$(&#x27;reset&#x27;).addEventListener(&#x27;click&#x27;,clearSelection);$(&#x27;network&#x27;).addEventListener(&#x27;keydown&#x27;,event=&gt;{if(event.key===&#x27;Escape&#x27;)clearSelection();});matchMedia(&#x27;(max-width:640px)&#x27;).addEventListener(&#x27;change&#x27;,draw);const requestedCase=new URLSearchParams(pageLocation().search).get(&#x27;case&#x27;);if(!pair&amp;&amp;[&#x27;dumplings&#x27;,&#x27;sweetness&#x27;].includes(requestedCase)){category=requestedCase;$(&#x27;category&#x27;).value=category;chosenView=&#x27;items&#x27;;}
 function importHash(){if(!pageLocation().hash.startsWith(&#x27;#taste=&#x27;))return;leftKey=null;$(&#x27;profile-url-a&#x27;).value=pageLocation().href;updateImport(&#x27;a&#x27;);draw();importProfile(&#x27;a&#x27;);}
 window.refreshTasteFromLocation=importHash;
 if(pageHost){

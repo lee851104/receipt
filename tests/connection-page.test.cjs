@@ -99,16 +99,30 @@ test('a match opens on the taste network with the taste score, and the item deta
   assert.deepEqual(calls, ['showMatches']);
 });
 
-test('picking a signal lights its path and writes both people into the detail line', () => {
+test('picking a signal grows its purchases on both sides and writes them into the detail line', () => {
   const { get } = open({ pair: pairFromMatchList(0).pair });
-  const links = findAll(get('network'), node => node.attrs.class === 't-link');
-  const [mine] = findAll(get('network'), node => node.attrs['aria-label']?.startsWith('你的飲料甜度'));
-  fire(mine, 'click');
-  assert.deepEqual(get('detail').textContent.split('\n').slice(0, 2),
-    ['你：飲料甜度 約 8 分糖，往「高甜度」推 0.61', '手搖學生 B：飲料甜度 約 10 分糖，往「高甜度」推 0.80']);
+  const network = get('network'), bought = () => findAll(network, node => node.attrs.class === 't-buy').length;
+  const pick = start => fire(findAll(network, node => node.attrs['aria-label']?.startsWith(start))[0], 'click');
+  // Room for the purchases is kept from the start.
+  const [left, , width] = network.attrs.viewBox.split(' ').map(Number);
+  assert.ok(left < 0 && width > 1200);
+  pick('你的飲料甜度');
+  assert.deepEqual(get('detail').textContent.split('\n').slice(0, 2), [
+    '你：飲料甜度 約 8 分糖（半糖冬瓜青茶 ×7、百香果茶 ×7、花果茶 ×7），往「高甜度」推 0.61',
+    '手搖學生 B：飲料甜度 約 10 分糖（冬瓜青茶 ×10、黑糖珍珠鮮奶 ×8、珍珠奶茶 ×6），往「高甜度」推 0.80']);
   // The picked signal's own lines light up, and lines away from its traits fade out.
-  assert.ok(links.some(link => link.style.opacity === '1'));
-  assert.ok(links.some(link => link.style.opacity === '.06'));
+  const lit = findAll(network, node => node.attrs.class === 't-link').map(link => link.style.opacity);
+  assert.ok(lit.includes('1') && lit.includes('.06'));
+  assert.equal(bought(), 6);
+  assert.equal(network.attrs.viewBox.split(' ')[2], String(width));
+  pick('你的常去店家');
+  assert.equal(bought(), 0);
+  assert.match(get('detail').textContent.split('\n')[0], /^你：常去店家 \d+%（這個訊號不列品項），/);
+  pick('你的飲料甜度');
+  fire(get('reset'), 'click');
+  assert.equal(bought(), 0);
+  pick('你，低甜度 ↔ 高甜度');
+  assert.equal(bought(), 0);
 });
 
 test('the friends page opens on 小安 and 小宇 with their taste score', () => {

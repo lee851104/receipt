@@ -133,4 +133,7 @@ test('the page explains an empty distance, missing home districts, nobody close 
 test('the line under the title only asks to pick someone when there is a list to pick from', () => {
   assert.equal(intro({ population: 40, isDemo: true }, true), '配對對象是 40 位虛構示範用戶。「我」也是虛構示範資料。點一個人，看你們的連線圖。');
   assert.equal(intro({ population: 40, isDemo: false }, false), '配對對象是 40 位虛構示範用戶。你的品味特質來自這份私人報告，只存在這個檔案裡。');
+  // Whose taste it is and whether there is a list are separate questions.
+  assert.equal(intro({ population: 40, isDemo: false }, true), '配對對象是 40 位虛構示範用戶。你的品味特質來自這份私人報告，只存在這個檔案裡。點一個人，看你們的連線圖。');
+  assert.equal(intro({ population: 40, isDemo: true }, false), '配對對象是 40 位虛構示範用戶。「我」也是虛構示範資料。');
 });

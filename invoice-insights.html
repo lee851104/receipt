@@ -743,17 +743,23 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
     if (!person || typeof person !== &#x27;object&#x27;) fail();
     const { vector, pushes, signals } = person;
     if (!Array.isArray(vector) || vector.length !== data.traits.length) fail();
-    vector.forEach((value, index) =&gt; {
-      const low = data.traits[index].kind === &#x27;level&#x27; ? 0 : -1;
-      if (value !== null &amp;&amp; (!finite(value) || value &lt; low || value &gt; 1)) fail();
-    });
     if (!Array.isArray(pushes) || pushes.length !== data.traits.length) fail();
-    pushes.forEach((list, index) =&gt; {
-      if (!Array.isArray(list) || list.length !== data.traits[index].signals.length
-        || list.some(value =&gt; value !== null &amp;&amp; !finite(value))) fail();
+    if (!Array.isArray(signals) || signals.length !== data.signals.length) fail();
+    signals.forEach(value =&gt; { if (value !== null &amp;&amp; (!finite(value) || value &lt; 0 || value &gt; 1e6)) fail(); });
+    const order = new Map(data.signals.map((signal, index) =&gt; [signal.id, index]));
+    data.traits.forEach((trait, index) =&gt; {
+      const value = vector[index], list = pushes[index], low = trait.kind === &#x27;level&#x27; ? 0 : -1;
+      if (value !== null &amp;&amp; (!finite(value) || value &lt; low || value &gt; 1)) fail();
+      if (!Array.isArray(list) || list.length !== trait.signals.length) fail();
+      list.forEach((push, slot) =&gt; {
+        if (push === null) return;
+        if (!finite(push) || push &lt; low || push &gt; 1) fail();
+        // A trait without data pushes nothing, and neither does a signal that was not measured.
+        if (value === null || signals[order.get(trait.signals[slot])] === null) fail();
+      });
+      // The lines must add up to the trait they draw, give or take the rounding of each push.
+      if (value !== null &amp;&amp; Math.abs(list.reduce((sum, push) =&gt; sum + (push ?? 0), 0) - value) &gt; 0.001) fail();
     });
-    if (!Array.isArray(signals) || signals.length !== data.signals.length
-      || signals.some(value =&gt; value !== null &amp;&amp; !finite(value))) fail();
     return { vector: [...vector], pushes: pushes.map(list =&gt; [...list]), signals: [...signals] };
   }
 

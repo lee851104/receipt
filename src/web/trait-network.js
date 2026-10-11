@@ -24,17 +24,23 @@
     if (!person || typeof person !== 'object') fail();
     const { vector, pushes, signals } = person;
     if (!Array.isArray(vector) || vector.length !== data.traits.length) fail();
-    vector.forEach((value, index) => {
-      const low = data.traits[index].kind === 'level' ? 0 : -1;
-      if (value !== null && (!finite(value) || value < low || value > 1)) fail();
-    });
     if (!Array.isArray(pushes) || pushes.length !== data.traits.length) fail();
-    pushes.forEach((list, index) => {
-      if (!Array.isArray(list) || list.length !== data.traits[index].signals.length
-        || list.some(value => value !== null && !finite(value))) fail();
+    if (!Array.isArray(signals) || signals.length !== data.signals.length) fail();
+    signals.forEach(value => { if (value !== null && (!finite(value) || value < 0 || value > 1e6)) fail(); });
+    const order = new Map(data.signals.map((signal, index) => [signal.id, index]));
+    data.traits.forEach((trait, index) => {
+      const value = vector[index], list = pushes[index], low = trait.kind === 'level' ? 0 : -1;
+      if (value !== null && (!finite(value) || value < low || value > 1)) fail();
+      if (!Array.isArray(list) || list.length !== trait.signals.length) fail();
+      list.forEach((push, slot) => {
+        if (push === null) return;
+        if (!finite(push) || push < low || push > 1) fail();
+        // A trait without data pushes nothing, and neither does a signal that was not measured.
+        if (value === null || signals[order.get(trait.signals[slot])] === null) fail();
+      });
+      // The lines must add up to the trait they draw, give or take the rounding of each push.
+      if (value !== null && Math.abs(list.reduce((sum, push) => sum + (push ?? 0), 0) - value) > 0.001) fail();
     });
-    if (!Array.isArray(signals) || signals.length !== data.signals.length
-      || signals.some(value => value !== null && !finite(value))) fail();
     return { vector: [...vector], pushes: pushes.map(list => [...list]), signals: [...signals] };
   }
 

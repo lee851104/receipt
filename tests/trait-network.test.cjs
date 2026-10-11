@@ -41,6 +41,31 @@ test('validate keeps well-formed taste data and refuses anything else', () => {
   for (const person of broken) assert.throws(() => TN.validate(person, data), /品味資料不正確/);
 });
 
+test('validate refuses pushes out of range, pushes without data, lines that do not add up and impossible signals', () => {
+  // Each broken person breaks exactly one rule; everything else about them is fine.
+  const broken = {
+    'a push past the end': { ...me, pushes: [[1.5, -0.8], [0, 1], [null, null], [0.375]] },
+    'a push of a million': { ...me, pushes: [[1000000, -999999.3], [0, 1], [null, null], [0.375]] },
+    'a push on a trait without data': { ...me, pushes: [[0.61, 0.09], [0, 1], [null, 0], [0.375]] },
+    'a push from a signal that was not measured': { ...them, signals: [1, 0.2, 0.36, 1, null, 2] },
+    'pushes that do not add up': { ...me, pushes: [[0.61, 0.2], [0, 1], [null, null], [0.375]] },
+    'a negative signal': { ...me, signals: [-0.1, 0.1429, 0, 1, null, 5] },
+    'a signal of millions': { ...me, signals: [0.8333, 0.1429, 0, 1, null, 2000000] },
+    'an extra row of pushes': { ...me, pushes: [...me.pushes, [0.5]] },
+    'a missing row of pushes': { ...me, pushes: me.pushes.slice(0, 3) },
+    'an extra push in a row': { ...me, pushes: [[0.61, 0.09, 0], [0, 1], [null, null], [0.375]] },
+    'an extra signal': { ...me, signals: [...me.signals, 1] },
+  };
+  for (const [name, person] of Object.entries(broken)) assert.throws(() => TN.validate(person, data), /品味資料不正確/, name);
+  // Rounding each push to four decimals may leave the sum a hair off the trait.
+  assert.doesNotThrow(() => TN.validate({ ...me, pushes: [[0.6105, 0.09], [0, 1], [null, null], [0.375]] }, data));
+  assert.doesNotThrow(() => TN.validate(them, data));
+  // A habit is only ever pushed up, even when its pushes still add up.
+  const habit = { ...data, traits: [...traits.slice(0, 3), { ...traits[3], signals: ['sport_visits', 'dessert_share'] }] };
+  assert.doesNotThrow(() => TN.validate({ ...me, pushes: [[0.61, 0.09], [0, 1], [null, null], [0.3, 0.075]] }, habit));
+  assert.throws(() => TN.validate({ ...me, pushes: [[0.61, 0.09], [0, 1], [null, null], [0.475, -0.1]] }, habit), /品味資料不正確/);
+});
+
 test('the layout is the same every time, left fan on the left and the first trait on top', () => {
   const graph = TN.layout(data, me, them, false);
   assert.deepEqual(TN.layout(data, me, them, false), graph);

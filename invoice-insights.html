@@ -526,7 +526,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 &lt;div class=&quot;canvas&quot;&gt;&lt;svg id=&quot;network&quot; viewBox=&quot;0 0 1200 570&quot; role=&quot;group&quot; aria-label=&quot;左側粉紅是你的資料，右側藍色是朋友的資料；匯入後可點選圓點或連線&quot;&gt;&lt;/svg&gt;&lt;/div&gt;
 &lt;div class=&quot;detail&quot;&gt;&lt;span class=&quot;detail-icon&quot; aria-hidden=&quot;true&quot;&gt;↔&lt;/span&gt;&lt;div class=&quot;detail-text&quot; id=&quot;detail&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;點選一個圓點或一條線，看看你們買了什麼、相似在哪裡。&lt;/div&gt;&lt;button class=&quot;reset&quot; id=&quot;reset&quot; type=&quot;button&quot;&gt;顯示全部連線&lt;/button&gt;&lt;/div&gt;
 &lt;/section&gt;
-&lt;details class=&quot;method&quot;&gt;&lt;summary&gt;資料來源與相似百分比怎麼算？&lt;/summary&gt;&lt;div id=&quot;trait-method&quot; hidden&gt;&lt;p id=&quot;trait-method-text&quot;&gt;&lt;/p&gt;&lt;p id=&quot;trait-graph-method&quot;&gt;&lt;/p&gt;&lt;/div&gt;&lt;div id=&quot;category-method&quot; hidden&gt;&lt;p&gt;報告連結包含暱稱、涵蓋月份與 10 類已確認消費品項的筆數，同一張發票的同一品項只算一次，不計折扣、贈品及待確認分類。沒有店家、品名、單筆日期、金額或發票號碼，但摘要仍可被取得連結的人讀取；編碼並非加密。&lt;/p&gt;&lt;p&gt;分類模式只用 10 類筆數畫圖，不另外計算分數；上方的品味相似度要兩人都有品味特質才算得出來。分類無法分辨同一類中的半糖與無糖、蔬菜餡與鮮蝦餡；分類沒有負值，因此不會產生負相關連線。&lt;/p&gt;&lt;p&gt;圓點面積代表品項筆數；只有相同類別會連線。線的強弱為兩人該類占比的較小值除以較大值，越接近就越粗。若混用示範人物，會先將其虛構次數彙整至相同 10 類，用於操作示範。不同月份或資料量會影響比較，請留意兩側資料範圍。&lt;/p&gt;&lt;/div&gt;&lt;div id=&quot;demo-method&quot;&gt;&lt;p&gt;人物、消費次數與特徵分數皆為虛構；八方雲集與水餃名稱取自討論案例，不代表真實購買紀錄或實際配方。尚未接入語意嵌入（Semantic Embedding）模型。本案例把「蔬菜餡取向」設為 +1、「鮮蝦餡取向」設為 −1；另把同一家虛構茶舖、同款紅茶的「半糖」與「無糖」設為甜度對比的 +1 與 −1。這不是實際含糖量，也不代表不同甜度必然互斥；店家、料理形式與類別保留較小的共同權重。這個對比軸是人工設計，不能從點蔬菜水餃推論為素食者，也不能從一筆選擇推論整體品味。&lt;/p&gt;&lt;p&gt;品項以 36 維示範特徵表示，先將向量長度縮放為 1，再計算內積（Inner Product）；此時等同餘弦相似度（Cosine Similarity）。正值用亮薄荷綠實線（正相關）、負值用亮橘色虛線（負相關），線寬隨絕對值增加；圖例中的「正相關／負相關」表示本示範特徵的同向／反向，不是從多筆觀測估計的統計相關係數。0 表示這組特徵沒有方向關聯，不畫線。所有非零連線皆保留。圓點面積代表消費次數，位置只為排版。&lt;/p&gt;&lt;p&gt;這張品項圖不另外計算分數，上方的大字是兩人的品味相似度；篩選只改變圖上顯示的品項。&lt;a href=&quot;https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;計算定義參考&lt;/a&gt;。&lt;/p&gt;&lt;/div&gt;&lt;/details&gt;
+&lt;details class=&quot;method&quot;&gt;&lt;summary&gt;資料來源與相似百分比怎麼算？&lt;/summary&gt;&lt;div id=&quot;link-method&quot; hidden&gt;&lt;p id=&quot;link-method-text&quot;&gt;&lt;/p&gt;&lt;/div&gt;&lt;div id=&quot;trait-method&quot; hidden&gt;&lt;p id=&quot;trait-method-text&quot;&gt;&lt;/p&gt;&lt;p id=&quot;trait-graph-method&quot;&gt;&lt;/p&gt;&lt;/div&gt;&lt;div id=&quot;category-method&quot; hidden&gt;&lt;p&gt;分類模式只用 10 類筆數畫圖，不另外計算分數；上方的品味相似度要兩人都有品味特質才算得出來。分類無法分辨同一類中的半糖與無糖、蔬菜餡與鮮蝦餡；分類沒有負值，因此不會產生負相關連線。&lt;/p&gt;&lt;p&gt;圓點面積代表品項筆數；只有相同類別會連線。線的強弱為兩人該類占比的較小值除以較大值，越接近就越粗。若混用示範人物，會先將其虛構次數彙整至相同 10 類，用於操作示範。不同月份或資料量會影響比較，請留意兩側資料範圍。&lt;/p&gt;&lt;/div&gt;&lt;div id=&quot;demo-method&quot;&gt;&lt;p&gt;人物、消費次數與特徵分數皆為虛構；八方雲集與水餃名稱取自討論案例，不代表真實購買紀錄或實際配方。尚未接入語意嵌入（Semantic Embedding）模型。本案例把「蔬菜餡取向」設為 +1、「鮮蝦餡取向」設為 −1；另把同一家虛構茶舖、同款紅茶的「半糖」與「無糖」設為甜度對比的 +1 與 −1。這不是實際含糖量，也不代表不同甜度必然互斥；店家、料理形式與類別保留較小的共同權重。這個對比軸是人工設計，不能從點蔬菜水餃推論為素食者，也不能從一筆選擇推論整體品味。&lt;/p&gt;&lt;p&gt;品項以 36 維示範特徵表示，先將向量長度縮放為 1，再計算內積（Inner Product）；此時等同餘弦相似度（Cosine Similarity）。正值用亮薄荷綠實線（正相關）、負值用亮橘色虛線（負相關），線寬隨絕對值增加；圖例中的「正相關／負相關」表示本示範特徵的同向／反向，不是從多筆觀測估計的統計相關係數。0 表示這組特徵沒有方向關聯，不畫線。所有非零連線皆保留。圓點面積代表消費次數，位置只為排版。&lt;/p&gt;&lt;p&gt;這張品項圖不另外計算分數，上方的大字是兩人的品味相似度；篩選只改變圖上顯示的品項。&lt;a href=&quot;https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;計算定義參考&lt;/a&gt;。&lt;/p&gt;&lt;/div&gt;&lt;/details&gt;
 &lt;/main&gt;&lt;footer&gt;&lt;span id=&quot;comparison-footer&quot;&gt;2026.01—03 · 同期間比較 · 僅供視覺與互動討論&lt;/span&gt;&lt;span&gt;You are what you buy. / TASTE CONNECTIONS&lt;/span&gt;&lt;/footer&gt;
 &lt;noscript&gt;&lt;p&gt;請開啟 JavaScript 以查看點線圖。&lt;/p&gt;&lt;/noscript&gt;
 &lt;script data-source=&quot;taste-profile.js&quot;&gt;
@@ -535,15 +535,23 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
  &#x27;use strict&#x27;;
  const categories=Object.freeze([&#x27;正餐&#x27;,&#x27;飲品&#x27;,&#x27;零食甜點&#x27;,&#x27;生鮮食材&#x27;,&#x27;運動&#x27;,&#x27;其他服務&#x27;,&#x27;交通&#x27;,&#x27;住宿&#x27;,&#x27;日用品&#x27;,&#x27;電子產品&#x27;]);
  const schema=&#x27;receipt-taste/categories-v1&#x27;;
+ // New links add taste traits; old ones carry the category counts alone and still read.
+ const traitsSchema=&#x27;receipt-taste/traits-v2&#x27;;
  function validate(value){
-  if(!value||value.schema!==schema)throw new Error(&#x27;這不是支援的品味連結版本，請回報告重新產生。&#x27;);
+  if(!value||(value.schema!==schema&amp;&amp;value.schema!==traitsSchema))throw new Error(&#x27;這不是支援的品味連結版本，請回報告重新產生。&#x27;);
   if(typeof value.name!==&#x27;string&#x27;||!value.name.trim()||value.name.length&gt;24)throw new Error(&#x27;暱稱需為 1–24 個字元。&#x27;);
   if(typeof value.demo!==&#x27;boolean&#x27;||!Array.isArray(value.months)||!value.months.length||value.months.length&gt;120||value.months.some(m=&gt;typeof m!==&#x27;string&#x27;||!/^20\d{2}-(0[1-9]|1[0-2])$/.test(m))||new Set(value.months).size!==value.months.length)throw new Error(&#x27;資料月份或來源格式不正確。&#x27;);
   if(!Array.isArray(value.counts)||value.counts.length!==categories.length||value.counts.some(c=&gt;!Number.isSafeInteger(c)||c&lt;0||c&gt;1000000)||!value.counts.some(c=&gt;c&gt;0))throw new Error(&#x27;消費筆數格式不正確，或沒有可比較的資料。&#x27;);
   // Reconstruct an allowlist rather than passing through arbitrary source fields.
-  return {schema,name:value.name.trim(),demo:value.demo,months:[...value.months].sort(),counts:[...value.counts]};
+  const profile={schema:value.schema,name:value.name.trim(),demo:value.demo,months:[...value.months].sort(),counts:[...value.counts]};
+  if(value.schema===traitsSchema){
+   // The taste traits pass through as they are; the comparison page checks them against its own trait data.
+   if(value.traits!==null&amp;&amp;(typeof value.traits!==&#x27;object&#x27;||Array.isArray(value.traits)))throw new Error(&#x27;連結裡的品味特質格式不正確。&#x27;);
+   profile.traits=value.traits;
+  }
+  return profile;
  }
- function fromReport(report,name){
+ function fromReport(report,name,taste=null){
   const counts=categories.map(()=&gt;0),months=Object.keys(report.months).sort(),seen=new Set();
   for(const month of Object.values(report.months))for(const row of month.rows){
    const i=categories.indexOf(report.categories[row.category]?.name);
@@ -552,7 +560,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
    if(row.invoice!==undefined){const key=JSON.stringify([row.invoice,row.name]);if(seen.has(key))continue;seen.add(key);}
    counts[i]++;
   }
-  return validate({schema,name:name.trim()||&#x27;我的偏好&#x27;,demo:report.isDemo===true,months,counts});
+  return validate({schema:traitsSchema,name:name.trim()||&#x27;我的偏好&#x27;,demo:report.isDemo===true,months,counts,traits:taste});
  }
  function fromPair(pair){
   if(!pair||!pair.left||!pair.right)throw new Error(&#x27;配對資料不正確，請回配對清單重新選擇。&#x27;);
@@ -576,7 +584,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
   }catch(error){throw new Error(&#x27;無法讀取品味連結。請確認完整複製，並使用目前版本重新匯出。&#x27;);}
  }
  function cosine(a,b){const n=Math.hypot(...a)*Math.hypot(...b);return n?Math.min(1,Math.max(0,a.reduce((s,x,i)=&gt;s+x*b[i],0)/n)):null;}
- const api=Object.freeze({categories,schema,validate,fromReport,fromPair,toURL,fromURL,cosine});
+ const api=Object.freeze({categories,schema,traitsSchema,validate,fromReport,fromPair,toURL,fromURL,cosine});
  if(typeof module!==&#x27;undefined&#x27;&amp;&amp;module.exports)module.exports=api;else root.TasteProfile=api;
 })(globalThis);
 &lt;/script&gt;
@@ -1159,10 +1167,20 @@ function allDemo(){const loaded=loadedSides();return loaded.length&gt;0&amp;&amp
 // Cards call the two 你 and 對方; friends are called by name.
 function pairNames(){return pair?[&#x27;你&#x27;,&#x27;對方&#x27;]:[profiles[leftKey].name,profiles[rightKey].name];}
 function currentView(){return traitPair()?chosenView:&#x27;items&#x27;;}
+// The reason, left side first, that two loaded people have no taste network: an old link or a report too thin for one.
+function missingReason(){return loadedSides().map(side=&gt;profiles[keyFor(side)].missing).find(Boolean)||&#x27;old&#x27;;}
+// Why the taste network button is off: a side is still empty, or a pasted link carries no taste traits.
+function traitNote(){
+ const loaded=loadedSides().length;
+ if(!loaded)return &#x27;匯入兩邊的資料後才能看品味特質&#x27;;
+ if(loaded&lt;2)return &#x27;另一邊匯入後才能看品味特質&#x27;;
+ return missingReason()===&#x27;thin&#x27;?&#x27;這份連結的資料還不夠算出品味特質&#x27;:&#x27;這份連結還沒有品味特質&#x27;;
+}
 function prepareView(){
  const available=Boolean(traitPair()),traits=currentView()===&#x27;traits&#x27;;
  for(const button of document.querySelectorAll(&#x27;[data-view]&#x27;)){button.setAttribute(&#x27;aria-pressed&#x27;,String(button.dataset.view===currentView()));if(button.dataset.view===&#x27;traits&#x27;)button.disabled=!available;}
- $(&#x27;views-note&#x27;).hidden=available||!hasBoth();
+ $(&#x27;views-note&#x27;).hidden=available;$(&#x27;views-note&#x27;).textContent=traitNote();
+ $(&#x27;link-method&#x27;).hidden=!loadedSides().some(side=&gt;keyFor(side).startsWith(&#x27;import-&#x27;));
  $(&#x27;item-legend&#x27;).hidden=traits;$(&#x27;trait-legend&#x27;).hidden=!traits;document.querySelector(&#x27;.legend-explain&#x27;).hidden=traits;document.querySelector(&#x27;.controls&#x27;).hidden=traits;
  $(&#x27;trait-method&#x27;).hidden=!available;$(&#x27;trait-graph-method&#x27;).hidden=!traits;
  if(traits){$(&#x27;category-method&#x27;).hidden=true;$(&#x27;demo-method&#x27;).hidden=true;document.querySelector(&#x27;.subtitle&#x27;).textContent=&#x27;每個點是一個消費訊號或品味特質。看看你們的品味，怎麼連起來。&#x27;;$(&#x27;comparison-footer&#x27;).textContent=&#x27;品味特質比較 · 資料只在本頁處理，不上傳發票&#x27;;}
@@ -1286,7 +1304,14 @@ function importProfile(side){
  let key;
  try{
   if(match)key=match[1];
-  else{const payload=TasteProfile.fromURL(text);key=&#x27;import-&#x27;+side;profiles[key]={name:payload.name,payload,counts:payload.counts};}
+  else{
+   const payload=TasteProfile.fromURL(text);
+   // An old link has no taste traits and a thin report sends none; anything else passes the same check as a match.
+   const missing=payload.schema===TasteProfile.schema?&#x27;old&#x27;:payload.traits===null?&#x27;thin&#x27;:null;
+   let traits=null;
+   if(!missing&amp;&amp;network){try{traits=TraitNetwork.validate(payload.traits,network);}catch{throw new Error(&#x27;連結裡的品味特質不正確，請對方用新版報告重新匯出。&#x27;);}}
+   key=&#x27;import-&#x27;+side;profiles[key]={name:payload.name,payload,counts:payload.counts,traits,missing:missing||(traits?null:&#x27;old&#x27;)};
+  }
  }catch(error){const current=keyFor(side);updateImport(side,(text?error.message:&#x27;請先填入偏好網址。&#x27;)+(current?&#x27; 圖中仍保留&#x27;+profiles[current].name+&#x27;的資料。&#x27;:&#x27;&#x27;),true);return;}
  if(side===&#x27;a&#x27;)leftKey=key;else rightKey=key;updateImport(side);draw();
 }
@@ -1297,7 +1322,7 @@ function draw(){
  // One big number everywhere: the taste similarity of the two people&#x27;s trait vectors.
  const both=traitPair(),result=both?TraitSimilarity.compare(both[0].vector,both[1].vector,network.model):null,scored=Boolean(result&amp;&amp;result.comparable);
  $(&#x27;overall-score&#x27;).textContent=scored?TraitSimilarity.signed(result.score).slice(0,-1):&#x27;—&#x27;;$(&#x27;score-unit&#x27;).hidden=!scored;$(&#x27;overall-score&#x27;).parentElement.classList.toggle(&#x27;waiting&#x27;,!scored);
- $(&#x27;overall-note&#x27;).textContent=scored?&#x27;依 &#x27;+TraitNetwork.traitCount(network.traits)+&#x27; 項品味特質計算&#x27;+(allDemo()?&#x27; · 虛構示範&#x27;:&#x27;&#x27;):hasBoth()?(both?&#x27;兩人共同的特質太少，無法計算品味相似度&#x27;:&#x27;舊版連結沒有品味特質，無法計算品味相似度&#x27;):loadedSides().length?&#x27;等待另一人匯入&#x27;:&#x27;先匯入偏好資料&#x27;;
+ $(&#x27;overall-note&#x27;).textContent=scored?&#x27;依 &#x27;+TraitNetwork.traitCount(network.traits)+&#x27; 項品味特質計算&#x27;+(allDemo()?&#x27; · 虛構示範&#x27;:&#x27;&#x27;):hasBoth()?(both?&#x27;兩人共同的特質太少，無法計算品味相似度&#x27;:missingReason()===&#x27;thin&#x27;?&#x27;這份連結的資料還不夠，無法計算品味相似度&#x27;:&#x27;舊版連結沒有品味特質，無法計算品味相似度&#x27;):loadedSides().length?&#x27;等待另一人匯入&#x27;:&#x27;先匯入偏好資料&#x27;;
  renderSummary(result,both);
  if(currentView()===&#x27;traits&#x27;){$(&#x27;scope&#x27;).textContent=TraitNetwork.traitCount(network.traits)+&#x27; 項品味特質 · &#x27;+network.signals.length+&#x27; 個訊號&#x27;;drawTraits(svg,mobile,both);return;}
  const indices=items.map((_,i)=&gt;i).filter(i=&gt;category===&#x27;all&#x27;||(category===&#x27;dumplings&#x27;?items[i].dumpling:category===&#x27;sweetness&#x27;?items[i].sweetness:items[i].c===category)).filter(i=&gt;!loadedSides().length||loadedSides().some(side=&gt;profiles[keyFor(side)].counts[i]&gt;0));const chartWidth=mobile?600:1200,chartHeight=mobile&amp;&amp;loadedSides().length&amp;&amp;indices.length&gt;4?160+indices.length*76:570;svg.setAttribute(&#x27;viewBox&#x27;,`0 0 ${chartWidth} ${chartHeight}`);
@@ -1329,6 +1354,7 @@ for(const side of [&#x27;a&#x27;,&#x27;b&#x27;]){
 }
 document.querySelectorAll(&#x27;[data-demo-side]&#x27;).forEach(button=&gt;button.addEventListener(&#x27;click&#x27;,()=&gt;{const side=button.dataset.demoSide;$(&#x27;profile-url-&#x27;+side).value=&#x27;demo://&#x27;+button.dataset.demoKey;importProfile(side);}));
 $(&#x27;category&#x27;).addEventListener(&#x27;change&#x27;,event=&gt;{category=event.target.value;draw();});document.querySelectorAll(&#x27;[data-view]&#x27;).forEach(button=&gt;button.addEventListener(&#x27;click&#x27;,()=&gt;{chosenView=button.dataset.view;draw();}));
+$(&#x27;link-method-text&#x27;).textContent=&#x27;品味連結包含暱稱、涵蓋月份、&#x27;+TasteProfile.categories.length+&#x27; 類已確認消費品項的筆數、&#x27;+(network?TraitNetwork.traitCount(network.traits)+&#x27; 項&#x27;:&#x27;&#x27;)+&#x27;品味特質、各消費訊號的彙總值（例如每餐平均花費、每月 3C 花費、每月次數），以及每個訊號最常買的品名；不包含店名、行政區、地址、日期、單筆金額或發票號碼。品名裡的地名已拿掉，住宿只寫「旅館住宿」。舊版連結只有暱稱、月份與 10 類筆數。拿到連結的人都讀得到這些內容；編碼並非加密。&#x27;;
 if(network){
  // The score explains both graphs; the lines and the purchases only the taste network.
  const unlisted=network.signals.filter(signal=&gt;signal.list_items===false).map(signal=&gt;signal.label);
@@ -2079,15 +2105,23 @@ refreshComparisonMonths();
  'use strict';
  const categories=Object.freeze(['正餐','飲品','零食甜點','生鮮食材','運動','其他服務','交通','住宿','日用品','電子產品']);
  const schema='receipt-taste/categories-v1';
+ // New links add taste traits; old ones carry the category counts alone and still read.
+ const traitsSchema='receipt-taste/traits-v2';
  function validate(value){
-  if(!value||value.schema!==schema)throw new Error('這不是支援的品味連結版本，請回報告重新產生。');
+  if(!value||(value.schema!==schema&&value.schema!==traitsSchema))throw new Error('這不是支援的品味連結版本，請回報告重新產生。');
   if(typeof value.name!=='string'||!value.name.trim()||value.name.length>24)throw new Error('暱稱需為 1–24 個字元。');
   if(typeof value.demo!=='boolean'||!Array.isArray(value.months)||!value.months.length||value.months.length>120||value.months.some(m=>typeof m!=='string'||!/^20\d{2}-(0[1-9]|1[0-2])$/.test(m))||new Set(value.months).size!==value.months.length)throw new Error('資料月份或來源格式不正確。');
   if(!Array.isArray(value.counts)||value.counts.length!==categories.length||value.counts.some(c=>!Number.isSafeInteger(c)||c<0||c>1000000)||!value.counts.some(c=>c>0))throw new Error('消費筆數格式不正確，或沒有可比較的資料。');
   // Reconstruct an allowlist rather than passing through arbitrary source fields.
-  return {schema,name:value.name.trim(),demo:value.demo,months:[...value.months].sort(),counts:[...value.counts]};
+  const profile={schema:value.schema,name:value.name.trim(),demo:value.demo,months:[...value.months].sort(),counts:[...value.counts]};
+  if(value.schema===traitsSchema){
+   // The taste traits pass through as they are; the comparison page checks them against its own trait data.
+   if(value.traits!==null&&(typeof value.traits!=='object'||Array.isArray(value.traits)))throw new Error('連結裡的品味特質格式不正確。');
+   profile.traits=value.traits;
+  }
+  return profile;
  }
- function fromReport(report,name){
+ function fromReport(report,name,taste=null){
   const counts=categories.map(()=>0),months=Object.keys(report.months).sort(),seen=new Set();
   for(const month of Object.values(report.months))for(const row of month.rows){
    const i=categories.indexOf(report.categories[row.category]?.name);
@@ -2096,7 +2130,7 @@ refreshComparisonMonths();
    if(row.invoice!==undefined){const key=JSON.stringify([row.invoice,row.name]);if(seen.has(key))continue;seen.add(key);}
    counts[i]++;
   }
-  return validate({schema,name:name.trim()||'我的偏好',demo:report.isDemo===true,months,counts});
+  return validate({schema:traitsSchema,name:name.trim()||'我的偏好',demo:report.isDemo===true,months,counts,traits:taste});
  }
  function fromPair(pair){
   if(!pair||!pair.left||!pair.right)throw new Error('配對資料不正確，請回配對清單重新選擇。');
@@ -2120,7 +2154,7 @@ refreshComparisonMonths();
   }catch(error){throw new Error('無法讀取品味連結。請確認完整複製，並使用目前版本重新匯出。');}
  }
  function cosine(a,b){const n=Math.hypot(...a)*Math.hypot(...b);return n?Math.min(1,Math.max(0,a.reduce((s,x,i)=>s+x*b[i],0)/n)):null;}
- const api=Object.freeze({categories,schema,validate,fromReport,fromPair,toURL,fromURL,cosine});
+ const api=Object.freeze({categories,schema,traitsSchema,validate,fromReport,fromPair,toURL,fromURL,cosine});
  if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.TasteProfile=api;
 })(globalThis);
 </script>

@@ -77,7 +77,7 @@ class StandaloneBuildTests(unittest.TestCase):
                 self.assertEqual(set(friend), {"vector", "pushes", "signals", "items"})
                 self.assertEqual((len(friend["vector"]), len(friend["signals"]), len(friend["items"])), (18, 46, 46))
             self.assertNotIn("示範", json.dumps(network, ensure_ascii=False))
-            self.assertIn("同一張發票的同一品項只算一次", comparison)
+            self.assertIn("品味連結包含暱稱", comparison)
             match_source = re.search(r'<template id="match-page-source">(.*?)</template>', html, re.S)
             self.assertIsNotNone(match_source)
             match_page = unescape(match_source.group(1))

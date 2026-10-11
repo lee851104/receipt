@@ -5,7 +5,8 @@ const fixture={isDemo:true,categories:[{name:'飲品'},{name:'正餐'}],months:{
 test('export only whitelisted aggregate fields, excluding refunds, gifts and uncertain categories',()=>{
  const p=taste.fromReport(fixture,'小明');
  assert.equal(p.counts[1],2);assert.equal(p.counts[0],1);assert.equal(p.counts.reduce((a,b)=>a+b),3);
- assert.deepEqual(Object.keys(p).sort(),['counts','demo','months','name','schema']);
+ assert.deepEqual(Object.keys(p).sort(),['counts','demo','months','name','schema','traits']);
+ assert.equal(p.schema,taste.traitsSchema);assert.equal(p.traits,null);
  assert.doesNotMatch(JSON.stringify(p),/SECRET|PRIVATE|私人物品|amount|invoice|merchant/);
 });
 test('Chinese names and data round-trip through both file and hosted URLs',()=>{
@@ -19,6 +20,17 @@ test('reject incompatible, oversized, empty and malformed profiles',()=>{
  for(const invalid of [{...p,schema:'future'},{...p,counts:[1]},{...p,counts:p.counts.map(()=>0)},{...p,counts:p.counts.map(()=>-1)},{...p,months:['2026-99']},{...p,name:'x'.repeat(25)},{...p,demo:'true'}])assert.throws(()=>taste.validate(invalid));
  for(const invalid of ['https://example.test/','javascript:alert(1)','#taste=%%%','#taste='+ 'a'.repeat(12001)])assert.throws(()=>taste.fromURL(invalid));
  assert.throws(()=>taste.fromReport({...fixture,months:{}},'小明'));
+});
+test('a new link carries the taste traits untouched, and an old link still reads',()=>{
+ const traits={vector:[0.5],pushes:[[0.5]],signals:[1],items:[[['紅茶',2]]]};
+ const p=taste.fromReport(fixture,'小明',traits);
+ assert.deepEqual(p.traits,traits);
+ assert.deepEqual(taste.fromURL(taste.toURL(p,'https://example.test/receipt/invoice-insights.html')).traits,traits);
+ const old={schema:taste.schema,name:'小明',demo:true,months:['2026-03'],counts:p.counts};
+ assert.deepEqual(taste.validate(old),old);
+ // An old link has no taste traits, whatever extra fields it carries.
+ assert.equal('traits' in taste.validate({...old,traits}),false);
+ for(const invalid of [{...p,traits:undefined},{...p,traits:[1]},{...p,traits:'x'}])assert.throws(()=>taste.validate(invalid));
 });
 test('category comparison has defined zero overlap and volume-independent identical distributions',()=>{
  assert.equal(taste.cosine([1,0],[0,1]),0);assert.ok(Math.abs(taste.cosine([2,1],[4,2])-1)<1e-12);assert.equal(taste.cosine([0,0],[1,1]),null);

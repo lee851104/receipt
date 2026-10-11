@@ -40,7 +40,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 <div class="canvas"><svg id="network" viewBox="0 0 1200 570" role="group" aria-label="左側粉紅是你的資料，右側藍色是朋友的資料；匯入後可點選圓點或連線"></svg></div>
 <div class="detail"><span class="detail-icon" aria-hidden="true">↔</span><div class="detail-text" id="detail" role="status" aria-live="polite">點選一個圓點或一條線，看看你們買了什麼、相似在哪裡。</div><button class="reset" id="reset" type="button">顯示全部連線</button></div>
 </section>
-<details class="method"><summary>資料來源與相似百分比怎麼算？</summary><div id="trait-method" hidden><p id="trait-method-text"></p><p id="trait-graph-method"></p></div><div id="category-method" hidden><p>報告連結包含暱稱、涵蓋月份與 10 類已確認消費品項的筆數，同一張發票的同一品項只算一次，不計折扣、贈品及待確認分類。沒有店家、品名、單筆日期、金額或發票號碼，但摘要仍可被取得連結的人讀取；編碼並非加密。</p><p>分類模式只用 10 類筆數畫圖，不另外計算分數；上方的品味相似度要兩人都有品味特質才算得出來。分類無法分辨同一類中的半糖與無糖、蔬菜餡與鮮蝦餡；分類沒有負值，因此不會產生負相關連線。</p><p>圓點面積代表品項筆數；只有相同類別會連線。線的強弱為兩人該類占比的較小值除以較大值，越接近就越粗。若混用示範人物，會先將其虛構次數彙整至相同 10 類，用於操作示範。不同月份或資料量會影響比較，請留意兩側資料範圍。</p></div><div id="demo-method"><p>人物、消費次數與特徵分數皆為虛構；八方雲集與水餃名稱取自討論案例，不代表真實購買紀錄或實際配方。尚未接入語意嵌入（Semantic Embedding）模型。本案例把「蔬菜餡取向」設為 +1、「鮮蝦餡取向」設為 −1；另把同一家虛構茶舖、同款紅茶的「半糖」與「無糖」設為甜度對比的 +1 與 −1。這不是實際含糖量，也不代表不同甜度必然互斥；店家、料理形式與類別保留較小的共同權重。這個對比軸是人工設計，不能從點蔬菜水餃推論為素食者，也不能從一筆選擇推論整體品味。</p><p>品項以 36 維示範特徵表示，先將向量長度縮放為 1，再計算內積（Inner Product）；此時等同餘弦相似度（Cosine Similarity）。正值用亮薄荷綠實線（正相關）、負值用亮橘色虛線（負相關），線寬隨絕對值增加；圖例中的「正相關／負相關」表示本示範特徵的同向／反向，不是從多筆觀測估計的統計相關係數。0 表示這組特徵沒有方向關聯，不畫線。所有非零連線皆保留。圓點面積代表消費次數，位置只為排版。</p><p>這張品項圖不另外計算分數，上方的大字是兩人的品味相似度；篩選只改變圖上顯示的品項。<a href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html" target="_blank" rel="noopener noreferrer">計算定義參考</a>。</p></div></details>
+<details class="method"><summary>資料來源與相似百分比怎麼算？</summary><div id="link-method" hidden><p id="link-method-text"></p></div><div id="trait-method" hidden><p id="trait-method-text"></p><p id="trait-graph-method"></p></div><div id="category-method" hidden><p>分類模式只用 10 類筆數畫圖，不另外計算分數；上方的品味相似度要兩人都有品味特質才算得出來。分類無法分辨同一類中的半糖與無糖、蔬菜餡與鮮蝦餡；分類沒有負值，因此不會產生負相關連線。</p><p>圓點面積代表品項筆數；只有相同類別會連線。線的強弱為兩人該類占比的較小值除以較大值，越接近就越粗。若混用示範人物，會先將其虛構次數彙整至相同 10 類，用於操作示範。不同月份或資料量會影響比較，請留意兩側資料範圍。</p></div><div id="demo-method"><p>人物、消費次數與特徵分數皆為虛構；八方雲集與水餃名稱取自討論案例，不代表真實購買紀錄或實際配方。尚未接入語意嵌入（Semantic Embedding）模型。本案例把「蔬菜餡取向」設為 +1、「鮮蝦餡取向」設為 −1；另把同一家虛構茶舖、同款紅茶的「半糖」與「無糖」設為甜度對比的 +1 與 −1。這不是實際含糖量，也不代表不同甜度必然互斥；店家、料理形式與類別保留較小的共同權重。這個對比軸是人工設計，不能從點蔬菜水餃推論為素食者，也不能從一筆選擇推論整體品味。</p><p>品項以 36 維示範特徵表示，先將向量長度縮放為 1，再計算內積（Inner Product）；此時等同餘弦相似度（Cosine Similarity）。正值用亮薄荷綠實線（正相關）、負值用亮橘色虛線（負相關），線寬隨絕對值增加；圖例中的「正相關／負相關」表示本示範特徵的同向／反向，不是從多筆觀測估計的統計相關係數。0 表示這組特徵沒有方向關聯，不畫線。所有非零連線皆保留。圓點面積代表消費次數，位置只為排版。</p><p>這張品項圖不另外計算分數，上方的大字是兩人的品味相似度；篩選只改變圖上顯示的品項。<a href="https://scikit-learn.org/stable/modules/generated/sklearn.metrics.pairwise.cosine_similarity.html" target="_blank" rel="noopener noreferrer">計算定義參考</a>。</p></div></details>
 </main><footer><span id="comparison-footer">2026.01—03 · 同期間比較 · 僅供視覺與互動討論</span><span>You are what you buy. / TASTE CONNECTIONS</span></footer>
 <noscript><p>請開啟 JavaScript 以查看點線圖。</p></noscript>
 <script src="taste-profile.js"></script>
@@ -132,10 +132,20 @@ function allDemo(){const loaded=loadedSides();return loaded.length>0&&loaded.eve
 // Cards call the two 你 and 對方; friends are called by name.
 function pairNames(){return pair?['你','對方']:[profiles[leftKey].name,profiles[rightKey].name];}
 function currentView(){return traitPair()?chosenView:'items';}
+// The reason, left side first, that two loaded people have no taste network: an old link or a report too thin for one.
+function missingReason(){return loadedSides().map(side=>profiles[keyFor(side)].missing).find(Boolean)||'old';}
+// Why the taste network button is off: a side is still empty, or a pasted link carries no taste traits.
+function traitNote(){
+ const loaded=loadedSides().length;
+ if(!loaded)return '匯入兩邊的資料後才能看品味特質';
+ if(loaded<2)return '另一邊匯入後才能看品味特質';
+ return missingReason()==='thin'?'這份連結的資料還不夠算出品味特質':'這份連結還沒有品味特質';
+}
 function prepareView(){
  const available=Boolean(traitPair()),traits=currentView()==='traits';
  for(const button of document.querySelectorAll('[data-view]')){button.setAttribute('aria-pressed',String(button.dataset.view===currentView()));if(button.dataset.view==='traits')button.disabled=!available;}
- $('views-note').hidden=available||!hasBoth();
+ $('views-note').hidden=available;$('views-note').textContent=traitNote();
+ $('link-method').hidden=!loadedSides().some(side=>keyFor(side).startsWith('import-'));
  $('item-legend').hidden=traits;$('trait-legend').hidden=!traits;document.querySelector('.legend-explain').hidden=traits;document.querySelector('.controls').hidden=traits;
  $('trait-method').hidden=!available;$('trait-graph-method').hidden=!traits;
  if(traits){$('category-method').hidden=true;$('demo-method').hidden=true;document.querySelector('.subtitle').textContent='每個點是一個消費訊號或品味特質。看看你們的品味，怎麼連起來。';$('comparison-footer').textContent='品味特質比較 · 資料只在本頁處理，不上傳發票';}
@@ -259,7 +269,14 @@ function importProfile(side){
  let key;
  try{
   if(match)key=match[1];
-  else{const payload=TasteProfile.fromURL(text);key='import-'+side;profiles[key]={name:payload.name,payload,counts:payload.counts};}
+  else{
+   const payload=TasteProfile.fromURL(text);
+   // An old link has no taste traits and a thin report sends none; anything else passes the same check as a match.
+   const missing=payload.schema===TasteProfile.schema?'old':payload.traits===null?'thin':null;
+   let traits=null;
+   if(!missing&&network){try{traits=TraitNetwork.validate(payload.traits,network);}catch{throw new Error('連結裡的品味特質不正確，請對方用新版報告重新匯出。');}}
+   key='import-'+side;profiles[key]={name:payload.name,payload,counts:payload.counts,traits,missing:missing||(traits?null:'old')};
+  }
  }catch(error){const current=keyFor(side);updateImport(side,(text?error.message:'請先填入偏好網址。')+(current?' 圖中仍保留'+profiles[current].name+'的資料。':''),true);return;}
  if(side==='a')leftKey=key;else rightKey=key;updateImport(side);draw();
 }
@@ -270,7 +287,7 @@ function draw(){
  // One big number everywhere: the taste similarity of the two people's trait vectors.
  const both=traitPair(),result=both?TraitSimilarity.compare(both[0].vector,both[1].vector,network.model):null,scored=Boolean(result&&result.comparable);
  $('overall-score').textContent=scored?TraitSimilarity.signed(result.score).slice(0,-1):'—';$('score-unit').hidden=!scored;$('overall-score').parentElement.classList.toggle('waiting',!scored);
- $('overall-note').textContent=scored?'依 '+TraitNetwork.traitCount(network.traits)+' 項品味特質計算'+(allDemo()?' · 虛構示範':''):hasBoth()?(both?'兩人共同的特質太少，無法計算品味相似度':'舊版連結沒有品味特質，無法計算品味相似度'):loadedSides().length?'等待另一人匯入':'先匯入偏好資料';
+ $('overall-note').textContent=scored?'依 '+TraitNetwork.traitCount(network.traits)+' 項品味特質計算'+(allDemo()?' · 虛構示範':''):hasBoth()?(both?'兩人共同的特質太少，無法計算品味相似度':missingReason()==='thin'?'這份連結的資料還不夠，無法計算品味相似度':'舊版連結沒有品味特質，無法計算品味相似度'):loadedSides().length?'等待另一人匯入':'先匯入偏好資料';
  renderSummary(result,both);
  if(currentView()==='traits'){$('scope').textContent=TraitNetwork.traitCount(network.traits)+' 項品味特質 · '+network.signals.length+' 個訊號';drawTraits(svg,mobile,both);return;}
  const indices=items.map((_,i)=>i).filter(i=>category==='all'||(category==='dumplings'?items[i].dumpling:category==='sweetness'?items[i].sweetness:items[i].c===category)).filter(i=>!loadedSides().length||loadedSides().some(side=>profiles[keyFor(side)].counts[i]>0));const chartWidth=mobile?600:1200,chartHeight=mobile&&loadedSides().length&&indices.length>4?160+indices.length*76:570;svg.setAttribute('viewBox',`0 0 ${chartWidth} ${chartHeight}`);
@@ -302,6 +319,7 @@ for(const side of ['a','b']){
 }
 document.querySelectorAll('[data-demo-side]').forEach(button=>button.addEventListener('click',()=>{const side=button.dataset.demoSide;$('profile-url-'+side).value='demo://'+button.dataset.demoKey;importProfile(side);}));
 $('category').addEventListener('change',event=>{category=event.target.value;draw();});document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{chosenView=button.dataset.view;draw();}));
+$('link-method-text').textContent='品味連結包含暱稱、涵蓋月份、'+TasteProfile.categories.length+' 類已確認消費品項的筆數、'+(network?TraitNetwork.traitCount(network.traits)+' 項':'')+'品味特質、各消費訊號的彙總值（例如每餐平均花費、每月 3C 花費、每月次數），以及每個訊號最常買的品名；不包含店名、行政區、地址、日期、單筆金額或發票號碼。品名裡的地名已拿掉，住宿只寫「旅館住宿」。舊版連結只有暱稱、月份與 10 類筆數。拿到連結的人都讀得到這些內容；編碼並非加密。';
 if(network){
  // The score explains both graphs; the lines and the purchases only the taste network.
  const unlisted=network.signals.filter(signal=>signal.list_items===false).map(signal=>signal.label);

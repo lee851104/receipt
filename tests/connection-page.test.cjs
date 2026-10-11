@@ -2,10 +2,19 @@
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { scriptsOf } = require('./built-report.cjs');
+const { html, between, scriptsOf, embedded } = require('./built-report.cjs');
 
 const scripts = scriptsOf('taste-page-source');
 const matchScripts = scriptsOf('match-page-source');
+const matchData = embedded('match-page-source', 'matchReportData');
+const exported = JSON.parse(between(html, 'const tasteExportData = ', '</script>').trim().replace(/;$/, ''));
+
+// A taste link as the export button writes it for the demo me: the new kind with taste traits, or the old kind.
+function link(schema = 'receipt-taste/traits-v2', traits = exported.taste) {
+  const payload = { schema, name: '我的偏好', demo: true, months: matchData.me.months, counts: matchData.me.counts };
+  if (schema === 'receipt-taste/traits-v2') payload.traits = traits;
+  return 'https://example.test/invoice-insights.html#taste=' + Buffer.from(JSON.stringify(payload)).toString('base64url');
+}
 
 // Just enough of an element for the page: attributes, children, listeners and a few properties.
 function element(tag = 'div') {
@@ -73,7 +82,7 @@ function open({ pair = null } = {}) {
   const window = { location: { search: '', hash: '', href: 'http://127.0.0.1/taste-comparison.html' }, addEventListener() {} };
   window.parent = host ? { ...host, window: null } : window;
   window.frameElement = host ? { id: 'connection-frame' } : null;
-  const context = vm.createContext({ window, document, location: window.location, URLSearchParams,
+  const context = vm.createContext({ window, document, location: window.location, URLSearchParams, atob, btoa, TextEncoder, TextDecoder,
     matchMedia: () => ({ matches: false, addEventListener() {} }) });
   for (const source of scripts) vm.runInContext(source, context);
   return { get, views, calls };
@@ -146,15 +155,46 @@ test('the friends page opens on 小安 and 小宇 with their taste score', () =>
   const { get } = open();
   assert.equal(get('overall-score').textContent, '+80');
   assert.equal(get('summary-worst').textContent, '小安偏低甜度，小宇偏高甜度（扣 6 分）— 一個加糖，一個讓糖罐放假。');
+  assert.equal(get('link-method').hidden, true);
+});
+
+const paste = (page, side, text) => { page.get('profile-url-' + side).value = text; fire(page.get('import-' + side), 'submit'); };
+
+test('a new taste link draws the taste network with the purchases it carries', () => {
+  const page = open();
+  paste(page, 'a', link());
+  assert.equal(page.get('import-status-a').textContent, '已匯入 我的偏好 · 2026-03、2026-04 · 虛構示範資料');
+  assert.equal(page.get('overall-score').textContent, '+41');
+  assert.equal(page.get('link-method').hidden, false);
+  assert.match(page.get('link-method-text').textContent, /^品味連結包含暱稱、涵蓋月份、10 類已確認消費品項的筆數、17 項品味特質/);
+  fire(findAll(page.get('network'), node => node.attrs['aria-label']?.startsWith('我的偏好的飲料甜度'))[0], 'click');
+  assert.equal(findAll(page.get('network'), node => node.attrs.class === 't-buy').length, 5);
+});
+
+test('an old link, a thin report and a broken link each say why there is no taste network', () => {
+  const page = open(), note = () => [page.get('views-note').hidden, page.get('views-note').textContent];
+  paste(page, 'a', link('receipt-taste/categories-v1'));
+  assert.equal(page.get('overall-score').textContent, '—');
+  assert.equal(page.get('overall-note').textContent, '舊版連結沒有品味特質，無法計算品味相似度');
+  assert.deepEqual(note(), [false, '這份連結還沒有品味特質']);
+  paste(page, 'a', link(undefined, null));
+  assert.equal(page.get('overall-note').textContent, '這份連結的資料還不夠，無法計算品味相似度');
+  assert.deepEqual(note(), [false, '這份連結的資料還不夠算出品味特質']);
+  const broken = { ...exported.taste, pushes: exported.taste.pushes.map((row, k) => (k === 0 ? [1000000, ...row.slice(1)] : row)) };
+  paste(page, 'b', link(undefined, broken));
+  assert.equal(page.get('import-status-b').textContent, '連結裡的品味特質不正確，請對方用新版報告重新匯出。 圖中仍保留小宇的資料。');
+  fire(page.get('clear-b'), 'click');
+  assert.deepEqual(note(), [false, '另一邊匯入後才能看品味特質']);
+  fire(page.get('clear-a'), 'click');
+  assert.deepEqual(note(), [false, '匯入兩邊的資料後才能看品味特質']);
+  assert.equal(page.get('link-method').hidden, true);
 });
 
 // The friends page quietly drops a friend whose data fails the check, so this test is what notices one.
 test('everyone the report embeds passes the check the graph runs before drawing', () => {
   const TN = require('../src/web/trait-network.js');
-  const { between, templateSource } = require('./built-report.cjs');
-  const constant = (page, name) => JSON.parse(between(templateSource(page), `const ${name} = `, '</script>').trim().replace(/;$/, ''));
-  const network = constant('taste-page-source', 'traitNetworkData'), match = constant('match-page-source', 'matchReportData');
-  const people = [['我', match.me], ...match.people.map(person => [person.name, person]), ...Object.entries(network.friends)];
+  const network = embedded('taste-page-source', 'traitNetworkData');
+  const people = [['我', matchData.me], ...matchData.people.map(person => [person.name, person]), ...Object.entries(network.friends)];
   assert.equal(people.length, 44);
   for (const [name, person] of people) assert.doesNotThrow(() => TN.validate(person, network), name);
 });

@@ -101,6 +101,13 @@
     };
   }
 
-  const api = Object.freeze({ RANGES, scored, pick, words, phrase, reasons, mine, status, view });
+  // The line under the title: who the matches are, whose taste mine is, and a nudge to pick someone when there is a list.
+  function intro(data, ready) {
+    return '配對對象是 ' + data.population + ' 位虛構示範用戶。'
+      + (data.isDemo ? '「我」也是虛構示範資料。' : '你的品味特質來自這份私人報告，只存在這個檔案裡。')
+      + (ready ? '點一個人，看你們的連線圖。' : '');
+  }
+
+  const api = Object.freeze({ RANGES, scored, pick, words, phrase, reasons, mine, status, view, intro });
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.MatchFilter = api;
 })(globalThis);

@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { RANGES, pick, phrase, reasons, mine, view } = require('../src/web/match-filter.js');
+const { RANGES, pick, phrase, reasons, mine, view, intro } = require('../src/web/match-filter.js');
 
 const MINUS = String.fromCharCode(0x2212);
 const traits = [
@@ -128,4 +128,9 @@ test('the page explains an empty distance, missing home districts, nobody close 
   assert.deepEqual(view({ ...data, me: { ...data.me, vector: null } }, { range: null, opposite: false }), {
     ready: false, mine: { lean: '資料還不夠，看不出品味特質', habits: '' },
     thin: '你的資料還不夠（有效品項少於 20 筆），先累積更多發票，再來找同好。' });
+});
+
+test('the line under the title only asks to pick someone when there is a list to pick from', () => {
+  assert.equal(intro({ population: 40, isDemo: true }, true), '配對對象是 40 位虛構示範用戶。「我」也是虛構示範資料。點一個人，看你們的連線圖。');
+  assert.equal(intro({ population: 40, isDemo: false }, false), '配對對象是 40 位虛構示範用戶。你的品味特質來自這份私人報告，只存在這個檔案裡。');
 });

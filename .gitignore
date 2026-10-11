@@ -34,3 +34,4 @@ Thumbs.db
 
 # Local report containing real purchases
 /invoice-insights-private.html
+/report-data.js

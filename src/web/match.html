@@ -131,8 +131,7 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
   } else {
     $('match-status').textContent = first.thin;
   }
-  $('match-note').textContent = '配對對象是 ' + data.population + ' 位虛構示範用戶。'
-    + (data.isDemo ? '「我」也是虛構示範資料。' : '你的品味特質來自這份私人報告，只存在這個檔案裡。') + '點一個人，看你們的連線圖。';
+  $('match-note').textContent = MatchFilter.intro(data, first.ready);
   const signed = TraitSimilarity.signed;
   // Traits that share a group, such as cats and dogs, count as one.
   const traitCount = new Set(data.traits.map(trait => trait.group ?? trait.id)).size;
@@ -144,7 +143,8 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
       + signed(-settings.opposite_score) + ' 以下的人。'),
     make('p', '距離看生活圈：占你發票 20% 以上的行政區，最多兩個。同一區、同縣市、同地區依兩人生活圈最接近的一組判斷。'),
     make('p', '「最像你」「最不像你」是對分數加分最多與扣分最多的特質。'),
-    make('p', '此配對頁與連線圖只用行政區、品味特質，以及各消費訊號的彙總值（例如每餐平均花費、每月次數），不顯示店名、品名、日期或單筆金額。'
+    make('p', '此配對頁與連線圖只用行政區、10 類消費筆數、品味特質、各消費訊號的彙總值（例如每餐平均花費、每月 3C 花費、每月次數），'
+      + '以及每個訊號最常買的品名；不顯示店名、地址、日期或單筆金額。品名裡的地名已拿掉，住宿只寫「旅館住宿」。'
       + (data.isDemo ? '' : '這份私人報告的其他頁面仍有完整交易明細，分享整份檔案就會一併分享。')
       + '配對對象皆為虛構示範用戶。'));
   if (pageHost) {

@@ -86,7 +86,7 @@ class StandaloneBuildTests(unittest.TestCase):
             self.assertEqual(matched.external, [])
             self.assertIn('data-source="trait-similarity.js"', match_page)
             self.assertIn('data-source="match-filter.js"', match_page)
-            self.assertIn("此配對頁與連線圖只用行政區、品味特質", match_page)
+            self.assertIn("此配對頁與連線圖只用行政區、10 類消費筆數、品味特質", match_page)
             self.assertIn("[hidden]{display:none!important}", match_page)
             text = re.search(r"const matchReportData = (.*?);\n</script>", match_page, re.S).group(1)
             # Compact JSON: no indentation and no space after a colon.

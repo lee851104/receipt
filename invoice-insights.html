@@ -718,7 +718,14 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
     };
   }
 
-  const api = Object.freeze({ RANGES, scored, pick, words, phrase, reasons, mine, status, view });
+  // The line under the title: who the matches are, whose taste mine is, and a nudge to pick someone when there is a list.
+  function intro(data, ready) {
+    return &#x27;配對對象是 &#x27; + data.population + &#x27; 位虛構示範用戶。&#x27;
+      + (data.isDemo ? &#x27;「我」也是虛構示範資料。&#x27; : &#x27;你的品味特質來自這份私人報告，只存在這個檔案裡。&#x27;)
+      + (ready ? &#x27;點一個人，看你們的連線圖。&#x27; : &#x27;&#x27;);
+  }
+
+  const api = Object.freeze({ RANGES, scored, pick, words, phrase, reasons, mine, status, view, intro });
   if (typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports) module.exports = api; else root.MatchFilter = api;
 })(globalThis);
 &lt;/script&gt;
@@ -1562,7 +1569,14 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
     };
   }
 
-  const api = Object.freeze({ RANGES, scored, pick, words, phrase, reasons, mine, status, view });
+  // The line under the title: who the matches are, whose taste mine is, and a nudge to pick someone when there is a list.
+  function intro(data, ready) {
+    return &#x27;配對對象是 &#x27; + data.population + &#x27; 位虛構示範用戶。&#x27;
+      + (data.isDemo ? &#x27;「我」也是虛構示範資料。&#x27; : &#x27;你的品味特質來自這份私人報告，只存在這個檔案裡。&#x27;)
+      + (ready ? &#x27;點一個人，看你們的連線圖。&#x27; : &#x27;&#x27;);
+  }
+
+  const api = Object.freeze({ RANGES, scored, pick, words, phrase, reasons, mine, status, view, intro });
   if (typeof module !== &#x27;undefined&#x27; &amp;&amp; module.exports) module.exports = api; else root.MatchFilter = api;
 })(globalThis);
 &lt;/script&gt;
@@ -1641,8 +1655,7 @@ const matchReportData = {&quot;isDemo&quot;:true,&quot;population&quot;:40,&quot
   } else {
     $(&#x27;match-status&#x27;).textContent = first.thin;
   }
-  $(&#x27;match-note&#x27;).textContent = &#x27;配對對象是 &#x27; + data.population + &#x27; 位虛構示範用戶。&#x27;
-    + (data.isDemo ? &#x27;「我」也是虛構示範資料。&#x27; : &#x27;你的品味特質來自這份私人報告，只存在這個檔案裡。&#x27;) + &#x27;點一個人，看你們的連線圖。&#x27;;
+  $(&#x27;match-note&#x27;).textContent = MatchFilter.intro(data, first.ready);
   const signed = TraitSimilarity.signed;
   // Traits that share a group, such as cats and dogs, count as one.
   const traitCount = new Set(data.traits.map(trait =&gt; trait.group ?? trait.id)).size;
@@ -1654,7 +1667,8 @@ const matchReportData = {&quot;isDemo&quot;:true,&quot;population&quot;:40,&quot
       + signed(-settings.opposite_score) + &#x27; 以下的人。&#x27;),
     make(&#x27;p&#x27;, &#x27;距離看生活圈：占你發票 20% 以上的行政區，最多兩個。同一區、同縣市、同地區依兩人生活圈最接近的一組判斷。&#x27;),
     make(&#x27;p&#x27;, &#x27;「最像你」「最不像你」是對分數加分最多與扣分最多的特質。&#x27;),
-    make(&#x27;p&#x27;, &#x27;此配對頁與連線圖只用行政區、品味特質，以及各消費訊號的彙總值（例如每餐平均花費、每月次數），不顯示店名、品名、日期或單筆金額。&#x27;
+    make(&#x27;p&#x27;, &#x27;此配對頁與連線圖只用行政區、10 類消費筆數、品味特質、各消費訊號的彙總值（例如每餐平均花費、每月 3C 花費、每月次數），&#x27;
+      + &#x27;以及每個訊號最常買的品名；不顯示店名、地址、日期或單筆金額。品名裡的地名已拿掉，住宿只寫「旅館住宿」。&#x27;
       + (data.isDemo ? &#x27;&#x27; : &#x27;這份私人報告的其他頁面仍有完整交易明細，分享整份檔案就會一併分享。&#x27;)
       + &#x27;配對對象皆為虛構示範用戶。&#x27;));
   if (pageHost) {

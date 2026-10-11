@@ -2,7 +2,7 @@
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { html, between, scriptsOf, embedded } = require('./built-report.cjs');
+const { html, between, templateSource, scriptsOf, embedded } = require('./built-report.cjs');
 
 const scripts = scriptsOf('taste-page-source');
 const matchScripts = scriptsOf('match-page-source');
@@ -60,13 +60,8 @@ function pairFromMatchList(index) {
 function open({ pair = null } = {}) {
   const nodes = new Map();
   const get = id => { if (!nodes.has(id)) nodes.set(id, element()); return nodes.get(id); };
-  const category = get('category');
-  category.options = ['all', 'dumplings', 'sweetness', '正餐'].map(value => ({ value, disabled: false }));
-  const views = ['traits', 'items'].map(view => { const button = element('button'); button.dataset.view = view; return button; });
-  const singles = { '.subtitle': element(), '.legend-item': element(), '.negative-label': element(), '.legend-explain': element(),
-    '.controls': element(), 'header .brand': element() };
-  const lists = { '[data-view]': views, '.summary-case': [element(), element()], '.import-title-row, .imports': [element(), element()],
-    '[data-demo-side]': [] };
+  const singles = { '.toolbar': element(), '.detail': element(), 'header .brand': element() };
+  const lists = { '.summary-case': [element(), element()], '.import-title-row, .imports': [element(), element()], '[data-demo-side]': [] };
   const calls = [];
   const host = pair ? {
     location: { search: '', hash: '', href: 'http://127.0.0.1/invoice-insights.html#connection' },
@@ -85,24 +80,29 @@ function open({ pair = null } = {}) {
   const context = vm.createContext({ window, document, location: window.location, URLSearchParams, atob, btoa, TextEncoder, TextDecoder,
     matchMedia: () => ({ matches: false, addEventListener() {} }) });
   for (const source of scripts) vm.runInContext(source, context);
-  return { get, views, calls };
+  return { get, calls, singles };
 }
 
-test('a match opens on the taste network with the taste score, and the item details stay one click away', () => {
+test('a match opens on the taste network with its score in the middle, glowing as strongly as the match', () => {
   const chosen = pairFromMatchList(0);
   assert.equal(chosen.name, '查看你和手搖學生 B的連線圖');
-  const { get, views, calls } = open({ pair: chosen.pair });
+  const { get, calls } = open({ pair: chosen.pair });
+  const network = get('network');
   assert.equal(get('overall-score').textContent, '+71');
   assert.equal(get('overall-note').textContent, '依 17 項品味特質計算 · 虛構示範');
   assert.equal(get('scope').textContent, '17 項品味特質 · 46 個訊號');
-  assert.equal(views[0].attrs['aria-pressed'], 'true');
-  assert.equal(findAll(get('network'), node => node.attrs.class === 't-link').length, 85);
-  assert.equal(findAll(get('network'), node => node.attrs.class === 't-cell').length, 15);
+  assert.equal(findAll(network, node => node.attrs.class === 't-link').length, 85);
+  const cells = findAll(network, node => node.attrs.class === 't-cell');
+  assert.equal(cells.length, 15);
   assert.equal(get('summary-best').textContent, '都偏好好吃飯（加 32 分）— 吃飯這件事，從不將就。');
-  fire(views[1], 'click');
-  assert.equal(views[1].attrs['aria-pressed'], 'true');
-  assert.match(get('scope').textContent, /^全類別 · \d+ 個類別點$/);
-  assert.equal(get('overall-score').textContent, '+71');
+  // The same score sits between the fans, green because it adds up to alike, over a glow as strong as the match.
+  const [badge] = findAll(network, node => node.attrs.class === 't-score');
+  assert.deepEqual(findAll(badge, node => node.tag === 'text').map(node => node.textContent), ['品味相似度', '+71%']);
+  assert.equal(findAll(badge, node => node.attrs.class === 't-score-number')[0].attrs.fill, '#5eeac7');
+  assert.equal(findAll(network, node => node.tag === 'stop')[0].attrs['stop-opacity'], '0.46');
+  // The cells that decide the score are bright; the ones that add almost nothing fade.
+  const opacity = cells.map(cell => Number(cell.attrs.opacity));
+  assert.ok(Math.max(...opacity) === 1 && Math.min(...opacity) < 0.5, opacity.join(' '));
   assert.equal(get('return-report').textContent, '← 返回配對清單');
   fire(get('return-report'), 'click');
   assert.deepEqual(calls, ['showMatches']);
@@ -156,10 +156,16 @@ test('whichever signal is picked, its name and its purchases stay below the name
 });
 
 test('the friends page opens on 小安 and 小宇 with their taste score', () => {
-  const { get } = open();
+  const { get, singles } = open();
   assert.equal(get('overall-score').textContent, '+80');
   assert.equal(get('summary-worst').textContent, '小安偏低甜度，小宇偏高甜度（扣 6 分）— 一個加糖，一個讓糖罐放假。');
   assert.equal(get('link-method').hidden, true);
+  assert.deepEqual([get('network').getAttribute('hidden'), singles['.detail'].hidden, get('views-note').hidden], [null, false, true]);
+});
+
+test('the friends page keeps no item view: no tabs, no demo items, no case links', () => {
+  const page = templateSource('taste-page-source');
+  for (const gone of ['data-view', '品項細節', 'demoItems', 'id="category"', "get('case')"]) assert.ok(!page.includes(gone), gone);
 });
 
 const paste = (page, side, text) => { page.get('profile-url-' + side).value = text; fire(page.get('import-' + side), 'submit'); };
@@ -177,10 +183,13 @@ test('a new taste link draws the taste network with the purchases it carries', (
 
 test('an old link, a thin report and a broken link each say why there is no taste network', () => {
   const page = open(), note = () => [page.get('views-note').hidden, page.get('views-note').textContent];
+  // Without taste traits on both sides the graph's place holds only the reason: no graph, no toolbar, no detail line.
+  const graph = () => [page.get('network').getAttribute('hidden'), page.singles['.toolbar'].hidden, page.singles['.detail'].hidden];
   paste(page, 'a', link('receipt-taste/categories-v1'));
   assert.equal(page.get('overall-score').textContent, '—');
   assert.equal(page.get('overall-note').textContent, '舊版連結沒有品味特質，無法計算品味相似度');
   assert.deepEqual(note(), [false, '這份連結還沒有品味特質']);
+  assert.deepEqual(graph(), ['', true, true]);
   paste(page, 'a', link(undefined, null));
   assert.equal(page.get('overall-note').textContent, '這份連結的資料還不夠，無法計算品味相似度');
   assert.deepEqual(note(), [false, '這份連結的資料還不夠算出品味特質']);

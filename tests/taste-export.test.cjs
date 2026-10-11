@@ -56,7 +56,7 @@ test('a report too thin for taste traits exports the category counts and says so
     + '拿到連結的人都讀得到這些內容；連結沒有加密。');
   click(get('export-taste'));
   assert.match(get('taste-export-preview').textContent, / · 97 筆已分類品項 · 品味特質資料不足$/);
-  assert.equal(get('taste-export-names').textContent, '這份報告的資料還不夠算出品味特質，朋友只能看品項細節。');
+  assert.equal(get('taste-export-names').textContent, '這份報告的資料還不夠算出品味特質，朋友看不到品味特質圖。');
   assert.equal(decode(get('taste-link').value).traits, null);
 });
 

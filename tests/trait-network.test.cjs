@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const TN = require('../src/web/trait-network.js');
-const { percent } = require('../src/web/trait-similarity.js');
+const { percent, signed } = require('../src/web/trait-similarity.js');
 
 // Four traits and six signals are enough to exercise every rule; "quick" feeds two traits, like weekday_quick_share.
 const traits = [
@@ -318,6 +318,25 @@ test('on desktop every column of purchases finds room clear of the names along t
     }
   }
   assert.equal(columns, 1092);
+});
+
+test('the overall match sits in the middle of the graph: its score in a badge, and a glow that grows with it', () => {
+  const mark = TN.scoreMark(TN.layout(data, me, them, false), false);
+  assert.deepEqual([mark.x, mark.y, mark.text, mark.tone, mark.glow], [600, 325, '+83%', 'positive', 0.5]);
+  const phone = TN.scoreMark(TN.layout(data, me, them, true), true);
+  assert.deepEqual([phone.x, phone.y], [300, 410]);
+  assert.ok(phone.labelY < phone.y && phone.numberY > phone.y);
+  // The glow follows how far the score is from zero; the colour, which side of zero it falls on.
+  const at = score => TN.scoreMark({ result: { comparable: true, score } }, false);
+  assert.deepEqual([at(-0.12).text, at(-0.12).tone, at(-0.12).glow.toFixed(3)], [signed(-0.12), 'negative', '0.078']);
+  assert.deepEqual([at(0.004).text, at(0.004).tone, at(0.004).glow.toFixed(4)], ['0%', 'zero', '0.0026']);
+  // Two people with too little in common get no badge, as the big number shows —.
+  const nobody = { ...me, vector: [null, null, null, null], pushes: [[null, null], [null, null], [null, null], [null]] };
+  assert.equal(TN.scoreMark(TN.layout(data, me, nobody, false), false), null);
+});
+
+test('a middle line is as bright as the points it adds or takes, up to ten', () => {
+  assert.deepEqual([0, 0.05, -0.1, 0.35].map(part => TN.cellOpacity(part).toFixed(2)), ['0.30', '0.60', '1.00', '1.00']);
 });
 
 test('a long purchase name is cut to ten letters on the graph', () => {

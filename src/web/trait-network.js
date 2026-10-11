@@ -10,19 +10,25 @@
   // stepped further out when that spot is taken), a column in a band `beyond` the fans on phones, rows `step` apart,
   // dots from dot[0] to dot[0] + dot[1] across.
   // Desktop writes the two people's names along the top, above `top`; nothing a click adds goes higher.
+  // `mark` is the score badge between the fans: its size, the label and number font sizes, and the glow's radii.
   const SHAPES = Object.freeze({
     desktop: Object.freeze({ width: 1200, height: 640, centers: [[430, 325], [770, 325]], stretch: [1, 0.86],
       near: 110, far: 270, none: 72, ring: 312, stagger: 14, dot: [3.5, 9], font: 13, top: 36,
-      item: Object.freeze({ across: 60, step: 20, dot: [2.5, 3.5] }) }),
+      item: Object.freeze({ across: 60, step: 20, dot: [2.5, 3.5] }),
+      mark: Object.freeze({ width: 176, height: 88, label: 14, number: 42, glow: [250, 250] }) }),
     mobile: Object.freeze({ width: 600, height: 820, centers: [[300, 290], [300, 530]], stretch: [1, 0.9],
       near: 70, far: 190, none: 46, ring: 228, stagger: 12, dot: [5, 11], font: 18,
-      item: Object.freeze({ beyond: 30, step: 26, dot: [3, 4] }) }),
+      item: Object.freeze({ beyond: 30, step: 26, dot: [3, 4] }),
+      mark: Object.freeze({ width: 200, height: 100, label: 17, number: 46, glow: [270, 140] }) }),
   });
   const FAN = 78 * Math.PI / 180;      // each fan opens 78° either side of straight out
   const SPREAD = 0.045;                // radians between neighbouring signals of one trait
   const SLIDES = 8;                    // half rows a purchase column may slide down or up to find room
   const REACH = 5;                     // rows a purchase column may step further out to find room
   const SIGNAL_ROOM = 4;               // a desktop signal dot's radius (3) and a little room around it
+  const FULL_PART = 0.1;               // a middle line adding or taking ten points or more is drawn at full strength
+  const GLOW_RATE = 0.65;              // how bright the glow between the fans gets per unit of score …
+  const GLOW_MAX = 0.5;                // … up to this, so the lines stay readable over it
   const LABEL_STEPS = 3;               // a crowded label moves outwards this many times before it hides
   const PAD = 3;                       // the gap kept around every label
 
@@ -241,6 +247,21 @@
     });
   }
 
+  // The overall match drawn between the fans: the score in a badge, coloured by the side of zero it falls on, and a
+  // glow that grows with how far it is from zero, so a close match reads at a glance and a distant one stays dim.
+  function scoreMark(graph, mobile) {
+    const { result } = graph;
+    if (!result || !result.comparable) return null;
+    const shape = mobile ? SHAPES.mobile : SHAPES.desktop, { mark } = shape, [[ax, ay], [bx, by]] = shape.centers;
+    const x = (ax + bx) / 2, y = (ay + by) / 2, points = similarity.percent(result.score);
+    return { x, y, width: mark.width, height: mark.height, label: mark.label, number: mark.number, radii: mark.glow,
+      labelY: y - mark.height / 2 + 24, numberY: y + mark.height / 2 - 16, text: similarity.signed(result.score),
+      tone: points > 0 ? 'positive' : points < 0 ? 'negative' : 'zero', glow: Math.min(GLOW_MAX, Math.abs(result.score) * GLOW_RATE) };
+  }
+
+  // A middle line is as bright as the points its cell adds or takes, so the cells that decide the score stand out.
+  const cellOpacity = part => (part === 0 ? 0.3 : 0.2 + 0.8 * Math.min(1, Math.abs(part) / FULL_PART));
+
   // The view box: the graph plus room for every purchase any signal could show, so picking one never rescales it.
   function viewBox(data, graph, people, mobile) {
     const font = (mobile ? SHAPES.mobile : SHAPES.desktop).font;
@@ -348,7 +369,7 @@
   // How many traits the page talks about: cats and dogs share one group, so 18 cells read as 17 traits.
   const traitCount = traits => new Set(traits.map(trait => trait.group ?? trait.id)).size;
 
-  const api = Object.freeze({ SHAPES, validate, traitLabel, labelRect, layout, shortName, purchases, viewBox, formatSignal,
-    traitText, signalSentence, cellSentence, readout, traitCount });
+  const api = Object.freeze({ SHAPES, validate, traitLabel, labelRect, layout, shortName, purchases, viewBox, scoreMark,
+    cellOpacity, formatSignal, traitText, signalSentence, cellSentence, readout, traitCount });
   if (node) module.exports = api; else root.TraitNetwork = api;
 })(globalThis);

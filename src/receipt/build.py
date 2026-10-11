@@ -75,11 +75,12 @@ def rounded(value):
 
 
 def drawing_of(explained, order):
-    """What the network graph draws for one person: each signal's push on each trait, and the measured signals
-    listed in signal_ids() order so their names are not repeated for everyone."""
+    """What the network graph draws for one person: each signal's push on each trait, then the measured signals
+    and the purchases each signal lists, both in signal_ids() order so their names are not repeated for everyone."""
     if explained is None:
-        return {"pushes": None, "signals": None}
-    return {"pushes": rounded(explained["pushes"]), "signals": [rounded(explained["signals"][key]) for key in order]}
+        return {"pushes": None, "signals": None, "items": None}
+    return {"pushes": rounded(explained["pushes"]), "signals": [rounded(explained["signals"][key]) for key in order],
+            "items": [explained["items"][key] for key in order]}
 
 
 def build_matches(rows, months, people, tastes, me, context, regions, is_demo):
@@ -117,13 +118,25 @@ def trait_network_data(settings, tastes, friends):
         entry["lines"] = trait["lines"]
         entry["signals"] = [signal["id"] for signal in trait["signals"]]
         for signal in trait["signals"]:
-            labels.setdefault(signal["id"], {"id": signal["id"], "label": signal["label"], "unit": signal["unit"]})
+            words = {"id": signal["id"], "label": signal["label"], "unit": signal["unit"]}
+            # Signals about where someone shopped say so, and never carry a list of purchases.
+            if signal.get("list_items") is False:
+                words["list_items"] = False
+            labels.setdefault(signal["id"], words)
     return {
         "model": similarity_model(settings), "traits": traits, "signals": [labels[key] for key in order],
         "readout": settings["readout"],
         "friends": {friend["name"]: {"vector": vector_of(tastes[friend["name"]]), **drawing_of(tastes[friend["name"]], order)}
                     for friend in friends},
     }
+
+
+def taste_export_data(settings, me):
+    """What the export button puts into a taste link: how many traits the pages talk about (cats and dogs are one),
+    and my taste with its pushes, signals and purchase lists, or None when I have too little data."""
+    count = len({trait.get("group", trait["id"]) for trait in settings["traits"]})
+    return {"traitCount": count,
+            "taste": None if me is None else {"vector": me["vector"], **drawing_of(me, signal_ids(settings))}}
 
 
 def taste_summary(me, people, tastes, context):
@@ -152,8 +165,12 @@ def main():
     else:
         months = build_demo(catalog)
     data = {"isDemo": not args.private, "categories": config["categories"], "months": months}
+    context = load_context(ROOT)
+    rows, period = dated(months)
+    me = explain(rows, period, context)
     data_script = script_constant("expenseReportData", data)
-    scripts = {"report-data.js": data_script}
+    scripts = {"report-data.js": data_script,
+               "taste-export-data.js": script_constant("tasteExportData", taste_export_data(context["traits"], me))}
     for name in ("insights-ui.js", "monthly-comparison.js", "comparison-ui.js", "flow-navigation.js", "taste-profile.js", "taste-export.js", "taste-navigation.js"):
         scripts[name] = (WEB / name).read_text(encoding="utf-8")
     template = (WEB / "invoice-insights.html").read_text(encoding="utf-8")
@@ -162,7 +179,6 @@ def main():
         raise ValueError("Expected exactly one stylesheet link in the HTML template")
     stylesheet = (WEB / "styles.css").read_text(encoding="utf-8")
     html = embed_scripts(template.replace(style_link, "<style>" + stylesheet + "</style>", 1), scripts)
-    context = load_context(ROOT)
     people = build_personas(context["calendar"])
     friends = build_friends(context["calendar"])
     # Everyone's taste is worked out once, here, and shared by both pages and the summary below.
@@ -173,8 +189,6 @@ def main():
         "trait-network.js": (WEB / "trait-network.js").read_text(encoding="utf-8"),
         "trait-network-data.js": script_constant("traitNetworkData", trait_network_data(context["traits"], tastes, friends))})
     html = embed_page(html, "taste-page-source", comparison)
-    rows, period = dated(months)
-    me = explain(rows, period, context)
     matches = build_matches(rows, months, people, tastes, me, context, load_regions(ROOT), not args.private)
     match_page = embed_scripts((WEB / "match.html").read_text(encoding="utf-8"), {
         **shared, "match-data.js": script_constant("matchReportData", matches)})

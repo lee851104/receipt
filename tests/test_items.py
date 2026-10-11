@@ -52,6 +52,13 @@ class LabelTests(unittest.TestCase):
         self.assertEqual(self.name("淡水阿給"), "阿給")
         self.assertEqual(self.name("高雄市 - 鹽酥雞"), "鹽酥雞")
 
+    def test_marks_in_a_name_stay_unless_a_removed_place_leaves_them_behind(self):
+        for name in ("麥香奶茶(600ml)", "(促)統一布丁", "蛋白質20%", "維他命C+"):
+            self.assertEqual(self.name(name), name)
+        self.assertEqual(self.name("【台中限定】鹽酥雞"), "【限定】鹽酥雞")
+        self.assertEqual(self.name("鹽酥雞（台中店）"), "鹽酥雞（店）")
+        self.assertEqual(self.name("鹽酥雞（台中）"), "鹽酥雞")
+
     def test_a_name_that_was_only_a_place_reads_as_its_category(self):
         self.assertEqual(self.name("台中"), "正餐")
         self.assertEqual(self.name("高雄 123", category=8), "日用品")

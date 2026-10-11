@@ -6,6 +6,9 @@ from .attributes import has
 
 LONGEST = 20  # letters a name keeps; a longer one is cut and ends with …
 TOP = 3       # purchases listed per signal
+# What a removed place name may leave behind: empty brackets, and separators at either edge.
+EMPTY_BRACKETS = re.compile(r"\(\s*\)|（\s*）|\[\s*\]|【\s*】|「\s*」|『\s*』|〔\s*〕")
+EDGES = re.compile(r"^[\s\-–—·・|/／,，、:：]+|[\s\-–—·・|/／,，、:：]+$")
 
 
 def place_words(rows, context):
@@ -40,11 +43,15 @@ def label(line, words, context):
         text = line["name"] + line["merchant"]
         return next((kind for kind, keywords in vocabulary["transport_kinds"] if has(text, keywords)),
                     vocabulary["generic_labels"]["長途交通"])
-    name = re.sub(r"^[\W_]+|[\W_]+$", "", without_places(line["name"].removeprefix("示範"), words))
-    # Nothing but a place, digits or marks left: say what kind of purchase it was instead.
-    if not re.search(r"[^\W\d_]", name):
-        name = context["report"]["categories"][line["category"]]["name"]
-    return name if len(name) <= LONGEST else name[:LONGEST - 1] + "…"
+    name = line["name"].removeprefix("示範").strip()
+    rest = without_places(name, words)
+    # Only a removed place leaves anything to tidy; brackets, % or + in an ordinary name stay as they are.
+    if rest != name:
+        rest = EDGES.sub("", EMPTY_BRACKETS.sub("", rest))
+    # Nothing but digits or marks left: say what kind of purchase it was instead.
+    if not re.search(r"[^\W\d_]", rest):
+        rest = context["report"]["categories"][line["category"]]["name"]
+    return rest if len(rest) <= LONGEST else rest[:LONGEST - 1] + "…"
 
 
 def listed(purchases, rows, context):
@@ -53,6 +60,15 @@ def listed(purchases, rows, context):
     words = place_words(rows, context)
     hidden = {signal["id"] for trait in context["traits"]["traits"] for signal in trait["signals"]
               if signal.get("list_items") is False}
+    names = {}
+
+    # One label per distinct purchase, however many signals list it.
+    def named(line):
+        key = (line["name"], line["channel"], line["category"], line["merchant"])
+        if key not in names:
+            names[key] = label(line, words, context)
+        return names[key]
+
     lists = {}
     for key, lines in purchases.items():
         if key in hidden:
@@ -60,7 +76,7 @@ def listed(purchases, rows, context):
             continue
         bills = {}
         for line in lines:
-            bills.setdefault(label(line, words, context), set()).add(line["invoice"])
+            bills.setdefault(named(line), set()).add(line["invoice"])
         ranked = sorted(bills.items(), key=lambda pair: (-len(pair[1]), pair[0]))
         lists[key] = [[name, len(seen)] for name, seen in ranked[:TOP]]
     return lists

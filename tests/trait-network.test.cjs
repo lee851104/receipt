@@ -255,7 +255,8 @@ test('the purchases behind a signal stand in a short column outside it, most bou
   const phone = TN.layout(data, me, them, true), { beyond, step: row } = TN.SHAPES.mobile.item;
   const [up, down] = TN.purchases(data, phone, [me, them], 'sugar_mean', true);
   assert.deepEqual(up.items.map(item => item.y), [-beyond - 2 * row, -beyond - row, -beyond]);
-  assert.deepEqual(down.items.map(item => item.y), [phone.height + beyond, phone.height + beyond + row]);  // Nothing bought, nothing drawn: my 超商即期 list is empty, theirs is not.
+  assert.deepEqual(down.items.map(item => item.y), [phone.height + beyond, phone.height + beyond + row]);
+  // Nothing bought, nothing drawn: my 超商即期 list is empty, theirs is not.
   assert.deepEqual(TN.purchases(data, graph, [me, them], 'clearance', false).map(side => side.side), ['b']);
 });
 

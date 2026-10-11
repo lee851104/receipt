@@ -48,6 +48,7 @@
   | Task 8 | 76 | 71 |
   | Task 9 | 76 | 75 |
   | Task 10 | 76 | 76 |
+  | 最終修正 | 77 | 77 |
 
 - `python scripts/build_report.py` 每次都印出同樣三行（配對與分數完全不變）：
   ```text
@@ -3360,15 +3361,28 @@ git commit -m "test: check the match page's header for each pairing of whose tas
 
 ---
 
+### 最終審查後的修正（Task 10 之後、Task 11 之前）
+
+整個分支的最終審查要求合併前修兩處、另建議幾處一兩行的修正，一次做完（commit `fix: refuse over-long taste links, keep a picked name single and clean names from real reports`）：
+
+1. `TasteProfile.toURL` 也檢查 12,000 字元上限（和 `fromURL` 共用 `LONGEST`），超過時丟出「這份品味連結超過 12,000 字元，朋友的比較頁讀不進來。」，匯出面板的狀態列會顯示；`tests/taste-profile.test.cjs` 多一個測試。
+2. README「與朋友比較偏好」裡講分類比例餘弦相似度的那段改成現在的做法（品味相似度、品項細節不算分數、分類模式的限制）。
+3. 滑鼠離開已選的訊號再移回來，不再於品項旁多出一個名稱；連線頁煙霧測試的那個測試多做一次離開、移回。
+4. `items.label` 先把名稱裡的 tab、換行、控制字元與連續空白換成一個空白；`tests/test_items.py` 多一個測試。示範資料的品名都沒變。
+5. `measure` 檢查 `behind` 與訊號的鍵一致，註解所說的「漏掉的訊號在這裡出錯」才成立。
+6. 朋友比較頁連結說明裡舊版連結的「10 類」改由程式產生；`SHAPES` 的註解寫出品項欄會挪動或往外走。
+
+之後：Python 77、Node 77。
+
 ### Task 11: 最終驗證與交接（由主控執行，不交給子代理）
 
 - [ ] **Step 1: 全部測試**
 
 Run: `python -m unittest discover -s tests`
-Expected: 76 tests OK
+Expected: 77 tests OK
 
 Run: `node --test tests/*.test.cjs`
-Expected: 76 tests pass
+Expected: 77 tests pass
 
 - [ ] **Step 2: 產生結果可重現、只動到預期的檔案**
 

@@ -14,4 +14,4 @@ const templateSource = id => unescapeHtml(between(html, `<template id="${id}">`,
 // The inline scripts of such a page, in order.
 const scriptsOf = id => [...templateSource(id).matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(match => match[1]);
 
-module.exports = { html, between, unescapeHtml, templateSource, scriptsOf };
+module.exports = { html, between, templateSource, scriptsOf };

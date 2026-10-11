@@ -106,7 +106,8 @@ test('picking a signal lights its path and writes both people into the detail li
   fire(mine, 'click');
   assert.deepEqual(get('detail').textContent.split('\n').slice(0, 2),
     ['你：飲料甜度 約 8 分糖，往「高甜度」推 0.61', '手搖學生 B：飲料甜度 約 10 分糖，往「高甜度」推 0.80']);
-  // Lines away from the picked signal's traits fade out.
+  // The picked signal's own lines light up, and lines away from its traits fade out.
+  assert.ok(links.some(link => link.style.opacity === '1'));
   assert.ok(links.some(link => link.style.opacity === '.06'));
 });
 

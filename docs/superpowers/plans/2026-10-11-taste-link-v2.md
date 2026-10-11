@@ -46,8 +46,8 @@
   | Task 6 | 76 | 62 |
   | Task 7 | 76 | 68 |
   | Task 8 | 76 | 71 |
-  | Task 9 | 76 | 74 |
-  | Task 10 | 76 | 75 |
+  | Task 9 | 76 | 75 |
+  | Task 10 | 76 | 76 |
 
 - `python scripts/build_report.py` 每次都印出同樣三行（配對與分數完全不變）：
   ```text
@@ -71,6 +71,7 @@
 6. 煙霧測試直接在報告裡的配對頁點第一張卡片，拿配對頁真正交給連線頁的資料；所以配對頁漏傳品項時測試會失敗。
 7. 配對頁頁首那句搬到 `MatchFilter.intro(data, ready)`，才測得到「資料不足時不寫『點一個人…』」。
 8. **桌機的一小排會找空位**（Task 7 審查後補上）：第 1 點說「任何位置都不重疊」只比了同一排的名稱。扇面頂端的訊號（每餐花費、餐廳正餐、百元飲料）旁邊擠滿別的訊號與特質標籤，上面又是兩人的名字；原本的排法在 52 組配對裡有 49 個品項蓋到名字、172 個蓋到特質標籤、444 個蓋到別的訊號點。現在一小排先放在原位，擋到就每次上下挪半列（最多 4 列），再往外多走一列（最多 5 列）重找，直到不碰頂端名字那一帶（36 以上）、同一團的點與特質標籤；79% 的一小排留在原位，`viewBox` 不變。訊號名稱若會伸進名字那一帶，改放在點的下方；點選時收起滑過時出現的名稱；品項不攔滑鼠。
+9. **匯出面板的說明分三種**（Task 9 審查後補上）：規格原本只有一句，資料不足或沒有品名的報告也會說連結含 17 項品味特質與品名，和下面的預覽列、品名清單互相矛盾。現在依這份連結實際的內容選句子：完整版照原句；有品味特質但沒有品名時寫「連結包含暱稱、月份、10 類消費筆數、17 項品味特質與各消費訊號的彙總值（…）；不包含品名、店名…」；資料不足時寫「連結包含暱稱、月份與 10 類消費筆數；不包含品味特質、品名、店名…」。
 
 ## 檔案結構
 
@@ -3001,6 +3002,154 @@ git add src/web/taste-export.js src/web/invoice-insights.html src/web/styles.css
 git commit -m "feat: export a taste link with my taste traits and the names friends will see" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
+- [ ] **Step 7: Say only what this link holds（審查後補上）**
+
+面板說明依這份連結實際的內容分三種（見「與規格原稿不同的地方」第 9 點），三種都由測試整句釘住；第一個測試也確認真正的頁面有 `#taste-export-about` 與 `#taste-export-names`（假頁面任何 id 都會自動產生，打錯 id 測試也會過）；不再用到的 `.taste-sharing button:disabled` 刪掉。全部用編輯工具；`taste-export.js` 與 `styles.css` 是 CRLF。
+
+先做測試的修改（7.4～7.6），執行 `node --test tests/taste-export.test.cjs`：4 個測試裡剛好 2 個失敗（`a report too thin for taste traits exports the category counts and says so`、`taste traits without any purchase names say the link holds no names`）。再做 7.1～7.3。
+
+**7.1** `src/web/taste-export.js`
+
+Replace
+
+```js
+ const exported=typeof tasteExportData==='undefined'?{traitCount:0,taste:null}:tasteExportData;
+ get('taste-export-about').textContent='連結包含暱稱、月份、'+TasteProfile.categories.length+' 類消費筆數、'+(exported.traitCount?exported.traitCount+' 項':'')
+  +'品味特質、各消費訊號的彙總值（例如每餐平均花費、每月 3C 花費、每月次數），以及每個訊號最常買的品名；不包含店名、行政區、地址、日期、單筆金額或發票號碼。'
+  +'品名裡的地名會拿掉，住宿只寫「旅館住宿」。拿到連結的人都讀得到這些內容；連結沒有加密。';
+ // Every purchase name a friend will see, in signal order, each once.
+ function sharedNames(taste){const names=[];for(const list of taste.items)for(const [name] of list||[])if(!names.includes(name))names.push(name);return names;}
+ function generate(){
+  const taste=exported.taste,profile=TasteProfile.fromReport(expenseReportData,get('taste-nickname').value,taste);
+```
+
+with
+
+```js
+ const exported=typeof tasteExportData==='undefined'?{traitCount:0,taste:null}:tasteExportData;
+ // Every purchase name a friend will see, in signal order, each once.
+ function sharedNames(taste){const names=[];for(const list of taste.items)for(const [name] of list||[])if(!names.includes(name))names.push(name);return names;}
+ const taste=exported.taste,names=taste?sharedNames(taste):[],kinds=TasteProfile.categories.length+' 類消費筆數';
+ const summaries='各消費訊號的彙總值（例如每餐平均花費、每月 3C 花費、每月次數）',never='店名、行政區、地址、日期、單筆金額或發票號碼';
+ // The panel says only what this link holds: taste traits and summaries when the report has them, names when there are any.
+ get('taste-export-about').textContent=(!taste?`連結包含暱稱、月份與 ${kinds}；不包含品味特質、品名、${never}。`
+  :names.length?`連結包含暱稱、月份、${kinds}、${exported.traitCount} 項品味特質、${summaries}，以及每個訊號最常買的品名；不包含${never}。品名裡的地名會拿掉，住宿只寫「旅館住宿」。`
+  :`連結包含暱稱、月份、${kinds}、${exported.traitCount} 項品味特質與${summaries}；不包含品名、${never}。`)+'拿到連結的人都讀得到這些內容；連結沒有加密。';
+ function generate(){
+  const profile=TasteProfile.fromReport(expenseReportData,get('taste-nickname').value,taste);
+```
+
+**7.2** `src/web/taste-export.js`
+
+Replace
+
+```js
+  const names=taste?sharedNames(taste):[];
+  get('taste-export-names').textContent=
+```
+
+with
+
+```js
+  get('taste-export-names').textContent=
+```
+
+**7.3** `src/web/styles.css`
+
+Replace
+
+```css
+.taste-sharing button:disabled{opacity:.5;cursor:not-allowed;}
+
+/* One file, two independent views
+```
+
+with
+
+```css
+/* One file, two independent views
+```
+
+**7.4** `tests/taste-export.test.cjs`
+
+Replace
+
+```js
+  assert.match(html, /<h2>分享品味，從一個連結開始。<\/h2>/);
+});
+```
+
+with
+
+```js
+  assert.match(html, /<h2>分享品味，從一個連結開始。<\/h2>/);
+  // The fake page below makes any element on request, so the real page must be shown to have the two new ones.
+  for (const id of ['taste-export-about', 'taste-export-names']) assert.equal(html.split(`id="${id}"`).length, 2, id);
+});
+```
+
+**7.5** `tests/taste-export.test.cjs`
+
+Replace
+
+```js
+  assert.match(get('taste-export-about').textContent, /^連結包含暱稱、月份、10 類消費筆數、17 項品味特質、各消費訊號的彙總值/);
+```
+
+with
+
+```js
+  assert.equal(get('taste-export-about').textContent, '連結包含暱稱、月份、10 類消費筆數、17 項品味特質、各消費訊號的彙總值（例如每餐平均花費、每月 3C 花費、'
+    + '每月次數），以及每個訊號最常買的品名；不包含店名、行政區、地址、日期、單筆金額或發票號碼。品名裡的地名會拿掉，住宿只寫「旅館住宿」。'
+    + '拿到連結的人都讀得到這些內容；連結沒有加密。');
+```
+
+**7.6** `tests/taste-export.test.cjs`
+
+Replace
+
+```js
+  const get = open({ taste: null });
+  click(get('export-taste'));
+  assert.match(get('taste-export-preview').textContent, / · 97 筆已分類品項 · 品味特質資料不足$/);
+  assert.equal(get('taste-export-names').textContent, '這份報告的資料還不夠算出品味特質，朋友只能看品項細節。');
+  assert.equal(decode(get('taste-link').value).traits, null);
+});
+```
+
+with
+
+```js
+  const get = open({ taste: null });
+  assert.equal(get('taste-export-about').textContent, '連結包含暱稱、月份與 10 類消費筆數；不包含品味特質、品名、店名、行政區、地址、日期、單筆金額或發票號碼。'
+    + '拿到連結的人都讀得到這些內容；連結沒有加密。');
+  click(get('export-taste'));
+  assert.match(get('taste-export-preview').textContent, / · 97 筆已分類品項 · 品味特質資料不足$/);
+  assert.equal(get('taste-export-names').textContent, '這份報告的資料還不夠算出品味特質，朋友只能看品項細節。');
+  assert.equal(decode(get('taste-link').value).traits, null);
+});
+
+test('taste traits without any purchase names say the link holds no names', () => {
+  const get = open({ taste: { ...exported.taste, items: exported.taste.items.map(list => (list === null ? null : [])) } });
+  assert.equal(get('taste-export-about').textContent, '連結包含暱稱、月份、10 類消費筆數、17 項品味特質與各消費訊號的彙總值（例如每餐平均花費、每月 3C 花費、'
+    + '每月次數）；不包含品名、店名、行政區、地址、日期、單筆金額或發票號碼。拿到連結的人都讀得到這些內容；連結沒有加密。');
+  click(get('export-taste'));
+  assert.equal(get('taste-export-names').textContent, '連結裡沒有品名。');
+});
+```
+
+- [ ] **Step 8: Rebuild and run every test**
+
+Run: `python scripts/build_report.py && node --test tests/*.test.cjs && python -m unittest discover -s tests`
+Expected: 三行輸出同「試做結果」；75 tests pass；76 tests OK
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add src/web/taste-export.js src/web/styles.css tests/taste-export.test.cjs invoice-insights.html
+git commit -m "fix: let the export panel say only what this link holds" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
 ---
 
 ### Task 10: 配對頁文案、README、`.gitignore`
@@ -3158,7 +3307,7 @@ Expected: 第一行是 `.gitignore:…:/report-data.js	report-data.js`；`git st
 - [ ] **Step 6: Rebuild and run everything**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs && python -m unittest discover -s tests`
-Expected: 三行輸出同「試做結果」；75 tests pass；76 tests OK
+Expected: 三行輸出同「試做結果」；76 tests pass；76 tests OK
 
 - [ ] **Step 7: Commit**
 
@@ -3177,7 +3326,7 @@ Run: `python -m unittest discover -s tests`
 Expected: 76 tests OK
 
 Run: `node --test tests/*.test.cjs`
-Expected: 75 tests pass
+Expected: 76 tests pass
 
 - [ ] **Step 2: 產生結果可重現、只動到預期的檔案**
 

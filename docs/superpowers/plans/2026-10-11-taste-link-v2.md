@@ -327,7 +327,33 @@ git commit -m "test: smoke-test the connection page from a match card to item de
 
 - [ ] **Step 1: Write the failing test**
 
-在 `tests/trait-network.test.cjs` 的測試 `validate keeps well-formed taste data and refuses anything else` 後面（它最後一行是 `  for (const person of broken) assert.throws(() => TN.validate(person, data), /品味資料不正確/);` 接 `});`）加上：
+新的加總規則也會擋下舊測試裡幾個壞例子，讓向量範圍與有限數的檢查沒有單獨守著的例子。先在 `tests/trait-network.test.cjs` 的測試 `validate keeps well-formed taste data and refuses anything else` 裡，把
+
+```js
+  const broken = [
+    null, { ...me, vector: me.vector.slice(1) }, { ...me, vector: [1.2, 1, null, 0.3] }, { ...me, vector: [0.7, 1, null, -0.1] },
+    { ...me, vector: [NaN, 1, null, 0.3] }, { ...me, pushes: [[0.61], [0, 1], [null, null], [0.375]] },
+    { ...me, pushes: [[0.61, 'x'], [0, 1], [null, null], [0.375]] }, { ...me, signals: me.signals.slice(1) },
+    { ...me, signals: [Infinity, 0, 0, 1, null, 5] },
+  ];
+```
+
+換成
+
+```js
+  // Each broken person breaks one rule; their pushes still add up unless the sum is what is broken.
+  const broken = [
+    null, { ...me, vector: me.vector.slice(1) },
+    { ...me, vector: [1.2, 1, null, 0.375], pushes: [[0.7, 0.5], [0, 1], [null, null], [0.375]] },
+    { ...me, vector: [-1.2, 1, null, 0.375], pushes: [[-0.7, -0.5], [0, 1], [null, null], [0.375]] },
+    { ...me, vector: [0.7, 1, null, -0.1] }, { ...me, vector: [NaN, 1, null, 0.375] },
+    { ...me, pushes: [[0.61], [0, 1], [null, null], [0.375]] },
+    { ...me, pushes: [[0.61, 'x'], [0, 1], [null, null], [0.375]] }, { ...me, signals: me.signals.slice(1) },
+    { ...me, signals: [NaN, 0.1429, 0, 1, null, 5] }, { ...me, signals: [Infinity, 0.1429, 0, 1, null, 5] },
+  ];
+```
+
+再在這個測試後面（它最後一行是 `  for (const person of broken) assert.throws(() => TN.validate(person, data), /品味資料不正確/);` 接 `});`）加上：
 
 ```js
 

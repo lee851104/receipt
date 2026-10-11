@@ -1,20 +1,11 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const { view } = require('../src/web/match-filter.js');
+const { between, templateSource } = require('./built-report.cjs');
 
 const MINUS = String.fromCharCode(0x2212);
-const between = (text, start, end) => {
-  const from = text.indexOf(start) + start.length;
-  return text.slice(from, text.indexOf(end, from));
-};
-const unescapeHtml = text => [['&lt;', '<'], ['&gt;', '>'], ['&quot;', '"'], ['&#x27;', "'"], ['&amp;', '&']]
-  .reduce((result, [entity, character]) => result.split(entity).join(character), text);
 // The built demo report keeps the match page, escaped, inside a template element.
-const html = fs.readFileSync(path.join(__dirname, '..', 'invoice-insights.html'), 'utf8');
-const page = unescapeHtml(between(html, '<template id="match-page-source">', '</template>'));
-const data = JSON.parse(between(page, 'const matchReportData = ', '</script>').trim().replace(/;$/, ''));
+const data = JSON.parse(between(templateSource('match-page-source'), 'const matchReportData = ', '</script>').trim().replace(/;$/, ''));
 const summary = cards => cards.map(card => [card.name, card.score]);
 
 test('the demo lists the three sweet-toothed students and two coffee lovers', () => {

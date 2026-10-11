@@ -1,19 +1,9 @@
 // Runs the connection page from the built report against a small fake DOM, so its main paths stay covered.
-const fs = require('node:fs');
-const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
+const { scriptsOf } = require('./built-report.cjs');
 
-const between = (text, start, end) => {
-  const from = text.indexOf(start) + start.length;
-  return text.slice(from, text.indexOf(end, from));
-};
-const unescapeHtml = text => [['&lt;', '<'], ['&gt;', '>'], ['&quot;', '"'], ['&#x27;', "'"], ['&amp;', '&']]
-  .reduce((result, [entity, character]) => result.split(entity).join(character), text);
-const html = fs.readFileSync(path.join(__dirname, '..', 'invoice-insights.html'), 'utf8');
-const scriptsOf = template => [...unescapeHtml(between(html, `<template id="${template}">`, '</template>'))
-  .matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(match => match[1]);
 const scripts = scriptsOf('taste-page-source');
 const matchScripts = scriptsOf('match-page-source');
 
@@ -111,9 +101,13 @@ test('a match opens on the taste network with the taste score, and the item deta
 
 test('picking a signal lights its path and writes both people into the detail line', () => {
   const { get } = open({ pair: pairFromMatchList(0).pair });
+  const links = findAll(get('network'), node => node.attrs.class === 't-link');
   const [mine] = findAll(get('network'), node => node.attrs['aria-label']?.startsWith('你的飲料甜度'));
   fire(mine, 'click');
-  assert.equal(get('detail').textContent.split('\n')[0], '你：飲料甜度 約 8 分糖，往「高甜度」推 0.61');
+  assert.deepEqual(get('detail').textContent.split('\n').slice(0, 2),
+    ['你：飲料甜度 約 8 分糖，往「高甜度」推 0.61', '手搖學生 B：飲料甜度 約 10 分糖，往「高甜度」推 0.80']);
+  // Lines away from the picked signal's traits fade out.
+  assert.ok(links.some(link => link.style.opacity === '.06'));
 });
 
 test('the friends page opens on 小安 and 小宇 with their taste score', () => {

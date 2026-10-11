@@ -76,6 +76,7 @@
 | 檔案 | 動作 | 責任 |
 |---|---|---|
 | `tests/connection-page.test.cjs` | 新增 | 連線頁的煙霧測試：用假 DOM 跑報告裡的配對頁與連線頁 |
+| `tests/built-report.cjs` | 新增 | 測試共用：讀產生的報告與 `<template>` 裡的頁面（`match-page`、`connection-page`、`taste-export` 三個測試共用） |
 | `src/web/trait-network.js` | 修改 | 收緊 `validate`、檢查品項；品項點的位置與留白（`purchases`、`viewBox`、`shortName`）；說明列寫出品項 |
 | `src/receipt/signals.py` | 修改 | `measure` 多回傳 `purchases`（每個訊號背後的消費） |
 | `src/receipt/items.py` | 新增 | 品名規則與每個訊號的品項清單 |
@@ -104,31 +105,81 @@
 
 **Files:**
 - Create: `tests/connection-page.test.cjs`
+- Create: `tests/built-report.cjs`（讀產生的報告的共用輔助函式；檔名不是 `*.test.cjs`，不會被當成測試）
+- Modify: `tests/match-page.test.cjs`（改用共用輔助函式）
 
 **Interfaces:**
 - Produces（同一個測試檔裡的輔助函式，Task 7、8 會沿用）：`element(tag)`、`fire(node, type, event)`、`findAll(node, check)`、`pairFromMatchList(index) -> { name, pair }`、`open({ pair }) -> { get, views, calls }`。
+- Produces：`tests/built-report.cjs` 匯出 `html`、`between`、`templateSource(id)`、`scriptsOf(id)`（Task 8、9 沿用）。
 
 - [ ] **Step 1: Write the test**
 
-新增 `tests/connection-page.test.cjs`：
+新增 `tests/built-report.cjs`（內含反斜線，用 Write 工具）：
 
 ```js
-// Runs the connection page from the built report against a small fake DOM, so its main paths stay covered.
+// The built demo report and the pages it keeps, escaped, inside template elements; shared by the tests that read it.
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
-const assert = require('node:assert/strict');
-const { test } = require('node:test');
 
+const html = fs.readFileSync(path.join(__dirname, '..', 'invoice-insights.html'), 'utf8');
 const between = (text, start, end) => {
   const from = text.indexOf(start) + start.length;
   return text.slice(from, text.indexOf(end, from));
 };
 const unescapeHtml = text => [['&lt;', '<'], ['&gt;', '>'], ['&quot;', '"'], ['&#x27;', "'"], ['&amp;', '&']]
   .reduce((result, [entity, character]) => result.split(entity).join(character), text);
+// A page the report keeps inside <template id="…">, unescaped.
+const templateSource = id => unescapeHtml(between(html, `<template id="${id}">`, '</template>'));
+// The inline scripts of such a page, in order.
+const scriptsOf = id => [...templateSource(id).matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(match => match[1]);
+
+module.exports = { html, between, templateSource, scriptsOf };
+```
+
+在 `tests/match-page.test.cjs` 把開頭的
+
+```js
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const { view } = require('../src/web/match-filter.js');
+
+const MINUS = String.fromCharCode(0x2212);
+const between = (text, start, end) => {
+  const from = text.indexOf(start) + start.length;
+  return text.slice(from, text.indexOf(end, from));
+};
+const unescapeHtml = text => [['&lt;', '<'], ['&gt;', '>'], ['&quot;', '"'], ['&#x27;', "'"], ['&amp;', '&']]
+  .reduce((result, [entity, character]) => result.split(entity).join(character), text);
+// The built demo report keeps the match page, escaped, inside a template element.
 const html = fs.readFileSync(path.join(__dirname, '..', 'invoice-insights.html'), 'utf8');
-const scriptsOf = template => [...unescapeHtml(between(html, `<template id="${template}">`, '</template>'))
-  .matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(match => match[1]);
+const page = unescapeHtml(between(html, '<template id="match-page-source">', '</template>'));
+const data = JSON.parse(between(page, 'const matchReportData = ', '</script>').trim().replace(/;$/, ''));
+```
+
+換成
+
+```js
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const { view } = require('../src/web/match-filter.js');
+const { between, templateSource } = require('./built-report.cjs');
+
+const MINUS = String.fromCharCode(0x2212);
+// The built demo report keeps the match page, escaped, inside a template element.
+const data = JSON.parse(between(templateSource('match-page-source'), 'const matchReportData = ', '</script>').trim().replace(/;$/, ''));
+```
+
+新增 `tests/connection-page.test.cjs`：
+
+```js
+// Runs the connection page from the built report against a small fake DOM, so its main paths stay covered.
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const { test } = require('node:test');
+const { scriptsOf } = require('./built-report.cjs');
+
 const scripts = scriptsOf('taste-page-source');
 const matchScripts = scriptsOf('match-page-source');
 
@@ -226,9 +277,14 @@ test('a match opens on the taste network with the taste score, and the item deta
 
 test('picking a signal lights its path and writes both people into the detail line', () => {
   const { get } = open({ pair: pairFromMatchList(0).pair });
+  const links = findAll(get('network'), node => node.attrs.class === 't-link');
   const [mine] = findAll(get('network'), node => node.attrs['aria-label']?.startsWith('你的飲料甜度'));
   fire(mine, 'click');
-  assert.equal(get('detail').textContent.split('\n')[0], '你：飲料甜度 約 8 分糖，往「高甜度」推 0.61');
+  assert.deepEqual(get('detail').textContent.split('\n').slice(0, 2),
+    ['你：飲料甜度 約 8 分糖，往「高甜度」推 0.61', '手搖學生 B：飲料甜度 約 10 分糖，往「高甜度」推 0.80']);
+  // The picked signal's own lines light up, and lines away from its traits fade out.
+  assert.ok(links.some(link => link.style.opacity === '1'));
+  assert.ok(links.some(link => link.style.opacity === '.06'));
 });
 
 test('the friends page opens on 小安 and 小宇 with their taste score', () => {
@@ -240,8 +296,8 @@ test('the friends page opens on 小安 and 小宇 with their taste score', () =>
 
 - [ ] **Step 2: Run it**
 
-Run: `node --test tests/connection-page.test.cjs`
-Expected: 3 tests pass（現有行為）。
+Run: `node --test tests/connection-page.test.cjs tests/match-page.test.cjs`
+Expected: 6 tests pass（現有行為）。
 
 - [ ] **Step 3: Run every Node test**
 
@@ -251,7 +307,7 @@ Expected: 59 tests pass
 - [ ] **Step 4: Commit**
 
 ```bash
-git add tests/connection-page.test.cjs
+git add tests/connection-page.test.cjs tests/built-report.cjs tests/match-page.test.cjs
 git commit -m "test: smoke-test the connection page from a match card to item details and back" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
@@ -1508,9 +1564,14 @@ test('a long purchase name is cut to ten letters on the graph', () => {
 ```js
 test('picking a signal lights its path and writes both people into the detail line', () => {
   const { get } = open({ pair: pairFromMatchList(0).pair });
+  const links = findAll(get('network'), node => node.attrs.class === 't-link');
   const [mine] = findAll(get('network'), node => node.attrs['aria-label']?.startsWith('你的飲料甜度'));
   fire(mine, 'click');
-  assert.equal(get('detail').textContent.split('\n')[0], '你：飲料甜度 約 8 分糖，往「高甜度」推 0.61');
+  assert.deepEqual(get('detail').textContent.split('\n').slice(0, 2),
+    ['你：飲料甜度 約 8 分糖，往「高甜度」推 0.61', '手搖學生 B：飲料甜度 約 10 分糖，往「高甜度」推 0.80']);
+  // The picked signal's own lines light up, and lines away from its traits fade out.
+  assert.ok(links.some(link => link.style.opacity === '1'));
+  assert.ok(links.some(link => link.style.opacity === '.06'));
 });
 ```
 
@@ -1528,6 +1589,9 @@ test('picking a signal grows its purchases on both sides and writes them into th
   assert.deepEqual(get('detail').textContent.split('\n').slice(0, 2), [
     '你：飲料甜度 約 8 分糖（半糖冬瓜青茶 ×7、百香果茶 ×7、花果茶 ×7），往「高甜度」推 0.61',
     '手搖學生 B：飲料甜度 約 10 分糖（冬瓜青茶 ×10、黑糖珍珠鮮奶 ×8、珍珠奶茶 ×6），往「高甜度」推 0.80']);
+  // The picked signal's own lines light up, and lines away from its traits fade out.
+  const lit = findAll(network, node => node.attrs.class === 't-link').map(link => link.style.opacity);
+  assert.ok(lit.includes('1') && lit.includes('.06'));
   assert.equal(bought(), 6);
   assert.equal(network.attrs.viewBox.split(' ')[2], String(width));
   pick('你的常去店家');
@@ -1986,6 +2050,8 @@ Expected: 7 tests pass
 把
 
 ```js
+const { scriptsOf } = require('./built-report.cjs');
+
 const scripts = scriptsOf('taste-page-source');
 const matchScripts = scriptsOf('match-page-source');
 ```
@@ -1993,10 +2059,11 @@ const matchScripts = scriptsOf('match-page-source');
 換成
 
 ```js
+const { html, between, templateSource, scriptsOf } = require('./built-report.cjs');
+
 const scripts = scriptsOf('taste-page-source');
 const matchScripts = scriptsOf('match-page-source');
-const matchData = JSON.parse(between(unescapeHtml(between(html, '<template id="match-page-source">', '</template>')),
-  'const matchReportData = ', '</script>').trim().replace(/;$/, ''));
+const matchData = JSON.parse(between(templateSource('match-page-source'), 'const matchReportData = ', '</script>').trim().replace(/;$/, ''));
 const exported = JSON.parse(between(html, 'const tasteExportData = ', '</script>').trim().replace(/;$/, ''));
 
 // A taste link as the export button writes it for the demo me: the new kind with taste traits, or the old kind.
@@ -2222,17 +2289,11 @@ git commit -m "feat: read new taste links with their taste traits on the friends
 
 ```js
 // Runs the export button of the built report against a few fake elements: the link it writes and what it says.
-const fs = require('node:fs');
-const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
+const { html, between } = require('./built-report.cjs');
 
-const html = fs.readFileSync(path.join(__dirname, '..', 'invoice-insights.html'), 'utf8');
-const between = (text, start, end) => {
-  const from = text.indexOf(start) + start.length;
-  return text.slice(from, text.indexOf(end, from));
-};
 const source = name => between(html, `<script data-source="${name}">`, '</script>');
 const exported = JSON.parse(source('taste-export-data.js').split('const tasteExportData = ')[1].trim().replace(/;$/, ''));
 

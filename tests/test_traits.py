@@ -6,7 +6,7 @@ from pathlib import Path
 
 from src.receipt.demo import build_demo
 from src.receipt.personas import build_friends, build_personas
-from src.receipt.signals import calendar_days, category_counts
+from src.receipt.signals import calendar_days, category_counts, measure
 from src.receipt.traits import (between, build_vector, dated, explain, load_context, population, signal_ids, trait_parts,
                                 trait_value)
 
@@ -261,6 +261,37 @@ class ExplainTests(unittest.TestCase):
         self.assertIsNone(explained["測試乙"])
         with self.assertRaises(ValueError):
             population([*people, {"name": "測試甲", "rows": []}], PERIOD, CONTEXT)
+
+
+class PurchaseTests(unittest.TestCase):
+    def test_each_signal_keeps_the_purchases_it_counted(self):
+        rows = bought(lunches(),
+                      (WORKDAYS[20:23], "測試鮪魚飯糰", 0, 45, "示範超商", HOME),
+                      (WORKDAYS[23:25], "測試全糖紅茶", 1, 40, "測試飲料店", HOME),
+                      (WORKDAYS[25:27], "測試精品手沖", 1, 180, "測試咖啡館", HOME),
+                      (sorted(OFF)[:2], "測試燒肉套餐", 0, 600, "測試海港餐廳", AWAY))
+        purchases = measure(rows, PERIOD, CONTEXT)["purchases"]
+
+        def names(key):
+            return {line["name"] for line in purchases[key]}
+
+        self.assertEqual(set(purchases), set(signal_ids(CONTEXT["traits"])))
+        self.assertEqual(names("sugar_mean"), {"測試全糖紅茶"})
+        self.assertEqual(names("premium_drink_share"), {"測試精品手沖"})
+        self.assertEqual(names("store_meal_share"), {"測試鮪魚飯糰"})
+        self.assertEqual(names("weekday_quick_share"), {"測試鮪魚飯糰"})
+        self.assertEqual(names("shop_meal_share"), {"測試排骨便當", "測試燒肉套餐"})
+        self.assertEqual(names("offday_invoice_share"), {"測試燒肉套餐"})
+        self.assertIn("測試排骨便當", names("repeat_rate"))
+        # Where someone shopped is never a list of purchases.
+        for key in ("away_share", "shop_focus", "new_shop_share", "holiday_trip_share"):
+            self.assertEqual(purchases[key], [], key)
+
+    def test_a_signal_that_cannot_be_measured_keeps_no_purchases(self):
+        measured = measure(bought(lunches()), PERIOD, CONTEXT)
+        self.assertIsNone(measured["signals"]["sugar_mean"])
+        self.assertEqual(measured["purchases"]["sugar_mean"], [])
+        self.assertEqual(len(measured["purchases"]["ready_meal_share"]), 20)
 
 
 class CategoryCountTests(unittest.TestCase):

@@ -131,16 +131,27 @@ def routine(items, paid, period):
     return average(repeat), average(focus), average(one_off)
 
 
-def weekday_quick_share(meals, off):
-    """Workdays with a quick meal that was bought on at least three different workdays, over workdays with a meal."""
+def quick_habit_meals(meals, off):
+    """Workday quick meals whose name was bought on at least three different workdays."""
     workday_meals = [item for item in meals if item["date"] not in off]
     dates = {}
     for item in workday_meals:
         if item["quick"]:
             dates.setdefault(fold(item["name"]), set()).add(item["date"])
     habits = {name for name, seen in dates.items() if len(seen) >= 3}
-    quick = {item["date"] for item in workday_meals if item["quick"] and fold(item["name"]) in habits}
-    return share(len(quick), len({item["date"] for item in workday_meals}))
+    return [item for item in workday_meals if item["quick"] and fold(item["name"]) in habits]
+
+
+def weekday_quick_share(meals, off):
+    """Workdays with a quick meal that was bought on at least three different workdays, over workdays with a meal."""
+    workdays = {item["date"] for item in meals if item["date"] not in off}
+    return share(len({item["date"] for item in quick_habit_meals(meals, off)}), len(workdays))
+
+
+def bill_species(invoice):
+    """The one species a pet-shop bill's pet items name, or None when they name neither or both."""
+    known = {line["species"] for line in invoice["lines"] if line["species"] and (line["pet_food"] or line["pet_supply"])}
+    return known.pop() if len(known) == 1 else None
 
 
 def pet_signals(items, paid, months):
@@ -152,8 +163,7 @@ def pet_signals(items, paid, months):
                     pets[species][kind] += part
     for invoice in paid:
         if invoice["channel"] == "寵物":
-            known = {line["species"] for line in invoice["lines"] if line["species"] and (line["pet_food"] or line["pet_supply"])}
-            for species, part in SPLIT[known.pop() if len(known) == 1 else None]:
+            for species, part in SPLIT[bill_species(invoice)]:
                 pets[species]["visits"] += part
     return {f"pet_{kind}_{species}": pets[species][key] / months
             for species in ("cat", "dog") for kind, key in (("food", "pet_food"), ("supply", "pet_supply"), ("visits", "visits"))}
@@ -233,6 +243,53 @@ def measure(rows, period, context):
         "alcohol_items": count(items, lambda item: item["alcohol"]) / months,
         "bar_visits": visits("酒吧"),
     }
+    # The purchases each signal counted, so the page can name them. Signals about where someone shopped list none.
+    portioned = {key for key, invoice in invoices.items() if invoice["portions"] and invoice["food"] > 0}
+    monthly = Counter((item["date"].year, item["date"].month, fold(item["name"])) for item in items)
+    off_bills = {key for key, invoice in invoices.items() if invoice["total"] > 0 and invoice["date"] in off}
+    pet_bills = {key: bill_species(invoice) for key, invoice in invoices.items()
+                 if invoice["total"] > 0 and invoice["channel"] == "寵物"}
+    other = {"cat": "dog", "dog": "cat"}
+
+    def flagged(flag):
+        return [item for item in items if item[flag]]
+
+    def at(channel):
+        return [item for item in items if item["channel"] == channel]
+
+    behind = {
+        "meal_cost": [item for item in meals if item["invoice"] in portioned],
+        "clearance_share": [item for item in food if item["clearance"]],
+        "premium_drink_share": [item for item in drinks if item["amount"] / max(item["quantity"], 1) >= 100],
+        "store_meal_share": [item for item in meals if item["channel"] == "超商"],
+        "weekday_quick_share": quick_habit_meals(meals, off),
+        "store_clearance_share": [item for item in store_food if item["clearance"]],
+        "shop_meal_share": [item for item in meals if item["channel"] not in NOT_SHOP_MEALS],
+        "fresh_share": [item for item in food if item["cooking"]],
+        "ready_meal_share": meals,
+        "kitchen_per_month": flagged("kitchen"),
+        "sugar_mean": [item for item in drinks if item["sugar"] is not None],
+        "dessert_share": [item for item in food if item["category"] == DESSERT],
+        "repeat_rate": [item for item in items if monthly[(item["date"].year, item["date"].month, fold(item["name"]))] > 1],
+        "sport_visits": [item for item in items if item["category"] == SPORT],
+        "sport_supplies": flagged("sport_supply"), "sport_gear": flagged("sport_gear"),
+        "fuel_visits": at("加油"), "parking_visits": at("停車"), "car_care": flagged("car_care"),
+        "stays": at("住宿"), "long_trips": at("長途交通"),
+        "convenience_share": [item for item in daily if invoices[item["invoice"]]["channel"] == "超商"],
+        "bulk_share": [item for item in daily if item["bulk"]],
+        "small_daily_visits": [item for item in daily if daily_spend[item["invoice"]] < 150],
+        "home_items": flagged("home"), "stationery_items": flagged("stationery"), "select_visits": at("選物"),
+        "tech_items": tech, "tech_spend": tech, "tech_visits": at("3C"),
+        "offday_invoice_share": [item for item in items if item["invoice"] in off_bills],
+        "offday_amount_share": [item for item in items if item["invoice"] in off_bills],
+        "fun_visits": flagged("fun"), "fun_kinds": flagged("fun"),
+        **{f"pet_{kind}_{species}": [item for item in items if item[f"pet_{kind}"] and item["species"] != other[species]]
+           for species in ("cat", "dog") for kind in ("food", "supply")},
+        **{f"pet_visits_{species}": [item for item in items if item["invoice"] in pet_bills
+                                     and pet_bills[item["invoice"]] != other[species]] for species in ("cat", "dog")},
+        "alcohol_items": flagged("alcohol"), "bar_visits": at("酒吧"),
+    }
+    purchases = {key: behind.get(key, []) if value is not None else [] for key, value in signals.items()}
     counts = {
         "items": len(items), "food_items": len(food), "meal_items": len(meals), "store_food_items": len(store_food),
         "known_sugar_drinks": len(sugars),
@@ -242,4 +299,4 @@ def measure(rows, period, context):
     offday_share = len(off) / len(days)
     constants = {"offday_share": offday_share, "offday_double": min(1.0, 2 * offday_share),
                  "long_holiday_share": len(long_weekend) / len(days)}
-    return {"signals": signals, "counts": counts, "constants": constants}
+    return {"signals": signals, "counts": counts, "constants": constants, "purchases": purchases}

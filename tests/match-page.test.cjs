@@ -1,11 +1,11 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { view } = require('../src/web/match-filter.js');
-const { between, templateSource } = require('./built-report.cjs');
+const { embedded } = require('./built-report.cjs');
 
 const MINUS = String.fromCharCode(0x2212);
 // The built demo report keeps the match page, escaped, inside a template element.
-const data = JSON.parse(between(templateSource('match-page-source'), 'const matchReportData = ', '</script>').trim().replace(/;$/, ''));
+const data = embedded('match-page-source', 'matchReportData');
 const summary = cards => cards.map(card => [card.name, card.score]);
 
 test('the demo lists the three sweet-toothed students and two coffee lovers', () => {

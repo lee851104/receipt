@@ -21,7 +21,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 @media(max-width:640px){main{padding-top:20px}.intro h1{font-size:25px}.intro h1 em{display:inline}.intro .eyebrow{font-size:9px}.comparison-overview{grid-template-columns:1fr;gap:12px;padding:16px;margin-bottom:17px}.comparison-overview .overall{border-right:0;border-bottom:1px solid #463435;padding:0 0 12px;display:grid;grid-template-columns:1fr auto;align-items:center}.comparison-overview .score{font-size:52px}.comparison-overview .readout{padding:0}.readout p{font-size:12px}.readout #summary{font-size:13px}.imports{gap:8px}.import-card{padding:10px 12px}.import-title-row span{font-size:9px}}
 .return-report{display:inline-block;color:var(--muted);font-size:12px;text-decoration:none;margin-bottom:14px}.return-report:hover{color:var(--pink)}
 .views{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}.view-button{background:none;border:0;padding:7px 15px;font-size:12px;color:var(--muted);min-height:36px}.view-button[aria-pressed="true"]{background:#2b2626;color:var(--ink)}.view-button:disabled{opacity:.4;cursor:not-allowed}.views-note{font-size:11px;color:var(--muted)}.toolbar-left{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.t-label{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.t-trait,.t-signal{stroke-width:1.4}.t-link,.t-cell{fill:none;stroke-linecap:round;transition:opacity .15s}.t-hit{cursor:pointer;outline:none;transition:opacity .15s}.t-hit:focus-visible .t-signal,.t-hit:focus-visible .t-trait{stroke:#fff;stroke-width:2.5}.t-cell-hit{fill:none;stroke:transparent;stroke-width:14}.t-hit:focus-visible .t-cell-hit{stroke:#fff;stroke-opacity:.35}.t-tip{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.detail-text{white-space:pre-line}.t-buy-line{fill:none;stroke-linecap:round;opacity:.85}.t-buy{fill-opacity:.35;stroke-width:1.2}
+.t-label{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.t-trait,.t-signal{stroke-width:1.4}.t-link,.t-cell{fill:none;stroke-linecap:round;transition:opacity .15s}.t-hit{cursor:pointer;outline:none;transition:opacity .15s}.t-hit:focus-visible .t-signal,.t-hit:focus-visible .t-trait{stroke:#fff;stroke-width:2.5}.t-cell-hit{fill:none;stroke:transparent;stroke-width:14}.t-hit:focus-visible .t-cell-hit{stroke:#fff;stroke-opacity:.35}.t-tip{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.detail-text{white-space:pre-line}.t-buy-line{fill:none;stroke-linecap:round;opacity:.85}.t-buy{fill-opacity:.35;stroke-width:1.2}.t-outer{pointer-events:none}
 </style>
 </head>
 <body>
@@ -197,7 +197,9 @@ function tipText(item,text,inward=false){
  const font=traitGraph.graph.font,mobile=traitGraph.graph.width===TraitNetwork.SHAPES.mobile.width,gap=item.r===undefined?8:item.r+4;
  let x,y,anchor;
  if(mobile){x=item.x+gap;y=item.y+font*.35;anchor='start';}
- else{const leftward=(item.side==='a')!==inward;x=leftward?item.x-gap:item.x+gap;y=item.r===undefined?item.y+(inward?-8:4):item.y-6;anchor=leftward?'end':'start';}
+ else{const leftward=(item.side==='a')!==inward;x=leftward?item.x-gap:item.x+gap;y=item.r===undefined?item.y+(inward?-8:4):item.y-6;anchor=leftward?'end':'start';
+  // The names along the top keep their band: a name that would reach into it hangs below its dot instead.
+  if(TraitNetwork.labelRect(text,font,x,y,anchor).top<TraitNetwork.SHAPES.desktop.top)y=item.y+gap+font;}
  // A name that would run past the edge of the graph hangs on the other side of its dot instead.
  const box=TraitNetwork.labelRect(text,font,x,y,anchor);if(box.right>traitGraph.graph.width){x=item.x-gap;anchor='end';}else if(box.left<0){x=item.x+gap;anchor='start';}
  return el('text',{x:x.toFixed(1),y:y.toFixed(1),'text-anchor':anchor,class:'t-tip','font-size':font},text);
@@ -231,7 +233,7 @@ function lightTraits(indexes,focus){
  for(const trait of traitGraph.traits){const on=lit.has(trait.index);trait.el.style.opacity=on?'1':'.2';if(trait.labelEl)trait.labelEl.style.opacity=on?'1':'.2';}
 }
 function selectSignal(id){
- clearPins();selected='signal:'+id;
+ clearPins();hideHover();selected='signal:'+id;
  const feeds=network.traits.map((trait,index)=>(trait.signals.includes(id)?index:-1)).filter(index=>index>=0);
  lightTraits(feeds,id);
  const label=network.signals.find(signal=>signal.id===id).label,[left,right]=traitPair(),names=sideNames(),parts=traitGraph.graph.result.parts;

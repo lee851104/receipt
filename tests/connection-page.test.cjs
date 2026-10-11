@@ -125,6 +125,23 @@ test('picking a signal grows its purchases on both sides and writes them into th
   assert.equal(bought(), 0);
 });
 
+// Desktop writes both names along the top, so nothing a click adds may reach into that band.
+test('whichever signal is picked, its name and its purchases stay below the names along the top', () => {
+  const { top, font } = require('../src/web/trait-network.js').SHAPES.desktop;
+  const { get } = open({ pair: pairFromMatchList(0).pair });
+  const network = get('network');
+  const signals = findAll(network, node => node.attrs.class === 't-hit' && node.children.some(child => child.attrs.class === 't-signal'));
+  assert.equal(signals.length, 92);
+  for (const signal of signals) {
+    fire(signal, 'mouseenter');
+    fire(signal, 'click');
+    // The signal's name shows once on each side: the name the pointer brought up is gone.
+    assert.equal(findAll(network, node => node.attrs.class === 't-tip' && !node.textContent.includes('×')).length, 2);
+    for (const name of findAll(network, node => node.attrs.class === 't-tip')) assert.ok(Number(name.attrs.y) - font >= top, name.textContent);
+    for (const dot of findAll(network, node => node.attrs.class === 't-buy')) assert.ok(Number(dot.attrs.cy) - Number(dot.attrs.r) >= top);
+  }
+});
+
 test('the friends page opens on 小安 and 小宇 with their taste score', () => {
   const { get } = open();
   assert.equal(get('overall-score').textContent, '+80');

@@ -13,5 +13,7 @@ const unescapeHtml = text => [['&lt;', '<'], ['&gt;', '>'], ['&quot;', '"'], ['&
 const templateSource = id => unescapeHtml(between(html, `<template id="${id}">`, '</template>'));
 // The inline scripts of such a page, in order.
 const scriptsOf = id => [...templateSource(id).matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(match => match[1]);
+// A data constant such a page embeds, such as `matchReportData`, read back.
+const embedded = (id, name) => JSON.parse(between(templateSource(id), `const ${name} = `, '</script>').trim().replace(/;$/, ''));
 
-module.exports = { html, between, templateSource, scriptsOf };
+module.exports = { html, between, templateSource, scriptsOf, embedded };

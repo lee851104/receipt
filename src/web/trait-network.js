@@ -8,9 +8,10 @@
   // Desktop puts the two fans side by side; phones stack them, the left person on top. All sizes are SVG units.
   // `item` places the purchases behind a picked signal: a column `across` from the signal on desktop, a column in a
   // band `beyond` the fans on phones, rows `step` apart, dots from dot[0] to dot[0] + dot[1] across.
+  // Desktop writes the two people's names along the top, above `top`; nothing a click adds goes higher.
   const SHAPES = Object.freeze({
     desktop: Object.freeze({ width: 1200, height: 640, centers: [[430, 325], [770, 325]], stretch: [1, 0.86],
-      near: 110, far: 270, none: 72, ring: 312, stagger: 14, dot: [3.5, 9], font: 13,
+      near: 110, far: 270, none: 72, ring: 312, stagger: 14, dot: [3.5, 9], font: 13, top: 36,
       item: Object.freeze({ across: 60, step: 20, dot: [2.5, 3.5] }) }),
     mobile: Object.freeze({ width: 600, height: 820, centers: [[300, 290], [300, 530]], stretch: [1, 0.9],
       near: 70, far: 190, none: 46, ring: 228, stagger: 12, dot: [5, 11], font: 18,
@@ -18,6 +19,9 @@
   });
   const FAN = 78 * Math.PI / 180;      // each fan opens 78° either side of straight out
   const SPREAD = 0.045;                // radians between neighbouring signals of one trait
+  const SLIDES = 8;                    // half rows a purchase column may slide down or up to find room
+  const REACH = 5;                     // rows a purchase column may step further out to find room
+  const SIGNAL_ROOM = 4;               // a desktop signal dot's radius (3) and a little room around it
   const LABEL_STEPS = 3;               // a crowded label moves outwards this many times before it hides
   const PAD = 3;                       // the gap kept around every label
 
@@ -176,6 +180,23 @@
   // A purchase name the graph can fit: ten letters at most, cut with an ellipsis; the detail line keeps it whole.
   const shortName = name => (Array.from(name).length > 10 ? Array.from(name).slice(0, 9).join('') + '…' : name);
 
+  // What a purchase column on desktop must not cover: the names along the top, this side's dots and its trait labels.
+  function obstacles(side, shape) {
+    const dot = (x, y, r) => ({ left: x - r, right: x + r, top: y - r, bottom: y + r });
+    return [{ left: -Infinity, right: Infinity, top: -Infinity, bottom: shape.top },
+      ...side.signals.map(signal => dot(signal.x, signal.y, SIGNAL_ROOM)),
+      ...side.traits.map(trait => dot(trait.x, trait.y, trait.r)),
+      ...side.traits.filter(trait => trait.labelShown)
+        .map(trait => labelRect(trait.label, shape.font, trait.labelX, trait.labelY, trait.labelAnchor))];
+  }
+
+  // Everything one purchase covers on the graph: its dot and its name.
+  function reach(item, font) {
+    const box = labelRect(item.text, font, item.labelX, item.labelY, item.anchor);
+    return { left: Math.min(box.left, item.x - item.r), right: Math.max(box.right, item.x + item.r),
+      top: Math.min(box.top, item.y - item.r), bottom: Math.max(box.bottom, item.y + item.r) };
+  }
+
   // The purchases behind one signal for each person who has any: a short column of dots outside the signal, most
   // bought first, each with a line into the signal and its name beside it. Desktop stands the column beside the
   // signal, away from the middle; phones stand it in a band above the top fan or below the bottom one.
@@ -188,22 +209,33 @@
       const signal = side.signals.find(entry => entry.id === id), most = Math.max(...list.map(([, count]) => count));
       const rows = list.map(([name, count]) => ({ name, count, text: shortName(name) + ' ×' + count,
         r: dot[0] + dot[1] * count / most, width: 0.7 + 2.2 * count / most }));
-      let x, first, anchor;
+      // Where the column may stand, best first: [x, y of its first row].
+      let spots, anchor;
       if (mobile) {
         // The names must fit inside the phone's width; the band itself only makes the graph taller.
         const widest = Math.max(...rows.map(row => row.r + 5 + textWidth(row.text, shape.font)));
-        x = Math.min(Math.max(signal.x, 20), graph.width - widest - 8);
-        first = side.side === 'a' ? -beyond - (rows.length - 1) * step : graph.height + beyond;
         anchor = 'start';
+        spots = [[Math.min(Math.max(signal.x, 20), graph.width - widest - 8),
+          side.side === 'a' ? -beyond - (rows.length - 1) * step : graph.height + beyond]];
       } else {
-        x = side.side === 'a' ? signal.x - across : signal.x + across;
-        first = signal.y - (rows.length - 1) * step / 2;
+        // Beside the signal and centred on it when there is room; otherwise the column slides down or up half a row at
+        // a time, then steps a row further out and slides again.
+        const out = side.side === 'a' ? -1 : 1, centred = signal.y - (rows.length - 1) * step / 2;
         anchor = side.side === 'a' ? 'end' : 'start';
+        spots = [];
+        for (let far = 0; far <= REACH; far++) {
+          for (let slide = 0; slide <= SLIDES; slide++) {
+            for (const sign of slide ? [1, -1] : [1]) spots.push([signal.x + out * (across + far * step), centred + sign * slide * step / 2]);
+          }
+        }
       }
-      const items = rows.map((row, slot) => {
+      const column = ([x, first]) => rows.map((row, slot) => {
         const y = first + slot * step;
         return { ...row, x, y, anchor, labelX: anchor === 'end' ? x - row.r - 5 : x + row.r + 5, labelY: y + shape.font * 0.35 };
       });
+      const taken = mobile ? [] : obstacles(side, shape);
+      const fits = items => items.every(item => !taken.some(box => overlaps(reach(item, shape.font), box)));
+      const items = column(spots.find(spot => fits(column(spot))) || spots[0]);
       return [{ side: side.side, signal: { x: signal.x, y: signal.y }, items }];
     });
   }
@@ -215,11 +247,11 @@
     for (const signal of data.signals) {
       for (const side of purchases(data, graph, people, signal.id, mobile)) {
         for (const item of side.items) {
-          const box = labelRect(item.text, font, item.labelX, item.labelY, item.anchor);
-          left = Math.min(left, box.left, item.x - item.r);
-          right = Math.max(right, box.right, item.x + item.r);
-          top = Math.min(top, box.top, item.y - item.r);
-          bottom = Math.max(bottom, box.bottom, item.y + item.r);
+          const box = reach(item, font);
+          left = Math.min(left, box.left);
+          right = Math.max(right, box.right);
+          top = Math.min(top, box.top);
+          bottom = Math.max(bottom, box.bottom);
         }
       }
     }

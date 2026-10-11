@@ -246,7 +246,16 @@ test('the purchases behind a signal stand in a short column outside it, most bou
     && item.anchor === 'start' && item.labelX > item.x));
   mine.items.slice(1).forEach((item, k) => assert.ok(item.y > mine.items[k].y));
   assert.ok(theirs.items[0].r > theirs.items[1].r && theirs.items[0].width > theirs.items[1].width);
-  // Nothing bought, nothing drawn: my 超商即期 list is empty, theirs is not.
+  // With room to spare a column stands exactly `across` out, centred on its signal, its rows `step` apart.
+  const { across, step } = TN.SHAPES.desktop.item, at = items => items.map(item => [item.x.toFixed(3), item.y.toFixed(3)]);
+  const spot = (x, ...ys) => ys.map(y => [x.toFixed(3), y.toFixed(3)]);
+  assert.deepEqual(at(mine.items), spot(signal.x - across, signal.y - step, signal.y, signal.y + step));
+  assert.deepEqual(at(theirs.items), spot(theirs.signal.x + across, theirs.signal.y - step / 2, theirs.signal.y + step / 2));
+  // Phones stand my column in the band above the top fan and theirs in the band below the bottom one.
+  const phone = TN.layout(data, me, them, true), { beyond, step: row } = TN.SHAPES.mobile.item;
+  const [up, down] = TN.purchases(data, phone, [me, them], 'sugar_mean', true);
+  assert.deepEqual(up.items.map(item => item.y), [-beyond - 2 * row, -beyond - row, -beyond]);
+  assert.deepEqual(down.items.map(item => item.y), [phone.height + beyond, phone.height + beyond + row]);  // Nothing bought, nothing drawn: my 超商即期 list is empty, theirs is not.
   assert.deepEqual(TN.purchases(data, graph, [me, them], 'clearance', false).map(side => side.side), ['b']);
 });
 
@@ -280,12 +289,42 @@ test('the view box leaves room for every purchase any signal could show, and pho
   // Without any purchases the graph keeps its own size.
   const bare = person => ({ ...person, items: person.items.map(() => []) });
   assert.equal(TN.viewBox(data, TN.layout(data, me, them, false), [bare(me), bare(them)], false), '0 0 1200 640');
+  assert.equal(TN.viewBox(data, TN.layout(data, me, them, true), [bare(me), bare(them)], true), '0 0 600 820');
+});
+
+test('on desktop every column of purchases finds room clear of the names along the top, the dots and the trait labels', () => {
+  const { embedded } = require('./built-report.cjs');
+  const network = embedded('taste-page-source', 'traitNetworkData'), match = embedded('match-page-source', 'matchReportData');
+  const { top, font, item: { across } } = TN.SHAPES.desktop;
+  const dot = (x, y, r) => ({ left: x - r, right: x + r, top: y - r, bottom: y + r });
+  let columns = 0;
+  // A side's columns depend only on that side's person, so drawing each person on both sides covers everyone.
+  for (const person of [match.me, ...match.people, ...Object.values(network.friends)].map(other => TN.validate(other, network))) {
+    const graph = TN.layout(network, person, person, false);
+    for (const signal of network.signals) {
+      for (const column of TN.purchases(network, graph, [person, person], signal.id, false)) {
+        const side = graph.sides.find(entry => entry.side === column.side);
+        const taken = [...side.signals.map(entry => dot(entry.x, entry.y, 3)), ...side.traits.map(trait => dot(trait.x, trait.y, trait.r)),
+          ...shownRects(side)];
+        for (const item of column.items) {
+          const marks = [TN.labelRect(item.text, font, item.labelX, item.labelY, item.anchor), dot(item.x, item.y, item.r)];
+          assert.ok(marks.every(mark => mark.top >= top && !taken.some(box => overlap(box, mark))), `${signal.id} ${item.text}`);
+          // However far it moved, the column still stands outside its signal.
+          assert.ok(Math.abs(item.x - column.signal.x) > across - 0.001, `${signal.id} ${item.text}`);
+        }
+        columns++;
+      }
+    }
+  }
+  assert.equal(columns, 1092);
 });
 
 test('a long purchase name is cut to ten letters on the graph', () => {
   assert.equal(TN.shortName('半糖冬瓜青茶'), '半糖冬瓜青茶');
   assert.equal(TN.shortName('測'.repeat(10)), '測'.repeat(10));
   assert.equal(TN.shortName('測'.repeat(11)), '測'.repeat(9) + '…');
+  // Letters, not UTF-16 units: a character outside the basic plane still counts once.
+  assert.equal(TN.shortName('𠮷'.repeat(10)), '𠮷'.repeat(10));
 });
 
 test('a cell sentence gives both values, the points it added or took, and its line', () => {

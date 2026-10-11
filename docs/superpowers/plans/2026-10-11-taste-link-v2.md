@@ -43,11 +43,11 @@
   | Task 3 | 64 | 60 |
   | Task 4 | 76 | 60 |
   | Task 5 | 76 | 60 |
-  | Task 6 | 76 | 61 |
-  | Task 7 | 76 | 65 |
-  | Task 8 | 76 | 68 |
-  | Task 9 | 76 | 71 |
-  | Task 10 | 76 | 72 |
+  | Task 6 | 76 | 62 |
+  | Task 7 | 76 | 66 |
+  | Task 8 | 76 | 69 |
+  | Task 9 | 76 | 72 |
+  | Task 10 | 76 | 73 |
 
 - `python scripts/build_report.py` 每次都印出同樣三行（配對與分數完全不變）：
   ```text
@@ -75,7 +75,7 @@
 
 | 檔案 | 動作 | 責任 |
 |---|---|---|
-| `tests/connection-page.test.cjs` | 新增 | 連線頁的煙霧測試：用假 DOM 跑報告裡的配對頁與連線頁 |
+| `tests/connection-page.test.cjs` | 新增 | 連線頁的煙霧測試：用假 DOM 跑報告裡的配對頁與連線頁，並把報告嵌入的每個人跑一次品味資料檢查 |
 | `tests/built-report.cjs` | 新增 | 測試共用：讀產生的報告與 `<template>` 裡的頁面（`match-page`、`connection-page`、`taste-export` 三個測試共用） |
 | `src/web/trait-network.js` | 修改 | 收緊 `validate`、檢查品項；品項點的位置與留白（`purchases`、`viewBox`、`shortName`）；說明列寫出品項 |
 | `src/receipt/signals.py` | 修改 | `measure` 多回傳 `purchases`（每個訊號背後的消費） |
@@ -442,7 +442,7 @@ Expected: 16 tests pass
 - [ ] **Step 5: Rebuild and run every Node test**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs`
-Expected: 三行輸出同「試做結果」；60 tests pass（煙霧測試證明 40 位虛構用戶與朋友的真實資料都過得了新規則）。
+Expected: 三行輸出同「試做結果」；60 tests pass（煙霧測試只開一對；報告裡的 44 人都過得了新規則，由 Task 6 補的測試檢查）。
 
 - [ ] **Step 6: Commit**
 
@@ -1402,12 +1402,12 @@ git commit -m "feat: embed everyone's purchase lists and my taste for the export
 
 ### Task 6: 檢查品項、配對卡片交出品項
 
-`validate` 多檢查品項（規格 §3）：長度等於訊號數；不列品項的訊號必須是 `null`；其他訊號最多 3 筆 `[名稱, 次數]`，名稱去掉頭尾空白後 1～20 字、不含控制字元、同一個訊號裡不重複，次數是 1～10,000 的整數。配對卡片把品項交給連線頁；示範朋友的檢查包 try/catch。Task 1 的煙霧測試從配對頁拿資料，所以配對頁漏傳品項時它會失敗。
+`validate` 多檢查品項（規格 §3）：長度等於訊號數；不列品項的訊號必須是 `null`；其他訊號最多 3 筆 `[名稱, 次數]`，名稱去掉頭尾空白後 1～20 字、不含控制字元、同一個訊號裡不重複，次數是 1～10,000 的整數。配對卡片把品項交給連線頁；示範朋友的檢查包 try/catch。Task 1 的煙霧測試從配對頁拿資料，所以配對頁漏傳品項時它會失敗。朋友頁會默默略過檢查不合格的朋友，所以另加一個測試，把報告嵌入的 44 人（我、40 位虛構用戶、3 位朋友）都跑一次檢查（審查後補上）。
 
 **Files:**
 - Modify: `src/web/trait-network.js`（`validate`）
 - Modify: `src/web/match.html`、`src/web/taste-comparison.html`
-- Test: `tests/trait-network.test.cjs`
+- Test: `tests/trait-network.test.cjs`、`tests/connection-page.test.cjs`
 - Regenerate: `invoice-insights.html`
 
 **Interfaces:**
@@ -1548,15 +1548,35 @@ Expected: 17 tests pass
 }
 ```
 
-- [ ] **Step 6: Rebuild and run every Node test**
+- [ ] **Step 6: Check everyone the report embeds**
+
+在 `tests/connection-page.test.cjs` 的最後一個測試（`test('the friends page opens on 小安 and 小宇 with their taste score', …)`，以 `});` 結尾）後面加上：
+
+```js
+
+// The friends page quietly drops a friend whose data fails the check, so this test is what notices one.
+test('everyone the report embeds passes the check the graph runs before drawing', () => {
+  const TN = require('../src/web/trait-network.js');
+  const { between, templateSource } = require('./built-report.cjs');
+  const constant = (page, name) => JSON.parse(between(templateSource(page), `const ${name} = `, '</script>').trim().replace(/;$/, ''));
+  const network = constant('taste-page-source', 'traitNetworkData'), match = constant('match-page-source', 'matchReportData');
+  const people = [['我', match.me], ...match.people.map(person => [person.name, person]), ...Object.entries(network.friends)];
+  assert.equal(people.length, 44);
+  for (const [name, person] of people) assert.doesNotThrow(() => TN.validate(person, network), name);
+});
+```
+
+檔案開頭的 `require('./built-report.cjs')` 那行先不動（Task 8 會改它，並讓這個測試改用檔案開頭讀好的資料）。試做時確認過：把小林的第一份品項清單改成 4 筆，只有這個測試失敗，訊息寫出「小林」。
+
+- [ ] **Step 7: Rebuild and run every Node test**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs`
-Expected: 61 tests pass（煙霧測試的大字仍是 +71、+80）
+Expected: 62 tests pass（煙霧測試的大字仍是 +71、+80）
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/web/trait-network.js src/web/match.html src/web/taste-comparison.html tests/trait-network.test.cjs invoice-insights.html
+git add src/web/trait-network.js src/web/match.html src/web/taste-comparison.html tests/trait-network.test.cjs tests/connection-page.test.cjs invoice-insights.html
 git commit -m "feat: check every purchase list and hand it from the match card to the graph" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
@@ -2028,7 +2048,7 @@ if(network){
 - [ ] **Step 6: Rebuild and run every Node test**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs`
-Expected: 65 tests pass
+Expected: 66 tests pass
 
 - [ ] **Step 7: Commit**
 
@@ -2260,6 +2280,24 @@ test('an old link, a thin report and a broken link each say why there is no tast
 });
 ```
 
+最後一個測試（Task 6 補的 `everyone the report embeds passes the check the graph runs before drawing`）改用檔案開頭讀好的資料：把
+
+```js
+  const TN = require('../src/web/trait-network.js');
+  const { between, templateSource } = require('./built-report.cjs');
+  const constant = (page, name) => JSON.parse(between(templateSource(page), `const ${name} = `, '</script>').trim().replace(/;$/, ''));
+  const network = constant('taste-page-source', 'traitNetworkData'), match = constant('match-page-source', 'matchReportData');
+  const people = [['我', match.me], ...match.people.map(person => [person.name, person]), ...Object.entries(network.friends)];
+```
+
+換成
+
+```js
+  const TN = require('../src/web/trait-network.js');
+  const network = JSON.parse(between(templateSource('taste-page-source'), 'const traitNetworkData = ', '</script>').trim().replace(/;$/, ''));
+  const people = [['我', matchData.me], ...matchData.people.map(person => [person.name, person]), ...Object.entries(network.friends)];
+```
+
 - [ ] **Step 6: Run the smoke test to verify it fails**
 
 Run: `python scripts/build_report.py && node --test tests/connection-page.test.cjs`
@@ -2378,7 +2416,7 @@ if(network){
 - [ ] **Step 8: Rebuild and run everything**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs && python -m unittest discover -s tests`
-Expected: 68 tests pass；76 tests OK
+Expected: 69 tests pass；76 tests OK
 
 - [ ] **Step 9: Commit**
 
@@ -2559,7 +2597,7 @@ Expected: 3 failures（按鈕仍是停用）
 - [ ] **Step 5: Rebuild and run every Node test**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs`
-Expected: 71 tests pass
+Expected: 72 tests pass
 
 - [ ] **Step 6: Commit**
 
@@ -2725,7 +2763,7 @@ Expected: 第一行是 `.gitignore:…:/report-data.js	report-data.js`；`git st
 - [ ] **Step 6: Rebuild and run everything**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs && python -m unittest discover -s tests`
-Expected: 三行輸出同「試做結果」；72 tests pass；76 tests OK
+Expected: 三行輸出同「試做結果」；73 tests pass；76 tests OK
 
 - [ ] **Step 7: Commit**
 
@@ -2744,7 +2782,7 @@ Run: `python -m unittest discover -s tests`
 Expected: 76 tests OK
 
 Run: `node --test tests/*.test.cjs`
-Expected: 72 tests pass
+Expected: 73 tests pass
 
 - [ ] **Step 2: 產生結果可重現、只動到預期的檔案**
 

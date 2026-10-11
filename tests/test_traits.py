@@ -287,6 +287,13 @@ class PurchaseTests(unittest.TestCase):
         for key in ("away_share", "shop_focus", "new_shop_share", "holiday_trip_share"):
             self.assertEqual(purchases[key], [], key)
 
+    def test_a_refunded_bill_is_no_visit_and_lists_nothing(self):
+        rows = bought(lunches(), (WORKDAYS[20:21], "測試汽油", 6, 500, "測試加油站", HOME))
+        rows.append({**rows[-1], "name": "測試退款", "amount": -600})
+        measured = measure(rows, PERIOD, CONTEXT)
+        self.assertEqual(measured["signals"]["fuel_visits"], 0)
+        self.assertEqual(measured["purchases"]["fuel_visits"], [])
+
     def test_a_signal_that_cannot_be_measured_keeps_no_purchases(self):
         measured = measure(bought(lunches()), PERIOD, CONTEXT)
         self.assertIsNone(measured["signals"]["sugar_mean"])

@@ -170,21 +170,22 @@ def pet_signals(items, paid, months):
 
 
 def measure(rows, period, context):
-    """Raw signals (None when they cannot be measured), the counts traits require, and calendar constants."""
+    """Raw signals (None when they cannot be measured), the counts traits require, calendar constants, and the
+    purchases each signal counted."""
     days, off, long_weekend = calendar_days(period, context["calendar"])
     months = len(period)
     lines, invoices = gather(rows, context)
     items = valid_items(lines)
     paid = [invoice for invoice in invoices.values() if invoice["total"] > 0]
+    paid_bills = {key for key, invoice in invoices.items() if invoice["total"] > 0}
     food = [item for item in items if item["food"]]
     meals = [item for item in items if item["category"] == MEAL]
     drinks = [item for item in items if item["category"] == DRINK]
     daily = [item for item in items if item["category"] == DAILY]
     tech = [item for item in items if item["category"] == TECH]
-    sugars = [item["sugar"] for item in drinks if item["sugar"] is not None]
     store_food = [item for item in food if item["channel"] == "超商"]
-    costs = [invoice["food"] / invoice["portions"] for invoice in invoices.values()
-             if invoice["portions"] and invoice["food"] > 0]
+    portioned = {key: invoice for key, invoice in invoices.items() if invoice["portions"] and invoice["food"] > 0}
+    costs = [invoice["food"] / invoice["portions"] for invoice in portioned.values()]
     located = [invoice for invoice in paid if invoice["district"]]
     home = home_cities(located)
     away = [invoice for invoice in located if invoice["district"][:3] not in home] if home else []
@@ -193,70 +194,25 @@ def measure(rows, period, context):
     for item in daily:
         daily_spend[item["invoice"]] += item["amount"]
     store_bills = [invoices[key] for key in daily_spend if invoices[key]["channel"] in STORES]
-    fun = {}
-    for item in items:
-        if item["fun"]:
-            fun.setdefault(item["invoice"], set()).add(item["fun"])
+    off_bills = {key: invoice for key, invoice in invoices.items() if key in paid_bills and invoice["date"] in off}
+    pet_bills = {key: bill_species(invoice) for key, invoice in invoices.items() if key in paid_bills and invoice["channel"] == "寵物"}
+    monthly = Counter((item["date"].year, item["date"].month, fold(item["name"])) for item in items)
     spent = sum(invoice["total"] for invoice in paid)
     repeat_rate, shop_focus, new_shop_share = routine(items, paid, period)
+    other = {"cat": "dog", "dog": "cat"}
 
     def visits(channel):
         return count(paid, lambda invoice: invoice["channel"] == channel) / months
-
-    signals = {
-        "meal_cost": median(costs) if len(costs) >= 3 else None,
-        "clearance_share": share(count(food, lambda item: item["clearance"]), len(food)),
-        "premium_drink_share": share(count(drinks, lambda item: item["amount"] / max(item["quantity"], 1) >= 100), len(drinks)),
-        "store_meal_share": share(count(meals, lambda item: item["channel"] == "超商"), len(meals)),
-        "weekday_quick_share": weekday_quick_share(meals, off),
-        "store_clearance_share": share(count(store_food, lambda item: item["clearance"]), len(store_food)),
-        "shop_meal_share": share(count(meals, lambda item: item["channel"] not in NOT_SHOP_MEALS), len(meals)),
-        "fresh_share": share(count(food, lambda item: item["cooking"]), len(food)),
-        "ready_meal_share": share(len(meals), len(food)),
-        "kitchen_per_month": count(items, lambda item: item["kitchen"]) / months,
-        "sugar_mean": mean(sugars) if sugars else None,
-        "dessert_share": share(count(food, lambda item: item["category"] == DESSERT), len(food)),
-        "repeat_rate": repeat_rate, "shop_focus": shop_focus, "new_shop_share": new_shop_share,
-        "sport_visits": len({item["invoice"] for item in items if item["category"] == SPORT}) / months,
-        "sport_supplies": count(items, lambda item: item["sport_supply"]) / months,
-        "sport_gear": count(items, lambda item: item["sport_gear"]) / months,
-        "fuel_visits": visits("加油"), "parking_visits": visits("停車"),
-        "car_care": count(items, lambda item: item["car_care"]) / months,
-        "away_share": share(len(away), len(located)) if home else None,
-        "stays": visits("住宿"), "long_trips": visits("長途交通"),
-        "convenience_share": share(count(store_bills, lambda bill: bill["channel"] == "超商"), len(store_bills))
-        if len(store_bills) >= 2 else None,
-        "bulk_share": share(count(daily, lambda item: item["bulk"]), len(daily)),
-        "small_daily_visits": count(daily_spend.values(), lambda amount: amount < 150) / months,
-        "home_items": count(items, lambda item: item["home"]) / months,
-        "stationery_items": count(items, lambda item: item["stationery"]) / months,
-        "select_visits": visits("選物"),
-        "tech_items": len(tech) / months,
-        "tech_spend": sum(min(item["amount"], 3000) for item in tech) / months,
-        "tech_visits": visits("3C"),
-        "offday_invoice_share": share(count(paid, lambda invoice: invoice["date"] in off), len(paid)),
-        "offday_amount_share": share(sum(invoice["total"] for invoice in paid if invoice["date"] in off), spent),
-        "holiday_trip_share": share(len(trips & long_weekend), len(trips)),
-        "fun_visits": len(fun) / months,
-        "fun_kinds": len(set().union(*fun.values())),
-        **pet_signals(items, paid, months),
-        "alcohol_items": count(items, lambda item: item["alcohol"]) / months,
-        "bar_visits": visits("酒吧"),
-    }
-    # The purchases each signal counted, so the page can name them. Signals about where someone shopped list none.
-    portioned = {key for key, invoice in invoices.items() if invoice["portions"] and invoice["food"] > 0}
-    monthly = Counter((item["date"].year, item["date"].month, fold(item["name"])) for item in items)
-    off_bills = {key for key, invoice in invoices.items() if invoice["total"] > 0 and invoice["date"] in off}
-    pet_bills = {key: bill_species(invoice) for key, invoice in invoices.items()
-                 if invoice["total"] > 0 and invoice["channel"] == "寵物"}
-    other = {"cat": "dog", "dog": "cat"}
 
     def flagged(flag):
         return [item for item in items if item[flag]]
 
     def at(channel):
-        return [item for item in items if item["channel"] == channel]
+        # Only paid bills count as visits, so only their purchases are listed.
+        return [item for item in items if item["channel"] == channel and item["invoice"] in paid_bills]
 
+    # The purchases each signal counts, so the page can name them. Most signals below are worked out from these
+    # very lists, so each rule is written once. Signals about where someone shopped or travelled list nothing.
     behind = {
         "meal_cost": [item for item in meals if item["invoice"] in portioned],
         "clearance_share": [item for item in food if item["clearance"]],
@@ -271,10 +227,11 @@ def measure(rows, period, context):
         "sugar_mean": [item for item in drinks if item["sugar"] is not None],
         "dessert_share": [item for item in food if item["category"] == DESSERT],
         "repeat_rate": [item for item in items if monthly[(item["date"].year, item["date"].month, fold(item["name"]))] > 1],
+        "shop_focus": [], "new_shop_share": [],
         "sport_visits": [item for item in items if item["category"] == SPORT],
         "sport_supplies": flagged("sport_supply"), "sport_gear": flagged("sport_gear"),
         "fuel_visits": at("加油"), "parking_visits": at("停車"), "car_care": flagged("car_care"),
-        "stays": at("住宿"), "long_trips": at("長途交通"),
+        "away_share": [], "stays": at("住宿"), "long_trips": at("長途交通"),
         "convenience_share": [item for item in daily if invoices[item["invoice"]]["channel"] == "超商"],
         "bulk_share": [item for item in daily if item["bulk"]],
         "small_daily_visits": [item for item in daily if daily_spend[item["invoice"]] < 150],
@@ -282,6 +239,7 @@ def measure(rows, period, context):
         "tech_items": tech, "tech_spend": tech, "tech_visits": at("3C"),
         "offday_invoice_share": [item for item in items if item["invoice"] in off_bills],
         "offday_amount_share": [item for item in items if item["invoice"] in off_bills],
+        "holiday_trip_share": [],
         "fun_visits": flagged("fun"), "fun_kinds": flagged("fun"),
         **{f"pet_{kind}_{species}": [item for item in items if item[f"pet_{kind}"] and item["species"] != other[species]]
            for species in ("cat", "dog") for kind in ("food", "supply")},
@@ -289,10 +247,54 @@ def measure(rows, period, context):
                                      and pet_bills[item["invoice"]] != other[species]] for species in ("cat", "dog")},
         "alcohol_items": flagged("alcohol"), "bar_visits": at("酒吧"),
     }
-    purchases = {key: behind.get(key, []) if value is not None else [] for key, value in signals.items()}
+
+    def bills(key):
+        return {item["invoice"] for item in behind[key]}
+
+    signals = {
+        "meal_cost": median(costs) if len(costs) >= 3 else None,
+        "clearance_share": share(len(behind["clearance_share"]), len(food)),
+        "premium_drink_share": share(len(behind["premium_drink_share"]), len(drinks)),
+        "store_meal_share": share(len(behind["store_meal_share"]), len(meals)),
+        "weekday_quick_share": weekday_quick_share(meals, off),
+        "store_clearance_share": share(len(behind["store_clearance_share"]), len(store_food)),
+        "shop_meal_share": share(len(behind["shop_meal_share"]), len(meals)),
+        "fresh_share": share(len(behind["fresh_share"]), len(food)),
+        "ready_meal_share": share(len(meals), len(food)),
+        "kitchen_per_month": len(behind["kitchen_per_month"]) / months,
+        "sugar_mean": mean(item["sugar"] for item in behind["sugar_mean"]) if behind["sugar_mean"] else None,
+        "dessert_share": share(len(behind["dessert_share"]), len(food)),
+        "repeat_rate": repeat_rate, "shop_focus": shop_focus, "new_shop_share": new_shop_share,
+        "sport_visits": len(bills("sport_visits")) / months,
+        "sport_supplies": len(behind["sport_supplies"]) / months,
+        "sport_gear": len(behind["sport_gear"]) / months,
+        "fuel_visits": visits("加油"), "parking_visits": visits("停車"),
+        "car_care": len(behind["car_care"]) / months,
+        "away_share": share(len(away), len(located)) if home else None,
+        "stays": visits("住宿"), "long_trips": visits("長途交通"),
+        "convenience_share": share(len(bills("convenience_share")), len(store_bills)) if len(store_bills) >= 2 else None,
+        "bulk_share": share(len(behind["bulk_share"]), len(daily)),
+        "small_daily_visits": len(bills("small_daily_visits")) / months,
+        "home_items": len(behind["home_items"]) / months,
+        "stationery_items": len(behind["stationery_items"]) / months,
+        "select_visits": visits("選物"),
+        "tech_items": len(tech) / months,
+        "tech_spend": sum(min(item["amount"], 3000) for item in tech) / months,
+        "tech_visits": visits("3C"),
+        "offday_invoice_share": share(len(off_bills), len(paid)),
+        "offday_amount_share": share(sum(invoice["total"] for invoice in off_bills.values()), spent),
+        "holiday_trip_share": share(len(trips & long_weekend), len(trips)),
+        "fun_visits": len(bills("fun_visits")) / months,
+        "fun_kinds": len({item["fun"] for item in behind["fun_kinds"]}),
+        **pet_signals(items, paid, months),
+        "alcohol_items": len(behind["alcohol_items"]) / months,
+        "bar_visits": visits("酒吧"),
+    }
+    # A signal that cannot be measured lists nothing; a signal missing from `behind` fails here instead of listing nothing.
+    purchases = {key: behind[key] if value is not None else [] for key, value in signals.items()}
     counts = {
         "items": len(items), "food_items": len(food), "meal_items": len(meals), "store_food_items": len(store_food),
-        "known_sugar_drinks": len(sugars),
+        "known_sugar_drinks": len(behind["sugar_mean"]),
         "district_invoices": len(located), "daily_items": len(daily), "invoices": len(paid),
         "trip_days": len(trips), "long_holidays": 1 if long_weekend else 0,
     }

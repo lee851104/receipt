@@ -30,11 +30,15 @@ test('the export button is ready and its panel says what a link carries', () => 
   assert.match(html, /<button id="export-taste" type="button">匯出我的品味連結<\/button>/);
   assert.doesNotMatch(html, /功能準備中/);
   assert.match(html, /<h2>分享品味，從一個連結開始。<\/h2>/);
+  // The fake page below makes any element on request, so the real page must be shown to have the two new ones.
+  for (const id of ['taste-export-about', 'taste-export-names']) assert.equal(html.split(`id="${id}"`).length, 2, id);
 });
 
 test('the export writes a new taste link with my taste traits and lists the names friends will see', () => {
   const get = open();
-  assert.match(get('taste-export-about').textContent, /^連結包含暱稱、月份、10 類消費筆數、17 項品味特質、各消費訊號的彙總值/);
+  assert.equal(get('taste-export-about').textContent, '連結包含暱稱、月份、10 類消費筆數、17 項品味特質、各消費訊號的彙總值（例如每餐平均花費、每月 3C 花費、'
+    + '每月次數），以及每個訊號最常買的品名；不包含店名、行政區、地址、日期、單筆金額或發票號碼。品名裡的地名會拿掉，住宿只寫「旅館住宿」。'
+    + '拿到連結的人都讀得到這些內容；連結沒有加密。');
   click(get('export-taste'));
   assert.equal(get('taste-export-preview').textContent, '虛構示範 · 2026-03、2026-04 · 97 筆已分類品項 · 17 項品味特質');
   assert.equal(get('taste-export-names').textContent, '朋友會看到這些品名（16 個）：蔬食餐盒、番茄燉飯、蔬菜咖哩、綜合蔬菜箱、有機蔬菜、'
@@ -48,8 +52,18 @@ test('the export writes a new taste link with my taste traits and lists the name
 
 test('a report too thin for taste traits exports the category counts and says so', () => {
   const get = open({ taste: null });
+  assert.equal(get('taste-export-about').textContent, '連結包含暱稱、月份與 10 類消費筆數；不包含品味特質、品名、店名、行政區、地址、日期、單筆金額或發票號碼。'
+    + '拿到連結的人都讀得到這些內容；連結沒有加密。');
   click(get('export-taste'));
   assert.match(get('taste-export-preview').textContent, / · 97 筆已分類品項 · 品味特質資料不足$/);
   assert.equal(get('taste-export-names').textContent, '這份報告的資料還不夠算出品味特質，朋友只能看品項細節。');
   assert.equal(decode(get('taste-link').value).traits, null);
+});
+
+test('taste traits without any purchase names say the link holds no names', () => {
+  const get = open({ taste: { ...exported.taste, items: exported.taste.items.map(list => (list === null ? null : [])) } });
+  assert.equal(get('taste-export-about').textContent, '連結包含暱稱、月份、10 類消費筆數、17 項品味特質與各消費訊號的彙總值（例如每餐平均花費、每月 3C 花費、'
+    + '每月次數）；不包含品名、店名、行政區、地址、日期、單筆金額或發票號碼。拿到連結的人都讀得到這些內容；連結沒有加密。');
+  click(get('export-taste'));
+  assert.equal(get('taste-export-names').textContent, '連結裡沒有品名。');
 });

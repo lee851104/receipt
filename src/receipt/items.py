@@ -9,6 +9,8 @@ TOP = 3       # purchases listed per signal
 # What a removed place name may leave behind: empty brackets, and separators at either edge.
 EMPTY_BRACKETS = re.compile(r"\(\s*\)|（\s*）|\[\s*\]|【\s*】|「\s*」|『\s*』|〔\s*〕")
 EDGES = re.compile(r"^[\s\-–—·・|/／,，、:：]+|[\s\-–—·・|/／,，、:：]+$")
+# Tabs, line breaks and other control characters in a name become one space; the browser refuses names holding them.
+SPACES = re.compile(r"[\s\x00-\x1f\x7f]+")
 
 
 def place_words(rows, context):
@@ -43,7 +45,7 @@ def label(line, words, context):
         text = line["name"] + line["merchant"]
         return next((kind for kind, keywords in vocabulary["transport_kinds"] if has(text, keywords)),
                     vocabulary["generic_labels"]["長途交通"])
-    name = line["name"].removeprefix("示範").strip()
+    name = SPACES.sub(" ", line["name"]).strip().removeprefix("示範").strip()
     rest = without_places(name, words)
     # Only a removed place leaves anything to tidy; brackets, % or + in an ordinary name stay as they are.
     if rest != name:

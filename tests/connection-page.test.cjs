@@ -141,11 +141,15 @@ test('whichever signal is picked, its name and its purchases stay below the name
   const network = get('network');
   const signals = findAll(network, node => node.attrs.class === 't-hit' && node.children.some(child => child.attrs.class === 't-signal'));
   assert.equal(signals.length, 92);
+  const names = () => findAll(network, node => node.attrs.class === 't-tip' && !node.textContent.includes('×')).length;
   for (const signal of signals) {
     fire(signal, 'mouseenter');
     fire(signal, 'click');
-    // The signal's name shows once on each side: the name the pointer brought up is gone.
-    assert.equal(findAll(network, node => node.attrs.class === 't-tip' && !node.textContent.includes('×')).length, 2);
+    // The signal's name shows once on each side: the name the pointer brought up is gone, and coming back brings none.
+    assert.equal(names(), 2);
+    fire(signal, 'mouseleave');
+    fire(signal, 'mouseenter');
+    assert.equal(names(), 2);
     for (const name of findAll(network, node => node.attrs.class === 't-tip')) assert.ok(Number(name.attrs.y) - font >= top, name.textContent);
     for (const dot of findAll(network, node => node.attrs.class === 't-buy')) assert.ok(Number(dot.attrs.cy) - Number(dot.attrs.r) >= top);
   }

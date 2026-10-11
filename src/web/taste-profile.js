@@ -5,6 +5,8 @@
  const schema='receipt-taste/categories-v1';
  // New links add taste traits; old ones carry the category counts alone and still read.
  const traitsSchema='receipt-taste/traits-v2';
+ // The longest link a page reads; the export never hands out a longer one.
+ const LONGEST=12000;
  function validate(value){
   if(!value||(value.schema!==schema&&value.schema!==traitsSchema))throw new Error('這不是支援的品味連結版本，請回報告重新產生。');
   if(typeof value.name!=='string'||!value.name.trim()||value.name.length>24)throw new Error('暱稱需為 1–24 個字元。');
@@ -40,10 +42,12 @@
   if(!['file:','http:','https:'].includes(url.protocol))throw new Error('請從本機檔案或網頁開啟報告。');
   const bytes=new TextEncoder().encode(JSON.stringify(validate(profile)));
   const token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-  url.hash='taste='+token;return url.href;
+  url.hash='taste='+token;
+  if(url.href.length>LONGEST)throw new Error('這份品味連結超過 '+LONGEST.toLocaleString('en-US')+' 字元，朋友的比較頁讀不進來。');
+  return url.href;
  }
  function fromURL(text){
-  if(typeof text!=='string'||text.length>12000)throw new Error('連結太長或格式不正確。');
+  if(typeof text!=='string'||text.length>LONGEST)throw new Error('連結太長或格式不正確。');
   const hash=text.slice(text.indexOf('#')+1),token=new URLSearchParams(hash).get('taste');
   if(!text.includes('#')||!token||!/^[\w-]+$/.test(token))throw new Error('找不到品味資料，請貼上報告產生的完整連結。');
   try{

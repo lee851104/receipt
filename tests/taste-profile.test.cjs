@@ -51,3 +51,7 @@ test('a match pair carries two valid profiles and hands their taste traits on un
  assert.deepEqual(taste.fromPair({left:{...side('你',false),traits:undefined},right:side('A',true)}).traits,[null,{vector:[0.5]}]);
  for(const invalid of [null,{left:side('你',false)},{left:side('你',false),right:{...side('A',true),counts:[1]}}])assert.throws(()=>taste.fromPair(invalid));
 });
+test('the export never hands out a link longer than a page reads',()=>{
+ const p=taste.fromReport(fixture,'小明',{vector:[],filler:'品'.repeat(4000)});
+ assert.throws(()=>taste.toURL(p,'https://example.test/receipt/invoice-insights.html'),/超過 12,000 字元/);
+});

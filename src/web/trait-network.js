@@ -6,8 +6,9 @@
   const cards = node ? require('./match-filter.js') : root.MatchFilter;
 
   // Desktop puts the two fans side by side; phones stack them, the left person on top. All sizes are SVG units.
-  // `item` places the purchases behind a picked signal: a column `across` from the signal on desktop, a column in a
-  // band `beyond` the fans on phones, rows `step` apart, dots from dot[0] to dot[0] + dot[1] across.
+  // `item` places the purchases behind a picked signal: a column `across` from the signal on desktop (slid along or
+  // stepped further out when that spot is taken), a column in a band `beyond` the fans on phones, rows `step` apart,
+  // dots from dot[0] to dot[0] + dot[1] across.
   // Desktop writes the two people's names along the top, above `top`; nothing a click adds goes higher.
   const SHAPES = Object.freeze({
     desktop: Object.freeze({ width: 1200, height: 640, centers: [[430, 325], [770, 325]], stretch: [1, 0.86],

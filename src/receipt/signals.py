@@ -291,6 +291,8 @@ def measure(rows, period, context):
         "bar_visits": visits("酒吧"),
     }
     # A signal that cannot be measured lists nothing; a signal missing from `behind` fails here instead of listing nothing.
+    if behind.keys() != signals.keys():
+        raise KeyError(sorted(behind.keys() ^ signals.keys()))
     purchases = {key: behind[key] if value is not None else [] for key, value in signals.items()}
     counts = {
         "items": len(items), "food_items": len(food), "meal_items": len(meals), "store_food_items": len(store_food),

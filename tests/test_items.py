@@ -67,6 +67,10 @@ class LabelTests(unittest.TestCase):
         self.assertEqual(self.name("星巴克那堤", category=1), "星巴克那堤")
         self.assertEqual(self.name("示範半糖冬瓜青茶", category=1), "半糖冬瓜青茶")
 
+    def test_tabs_line_breaks_and_runs_of_spaces_become_one_space(self):
+        self.assertEqual(self.name("半糖\t冬瓜\n\n青茶", category=1), "半糖 冬瓜 青茶")
+        self.assertEqual(self.name("  示範半糖冬瓜青茶\x7f", category=1), "半糖冬瓜青茶")
+
     def test_a_long_name_is_cut_at_twenty_letters(self):
         self.assertEqual(self.name("測" * 20), "測" * 20)
         self.assertEqual(self.name("測" * 25), "測" * 19 + "…")

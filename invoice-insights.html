@@ -535,6 +535,8 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
  const schema=&#x27;receipt-taste/categories-v1&#x27;;
  // New links add taste traits; old ones carry the category counts alone and still read.
  const traitsSchema=&#x27;receipt-taste/traits-v2&#x27;;
+ // The longest link a page reads; the export never hands out a longer one.
+ const LONGEST=12000;
  function validate(value){
   if(!value||(value.schema!==schema&amp;&amp;value.schema!==traitsSchema))throw new Error(&#x27;這不是支援的品味連結版本，請回報告重新產生。&#x27;);
   if(typeof value.name!==&#x27;string&#x27;||!value.name.trim()||value.name.length&gt;24)throw new Error(&#x27;暱稱需為 1–24 個字元。&#x27;);
@@ -570,10 +572,12 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
   if(![&#x27;file:&#x27;,&#x27;http:&#x27;,&#x27;https:&#x27;].includes(url.protocol))throw new Error(&#x27;請從本機檔案或網頁開啟報告。&#x27;);
   const bytes=new TextEncoder().encode(JSON.stringify(validate(profile)));
   const token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,&#x27;-&#x27;).replace(/\//g,&#x27;_&#x27;).replace(/=+$/,&#x27;&#x27;);
-  url.hash=&#x27;taste=&#x27;+token;return url.href;
+  url.hash=&#x27;taste=&#x27;+token;
+  if(url.href.length&gt;LONGEST)throw new Error(&#x27;這份品味連結超過 &#x27;+LONGEST.toLocaleString(&#x27;en-US&#x27;)+&#x27; 字元，朋友的比較頁讀不進來。&#x27;);
+  return url.href;
  }
  function fromURL(text){
-  if(typeof text!==&#x27;string&#x27;||text.length&gt;12000)throw new Error(&#x27;連結太長或格式不正確。&#x27;);
+  if(typeof text!==&#x27;string&#x27;||text.length&gt;LONGEST)throw new Error(&#x27;連結太長或格式不正確。&#x27;);
   const hash=text.slice(text.indexOf(&#x27;#&#x27;)+1),token=new URLSearchParams(hash).get(&#x27;taste&#x27;);
   if(!text.includes(&#x27;#&#x27;)||!token||!/^[\w-]+$/.test(token))throw new Error(&#x27;找不到品味資料，請貼上報告產生的完整連結。&#x27;);
   try{
@@ -738,8 +742,9 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
   const cards = node ? require(&#x27;./match-filter.js&#x27;) : root.MatchFilter;
 
   // Desktop puts the two fans side by side; phones stack them, the left person on top. All sizes are SVG units.
-  // `item` places the purchases behind a picked signal: a column `across` from the signal on desktop, a column in a
-  // band `beyond` the fans on phones, rows `step` apart, dots from dot[0] to dot[0] + dot[1] across.
+  // `item` places the purchases behind a picked signal: a column `across` from the signal on desktop (slid along or
+  // stepped further out when that spot is taken), a column in a band `beyond` the fans on phones, rows `step` apart,
+  // dots from dot[0] to dot[0] + dot[1] across.
   // Desktop writes the two people&#x27;s names along the top, above `top`; nothing a click adds goes higher.
   const SHAPES = Object.freeze({
     desktop: Object.freeze({ width: 1200, height: 640, centers: [[430, 325], [770, 325]], stretch: [1, 0.86],
@@ -1256,7 +1261,8 @@ function tipText(item,text,inward=false){
 }
 function hideHover(){if(traitGraph&amp;&amp;traitGraph.hover){traitGraph.hover.remove();traitGraph.hover=null;}}
 function hoverable(group,item,text){
- const show=()=&gt;{hideHover();traitGraph.hover=tipText(item,text);traitGraph.tips.append(traitGraph.hover);};
+ // A picked signal already shows its name pinned beside it, so the pointer brings no second copy.
+ const show=()=&gt;{hideHover();if(selected===&#x27;signal:&#x27;+item.id)return;traitGraph.hover=tipText(item,text);traitGraph.tips.append(traitGraph.hover);};
  group.addEventListener(&#x27;mouseenter&#x27;,show);group.addEventListener(&#x27;focus&#x27;,show);group.addEventListener(&#x27;mouseleave&#x27;,hideHover);group.addEventListener(&#x27;blur&#x27;,hideHover);
 }
 function pin(item,text,inward){const tip=tipText(item,text,inward);traitGraph.tips.append(tip);traitGraph.pinned.push(tip);}
@@ -1359,7 +1365,7 @@ for(const side of [&#x27;a&#x27;,&#x27;b&#x27;]){
 }
 document.querySelectorAll(&#x27;[data-demo-side]&#x27;).forEach(button=&gt;button.addEventListener(&#x27;click&#x27;,()=&gt;{const side=button.dataset.demoSide;$(&#x27;profile-url-&#x27;+side).value=&#x27;demo://&#x27;+button.dataset.demoKey;importProfile(side);}));
 $(&#x27;category&#x27;).addEventListener(&#x27;change&#x27;,event=&gt;{category=event.target.value;draw();});document.querySelectorAll(&#x27;[data-view]&#x27;).forEach(button=&gt;button.addEventListener(&#x27;click&#x27;,()=&gt;{chosenView=button.dataset.view;draw();}));
-$(&#x27;link-method-text&#x27;).textContent=&#x27;品味連結包含暱稱、涵蓋月份、&#x27;+TasteProfile.categories.length+&#x27; 類已確認消費品項的筆數、&#x27;+(network?TraitNetwork.traitCount(network.traits)+&#x27; 項&#x27;:&#x27;&#x27;)+&#x27;品味特質、各消費訊號的彙總值（例如每餐平均花費、每月 3C 花費、每月次數），以及每個訊號最常買的品名；不包含店名、行政區、地址、日期、單筆金額或發票號碼。品名裡的地名已拿掉，住宿只寫「旅館住宿」。舊版連結只有暱稱、月份與 10 類筆數。拿到連結的人都讀得到這些內容；編碼並非加密。&#x27;;
+$(&#x27;link-method-text&#x27;).textContent=&#x27;品味連結包含暱稱、涵蓋月份、&#x27;+TasteProfile.categories.length+&#x27; 類已確認消費品項的筆數、&#x27;+(network?TraitNetwork.traitCount(network.traits)+&#x27; 項&#x27;:&#x27;&#x27;)+&#x27;品味特質、各消費訊號的彙總值（例如每餐平均花費、每月 3C 花費、每月次數），以及每個訊號最常買的品名；不包含店名、行政區、地址、日期、單筆金額或發票號碼。品名裡的地名已拿掉，住宿只寫「旅館住宿」。舊版連結只有暱稱、月份與 &#x27;+TasteProfile.categories.length+&#x27; 類筆數。拿到連結的人都讀得到這些內容；編碼並非加密。&#x27;;
 if(network){
  // The score explains both graphs; the lines and the purchases only the taste network.
  const unlisted=network.signals.filter(signal=&gt;signal.list_items===false).map(signal=&gt;signal.label);
@@ -2119,6 +2125,8 @@ refreshComparisonMonths();
  const schema='receipt-taste/categories-v1';
  // New links add taste traits; old ones carry the category counts alone and still read.
  const traitsSchema='receipt-taste/traits-v2';
+ // The longest link a page reads; the export never hands out a longer one.
+ const LONGEST=12000;
  function validate(value){
   if(!value||(value.schema!==schema&&value.schema!==traitsSchema))throw new Error('這不是支援的品味連結版本，請回報告重新產生。');
   if(typeof value.name!=='string'||!value.name.trim()||value.name.length>24)throw new Error('暱稱需為 1–24 個字元。');
@@ -2154,10 +2162,12 @@ refreshComparisonMonths();
   if(!['file:','http:','https:'].includes(url.protocol))throw new Error('請從本機檔案或網頁開啟報告。');
   const bytes=new TextEncoder().encode(JSON.stringify(validate(profile)));
   const token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-  url.hash='taste='+token;return url.href;
+  url.hash='taste='+token;
+  if(url.href.length>LONGEST)throw new Error('這份品味連結超過 '+LONGEST.toLocaleString('en-US')+' 字元，朋友的比較頁讀不進來。');
+  return url.href;
  }
  function fromURL(text){
-  if(typeof text!=='string'||text.length>12000)throw new Error('連結太長或格式不正確。');
+  if(typeof text!=='string'||text.length>LONGEST)throw new Error('連結太長或格式不正確。');
   const hash=text.slice(text.indexOf('#')+1),token=new URLSearchParams(hash).get('taste');
   if(!text.includes('#')||!token||!/^[\w-]+$/.test(token))throw new Error('找不到品味資料，請貼上報告產生的完整連結。');
   try{

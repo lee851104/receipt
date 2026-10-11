@@ -741,7 +741,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
     const fail = () =&gt; { throw new Error(&#x27;品味資料不正確，請回配對清單重新選擇。&#x27;); };
     const finite = value =&gt; typeof value === &#x27;number&#x27; &amp;&amp; Number.isFinite(value);
     if (!person || typeof person !== &#x27;object&#x27;) fail();
-    const { vector, pushes, signals } = person;
+    const { vector, pushes, signals, items } = person;
     if (!Array.isArray(vector) || vector.length !== data.traits.length) fail();
     if (!Array.isArray(pushes) || pushes.length !== data.traits.length) fail();
     if (!Array.isArray(signals) || signals.length !== data.signals.length) fail();
@@ -760,7 +760,24 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
       // The lines must add up to the trait they draw, give or take the rounding of each push.
       if (value !== null &amp;&amp; Math.abs(list.reduce((sum, push) =&gt; sum + (push ?? 0), 0) - value) &gt; 0.001) fail();
     });
-    return { vector: [...vector], pushes: pushes.map(list =&gt; [...list]), signals: [...signals] };
+    // Up to three purchases per signal, each a short name and the bills it is on; signals about places list none.
+    if (!Array.isArray(items) || items.length !== data.signals.length) fail();
+    const lists = items.map((list, index) =&gt; {
+      if (data.signals[index].list_items === false) return list === null ? null : fail();
+      if (!Array.isArray(list) || list.length &gt; 3) fail();
+      const seen = new Set();
+      return list.map(entry =&gt; {
+        if (!Array.isArray(entry) || entry.length !== 2) fail();
+        const [name, count] = entry;
+        if (typeof name !== &#x27;string&#x27; || /[\u0000-\u001f\u007f]/.test(name)) fail();
+        const trimmed = name.trim(), letters = Array.from(trimmed).length;
+        if (letters &lt; 1 || letters &gt; 20 || seen.has(trimmed)) fail();
+        if (!Number.isSafeInteger(count) || count &lt; 1 || count &gt; 10000) fail();
+        seen.add(trimmed);
+        return [trimmed, count];
+      });
+    });
+    return { vector: [...vector], pushes: pushes.map(list =&gt; [...list]), signals: [...signals], items: lists };
   }
 
   // A value that prints as 0.00 leans nowhere, so the words treat it as 0.
@@ -993,7 +1010,8 @@ const $=id=&gt;document.getElementById(id);const svgNS=&#x27;http://www.w3.org/2
 const network=typeof traitNetworkData===&#x27;undefined&#x27;?null:traitNetworkData;let chosenView=&#x27;traits&#x27;,traitGraph=null;
 for(const person of Object.values(profiles)){
  person.demoCounts=[...person.counts];person.categoryCounts=TasteProfile.categories.map(name=&gt;demoItems.reduce((n,item,i)=&gt;n+(item.c===name?person.counts[i]:0),0));
- person.traits=network&amp;&amp;network.friends[person.name]?TraitNetwork.validate(network.friends[person.name],network):null;
+ // A friend whose embedded data fails the check only loses the taste graph; the rest of the page still works.
+ try{person.traits=network&amp;&amp;network.friends[person.name]?TraitNetwork.validate(network.friends[person.name],network):null;}catch{person.traits=null;}
 }
 // Opened from the match list: the sides are fixed to you and that match, each with the taste traits it was matched on.
 let pair=null;
@@ -1425,7 +1443,7 @@ const matchReportData = {&quot;isDemo&quot;:true,&quot;population&quot;:40,&quot
     return node;
   }
   // The connection page draws the network from both people&#x27;s taste and works out the score itself.
-  const taste = person =&gt; ({ vector: person.vector, pushes: person.pushes, signals: person.signals });
+  const taste = person =&gt; ({ vector: person.vector, pushes: person.pushes, signals: person.signals, items: person.items });
   function pairFor(card) {
     return {
       left: { name: &#x27;你&#x27;, demo: data.isDemo, months: data.me.months, counts: data.me.counts, traits: taste(data.me) },

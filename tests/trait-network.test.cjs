@@ -21,8 +21,10 @@ const data = {
     { id: 'clearance', label: '超商即期', unit: 'share' }, { id: 'sport_visits', label: '運動消費', unit: 'times_month' }],
   readout: { no_alike: '共同話題還在找。', no_unlike: '難得這麼合拍。' },
 };
-const me = { vector: [0.7, 1, null, 0.375], pushes: [[0.61, 0.09], [0, 1], [null, null], [0.375]], signals: [0.8333, 0.1429, 0, 1, null, 5] };
-const them = { vector: [0.94, 0.82, 0.5, 0.2], pushes: [[0.8, 0.14], [-0.18, 1], [-0.1, 0.6], [0.2]], signals: [1, 0.2, 0.36, 1, 0.1, 2] };
+const me = { vector: [0.7, 1, null, 0.375], pushes: [[0.61, 0.09], [0, 1], [null, null], [0.375]], signals: [0.8333, 0.1429, 0, 1, null, 5],
+  items: [[['半糖冬瓜青茶', 7], ['百香果茶', 7], ['花果茶', 7]], [['燕麥餅', 4]], [], [['蔬食餐盒', 5]], [], [['體適能體驗票', 10]]] };
+const them = { vector: [0.94, 0.82, 0.5, 0.2], pushes: [[0.8, 0.14], [-0.18, 1], [-0.1, 0.6], [0.2]], signals: [1, 0.2, 0.36, 1, 0.1, 2],
+  items: [[['冬瓜青茶', 10], ['黑糖珍珠鮮奶', 8]], [['肉桂捲', 6]], [['鮪魚飯糰', 9]], [['石鍋拌飯', 5]], [['即期便當', 2]], [['體適能體驗票', 4]]] };
 const light = { ...them, vector: [-0.58, 0.82, 0.5, 0], pushes: [[-0.5, -0.08], [-0.18, 1], [-0.1, 0.6], [0]] };
 const shownRects = side => side.traits.filter(trait => trait.labelShown)
   .map(trait => TN.labelRect(trait.label, TN.SHAPES.desktop.font, trait.labelX, trait.labelY, trait.labelAnchor));
@@ -68,6 +70,31 @@ test('validate refuses pushes out of range, pushes without data, lines that do n
   const habit = { ...data, traits: [...traits.slice(0, 3), { ...traits[3], signals: ['sport_visits', 'dessert_share'] }] };
   assert.doesNotThrow(() => TN.validate({ ...me, pushes: [[0.61, 0.09], [0, 1], [null, null], [0.3, 0.075]] }, habit));
   assert.throws(() => TN.validate({ ...me, pushes: [[0.61, 0.09], [0, 1], [null, null], [0.475, -0.1]] }, habit), /品味資料不正確/);
+});
+
+test('validate checks every list of purchases, and a signal about places never carries one', () => {
+  // Pretend 超商即期 is about where someone shops, like 常去店家.
+  const placed = { ...data, signals: data.signals.map(signal => (signal.id === 'clearance' ? { ...signal, list_items: false } : signal)) };
+  const listed = { ...me, items: [[[' 半糖冬瓜青茶 ', 7], ['百香果茶', 7], ['測'.repeat(20), 1]], [], [], [['蔬食餐盒', 5]], null, [['體適能體驗票', 10]]] };
+  assert.deepEqual(TN.validate(listed, placed).items, [[['半糖冬瓜青茶', 7], ['百香果茶', 7], ['測'.repeat(20), 1]], [], [], [['蔬食餐盒', 5]], null, [['體適能體驗票', 10]]]);
+  const first = list => ({ ...listed, items: [list, ...listed.items.slice(1)] });
+  const broken = {
+    'no lists at all': { ...listed, items: undefined },
+    'a missing list': { ...listed, items: listed.items.slice(1) },
+    'a list for a signal about places': { ...listed, items: [...listed.items.slice(0, 4), [['測試店', 1]], listed.items[5]] },
+    'no list for a signal that has one': first(null),
+    'four purchases': first([['甲', 1], ['乙', 1], ['丙', 1], ['丁', 1]]),
+    'a name of 21 letters': first([['測'.repeat(21), 1]]),
+    'a blank name': first([['  ', 1]]),
+    'a control character': first([['紅茶\u0007', 1]]),
+    'a name that is not text': first([[7, 1]]),
+    'a count of zero': first([['紅茶', 0]]),
+    'a fractional count': first([['紅茶', 1.5]]),
+    'too many bills': first([['紅茶', 10001]]),
+    'the same name twice': first([['紅茶', 2], [' 紅茶', 1]]),
+    'a purchase that is not a pair': first([['紅茶', 2, 3]]),
+  };
+  for (const [name, person] of Object.entries(broken)) assert.throws(() => TN.validate(person, placed), /品味資料不正確/, name);
 });
 
 test('the layout is the same every time, left fan on the left and the first trait on top', () => {

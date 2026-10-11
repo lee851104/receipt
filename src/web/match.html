@@ -73,7 +73,7 @@ details{margin-top:22px;color:var(--muted);font-size:12px}details summary{cursor
     return node;
   }
   // The connection page draws the network from both people's taste and works out the score itself.
-  const taste = person => ({ vector: person.vector, pushes: person.pushes, signals: person.signals });
+  const taste = person => ({ vector: person.vector, pushes: person.pushes, signals: person.signals, items: person.items });
   function pairFor(card) {
     return {
       left: { name: '你', demo: data.isDemo, months: data.me.months, counts: data.me.counts, traits: taste(data.me) },

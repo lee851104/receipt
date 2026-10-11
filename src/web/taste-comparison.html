@@ -76,7 +76,8 @@ const $=id=>document.getElementById(id);const svgNS='http://www.w3.org/2000/svg'
 const network=typeof traitNetworkData==='undefined'?null:traitNetworkData;let chosenView='traits',traitGraph=null;
 for(const person of Object.values(profiles)){
  person.demoCounts=[...person.counts];person.categoryCounts=TasteProfile.categories.map(name=>demoItems.reduce((n,item,i)=>n+(item.c===name?person.counts[i]:0),0));
- person.traits=network&&network.friends[person.name]?TraitNetwork.validate(network.friends[person.name],network):null;
+ // A friend whose embedded data fails the check only loses the taste graph; the rest of the page still works.
+ try{person.traits=network&&network.friends[person.name]?TraitNetwork.validate(network.friends[person.name],network):null;}catch{person.traits=null;}
 }
 // Opened from the match list: the sides are fixed to you and that match, each with the taste traits it was matched on.
 let pair=null;

@@ -22,7 +22,7 @@
     const fail = () => { throw new Error('品味資料不正確，請回配對清單重新選擇。'); };
     const finite = value => typeof value === 'number' && Number.isFinite(value);
     if (!person || typeof person !== 'object') fail();
-    const { vector, pushes, signals } = person;
+    const { vector, pushes, signals, items } = person;
     if (!Array.isArray(vector) || vector.length !== data.traits.length) fail();
     if (!Array.isArray(pushes) || pushes.length !== data.traits.length) fail();
     if (!Array.isArray(signals) || signals.length !== data.signals.length) fail();
@@ -41,7 +41,24 @@
       // The lines must add up to the trait they draw, give or take the rounding of each push.
       if (value !== null && Math.abs(list.reduce((sum, push) => sum + (push ?? 0), 0) - value) > 0.001) fail();
     });
-    return { vector: [...vector], pushes: pushes.map(list => [...list]), signals: [...signals] };
+    // Up to three purchases per signal, each a short name and the bills it is on; signals about places list none.
+    if (!Array.isArray(items) || items.length !== data.signals.length) fail();
+    const lists = items.map((list, index) => {
+      if (data.signals[index].list_items === false) return list === null ? null : fail();
+      if (!Array.isArray(list) || list.length > 3) fail();
+      const seen = new Set();
+      return list.map(entry => {
+        if (!Array.isArray(entry) || entry.length !== 2) fail();
+        const [name, count] = entry;
+        if (typeof name !== 'string' || /[\u0000-\u001f\u007f]/.test(name)) fail();
+        const trimmed = name.trim(), letters = Array.from(trimmed).length;
+        if (letters < 1 || letters > 20 || seen.has(trimmed)) fail();
+        if (!Number.isSafeInteger(count) || count < 1 || count > 10000) fail();
+        seen.add(trimmed);
+        return [trimmed, count];
+      });
+    });
+    return { vector: [...vector], pushes: pushes.map(list => [...list]), signals: [...signals], items: lists };
   }
 
   // A value that prints as 0.00 leans nowhere, so the words treat it as 0.

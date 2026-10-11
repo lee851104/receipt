@@ -41,13 +41,13 @@
   | Task 1 | 61 | 59 |
   | Task 2 | 61 | 60 |
   | Task 3 | 64 | 60 |
-  | Task 4 | 75 | 60 |
-  | Task 5 | 75 | 60 |
-  | Task 6 | 75 | 61 |
-  | Task 7 | 75 | 65 |
-  | Task 8 | 75 | 68 |
-  | Task 9 | 75 | 71 |
-  | Task 10 | 75 | 72 |
+  | Task 4 | 76 | 60 |
+  | Task 5 | 76 | 60 |
+  | Task 6 | 76 | 61 |
+  | Task 7 | 76 | 65 |
+  | Task 8 | 76 | 68 |
+  | Task 9 | 76 | 71 |
+  | Task 10 | 76 | 72 |
 
 - `python scripts/build_report.py` 每次都印出同樣三行（配對與分數完全不變）：
   ```text
@@ -819,6 +819,13 @@ class LabelTests(unittest.TestCase):
         self.assertEqual(self.name("淡水阿給"), "阿給")
         self.assertEqual(self.name("高雄市 - 鹽酥雞"), "鹽酥雞")
 
+    def test_marks_in_a_name_stay_unless_a_removed_place_leaves_them_behind(self):
+        for name in ("麥香奶茶(600ml)", "(促)統一布丁", "蛋白質20%", "維他命C+"):
+            self.assertEqual(self.name(name), name)
+        self.assertEqual(self.name("【台中限定】鹽酥雞"), "【限定】鹽酥雞")
+        self.assertEqual(self.name("鹽酥雞（台中店）"), "鹽酥雞（店）")
+        self.assertEqual(self.name("鹽酥雞（台中）"), "鹽酥雞")
+
     def test_a_name_that_was_only_a_place_reads_as_its_category(self):
         self.assertEqual(self.name("台中"), "正餐")
         self.assertEqual(self.name("高雄 123", category=8), "日用品")
@@ -908,6 +915,9 @@ from .attributes import has
 
 LONGEST = 20  # letters a name keeps; a longer one is cut and ends with …
 TOP = 3       # purchases listed per signal
+# What a removed place name may leave behind: empty brackets, and separators at either edge.
+EMPTY_BRACKETS = re.compile(r"\(\s*\)|（\s*）|\[\s*\]|【\s*】|「\s*」|『\s*』|〔\s*〕")
+EDGES = re.compile(r"^[\s\-–—·・|/／,，、:：]+|[\s\-–—·・|/／,，、:：]+$")
 
 
 def place_words(rows, context):
@@ -942,11 +952,15 @@ def label(line, words, context):
         text = line["name"] + line["merchant"]
         return next((kind for kind, keywords in vocabulary["transport_kinds"] if has(text, keywords)),
                     vocabulary["generic_labels"]["長途交通"])
-    name = re.sub(r"^[\W_]+|[\W_]+$", "", without_places(line["name"].removeprefix("示範"), words))
-    # Nothing but a place, digits or marks left: say what kind of purchase it was instead.
-    if not re.search(r"[^\W\d_]", name):
-        name = context["report"]["categories"][line["category"]]["name"]
-    return name if len(name) <= LONGEST else name[:LONGEST - 1] + "…"
+    name = line["name"].removeprefix("示範").strip()
+    rest = without_places(name, words)
+    # Only a removed place leaves anything to tidy; brackets, % or + in an ordinary name stay as they are.
+    if rest != name:
+        rest = EDGES.sub("", EMPTY_BRACKETS.sub("", rest))
+    # Nothing but digits or marks left: say what kind of purchase it was instead.
+    if not re.search(r"[^\W\d_]", rest):
+        rest = context["report"]["categories"][line["category"]]["name"]
+    return rest if len(rest) <= LONGEST else rest[:LONGEST - 1] + "…"
 
 
 def listed(purchases, rows, context):
@@ -955,6 +969,15 @@ def listed(purchases, rows, context):
     words = place_words(rows, context)
     hidden = {signal["id"] for trait in context["traits"]["traits"] for signal in trait["signals"]
               if signal.get("list_items") is False}
+    names = {}
+
+    # One label per distinct purchase, however many signals list it.
+    def named(line):
+        key = (line["name"], line["channel"], line["category"], line["merchant"])
+        if key not in names:
+            names[key] = label(line, words, context)
+        return names[key]
+
     lists = {}
     for key, lines in purchases.items():
         if key in hidden:
@@ -962,7 +985,7 @@ def listed(purchases, rows, context):
             continue
         bills = {}
         for line in lines:
-            bills.setdefault(label(line, words, context), set()).add(line["invoice"])
+            bills.setdefault(named(line), set()).add(line["invoice"])
         ranked = sorted(bills.items(), key=lambda pair: (-len(pair[1]), pair[0]))
         lists[key] = [[name, len(seen)] for name, seen in ranked[:TOP]]
     return lists
@@ -1063,10 +1086,10 @@ CONFIGS = (("brands", "brands.json"), ("vocabulary", "attributes.json"), ("trait
 - [ ] **Step 6: Run the tests**
 
 Run: `python -m unittest tests.test_items -v`
-Expected: 11 tests OK
+Expected: 12 tests OK
 
 Run: `python -m unittest discover -s tests`
-Expected: 75 tests OK
+Expected: 76 tests OK
 
 - [ ] **Step 7: The report does not change yet**
 
@@ -1366,7 +1389,7 @@ Expected: 2 tests OK
 - [ ] **Step 5: Rebuild and run everything**
 
 Run: `python scripts/build_report.py && python -m unittest discover -s tests && node --test tests/*.test.cjs`
-Expected: 三行輸出同「試做結果」；75 tests OK；60 tests pass
+Expected: 三行輸出同「試做結果」；76 tests OK；60 tests pass
 
 - [ ] **Step 6: Commit**
 
@@ -2355,7 +2378,7 @@ if(network){
 - [ ] **Step 8: Rebuild and run everything**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs && python -m unittest discover -s tests`
-Expected: 68 tests pass；75 tests OK
+Expected: 68 tests pass；76 tests OK
 
 - [ ] **Step 9: Commit**
 
@@ -2702,7 +2725,7 @@ Expected: 第一行是 `.gitignore:…:/report-data.js	report-data.js`；`git st
 - [ ] **Step 6: Rebuild and run everything**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs && python -m unittest discover -s tests`
-Expected: 三行輸出同「試做結果」；72 tests pass；75 tests OK
+Expected: 三行輸出同「試做結果」；72 tests pass；76 tests OK
 
 - [ ] **Step 7: Commit**
 
@@ -2718,7 +2741,7 @@ git commit -m "feat: word the privacy notes for the new links and keep the priva
 - [ ] **Step 1: 全部測試**
 
 Run: `python -m unittest discover -s tests`
-Expected: 75 tests OK
+Expected: 76 tests OK
 
 Run: `node --test tests/*.test.cjs`
 Expected: 72 tests pass

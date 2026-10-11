@@ -32,11 +32,15 @@ test('validate keeps well-formed taste data and refuses anything else', () => {
   const copy = TN.validate(me, data);
   assert.deepEqual(copy, me);
   assert.notEqual(copy.vector, me.vector);
+  // Each broken person breaks one rule; their pushes still add up unless the sum is what is broken.
   const broken = [
-    null, { ...me, vector: me.vector.slice(1) }, { ...me, vector: [1.2, 1, null, 0.3] }, { ...me, vector: [0.7, 1, null, -0.1] },
-    { ...me, vector: [NaN, 1, null, 0.3] }, { ...me, pushes: [[0.61], [0, 1], [null, null], [0.375]] },
+    null, { ...me, vector: me.vector.slice(1) },
+    { ...me, vector: [1.2, 1, null, 0.375], pushes: [[0.7, 0.5], [0, 1], [null, null], [0.375]] },
+    { ...me, vector: [-1.2, 1, null, 0.375], pushes: [[-0.7, -0.5], [0, 1], [null, null], [0.375]] },
+    { ...me, vector: [0.7, 1, null, -0.1] }, { ...me, vector: [NaN, 1, null, 0.375] },
+    { ...me, pushes: [[0.61], [0, 1], [null, null], [0.375]] },
     { ...me, pushes: [[0.61, 'x'], [0, 1], [null, null], [0.375]] }, { ...me, signals: me.signals.slice(1) },
-    { ...me, signals: [Infinity, 0, 0, 1, null, 5] },
+    { ...me, signals: [NaN, 0.1429, 0, 1, null, 5] }, { ...me, signals: [Infinity, 0.1429, 0, 1, null, 5] },
   ];
   for (const person of broken) assert.throws(() => TN.validate(person, data), /品味資料不正確/);
 });

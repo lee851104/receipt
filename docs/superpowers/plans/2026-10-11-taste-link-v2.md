@@ -40,14 +40,14 @@
   | 開始前 | 61 | 56 |
   | Task 1 | 61 | 59 |
   | Task 2 | 61 | 60 |
-  | Task 3 | 63 | 60 |
-  | Task 4 | 74 | 60 |
-  | Task 5 | 74 | 60 |
-  | Task 6 | 74 | 61 |
-  | Task 7 | 74 | 65 |
-  | Task 8 | 74 | 68 |
-  | Task 9 | 74 | 71 |
-  | Task 10 | 74 | 72 |
+  | Task 3 | 64 | 60 |
+  | Task 4 | 75 | 60 |
+  | Task 5 | 75 | 60 |
+  | Task 6 | 75 | 61 |
+  | Task 7 | 75 | 65 |
+  | Task 8 | 75 | 68 |
+  | Task 9 | 75 | 71 |
+  | Task 10 | 75 | 72 |
 
 - `python scripts/build_report.py` 每次都印出同樣三行（配對與分數完全不變）：
   ```text
@@ -506,6 +506,13 @@ class PurchaseTests(unittest.TestCase):
         for key in ("away_share", "shop_focus", "new_shop_share", "holiday_trip_share"):
             self.assertEqual(purchases[key], [], key)
 
+    def test_a_refunded_bill_is_no_visit_and_lists_nothing(self):
+        rows = bought(lunches(), (WORKDAYS[20:21], "測試汽油", 6, 500, "測試加油站", HOME))
+        rows.append({**rows[-1], "name": "測試退款", "amount": -600})
+        measured = measure(rows, PERIOD, CONTEXT)
+        self.assertEqual(measured["signals"]["fuel_visits"], 0)
+        self.assertEqual(measured["purchases"]["fuel_visits"], [])
+
     def test_a_signal_that_cannot_be_measured_keeps_no_purchases(self):
         measured = measure(bought(lunches()), PERIOD, CONTEXT)
         self.assertIsNone(measured["signals"]["sugar_mean"])
@@ -518,7 +525,7 @@ class PurchaseTests(unittest.TestCase):
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `python -m unittest tests.test_traits`
-Expected: 2 errors，`KeyError: 'purchases'`
+Expected: 3 errors，`KeyError: 'purchases'`
 
 - [ ] **Step 3: Pull out two helpers**
 
@@ -576,37 +583,57 @@ def bill_species(invoice):
             for species, part in SPLIT[bill_species(invoice)]:
 ```
 
-- [ ] **Step 4: Keep the purchases behind each signal**
+- [ ] **Step 4: Work each signal out of the purchases it lists**
 
-在 `measure` 裡把
+`measure` 先建出每個訊號背後的消費清單，大部分訊號再從這些清單算出來，同一條規則只寫一次；`purchases` 直接取 `behind[key]`，漏寫的訊號會在這裡出錯，不會默默列出空清單；造訪次數與列出的品項都只看已付款的發票。（任務審查後的修正：對 44 位示範人物，訊號、計數、常數與品項清單都與原本逐一相同，報告不變。）
 
-```python
-        "alcohol_items": count(items, lambda item: item["alcohol"]) / months,
-        "bar_visits": visits("酒吧"),
-    }
-    counts = {
-```
-
-換成
+`measure` 是檔案裡最後一個函式。把從 `def measure(rows, period, context):` 到檔案結尾的全部內容換成（用 Write 工具寫一個小 Python 腳本來替換，不要用 shell heredoc）：
 
 ```python
-        "alcohol_items": count(items, lambda item: item["alcohol"]) / months,
-        "bar_visits": visits("酒吧"),
-    }
-    # The purchases each signal counted, so the page can name them. Signals about where someone shopped list none.
-    portioned = {key for key, invoice in invoices.items() if invoice["portions"] and invoice["food"] > 0}
+def measure(rows, period, context):
+    """Raw signals (None when they cannot be measured), the counts traits require, calendar constants, and the
+    purchases each signal counted."""
+    days, off, long_weekend = calendar_days(period, context["calendar"])
+    months = len(period)
+    lines, invoices = gather(rows, context)
+    items = valid_items(lines)
+    paid = [invoice for invoice in invoices.values() if invoice["total"] > 0]
+    paid_bills = {key for key, invoice in invoices.items() if invoice["total"] > 0}
+    food = [item for item in items if item["food"]]
+    meals = [item for item in items if item["category"] == MEAL]
+    drinks = [item for item in items if item["category"] == DRINK]
+    daily = [item for item in items if item["category"] == DAILY]
+    tech = [item for item in items if item["category"] == TECH]
+    store_food = [item for item in food if item["channel"] == "超商"]
+    portioned = {key: invoice for key, invoice in invoices.items() if invoice["portions"] and invoice["food"] > 0}
+    costs = [invoice["food"] / invoice["portions"] for invoice in portioned.values()]
+    located = [invoice for invoice in paid if invoice["district"]]
+    home = home_cities(located)
+    away = [invoice for invoice in located if invoice["district"][:3] not in home] if home else []
+    trips = {invoice["date"] for invoice in away} | {invoice["date"] for invoice in paid if invoice["channel"] == "住宿"}
+    daily_spend = Counter()
+    for item in daily:
+        daily_spend[item["invoice"]] += item["amount"]
+    store_bills = [invoices[key] for key in daily_spend if invoices[key]["channel"] in STORES]
+    off_bills = {key: invoice for key, invoice in invoices.items() if key in paid_bills and invoice["date"] in off}
+    pet_bills = {key: bill_species(invoice) for key, invoice in invoices.items() if key in paid_bills and invoice["channel"] == "寵物"}
     monthly = Counter((item["date"].year, item["date"].month, fold(item["name"])) for item in items)
-    off_bills = {key for key, invoice in invoices.items() if invoice["total"] > 0 and invoice["date"] in off}
-    pet_bills = {key: bill_species(invoice) for key, invoice in invoices.items()
-                 if invoice["total"] > 0 and invoice["channel"] == "寵物"}
+    spent = sum(invoice["total"] for invoice in paid)
+    repeat_rate, shop_focus, new_shop_share = routine(items, paid, period)
     other = {"cat": "dog", "dog": "cat"}
+
+    def visits(channel):
+        return count(paid, lambda invoice: invoice["channel"] == channel) / months
 
     def flagged(flag):
         return [item for item in items if item[flag]]
 
     def at(channel):
-        return [item for item in items if item["channel"] == channel]
+        # Only paid bills count as visits, so only their purchases are listed.
+        return [item for item in items if item["channel"] == channel and item["invoice"] in paid_bills]
 
+    # The purchases each signal counts, so the page can name them. Most signals below are worked out from these
+    # very lists, so each rule is written once. Signals about where someone shopped or travelled list nothing.
     behind = {
         "meal_cost": [item for item in meals if item["invoice"] in portioned],
         "clearance_share": [item for item in food if item["clearance"]],
@@ -621,10 +648,11 @@ def bill_species(invoice):
         "sugar_mean": [item for item in drinks if item["sugar"] is not None],
         "dessert_share": [item for item in food if item["category"] == DESSERT],
         "repeat_rate": [item for item in items if monthly[(item["date"].year, item["date"].month, fold(item["name"]))] > 1],
+        "shop_focus": [], "new_shop_share": [],
         "sport_visits": [item for item in items if item["category"] == SPORT],
         "sport_supplies": flagged("sport_supply"), "sport_gear": flagged("sport_gear"),
         "fuel_visits": at("加油"), "parking_visits": at("停車"), "car_care": flagged("car_care"),
-        "stays": at("住宿"), "long_trips": at("長途交通"),
+        "away_share": [], "stays": at("住宿"), "long_trips": at("長途交通"),
         "convenience_share": [item for item in daily if invoices[item["invoice"]]["channel"] == "超商"],
         "bulk_share": [item for item in daily if item["bulk"]],
         "small_daily_visits": [item for item in daily if daily_spend[item["invoice"]] < 150],
@@ -632,6 +660,7 @@ def bill_species(invoice):
         "tech_items": tech, "tech_spend": tech, "tech_visits": at("3C"),
         "offday_invoice_share": [item for item in items if item["invoice"] in off_bills],
         "offday_amount_share": [item for item in items if item["invoice"] in off_bills],
+        "holiday_trip_share": [],
         "fun_visits": flagged("fun"), "fun_kinds": flagged("fun"),
         **{f"pet_{kind}_{species}": [item for item in items if item[f"pet_{kind}"] and item["species"] != other[species]]
            for species in ("cat", "dog") for kind in ("food", "supply")},
@@ -639,29 +668,70 @@ def bill_species(invoice):
                                      and pet_bills[item["invoice"]] != other[species]] for species in ("cat", "dog")},
         "alcohol_items": flagged("alcohol"), "bar_visits": at("酒吧"),
     }
-    purchases = {key: behind.get(key, []) if value is not None else [] for key, value in signals.items()}
+
+    def bills(key):
+        return {item["invoice"] for item in behind[key]}
+
+    signals = {
+        "meal_cost": median(costs) if len(costs) >= 3 else None,
+        "clearance_share": share(len(behind["clearance_share"]), len(food)),
+        "premium_drink_share": share(len(behind["premium_drink_share"]), len(drinks)),
+        "store_meal_share": share(len(behind["store_meal_share"]), len(meals)),
+        "weekday_quick_share": weekday_quick_share(meals, off),
+        "store_clearance_share": share(len(behind["store_clearance_share"]), len(store_food)),
+        "shop_meal_share": share(len(behind["shop_meal_share"]), len(meals)),
+        "fresh_share": share(len(behind["fresh_share"]), len(food)),
+        "ready_meal_share": share(len(meals), len(food)),
+        "kitchen_per_month": len(behind["kitchen_per_month"]) / months,
+        "sugar_mean": mean(item["sugar"] for item in behind["sugar_mean"]) if behind["sugar_mean"] else None,
+        "dessert_share": share(len(behind["dessert_share"]), len(food)),
+        "repeat_rate": repeat_rate, "shop_focus": shop_focus, "new_shop_share": new_shop_share,
+        "sport_visits": len(bills("sport_visits")) / months,
+        "sport_supplies": len(behind["sport_supplies"]) / months,
+        "sport_gear": len(behind["sport_gear"]) / months,
+        "fuel_visits": visits("加油"), "parking_visits": visits("停車"),
+        "car_care": len(behind["car_care"]) / months,
+        "away_share": share(len(away), len(located)) if home else None,
+        "stays": visits("住宿"), "long_trips": visits("長途交通"),
+        "convenience_share": share(len(bills("convenience_share")), len(store_bills)) if len(store_bills) >= 2 else None,
+        "bulk_share": share(len(behind["bulk_share"]), len(daily)),
+        "small_daily_visits": len(bills("small_daily_visits")) / months,
+        "home_items": len(behind["home_items"]) / months,
+        "stationery_items": len(behind["stationery_items"]) / months,
+        "select_visits": visits("選物"),
+        "tech_items": len(tech) / months,
+        "tech_spend": sum(min(item["amount"], 3000) for item in tech) / months,
+        "tech_visits": visits("3C"),
+        "offday_invoice_share": share(len(off_bills), len(paid)),
+        "offday_amount_share": share(sum(invoice["total"] for invoice in off_bills.values()), spent),
+        "holiday_trip_share": share(len(trips & long_weekend), len(trips)),
+        "fun_visits": len(bills("fun_visits")) / months,
+        "fun_kinds": len({item["fun"] for item in behind["fun_kinds"]}),
+        **pet_signals(items, paid, months),
+        "alcohol_items": len(behind["alcohol_items"]) / months,
+        "bar_visits": visits("酒吧"),
+    }
+    # A signal that cannot be measured lists nothing; a signal missing from `behind` fails here instead of listing nothing.
+    purchases = {key: behind[key] if value is not None else [] for key, value in signals.items()}
     counts = {
-```
-
-最後把
-
-```python
-    return {"signals": signals, "counts": counts, "constants": constants}
-```
-
-換成
-
-```python
+        "items": len(items), "food_items": len(food), "meal_items": len(meals), "store_food_items": len(store_food),
+        "known_sugar_drinks": len(behind["sugar_mean"]),
+        "district_invoices": len(located), "daily_items": len(daily), "invoices": len(paid),
+        "trip_days": len(trips), "long_holidays": 1 if long_weekend else 0,
+    }
+    offday_share = len(off) / len(days)
+    constants = {"offday_share": offday_share, "offday_double": min(1.0, 2 * offday_share),
+                 "long_holiday_share": len(long_weekend) / len(days)}
     return {"signals": signals, "counts": counts, "constants": constants, "purchases": purchases}
 ```
 
 - [ ] **Step 5: Run the tests**
 
 Run: `python -m unittest tests.test_traits`
-Expected: 27 tests OK
+Expected: 28 tests OK
 
 Run: `python -m unittest discover -s tests`
-Expected: 63 tests OK
+Expected: 64 tests OK
 
 - [ ] **Step 6: The report does not change**
 
@@ -996,7 +1066,7 @@ Run: `python -m unittest tests.test_items -v`
 Expected: 11 tests OK
 
 Run: `python -m unittest discover -s tests`
-Expected: 74 tests OK
+Expected: 75 tests OK
 
 - [ ] **Step 7: The report does not change yet**
 
@@ -1296,7 +1366,7 @@ Expected: 2 tests OK
 - [ ] **Step 5: Rebuild and run everything**
 
 Run: `python scripts/build_report.py && python -m unittest discover -s tests && node --test tests/*.test.cjs`
-Expected: 三行輸出同「試做結果」；74 tests OK；60 tests pass
+Expected: 三行輸出同「試做結果」；75 tests OK；60 tests pass
 
 - [ ] **Step 6: Commit**
 
@@ -2285,7 +2355,7 @@ if(network){
 - [ ] **Step 8: Rebuild and run everything**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs && python -m unittest discover -s tests`
-Expected: 68 tests pass；74 tests OK
+Expected: 68 tests pass；75 tests OK
 
 - [ ] **Step 9: Commit**
 
@@ -2632,7 +2702,7 @@ Expected: 第一行是 `.gitignore:…:/report-data.js	report-data.js`；`git st
 - [ ] **Step 6: Rebuild and run everything**
 
 Run: `python scripts/build_report.py && node --test tests/*.test.cjs && python -m unittest discover -s tests`
-Expected: 三行輸出同「試做結果」；72 tests pass；74 tests OK
+Expected: 三行輸出同「試做結果」；72 tests pass；75 tests OK
 
 - [ ] **Step 7: Commit**
 
@@ -2648,7 +2718,7 @@ git commit -m "feat: word the privacy notes for the new links and keep the priva
 - [ ] **Step 1: 全部測試**
 
 Run: `python -m unittest discover -s tests`
-Expected: 74 tests OK
+Expected: 75 tests OK
 
 Run: `node --test tests/*.test.cjs`
 Expected: 72 tests pass

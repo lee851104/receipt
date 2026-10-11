@@ -2345,7 +2345,8 @@ with
   const phone = TN.layout(data, me, them, true), { beyond, step: row } = TN.SHAPES.mobile.item;
   const [up, down] = TN.purchases(data, phone, [me, them], 'sugar_mean', true);
   assert.deepEqual(up.items.map(item => item.y), [-beyond - 2 * row, -beyond - row, -beyond]);
-  assert.deepEqual(down.items.map(item => item.y), [phone.height + beyond, phone.height + beyond + row]);  // Nothing bought, nothing drawn
+  assert.deepEqual(down.items.map(item => item.y), [phone.height + beyond, phone.height + beyond + row]);
+  // Nothing bought, nothing drawn
 ```
 
 **8.12** `tests/trait-network.test.cjs`

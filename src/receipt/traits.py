@@ -2,9 +2,11 @@
 import json
 from datetime import date
 
+from .items import listed
 from .signals import measure
 
-CONFIGS = (("brands", "brands.json"), ("vocabulary", "attributes.json"), ("traits", "traits.json"), ("calendar", "calendar-2026.json"))
+CONFIGS = (("brands", "brands.json"), ("vocabulary", "attributes.json"), ("traits", "traits.json"), ("calendar", "calendar-2026.json"),
+           ("report", "report.json"))
 
 
 def load_context(root):
@@ -74,7 +76,8 @@ def trait_value(trait, measured):
 
 
 def explain(rows, period, context):
-    """One person's taste: the vector, each signal's push on each trait, and the measured signals.
+    """One person's taste: the vector, each signal's push on each trait, the measured signals and the
+    purchases each signal lists.
 
     None when the person has too little data at all.
     """
@@ -86,7 +89,7 @@ def explain(rows, period, context):
         return None
     parts = [trait_parts(trait, measured) for trait in settings["traits"]]
     return {"vector": [value for value, _ in parts], "pushes": [pushes for _, pushes in parts],
-            "signals": measured["signals"]}
+            "signals": measured["signals"], "items": listed(measured["purchases"], rows, context)}
 
 
 def build_vector(rows, period, context):

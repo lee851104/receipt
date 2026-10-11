@@ -41,9 +41,18 @@ const fire = (node, type, event = {}) => {
 };
 // Every element below `node` that passes the test, depth first.
 const findAll = (node, check) => node.children.flatMap(child => [...(check(child) ? [child] : []), ...findAll(child, check)]);
+// The score badge and the glow drawn between the fans, with the attributes the tests read.
+function scoreMarkOf(network) {
+  const [badge] = findAll(network, node => node.attrs.class === 't-score'), [glow] = findAll(network, node => node.attrs.class === 't-glow');
+  const [box] = findAll(badge, node => node.tag === 'rect'), [number] = findAll(badge, node => node.attrs.class === 't-score-number');
+  const [gradient] = findAll(glow, node => node.tag === 'radialGradient'), [stop] = findAll(glow, node => node.tag === 'stop');
+  const [ellipse] = findAll(glow, node => node.tag === 'ellipse');
+  return { badge, glow, box, gradient, ellipse, texts: findAll(badge, node => node.tag === 'text').map(node => node.textContent),
+    number: number.attrs.fill, frame: box.attrs.stroke, stop: stop.attrs['stop-opacity'] };
+}
 
-// Click a card on the built match page and keep the pair it hands to the connection page.
-function pairFromMatchList(index) {
+// Click a card on the built match page, or on its list of opposites, and keep the pair it hands to the connection page.
+function pairFromMatchList(index, { opposite = false } = {}) {
   const nodes = new Map();
   const get = id => { if (!nodes.has(id)) nodes.set(id, element()); return nodes.get(id); };
   let pair = null;
@@ -51,16 +60,18 @@ function pairFromMatchList(index) {
   window.parent = { ReceiptPages: { showConnection: chosen => { pair = chosen; }, showReport() {} } };
   const context = vm.createContext({ window, document: { getElementById: get, createElement: tag => element(tag) } });
   for (const source of matchScripts) vm.runInContext(source, context);
-  const card = get('match-list').children[index];
+  if (opposite) fire(get('show-opposites'), 'change', { target: { checked: true } });
+  const card = get(opposite ? 'opposite-list' : 'match-list').children[index];
   fire(card, 'click');
   return { name: card.title, pair };
 }
 
 // Load the page as the report would: in the connection frame with a chosen pair, or on its own as the friends page.
-function open({ pair = null } = {}) {
+// `phone` is a narrow window; `standalone` leaves out the trait data, as when the page is opened outside the report.
+function open({ pair = null, phone = false, standalone = false } = {}) {
   const nodes = new Map();
   const get = id => { if (!nodes.has(id)) nodes.set(id, element()); return nodes.get(id); };
-  const singles = { '.toolbar': element(), '.detail': element(), 'header .brand': element() };
+  const singles = { '.toolbar': element(), '.detail': element(), '.method': element(), 'header .brand': element() };
   const lists = { '.summary-case': [element(), element()], '.import-title-row, .imports': [element(), element()], '[data-demo-side]': [] };
   const calls = [];
   const host = pair ? {
@@ -78,8 +89,8 @@ function open({ pair = null } = {}) {
   window.parent = host ? { ...host, window: null } : window;
   window.frameElement = host ? { id: 'connection-frame' } : null;
   const context = vm.createContext({ window, document, location: window.location, URLSearchParams, atob, btoa, TextEncoder, TextDecoder,
-    matchMedia: () => ({ matches: false, addEventListener() {} }) });
-  for (const source of scripts) vm.runInContext(source, context);
+    matchMedia: () => ({ matches: phone, addEventListener() {} }) });
+  for (const source of standalone ? scripts.filter(code => !code.includes('const traitNetworkData')) : scripts) vm.runInContext(source, context);
   return { get, calls, singles };
 }
 
@@ -96,10 +107,16 @@ test('a match opens on the taste network with its score in the middle, glowing a
   assert.equal(cells.length, 15);
   assert.equal(get('summary-best').textContent, '都偏好好吃飯（加 32 分）— 吃飯這件事，從不將就。');
   // The same score sits between the fans, green because it adds up to alike, over a glow as strong as the match.
-  const [badge] = findAll(network, node => node.attrs.class === 't-score');
-  assert.deepEqual(findAll(badge, node => node.tag === 'text').map(node => node.textContent), ['品味相似度', '+71%']);
-  assert.equal(findAll(badge, node => node.attrs.class === 't-score-number')[0].attrs.fill, '#5eeac7');
-  assert.equal(findAll(network, node => node.tag === 'stop')[0].attrs['stop-opacity'], '0.46');
+  const mark = scoreMarkOf(network);
+  assert.deepEqual(mark.texts, ['品味相似度', '+71%']);
+  assert.deepEqual([mark.number, mark.frame, mark.stop], ['#5eeac7', '#5eeac7', '0.46']);
+  // The badge and glow only decorate: hidden from screen readers, over the middle lines and under the dots, letting
+  // clicks through to the lines beneath them.
+  assert.deepEqual([mark.badge.attrs['aria-hidden'], mark.glow.attrs['aria-hidden']], ['true', 'true']);
+  assert.equal(mark.ellipse.attrs.fill, `url(#${mark.gradient.attrs.id})`);
+  const layers = network.children, middles = layers.findIndex(layer => findAll(layer, node => node.attrs.class === 't-cell').length);
+  assert.ok(layers[0] === mark.glow && layers.indexOf(mark.badge) === middles + 1, 'glow first, badge right after the middle lines');
+  assert.ok(templateSource('taste-page-source').includes('.t-glow,.t-score{pointer-events:none}'));
   // The cells that decide the score are bright; the ones that add almost nothing fade.
   const opacity = cells.map(cell => Number(cell.attrs.opacity));
   assert.ok(Math.max(...opacity) === 1 && Math.min(...opacity) < 0.5, opacity.join(' '));
@@ -130,8 +147,26 @@ test('picking a signal grows its purchases on both sides and writes them into th
   pick('你的飲料甜度');
   fire(get('reset'), 'click');
   assert.equal(bought(), 0);
+  // Clearing the choice puts every middle line back at its own brightness.
+  for (const cell of findAll(network, node => node.attrs.class === 't-cell')) assert.equal(Number(cell.style.opacity).toFixed(2), cell.attrs.opacity);
   pick('你，低甜度 ↔ 高甜度');
   assert.equal(bought(), 0);
+});
+
+test('an opposite match shows its score in orange with hardly any glow, and phones put the badge between the groups', () => {
+  const chosen = pairFromMatchList(0, { opposite: true });
+  assert.equal(chosen.name, '查看你和省錢上班族 D的連線圖');
+  const { get } = open({ pair: chosen.pair }), mark = scoreMarkOf(get('network'));
+  assert.deepEqual([mark.texts[1], mark.number, mark.frame, mark.stop], [get('overall-score').textContent + '%', '#ffb65c', '#ffb65c', '0.08']);
+  const phone = scoreMarkOf(open({ pair: pairFromMatchList(0).pair, phone: true }).get('network'));
+  assert.deepEqual([phone.box.attrs.x, phone.box.attrs.y, phone.box.attrs.width], ['200', '360', '200']);
+});
+
+test('opened outside the report, the page says where to open it instead of blaming the link', () => {
+  const { get } = open({ standalone: true });
+  assert.equal(get('views-note').textContent, '請從報告開啟這一頁，才看得到品味特質圖');
+  assert.equal(get('overall-note').textContent, '請從報告開啟這一頁，才算得出品味相似度');
+  assert.equal(get('network').getAttribute('hidden'), '');
 });
 
 // Desktop writes both names along the top, so nothing a click adds may reach into that band.
@@ -183,13 +218,14 @@ test('a new taste link draws the taste network with the purchases it carries', (
 
 test('an old link, a thin report and a broken link each say why there is no taste network', () => {
   const page = open(), note = () => [page.get('views-note').hidden, page.get('views-note').textContent];
-  // Without taste traits on both sides the graph's place holds only the reason: no graph, no toolbar, no detail line.
-  const graph = () => [page.get('network').getAttribute('hidden'), page.singles['.toolbar'].hidden, page.singles['.detail'].hidden];
+  // Without taste traits on both sides the graph's place holds only the reason: no graph, toolbar, detail line or legend.
+  const graph = () => [page.get('network').getAttribute('hidden'), page.singles['.toolbar'].hidden, page.singles['.detail'].hidden,
+    page.get('trait-legend').hidden];
   paste(page, 'a', link('receipt-taste/categories-v1'));
   assert.equal(page.get('overall-score').textContent, '—');
   assert.equal(page.get('overall-note').textContent, '舊版連結沒有品味特質，無法計算品味相似度');
   assert.deepEqual(note(), [false, '這份連結還沒有品味特質']);
-  assert.deepEqual(graph(), ['', true, true]);
+  assert.deepEqual(graph(), ['', true, true, true]);
   paste(page, 'a', link(undefined, null));
   assert.equal(page.get('overall-note').textContent, '這份連結的資料還不夠，無法計算品味相似度');
   assert.deepEqual(note(), [false, '這份連結的資料還不夠算出品味特質']);
@@ -201,6 +237,11 @@ test('an old link, a thin report and a broken link each say why there is no tast
   fire(page.get('clear-a'), 'click');
   assert.deepEqual(note(), [false, '匯入兩邊的資料後才能看品味特質']);
   assert.equal(page.get('link-method').hidden, true);
+  // A link with taste traits and a friend bring the graph back.
+  paste(page, 'a', link());
+  paste(page, 'b', 'demo://yu');
+  assert.deepEqual(graph(), [null, false, false, false]);
+  assert.equal(page.get('views-note').hidden, true);
 });
 
 // The friends page quietly drops a friend whose data fails the check, so this test is what notices one.

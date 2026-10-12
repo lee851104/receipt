@@ -28,7 +28,7 @@
 - 接入前要先做：
   - 使用者填寫人工複核（`private/human-review.json`，目前 NOT_REVIEWED），作為獨立的真實測試集。
   - 依 `INTEGRATION.md`：保留或另外辨識店家通路 `channel_of`；決定甜度政策（實驗是沒有明示就回 null，主程式現在有奶茶／手搖的預設甜度）；接入後用同一批發票核對明細數、發票數、總金額、訊號與向量都不變，才修改分析介面。
-- 模型檔約 3.7 GB，放在 `models/`，連同 `private/`、`results/`、`runtime/` 都被實驗的 `.gitignore` 排除，不在 Git 裡；換電腦要另外複製或重新下載。
+- `models/` 放了四個候選模型，整個資料夾約 5.8 GB；它和 `private/`、`results/`、`runtime/` 都被實驗的 `.gitignore` 排除，不在 Git 裡。換電腦要另外複製，或用 `download_models.py`、`download_extra.py` 重新下載。
 - `make_draft_reference.py` 沒有提交：它寫死了三則從使用者三月真實品項來的註記（黑米 0 分糖飲料、印花貼紙、加價項目）。repo 是公開的，要不要提交由使用者決定。
 
 ### 3. 等使用者決定的說明文字

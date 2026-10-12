@@ -1,0 +1,33 @@
+{
+  "model": {"cells": [{"id": "a", "kind": "two_sided", "weight": 1}, {"id": "b", "kind": "two_sided", "weight": 1}, {"id": "c", "kind": "two_sided", "weight": 1}, {"id": "d", "kind": "two_sided", "weight": 1}, {"id": "e", "kind": "two_sided", "weight": 1}, {"id": "f", "kind": "two_sided", "weight": 1}, {"id": "g", "kind": "level", "weight": 1}], "shrink": 0.25, "min_shared_two_sided": 5},
+  "cases": [
+    {"name": "identical vectors score just under +1",
+     "mine": [0.6, -0.4, 0.2, 0.8, -0.2, 0.5, 0.3], "theirs": [0.6, -0.4, 0.2, 0.8, -0.2, 0.5, 0.3],
+     "comparable": true, "score": 0.863387978142,
+     "parts": [0.196721311475, 0.087431693989, 0.021857923497, 0.349726775956, 0.021857923497, 0.136612021858, 0.049180327869]},
+    {"name": "opposite vectors score just above -1",
+     "mine": [0.6, -0.4, 0.2, 0.8, -0.2, 0.5, 0.0], "theirs": [-0.6, 0.4, -0.2, -0.8, 0.2, -0.5, 0.0],
+     "comparable": true, "score": -0.85632183908,
+     "parts": [-0.206896551724, -0.091954022989, -0.022988505747, -0.367816091954, -0.022988505747, -0.14367816092, 0.0]},
+    {"name": "a cell either side lacks is skipped",
+     "mine": [0.6, null, 0.2, 0.8, -0.2, 0.5, 0.3], "theirs": [0.5, 0.9, 0.1, 0.7, -0.1, 0.4, 0.0],
+     "comparable": true, "score": 0.789674749961,
+     "parts": [0.215365840898, null, 0.014357722727, 0.402016236344, 0.014357722727, 0.143577227266, 0.0]},
+    {"name": "fewer than five shared two-sided cells cannot be compared",
+     "mine": [0.6, null, null, 0.8, -0.2, 0.5, 0.3], "theirs": [0.6, -0.4, 0.2, 0.8, -0.2, 0.5, 0.3],
+     "comparable": false, "score": null,
+     "parts": null},
+    {"name": "faint profiles shrink toward zero",
+     "mine": [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.0], "theirs": [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.0],
+     "comparable": true, "score": 0.193548387097,
+     "parts": [0.032258064516, 0.032258064516, 0.032258064516, 0.032258064516, 0.032258064516, 0.032258064516, 0.0]},
+    {"name": "a missing vector cannot be compared",
+     "mine": null, "theirs": [0.6, -0.4, 0.2, 0.8, -0.2, 0.5, 0.3],
+     "comparable": false, "score": null,
+     "parts": null},
+    {"name": "a heavier cell counts more", "model": {"cells": [{"id": "a", "kind": "two_sided", "weight": 2}, {"id": "b", "kind": "two_sided", "weight": 1}, {"id": "c", "kind": "two_sided", "weight": 1}, {"id": "d", "kind": "two_sided", "weight": 1}, {"id": "e", "kind": "two_sided", "weight": 1}, {"id": "f", "kind": "two_sided", "weight": 1}, {"id": "g", "kind": "level", "weight": 1}], "shrink": 0.25, "min_shared_two_sided": 5},
+     "mine": [0.6, -0.4, 0.2, 0.8, -0.2, 0.5, 0.3], "theirs": [0.9, 0.1, -0.3, 0.4, 0.0, -0.6, 0.2],
+     "comparable": true, "score": 0.450461838556,
+     "parts": [0.458961118528, -0.016998559945, -0.025497839918, 0.135988479564, -0.0, -0.127489199591, 0.025497839918]}
+  ]
+}

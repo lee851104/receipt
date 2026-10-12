@@ -11,7 +11,11 @@ import unittest
 from html.parser import HTMLParser
 from pathlib import Path
 
+from src.receipt.traits import signal_ids
+
 ROOT = Path(__file__).resolve().parents[1]
+# Demo districts that must never show up inside a purchase name.
+DISTRICT_WORDS = ("苓雅", "新興", "前鎮", "恆春", "信義", "內湖", "竹北", "中壢", "板橋", "左營", "東港", "宜蘭", "東區")
 
 
 class ResourceParser(HTMLParser):
@@ -43,11 +47,12 @@ class StandaloneBuildTests(unittest.TestCase):
             command = [sys.executable, str(project / "scripts" / "build_report.py")]
             result = subprocess.run(command, cwd=folder, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("taste similarity to 40 fictional people: highest 71%, median 14%, lowest -12%", result.stdout)
             html = (project / "invoice-insights.html").read_text(encoding="utf-8")
-            self.assertIn('"isDemo": true', html)
+            self.assertIn('"isDemo":true', html)
             self.assertIn("虛構示範", html)
             self.assertNotIn("PRIVATE-", html)
-            self.assertIn('"district": "高雄市苓雅區"', html)
+            self.assertIn('"district":"高雄市苓雅區"', html)
             self.assertEqual(original.read_text(), "PRIVATE-HTML-UNCHANGED")
             self.assertFalse((project / "taste-comparison.html").exists())
             embedded = re.search(r'<template id="taste-page-source">(.*?)</template>', html, re.S)
@@ -57,27 +62,78 @@ class StandaloneBuildTests(unittest.TestCase):
             compared.feed(comparison)
             self.assertEqual(compared.external, [])
             self.assertIn("receipt-taste/categories-v1", comparison)
-            self.assertIn("同一張發票的同一品項只算一次", comparison)
+            for name in ("trait-similarity.js", "match-filter.js", "trait-network.js", "trait-network-data.js"):
+                self.assertIn(f'data-source="{name}"', comparison)
+            network = json.loads(re.search(r"const traitNetworkData = (.*?);\n</script>", comparison, re.S).group(1))
+            self.assertEqual(set(network), {"model", "traits", "signals", "readout", "friends"})
+            self.assertEqual(len(network["traits"]), 18)
+            self.assertEqual(len(network["signals"]), 46)
+            self.assertEqual(set(network["signals"][0]), {"id", "label", "unit"})
+            self.assertEqual([signal["id"] for signal in network["signals"] if signal.get("list_items") is False],
+                             ["shop_focus", "new_shop_share", "away_share", "holiday_trip_share"])
+            self.assertEqual(network["traits"][4]["lines"]["split"], "一個加糖，一個讓糖罐放假。")
+            self.assertEqual(list(network["friends"]), ["小安", "小宇", "小林"])
+            for friend in network["friends"].values():
+                self.assertEqual(set(friend), {"vector", "pushes", "signals", "items"})
+                self.assertEqual((len(friend["vector"]), len(friend["signals"]), len(friend["items"])), (18, 46, 46))
+            self.assertNotIn("示範", json.dumps(network, ensure_ascii=False))
+            self.assertIn("品味連結包含暱稱", comparison)
             match_source = re.search(r'<template id="match-page-source">(.*?)</template>', html, re.S)
             self.assertIsNotNone(match_source)
             match_page = unescape(match_source.group(1))
             matched = ResourceParser()
             matched.feed(match_page)
             self.assertEqual(matched.external, [])
+            self.assertIn('data-source="trait-similarity.js"', match_page)
             self.assertIn('data-source="match-filter.js"', match_page)
-            self.assertIn("此配對頁只用行政區與連鎖品牌", match_page)
-            payload = json.loads(re.search(r"const matchReportData = (.*?);\n</script>", match_page, re.S).group(1))
+            self.assertIn("此配對頁與連線圖只用行政區、10 類消費筆數、品味特質", match_page)
+            self.assertIn("以及每個訊號最常買的品名；不顯示店名、地址、日期或單筆金額。品名裡的地名已拿掉，住宿只寫「旅館住宿」。", match_page)
+            self.assertIn("[hidden]{display:none!important}", match_page)
+            text = re.search(r"const matchReportData = (.*?);\n</script>", match_page, re.S).group(1)
+            # Compact JSON: no indentation and no space after a colon.
+            self.assertNotIn("\n", text)
+            self.assertNotIn('": ', text)
+            # Rounded pushes of nothing are written as 0.0, never -0.0.
+            self.assertIsNone(re.search(r"-0\.0(?!\d)", text))
+            payload = json.loads(text)
             self.assertTrue(payload["isDemo"])
             self.assertEqual(payload["population"], 40)
-            self.assertEqual(payload["settings"]["thresholds"], {"match": 0.8, "nearby": 0.7})
+            self.assertEqual(payload["settings"], {"min_score": 0.3, "opposite_score": 0.1, "top": 5, "min_items": 20})
             self.assertEqual(payload["personaMonths"], ["2026-03", "2026-04"])
-            self.assertTrue(payload["me"]["ready"])
+            self.assertEqual(len(payload["model"]["cells"]), 18)
+            self.assertEqual([trait["id"] for trait in payload["traits"]], [cell["id"] for cell in payload["model"]["cells"]])
+            self.assertEqual(len(payload["me"]["vector"]), 18)
             self.assertEqual(payload["me"]["months"], ["2026-03", "2026-04"])
             self.assertEqual(payload["me"]["areas"], ["高雄市苓雅區", "高雄市新興區"])
             self.assertEqual(len(payload["me"]["counts"]), 10)
-            self.assertTrue(all(set(tag) == {"dimension", "text"} for tag in payload["me"]["tags"]))
-            self.assertGreaterEqual(len(payload["candidates"]), 1)
-            self.assertEqual(set(payload["candidates"][0]), {"name", "score", "distance", "like", "unlike", "counts"})
+            self.assertEqual(set(payload["me"]), {"vector", "pushes", "signals", "items", "months", "areas", "counts"})
+            self.assertEqual(len(payload["people"]), 40)
+            # Every embedded list follows signal_ids(): the demo me spends NT$125 a meal and NT$780 on 3C.
+            ids = signal_ids(json.loads((ROOT / "configs" / "traits.json").read_text(encoding="utf-8")))
+            self.assertEqual(payload["me"]["signals"][ids.index("meal_cost")], 125)
+            self.assertEqual(payload["me"]["signals"][ids.index("tech_spend")], 780)
+            self.assertEqual(payload["me"]["items"][ids.index("sugar_mean")], [["半糖冬瓜青茶", 7], ["百香果茶", 7], ["花果茶", 7]])
+            self.assertIsNone(payload["me"]["items"][ids.index("away_share")])
+            traits = json.loads((ROOT / "configs" / "traits.json").read_text(encoding="utf-8"))["traits"]
+            for person in [payload["me"], *payload["people"]]:
+                self.assertEqual([len(pushes) for pushes in person["pushes"]], [len(trait["signals"]) for trait in traits])
+                self.assertEqual(len(person["signals"]), 46)
+            for person in payload["people"]:
+                self.assertEqual(set(person), {"name", "vector", "pushes", "signals", "items", "distance", "place", "counts"})
+                self.assertEqual((len(person["vector"]), len(person["counts"]), len(person["items"])), (18, 10, 46))
+            # Shop and item names in the demo all start with 示範: shops never reach the page, and purchase names
+            # arrive without the mark.
+            self.assertNotIn("示範", json.dumps(payload, ensure_ascii=False))
+            exported = json.loads(re.search(r"const tasteExportData = (.*?);\n</script>", html, re.S).group(1))
+            self.assertEqual(exported["traitCount"], 17)
+            self.assertEqual(set(exported["taste"]), {"vector", "pushes", "signals", "items"})
+            self.assertEqual([exported["taste"][key] for key in ("vector", "pushes", "signals", "items")],
+                             [payload["me"][key] for key in ("vector", "pushes", "signals", "items")])
+            self.assertNotIn("示範", json.dumps(exported, ensure_ascii=False))
+            names = json.dumps([exported["taste"]["items"], *(person["items"] for person in payload["people"]),
+                                *(friend["items"] for friend in network["friends"].values())], ensure_ascii=False)
+            for word in DISTRICT_WORDS:
+                self.assertNotIn(word, names)
             self.assertIn('href="#match"', html)
             self.assertIn('<iframe id="connection-frame"', html)
             self.assertIn("connection-frame", comparison)
@@ -116,26 +172,31 @@ class StandaloneBuildTests(unittest.TestCase):
             command = [sys.executable, str(project / "scripts" / "build_report.py"), "--private"]
             first = subprocess.run(command, cwd=folder, capture_output=True, text=True)
             self.assertEqual(first.returncode, 0, first.stderr)
+            self.assertIn("taste vector: not enough data to compare", first.stdout)
+            self.assertNotIn("測試商店", first.stdout)
             report = project / "invoice-insights-private.html"
             self.assertFalse((project / "invoice-insights.html").exists())
             before = report.read_bytes()
             html = before.decode("utf-8")
             self.assertIn('"2026-03"', html)
             self.assertIn('"2026-04"', html)
-            self.assertIn('"amount": 30', html)
+            self.assertIn('"amount":30', html)
             for private_value in ("PRIVATE-INVOICE-001", "PRIVATE-ADDRESS", "PRIVATE-CARRIER", "PRIVATE-TAX-ID"):
                 self.assertNotIn(private_value, html)
             parsed = ResourceParser()
             parsed.feed(html)
             self.assertEqual(parsed.external, [])
-            self.assertEqual(len(parsed.scripts), 8)
+            self.assertEqual(len(parsed.scripts), 9)
+            exported = json.loads(re.search(r"const tasteExportData = (.*?);\r?\n</script>", html, re.S).group(1))
+            self.assertEqual(exported, {"traitCount": 17, "taste": None})
             match_page = unescape(re.search(r'<template id="match-page-source">(.*?)</template>', html, re.S).group(1))
             # These raw bytes keep the platform newlines that write_text produced (CRLF on Windows).
             payload = json.loads(re.search(r"const matchReportData = (.*?);\r?\n</script>", match_page, re.S).group(1))
             self.assertFalse(payload["isDemo"])
             self.assertIn("這份私人報告的其他頁面仍有完整交易明細", match_page)
-            self.assertFalse(payload["me"]["ready"])
-            self.assertEqual(payload["candidates"], [])
+            self.assertEqual([payload["me"][key] for key in ("vector", "pushes", "signals", "items")], [None, None, None, None])
+            self.assertEqual(set(payload["me"]), {"vector", "pushes", "signals", "items", "months", "areas", "counts"})
+            self.assertEqual(len(payload["people"]), 40)
             self.assertTrue((project / "data" / "private" / "report-data.js").is_file())
             self.assertNotIn('"PRIVATE-INVOICE-001"', (project / "src" / "web" / "invoice-insights.html").read_text(encoding="utf-8"))
             second = subprocess.run(command, cwd=folder, capture_output=True, text=True)

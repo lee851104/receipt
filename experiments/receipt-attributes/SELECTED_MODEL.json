@@ -1,0 +1,40 @@
+{
+  "model": {
+    "id": "qwen3-4b",
+    "repo": "bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF",
+    "revision": "ae44f08e1392f39c0e474af10c3ff8355c8b6688",
+    "file": "Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+    "sha256": "2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e",
+    "base_model": "Qwen/Qwen3-4B-Instruct-2507",
+    "quantizer": "bartowski"
+  },
+  "mode": "offline_review_assisted",
+  "production_ready": false,
+  "decision": "Highest raw synthetic macro F1 of four models; use bulk rule and explicit-sweetness guard. Raw real-data F1 is only 44.44%, so the model alone is not approved.",
+  "inference": {
+    "runtime": "llama.cpp b11557 CPU x64",
+    "temperature": 0,
+    "seed": 42,
+    "batch_size": 3,
+    "context": 4096,
+    "threads": 2,
+    "gpu_layers": 0,
+    "prompt_sha256": "bfd5cb4b4538bed1829aea92504babca587ac8746dde820f39004523cff93a88"
+  },
+  "guards": [
+    "bulk_rule.py",
+    "sugar_guard.py"
+  ],
+  "guard_sha256": {
+    "bulk_rule.py": "1b2b610ed4dab3ae2ee60f8f4a1ae589721a7dcfdea08078e2fa29605558573f",
+    "sugar_guard.py": "ddb186da2bc791c6e76bedff4342a433fd3d89ac868c0a6b3d862d99e24e4b49"
+  },
+  "evaluation_status": "POST_HOC_DEVELOPMENT_REPLAY_NOT_INDEPENDENT_HOLDOUT",
+  "human_verified_labels": false,
+  "independent_holdout_validated": false,
+  "development_metric_gate_passed": true,
+  "real_output": "results/followup/selected-output.json",
+  "report": "results/followup/comparison.json",
+  "real_source_sha256": "1ea2b762713ae4562da70f0f155fa0fe2c4b3f045f526ef4da7930663f32556a",
+  "raw_real_inference_sha256": "0aa669dab3353b841d62921d25e91728241a22a997e4c46464588a4a021e9f29"
+}

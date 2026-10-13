@@ -1,6 +1,6 @@
-# A：TF-IDF＋邏輯迴歸
+# 品名分類實驗：A 與 B
 
-只讀品名，預測 0～9 的消費類別。此為獨立實驗，不改主程式、正式對照表或網頁。B、C 尚未實作。
+只讀品名，預測 0～9 的消費類別。A 使用 TF-IDF，B 使用固定的中文 Embedding，兩者都以邏輯迴歸分類。此為獨立實驗，不改主程式、正式對照表或網頁。C 尚未實作。
 
 ## 安裝與測試
 
@@ -9,7 +9,7 @@
 ```powershell
 python -m venv experiments/category-models/.venv
 experiments/category-models/.venv/Scripts/python.exe -m pip install -r experiments/category-models/requirements.txt
-experiments/category-models/.venv/Scripts/python.exe -m unittest discover -s experiments/category-models -p "test_*.py" -v
+experiments/category-models/.venv/Scripts/python.exe -m unittest discover -s experiments/category-models -p "test_category_models.py" -v
 ```
 
 套件和資料在本機使用。沒有模型 API，也不需要 GPU。
@@ -94,3 +94,39 @@ experiments/category-models/.venv/Scripts/python.exe experiments/category-models
 ## 效能計量
 
 同一程序記錄開發 CV 時間、最終 fit 時間、暖機後完整分類流程處理 1,000 筆的時間、OS 尖峰程序 RSS 及模型檔大小。1,000 筆由目前品名循環重複，用於效能測量，不是新增資料或分類正確率證據。RSS 包含 Python 與原生套件，也受程序先前工作影響；不同方案應各開乾淨程序。執行環境及來源指紋在報告內。
+
+## B：Embedding＋邏輯迴歸
+
+使用 [BAAI/bge-small-zh-v1.5](https://huggingface.co/BAAI/bge-small-zh-v1.5)，固定 revision `7999e1d3359715c523056ef9478215996d62a620`。品名經 tokenizer、預訓練模型、CLS pooling 與 L2 正規化後成為向量，再交給邏輯迴歸。編碼器凍結、不微調，不加檢索指令前綴。設定為 CPU、FP32、單計算執行緒、batch 16、最長 512 tokens；超長名稱會截斷。
+
+首次安裝 B 套件並下載公開模型（需要網路）：
+
+```powershell
+experiments/category-models/.venv/Scripts/python.exe -m pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+experiments/category-models/.venv/Scripts/python.exe -m pip install -r experiments/category-models/requirements-b.txt
+experiments/category-models/.venv/Scripts/python.exe experiments/category-models/download_embedding.py --out experiments/category-models/models/bge-small-zh-v1.5
+experiments/category-models/.venv/Scripts/python.exe -m unittest discover -s experiments/category-models -p "test_*.py" -v
+```
+
+下載程式只取得指定版本的公開模型，不讀取消費資料；下載後依上游雜湊驗證檔案。後續訓練與預測只載入本機模型並強制離線，品名不送到 API。
+
+沿用已產生的 A 切分訓練 B，每次指定新的輸出目錄：
+
+```powershell
+experiments/category-models/.venv/Scripts/python.exe experiments/category-models/embedding_lr.py train --data experiments/category-models/data/items.jsonl --splits experiments/category-models/outputs/tfidf-20261013/splits.json --encoder-dir experiments/category-models/models/bge-small-zh-v1.5 --cache experiments/category-models/data/bge-small-vectors.npz --out experiments/category-models/outputs/embedding-run-01
+```
+
+程式驗證資料指紋與群組邊界，直接重用 A 的 train/validation ID。向量可先一次計算，因為編碼器固定且不使用標籤、不從本批資料學習統計量；邏輯迴歸仍只用每折訓練資料 fit。LR 與 A 同樣使用 C=1、balanced、max_iter=2000，沒有調參。
+
+向量快取使用獨立 `.npz` 檔，不可指向輸入檔、編碼器目錄或本次輸出目錄；會核對品名順序、模型檔案與版本、設定及陣列完整性，資料改變就重算。報告分開記錄編碼時間、LR 訓練時間與完整預測時間；1,000 筆測速不使用向量快取。完整模型大小包括編碼器與 LR，不能只比較小型 `model.joblib`。
+
+B 的輸出檔名與 A 相同。預測與評估：
+
+```powershell
+experiments/category-models/.venv/Scripts/python.exe experiments/category-models/embedding_lr.py predict --model experiments/category-models/outputs/embedding-run-01/model.joblib --data experiments/category-models/data/new-names.jsonl --out experiments/category-models/outputs/b-new-predictions.jsonl
+experiments/category-models/.venv/Scripts/python.exe experiments/category-models/embedding_lr.py evaluate --model experiments/category-models/outputs/embedding-run-01/model.joblib --data experiments/category-models/data/new-items.jsonl --out experiments/category-models/outputs/b-external-01
+```
+
+`predict` 接受每行只有 `name` 的 JSONL；`evaluate` 必須提供已人工確認的標籤，可先使用上方 `prepare_data.py` 從 CSV 準備。兩者皆固定輸出類別 0～9 的機率，尚未校準。B 沒有 A 的 TF-IDF `out_of_vocabulary` 欄位；能產生向量不代表一定分對。
+
+搬移模型時須保留編碼器資料夾及 `encoder-manifest.json`。預設依 `model.joblib` 記錄的相對路徑尋找編碼器，也可用 `--encoder-dir` 指定新位置；檔案、編碼設定及相關套件版本必須符合訓練紀錄。只載入可信的 joblib。B 與 A 的比較見 [RESULTS-B.md](RESULTS-B.md)。

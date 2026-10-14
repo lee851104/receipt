@@ -1,15 +1,12 @@
 """Build the FastAPI app: settings, database, models and the /api routes."""
 import json
-from pathlib import Path
 
 from fastapi import FastAPI
 
 from .backends import load_backends
-from .db import init_db, make_engine
+from .db import ROOT, init_db, make_engine
 from .errors import ApiError, api_error_handler
 from .routes import health
-
-ROOT = Path(__file__).resolve().parents[2]
 
 
 def create_app(settings, backends=None):

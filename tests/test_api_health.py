@@ -11,7 +11,7 @@ class HealthTests(unittest.TestCase):
         self.assertEqual(response.json(), {"status": "ok", "gpu_mode": False, "demo_mode": False,
                                            "models": {"category": "fake", "attributes": "fake"}})
 
-    def test_gpu_mode_follows_the_llama_server_probe(self):
+    def test_gpu_mode_follows_the_probe_and_demo_mode_the_settings(self):
         self.assertTrue(make_client(gpu_probe=lambda: True).get("/api/health").json()["gpu_mode"])
         self.assertTrue(make_client(demo_mode=True).get("/api/health").json()["demo_mode"])
 

@@ -1,6 +1,7 @@
 # 消費配對系統：團隊總覽
 
-> 給 4 位組員和各自的 AI 先讀的唯一一份文件。最後更新：2026-10-14。
+> 給 4 位組員和各自的 AI 先讀的唯一一份文件。最後更新：2026-10-15。
+> 逐條需求、技術決定和任務清單在 OpenSpec 變更 `openspec/changes/add-matching-system/`。API 的路徑、欄位、錯誤代碼和設定名稱以本文件第 5 節為準，兩邊不一致時改 OpenSpec。
 > 交給 AI 時可以這樣說：「先讀 `docs/team/overview.md`，我是角色 N，今天要做第 N 週的哪一項。」
 
 ## 1. 一句話
@@ -53,19 +54,19 @@ clearance、sugar、quick、cooking、kitchen、sport_supply、sport_gear、car_
 | 8 | 資料輸入 | 上傳電子發票 CSV，另加「輸入品名馬上看分類」的小框 |
 | 9 | 假用戶 | 約 300 人，產生假發票後跑完整管線 |
 | 10 | 前端 | 沿用現有網頁，改成向 FastAPI 要資料 |
-| 11 | 登入 | 帳號密碼 + JWT，另外保留 demo 用的快速切換 |
+| 11 | 登入 | 帳號密碼 + JWT，另外保留 demo 用的快速切換。10/15 補上帳號管理：查看與修改個人資料、修改密碼、刪除帳號（含所有資料）、刪除單一月份、登出（所有裝置一起登出），見 5.11 |
 | 12 | 訓練資料不足 | 先用 AI 生成假品名把稀少類別補到每類 50 個；不夠再請組員提供發票 |
 | 13 | 相似度公式 | 保留現有公式（含 0.25 收縮項） |
 | 14 | Qwen 執行 | 背景處理 + 快取。改用約 5 GB 的模型，要重跑選型。RTX 4060 8G 從 10/14 起可用 |
 | 15 | BERT | `bert-base-chinese`，在 4060 上訓練（4060 被占用時改用 Colab） |
 | 16 | 資料庫 | SQLite，相似度用 Python 算。README 註明人數擴大後再改用 pgvector，以及原因 |
 | 17 | 評估 | 分類比較表 + 配對驗證 + 抽 100 個品名人工複核 Qwen。**測試集只放真實品名** |
-| 18 | 公開範圍 | 程式碼公開。真實發票、真實品名與其標註、模型檔都不進 git |
+| 18 | 公開範圍 | 程式碼公開。真實發票、真實品名與其標註、模型檔都不進 git。10/15 補充：BERT 模型權重第 3 週公開在 Hugging Face（固定版本），訓練資料不公開 |
 | 19 | 測試 | GitHub Actions 每次 push 跑全部測試，模型用假替身 |
 | 20 | 概念說明 | 說明文件，加上配對頁的「計算過程」面板 |
-| 21 | 啟動 | Python 虛擬環境 + 一鍵啟動檔，另做無 GPU 模式 |
+| 21 | 啟動 | Python 虛擬環境 + 一鍵啟動檔，另做無 GPU 模式。10/15 補充：另外提供 Docker（`docker compose up`，無 GPU 模式，自動下載模型、匯入假用戶），給面試官和乾淨環境驗證用 |
 | 22 | GitHub Pages | 現有版本凍結成 v1，README 放 v2 的 demo 影片或動圖 |
-| 23 | API | 第 5 節：8 項功能、11 個端點 |
+| 23 | API | 第 5 節：9 項功能、17 個端點（第 9 項帳號管理的 6 個端點是 10/15 加的） |
 | 24 | 分工 | 角色 1–4（第 7 節） |
 | 25 | 時程 | 第 8 節，盡量全部做完 |
 | 26 | 發表 | 4 人 × 8 分鐘，簡報稍後再做 |
@@ -103,15 +104,17 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 
 預設套件：`fastapi`、`uvicorn`、`sqlmodel`、`python-multipart`、`pyjwt`、`pwdlib[argon2]`（密碼雜湊）、`scikit-learn`、`torch`、`transformers`。Qwen 用 llama.cpp 的 `llama-server`，後端用 HTTP 呼叫它。Python 統一用 3.12。
 
+**Docker（10/15 補上）：** 根目錄的 `Dockerfile` 和 `docker-compose.yml` 用無 GPU 模式包起整個服務。執行 `docker compose up` 後：第一次啟動會從 Hugging Face 下載固定版本的分類模型；`DEMO_MODE=1` 而且資料庫是空的時，會自動匯入假用戶。資料庫和模型放在 volume 裡，重建容器也不會不見。容器裡不跑 Qwen；有設定 `LLAMA_SERVER_URL` 時，就連到主機上的 llama-server。組員開發時仍以虛擬環境為主，Docker 是給面試官和乾淨環境驗證用的。
+
 ## 5. API 規格（2026-10-14 定案）
 
-8 項功能、11 個端點。這一節是正式規格；程式寫好後，FastAPI 自動產生的 `/docs` 要和這一節一致，不一致時改程式。
+9 項功能、17 個端點（第 9 項帳號管理是 10/15 補上的，見 5.11）。這一節是正式規格；程式寫好後，FastAPI 自動產生的 `/docs` 要和這一節一致，不一致時改程式。
 
 ### 5.1 共通規則
 
 - **路徑**：API 一律以 `/api` 開頭。v2 網頁由同一個 FastAPI 從 `/web/` 提供（`src/web/` 資料夾），同一個網域，所以不用設 CORS。不掛在 `/`，是因為那樣 POST 到不存在的 `/api` 路徑會被靜態檔案接走，回 405 而不是 404
 - **格式**：JSON（UTF-8），欄位名用 snake_case。唯一例外：`/api/me/profile` 的 `months` 原樣沿用現有月報格式（`invoices.build_month` 的輸出，例如 `monthNumber`），現有網頁才不用改
-- **登入**：除了標「免」的端點，都要帶 `Authorization: Bearer <access_token>`。JWT 用 HS256，`sub` 放 user_id（轉成字串），24 小時過期
+- **登入**：除了標「免」的端點，都要帶 `Authorization: Bearer <access_token>`。JWT 用 HS256，`sub` 放 user_id（轉成字串），24 小時過期。帳號管理上線後，JWT 會多帶 `iat`（簽發時間），簽發時間早於這個人 `tokens_valid_after` 的 token 一律當成無效（見 5.11）
 - **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤用 FastAPI 預設的 422。需要登入的端點，沒帶 token 或 token 過期都回 401 `not_authenticated`
 - **數字**：`score` 這類小數不先四捨五入。要顯示的整數百分比另外給 `percent`，算法同 `similarity.percent`
 - **18 格順序**：一律照 `configs/traits.json` 的順序
@@ -132,6 +135,12 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 | 6 | 配對清單 | `GET /api/matches` | 要 | 200 |
 | 7 | 計算過程 | `GET /api/matches/{user_id}/explain` | 要 | 200 |
 | 8 | 健康檢查 | `GET /api/health` | 免 | 200 |
+| 9 | 帳號管理 | `GET /api/me` | 要 | 200 |
+| | | `PATCH /api/me` | 要 | 200 |
+| | | `POST /api/me/password` | 要 | 200 |
+| | | `DELETE /api/me` | 要 | 204 |
+| | | `DELETE /api/me/months/{month}` | 要 | 204 |
+| | | `POST /api/auth/logout` | 要 | 204 |
 
 ### 5.3 帳號
 
@@ -277,7 +286,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 **`GET /api/health`**
 - 回傳：`{"status": "ok", "gpu_mode": false, "demo_mode": true, "models": {"category": "fake", "attributes": "cache_only"}}`
 - `gpu_mode`：連得到 `LLAMA_SERVER_URL` 的 llama-server 就是 true
-- `models.category`：fake / tfidf / embedding / bert；`models.attributes`：fake / qwen / cache_only（無 GPU 模式）
+- `models.category`：fake / tfidf / embedding / bert，設定的模型檔不存在或下載失敗時是 `unavailable`（10/15 補上，這時即時分類回 503 `model_unavailable`，上傳的背景任務變成 failed）；`models.attributes`：fake / qwen / cache_only（無 GPU 模式）
 
 ### 5.10 設定（`.env`，repo 只放 `.env.example`）
 
@@ -291,6 +300,36 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `CATEGORY_MODEL` | fake | fake / tfidf / embedding / bert |
 | `ATTRIBUTES_MODEL` | fake | fake / qwen |
 | `CATEGORY_MIN_PROB` | 0.5 | 低於這個機率的品名歸到 10 待確認 |
+| `CATEGORY_MODEL_DIR` | `models/category` | `CATEGORY_MODEL=bert` 時讀模型的資料夾（`/models/` 不進 git）。10/15 補上 |
+| `CATEGORY_MODEL_REPO` | 空 | Hugging Face 上公開的分類模型庫；資料夾裡沒有模型時從這裡下載。10/15 補上 |
+| `CATEGORY_MODEL_REVISION` | 空 | 要下載的固定版本（commit），和 `CATEGORY_MODEL_REPO` 一起設定。10/15 補上 |
+
+### 5.11 帳號管理（2026-10-15 補上）
+
+格式和錯誤規則同 5.1。假用戶（`is_demo`）不能改名、改密碼、刪帳號或刪月份，一律回 403 `demo_user_read_only`；登出照常可以用。
+
+**`GET /api/me`**
+- 回傳：`{"user_id": 301, "username": "amy", "display_name": "Amy", "is_demo": false, "months": ["2026-07", "2026-08"]}`
+- `months`：已上傳的月份，由舊到新
+
+**`PATCH /api/me`**：JSON `{"display_name": "愛喝咖啡的人"}`，1–20 字元
+- 回傳：同 `GET /api/me`。`username` 不能改
+
+**`POST /api/me/password`**：JSON `{"current_password": "…", "new_password": "…"}`，新密碼 8–128 字元
+- 回傳：同 login（一個新的 token）。改完之後，舊的 token 全部失效
+- 錯誤：403 `wrong_password`
+
+**`DELETE /api/me`**：JSON `{"password": "…"}`
+- 回傳 204。依序刪掉這個人的 `items`、`jobs`、`profiles`、`users`，再刪掉 `item_cache` 裡已經沒有任何 `items` 用到的品名
+- 錯誤：403 `wrong_password`
+
+**`DELETE /api/me/months/{month}`**：`month` 是 `YYYY-MM`
+- 回傳 204。刪掉那個月的 `items` 和 `jobs`，重算 18 格；`item_cache` 的清理方式同上
+- 錯誤：404 `month_not_found`、409 `job_in_progress`（那個月還有 queued 或 running 的任務）
+
+**`POST /api/auth/logout`**
+- 回傳 204。把這個人的 `tokens_valid_after` 設成現在，這個帳號在**所有裝置**上的 token 都會失效
+- `users` 表因此多一個欄位 `tokens_valid_after`（可以是空的）。SQLModel 不會幫已經存在的資料表加欄位，開發用的 `data/app.db` 刪掉重建，再跑一次 seed 就好
 
 ## 6. 模型介面（角色 2、3 交給角色 1）
 
@@ -311,8 +350,8 @@ def describe_items(names: list[str]) -> list[dict | None]:
 
 ### 角色 1：後端與配對（組長）
 
-- **負責：** FastAPI、SQLite、登入、CSV 上傳與背景任務、配對和計算過程 API、一鍵啟動、無 GPU 模式、GitHub Actions
-- **交出：** 第 5 節的 11 個端點，每個都有測試
+- **負責：** FastAPI、SQLite、登入與帳號管理、CSV 上傳與背景任務、配對和計算過程 API、一鍵啟動、無 GPU 模式、Docker、GitHub Actions
+- **交出：** 第 5 節的 17 個端點，每個都有測試；`docker compose up` 能在乾淨的電腦上跑起 demo
 - **先讀：** `src/receipt/invoices.py`、`signals.py`、`traits.py`、`similarity.py`、`personas.py`、`configs/traits.json`
 - **每週：**
   1. API 規格和 4 人確認；FastAPI 骨架、資料表、註冊登入、`/health`；用假替身跑通
@@ -324,7 +363,7 @@ def describe_items(names: list[str]) -> list[dict | None]:
 ### 角色 2：分類模型
 
 - **負責：** 生成假品名、分配真實品名的複核、TF-IDF / embedding / BERT 三個模型的訓練與比較
-- **交出：** `src/ml/category.py` 的 `classify()`；比較表（macro-F1、準確率、模型大小、速度）；混淆矩陣；概念說明的「迴歸」段落
+- **交出：** `src/ml/category.py` 的 `classify()`；比較表（macro-F1、準確率、模型大小、速度）；混淆矩陣；概念說明的「迴歸」段落；第 3 週把 BERT 模型公開到 Hugging Face（固定版本，附模型卡）
 - **先讀：** `experiments/category-models/README.md`、`RESULTS.md`、`RESULTS-B.md`、`LABELING.md`、`docs/category-models-brief.md`、`configs/report.json`
 - **每週：**
   1. 稀少類別生成假品名，每類補到至少 50 個，存成 `datasets/synthetic/item-names.jsonl`（`name`、`category`、`source="synthetic"`）；整理真實品名測試集（只留在本機）
@@ -347,7 +386,7 @@ def describe_items(names: list[str]) -> list[dict | None]:
 
 ### 角色 4：前端與展示
 
-- **負責：** 現有網頁改接 API、登入和上傳畫面、品名即時分類框、計算過程面板、概念說明文件、README、發表素材整合
+- **負責：** 現有網頁改接 API、登入和上傳畫面、帳號設定頁、品名即時分類框、計算過程面板、概念說明文件、README、發表素材整合
 - **交出：** v2 網頁（由 FastAPI 提供）；`docs/team/concepts.md`（向量化、餘弦與內積，用假資料舉例）；README 的 v2 影片或動圖
 - **先讀：** `src/web/` 全部（特別是 `match.html`、`match-filter.js`、`trait-similarity.js`、`taste-profile.js`）、`src/receipt/build.py`
 - **每週：**
@@ -387,6 +426,7 @@ def describe_items(names: list[str]) -> list[dict | None]:
 - 真實品名只能用本機模型處理，不可以貼到雲端 AI 或線上服務；假品名可以
 - 評估報告只放數字，逐筆結果留在本機
 - 配對時，對方會看到你每個訊號買最多次的品名（去掉地名後，見 5.8），但看不到店家、日期和金額
+- BERT 分類模型的權重會公開在 Hugging Face。模型卡要寫明訓練資料包含真實品名，但資料本身不公開
 
 ## 11. 評估要交出的東西
 

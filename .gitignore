@@ -7,6 +7,11 @@
 /models/
 /runtime/
 
+# Archives may bundle the private sources above (e.g. rawdata.rar)
+*.rar
+*.zip
+*.7z
+
 # Reference photos and screenshots
 *.jpg
 *.jpeg

@@ -1,5 +1,12 @@
-"""Checks on text people type, shared by the request bodies."""
+"""Checks on what people send, shared by the request bodies."""
 import unicodedata
+from typing import Annotated
+
+from pydantic import Field
+
+MAX_ID = 2**63 - 1  # SQLite's largest INTEGER; a bigger number would crash the database lookup
+# A database id in a request body: a real JSON integer (not true, "2" or 2.0) from 1 to MAX_ID, else a 422 answer.
+RowId = Annotated[int, Field(strict=True, ge=1, le=MAX_ID)]
 
 
 def visible(text, field):

@@ -151,6 +151,9 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 **`POST /api/auth/demo-login`**：JSON `{"user_id": 1}`，不用密碼
 - 回傳：同 login
 - 只能切換成假用戶，註冊的真實帳號一定要用密碼登入
+- `user_id` 是 JSON 整數，1 到 2^63−1；`true`、字串 `"2"`、`2.0` 或超出範圍都回 422
+- `DEMO_MODE=1` 時，任何連得到伺服器的人都能用 demo 用戶登入，所以只在自己電腦或 demo 現場開。關掉之後，已發出的 demo token 仍有效到過期（24 小時），要立刻失效就換 `JWT_SECRET`
+- 前端用 `GET /api/health` 的 `demo_mode` 決定要不要顯示快速切換，不要靠 404 的內容判斷
 - 錯誤：404（`DEMO_MODE` 沒開，或沒有這個人）、403 `not_demo_user`
 
 ### 5.4 上傳與進度

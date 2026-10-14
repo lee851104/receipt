@@ -11,7 +11,7 @@ from ..db import get_session
 from ..errors import ApiError
 from ..security import MAX_PASSWORD, hash_password, token_response, verify_password
 from ..tables import User
-from ..validation import visible
+from ..validation import RowId, visible
 
 router = APIRouter(prefix="/api/auth")
 demo_router = APIRouter(prefix="/api/auth")
@@ -31,7 +31,7 @@ class Registration(BaseModel):
 
 
 class DemoLogin(BaseModel):
-    user_id: int
+    user_id: RowId
 
 
 @router.post("/register", status_code=201)

@@ -24,7 +24,8 @@ class RegisterTests(unittest.TestCase):
     def test_bad_fields_are_422(self):
         for fields in ({"username": "am"}, {"username": "a" * 33}, {"username": "amy!"}, {"password": "short"},
                        {"password": "p" * 129}, {"display_name": "   "}, {"display_name": "名" * 21},
-                       {"display_name": "\u200b"}, {"display_name": "\u202eymA"}, {"display_name": "a\nb"}):
+                       {"display_name": "\u200b"}, {"display_name": "\u202eymA"}, {"display_name": "a\nb"},
+                       {"display_name": "a" + chr(0x2028) + "b"}, {"display_name": chr(0xE000)}):
             with self.subTest(fields=fields):
                 self.assertEqual(register(make_client(), **fields).status_code, 422)
 

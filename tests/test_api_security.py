@@ -3,10 +3,12 @@ import base64
 import json
 import unittest
 from datetime import datetime, timedelta, timezone
+from unittest import mock
 
 import jwt
 
-from src.api.security import create_token, hash_password, read_token, verify_password
+from src.api import security
+from src.api.security import MAX_PASSWORD, create_token, hash_password, read_token, verify_password
 from src.api.settings import Settings
 from src.api.tables import User
 
@@ -30,6 +32,14 @@ class PasswordTests(unittest.TestCase):
         for hashed in (None, ""):
             with self.subTest(hashed=hashed):
                 self.assertFalse(verify_password("anything", hashed))
+
+    def test_an_overlong_password_is_refused_without_normalising_all_of_it(self):
+        hashed = hash_password("password123")
+        lengths, original = [], security.normalized
+        with mock.patch.object(security, "normalized", side_effect=lambda text: lengths.append(len(text)) or original(text)):
+            self.assertFalse(verify_password("p" * 100_000, hashed))
+        self.assertTrue(lengths)
+        self.assertLessEqual(max(lengths), MAX_PASSWORD)
 
 
 class TokenTests(unittest.TestCase):

@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 
 from ..db import get_session
 from ..errors import ApiError
-from ..security import hash_password, token_response, verify_password
+from ..security import MAX_PASSWORD, hash_password, token_response, verify_password
 from ..tables import User
 
 router = APIRouter(prefix="/api/auth")
@@ -20,15 +20,17 @@ SessionDep = Annotated[Session, Depends(get_session)]
 class Registration(BaseModel):
     # Stored in lowercase, so Amy, amy and AMY are one account however a phone capitalises it.
     username: Annotated[str, StringConstraints(to_lower=True, pattern=r"^[A-Za-z0-9_]{3,32}$")]
-    password: str = Field(min_length=8, max_length=128)
+    password: str = Field(min_length=8, max_length=MAX_PASSWORD)
     display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20)] | None = None
 
     @field_validator("display_name")
     @classmethod
     def visible(cls, name):
-        """No control or invisible formatting characters, which could make a name look blank or like someone else's."""
-        if name is not None and any(unicodedata.category(char) in ("Cc", "Cf") for char in name):
-            raise ValueError("display_name holds a control or invisible character")
+        """No control, invisible, private or unassigned characters and no line breaks, which could make a name look
+        blank, break a line or pass for someone else's."""
+        if name is not None and any(unicodedata.category(char)[0] == "C" or unicodedata.category(char) in ("Zl", "Zp")
+                                    for char in name):
+            raise ValueError("display_name holds a control, invisible or line-breaking character")
         return name
 
 

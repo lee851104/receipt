@@ -136,7 +136,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 ### 5.3 帳號
 
 **`POST /api/auth/register`**：JSON `{"username": "amy", "password": "…", "display_name": "Amy"}`
-- `username` 3–32 字元，只能用英數字和底線；`password` 8–128 字元；`display_name` 可省略，1–20 字元，預設同 `username`
+- `username` 3–32 字元，只能用英數字和底線，不分大小寫（一律存成小寫，登入時也轉小寫比對）；`password` 8–128 字元，雜湊和比對前都先做 Unicode NFKC 正規化；`display_name` 可省略，1–20 字元，預設同 `username`，不能含控制字元或看不見的格式字元（例如零寬空白、方向控制字元）
 - 回傳 201：`{"user_id": 301, "username": "amy", "display_name": "Amy"}`
 - 錯誤：409 `username_taken`
 

@@ -1,4 +1,5 @@
 """Password hashes, access tokens, and the logged-in user behind a request."""
+import unicodedata
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
@@ -20,8 +21,13 @@ ALGORITHM = "HS256"
 bearer = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
+def normalized(password):
+    """The same password however the keyboard composed it (Unicode NFKC), so an é typed two ways still matches."""
+    return unicodedata.normalize("NFKC", password)
+
+
 def hash_password(password):
-    return HASHER.hash(password)
+    return HASHER.hash(normalized(password))
 
 
 def verify_password(password, hashed):
@@ -29,7 +35,7 @@ def verify_password(password, hashed):
     if not hashed:
         HASHER.verify(password, DUMMY_HASH)
         return False
-    return HASHER.verify(password, hashed)
+    return HASHER.verify(normalized(password), hashed)
 
 
 def create_token(user, settings, now=None):

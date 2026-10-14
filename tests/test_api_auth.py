@@ -23,9 +23,23 @@ class RegisterTests(unittest.TestCase):
 
     def test_bad_fields_are_422(self):
         for fields in ({"username": "am"}, {"username": "a" * 33}, {"username": "amy!"}, {"password": "short"},
-                       {"password": "p" * 129}, {"display_name": "   "}, {"display_name": "名" * 21}):
+                       {"password": "p" * 129}, {"display_name": "   "}, {"display_name": "名" * 21},
+                       {"display_name": "\u200b"}, {"display_name": "\u202eymA"}, {"display_name": "a\nb"}):
             with self.subTest(fields=fields):
                 self.assertEqual(register(make_client(), **fields).status_code, 422)
+
+    def test_the_longest_and_shortest_allowed_values_are_accepted(self):
+        for fields in ({"username": "abc"}, {"username": "a" * 32}, {"password": "p" * 8}, {"password": "p" * 128},
+                       {"display_name": "名" * 20}):
+            with self.subTest(fields=fields):
+                self.assertEqual(register(make_client(), **fields).status_code, 201)
+
+    def test_usernames_ignore_case(self):
+        client = make_client()
+        self.assertEqual(register(client, username="Amy").json()["username"], "amy")
+        self.assertEqual(register(client, username="amy").status_code, 409)
+        response = client.post("/api/auth/login", data={"username": "AMY", "password": "password123"})
+        self.assertEqual(response.status_code, 200)
 
 
 class LoginTests(unittest.TestCase):
@@ -45,6 +59,12 @@ class LoginTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 401)
                 self.assertEqual(response.json(), {"detail": "bad_credentials"})
                 self.assertEqual(response.headers["WWW-Authenticate"], "Bearer")
+
+    def test_a_password_matches_however_its_letters_were_composed(self):
+        client = make_client()
+        register(client, password="caf\u00e9-1234")  # é as one character
+        response = client.post("/api/auth/login", data={"username": "amy", "password": "cafe\u0301-1234"})  # e + accent
+        self.assertEqual(response.status_code, 200)
 
     def test_the_helper_headers_work(self):
         client = make_client()

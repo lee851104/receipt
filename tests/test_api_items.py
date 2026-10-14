@@ -1,0 +1,60 @@
+"""POST /api/items/classify needs a login and answers the category and attributes of one name."""
+import unittest
+
+from sqlmodel import Session, select
+
+from src.api.security import create_token
+from src.api.tables import User
+from src.ml.fields import FIELDS
+from tests.api_support import login, make_client, register
+
+
+class ClassifyTests(unittest.TestCase):
+    def client_and_headers(self, **backend_changes):
+        client = make_client(**backend_changes)
+        register(client)
+        return client, login(client)
+
+    def test_classify_needs_a_valid_token(self):
+        client = make_client()
+        ghost = create_token(User(id=99, username="ghost", display_name="Ghost"), client.app.state.settings)
+        for headers in ({}, {"Authorization": "Bearer not.a.token"}, {"Authorization": "Bearer " + ghost}):
+            with self.subTest(headers=headers):
+                response = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers)
+                self.assertEqual(response.status_code, 401)
+                self.assertEqual(response.json(), {"detail": "not_authenticated"})
+                self.assertEqual(response.headers["WWW-Authenticate"], "Bearer")
+
+    def test_a_deleted_accounts_token_does_not_work_for_the_next_account_with_its_id(self):
+        client, old = self.client_and_headers()
+        with Session(client.app.state.engine) as session:
+            session.delete(session.exec(select(User).where(User.username == "amy")).one())
+            session.commit()
+        self.assertEqual(register(client, username="bob").json()["user_id"], 1)  # SQLite gave amy's id to bob
+        response = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=old)
+        self.assertEqual(response.status_code, 401)
+
+    def test_classify_answers_the_category_probabilities_and_attributes(self):
+        client, headers = self.client_and_headers()
+        body = client.post("/api/items/classify", json={"name": "  鮮奶茶 微糖 "}, headers=headers).json()
+        self.assertEqual(body["name"], "鮮奶茶 微糖")
+        self.assertEqual(body["category"], {"id": 1, "name": "飲品", "prob": 0.9})
+        self.assertEqual(len(body["probs"]), 10)
+        self.assertEqual(body["attributes"], dict.fromkeys(FIELDS))
+        self.assertEqual(body["attributes_status"], "ready")
+
+    def test_a_name_the_attribute_model_has_not_seen_is_pending(self):
+        client, headers = self.client_and_headers(describe_items=lambda names: [None for _ in names])
+        body = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers).json()
+        self.assertEqual((body["attributes"], body["attributes_status"]), (None, "pending"))
+
+    def test_an_empty_or_too_long_name_is_422(self):
+        client, headers = self.client_and_headers()
+        for name in ("", "   ", "茶" * 101):
+            with self.subTest(length=len(name)):
+                response = client.post("/api/items/classify", json={"name": name}, headers=headers)
+                self.assertEqual(response.status_code, 422)
+
+
+if __name__ == "__main__":
+    unittest.main()

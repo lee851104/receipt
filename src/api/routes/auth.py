@@ -24,6 +24,14 @@ class Registration(BaseModel):
     password: str = Field(min_length=8, max_length=MAX_PASSWORD)
     display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20)] | None = None
 
+    @field_validator("username")
+    @classmethod
+    def not_a_demo_name(cls, username):
+        """demo_ names belong to the fictional users the seed adds, so a real account can never take one."""
+        if username.startswith("demo_"):
+            raise ValueError("usernames starting with demo_ are kept for the fictional users")
+        return username
+
     @field_validator("display_name")
     @classmethod
     def visible_name(cls, name):

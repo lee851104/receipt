@@ -1,5 +1,6 @@
 """Register, log in, and the demo quick switch that only fictional people can use."""
 import unittest
+from dataclasses import replace
 
 from src.api.security import read_token
 from src.api.seed import seed_demo_users
@@ -31,6 +32,11 @@ class RegisterTests(unittest.TestCase):
                        {"display_name": "a" + chr(0x2028) + "b"}, {"display_name": chr(0xE000)}):
             with self.subTest(fields=fields):
                 self.assertEqual(register(make_client(), **fields).status_code, 422)
+
+    def test_demo_names_are_kept_for_the_fictional_users(self):
+        for username in ("demo_001", "Demo_123"):
+            with self.subTest(username=username):
+                self.assertEqual(register(make_client(), username=username).status_code, 422)
 
     def test_a_rejected_password_is_not_sent_back(self):
         response = register(make_client(), password="hunter2")
@@ -120,6 +126,16 @@ class DemoTests(unittest.TestCase):
             with self.subTest(user_id=user_id):
                 response = self.client.post("/api/auth/demo-login", json={"user_id": user_id})
                 self.assertEqual(response.status_code, 422)
+
+    def test_a_demo_token_stops_working_once_demo_mode_is_off(self):
+        token = self.client.post("/api/auth/demo-login", json={"user_id": 1}).json()["access_token"]
+        real = login(self.client)
+        app = self.client.app
+        app.state.settings = replace(app.state.settings, demo_mode=False)
+        demo = self.client.post("/api/items/classify", json={"name": "鮮奶茶"},
+                                headers={"Authorization": "Bearer " + token})
+        self.assertEqual(demo.status_code, 401)
+        self.assertEqual(self.client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=real).status_code, 200)
 
     def test_demo_login_refuses_real_accounts_and_unknown_ids(self):
         real = self.client.post("/api/auth/demo-login", json={"user_id": self.real_id})

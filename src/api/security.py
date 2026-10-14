@@ -71,6 +71,7 @@ def current_user(request: Request, token: Annotated[str | None, Depends(bearer)]
     too, so a token issued to a deleted account never works for a newer one that got the same id."""
     claims = None if token is None else read_token(token, request.app.state.settings)
     user = None if claims is None else session.get(User, claims[0])
-    if user is None or user.token_key != claims[1]:
+    # A demo session ends as soon as DEMO_MODE is switched off; real accounts are not affected.
+    if user is None or user.token_key != claims[1] or (user.is_demo and not request.app.state.settings.demo_mode):
         raise ApiError(401, "not_authenticated", headers={"WWW-Authenticate": "Bearer"})
     return user

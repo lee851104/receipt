@@ -6,6 +6,7 @@ from pydantic import Field
 
 MAX_ID = 2**63 - 1  # SQLite's largest INTEGER; a bigger number would crash the database lookup
 # A database id in a request body: a real JSON integer (not true, "2" or 2.0) from 1 to MAX_ID, else a 422 answer.
+# Request bodies only: an id in the path arrives as text, so use Annotated[int, Path(ge=1, le=MAX_ID)] there.
 RowId = Annotated[int, Field(strict=True, ge=1, le=MAX_ID)]
 
 

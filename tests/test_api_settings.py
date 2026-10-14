@@ -39,6 +39,27 @@ class SettingsTests(unittest.TestCase):
             with self.subTest(key=key), self.assertRaisesRegex(ValueError, key):
                 Settings.from_env({"JWT_SECRET": SECRET, key: "gpt"})
 
+    def test_blank_values_mean_the_default(self):
+        settings = Settings.from_env({"JWT_SECRET": SECRET, "JWT_EXPIRE_MINUTES": "", "DATABASE_URL": "  ",
+                                      "CATEGORY_MODEL": "", "CATEGORY_MIN_PROB": " "})
+        self.assertEqual(settings, Settings(jwt_secret=SECRET))
+
+    def test_spaces_around_values_are_ignored(self):
+        settings = Settings.from_env({"JWT_SECRET": f" {SECRET} ", "DEMO_MODE": " 1 ", "CATEGORY_MODEL": "tfidf ",
+                                      "ATTRIBUTES_MODEL": " qwen", "JWT_EXPIRE_MINUTES": " 30 "})
+        self.assertEqual((settings.jwt_secret, settings.demo_mode, settings.category_model,
+                          settings.attributes_model, settings.jwt_expire_minutes), (SECRET, True, "tfidf", "qwen", 30))
+
+    def test_bad_or_out_of_range_numbers_stop_the_server_naming_the_variable(self):
+        cases = [("JWT_EXPIRE_MINUTES", value) for value in ("abc", "1.5", "0", "-5")]
+        cases += [("CATEGORY_MIN_PROB", value) for value in ("abc", "1.5", "-0.1", "nan")]
+        for key, value in cases:
+            with self.subTest(key=key, value=value), self.assertRaisesRegex(ValueError, key):
+                Settings.from_env({"JWT_SECRET": SECRET, key: value})
+
+    def test_the_secret_is_never_printed(self):
+        self.assertNotIn(SECRET, repr(Settings.from_env({"JWT_SECRET": SECRET})))
+
 
 if __name__ == "__main__":
     unittest.main()

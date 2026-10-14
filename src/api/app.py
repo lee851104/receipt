@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from .backends import load_backends
 from .db import ROOT, init_db, make_engine
 from .errors import ApiError, api_error_handler
-from .routes import health
+from .routes import auth, health
 
 
 def create_app(settings, backends=None):
@@ -19,5 +19,6 @@ def create_app(settings, backends=None):
     report = json.loads((ROOT / "configs" / "report.json").read_text(encoding="utf-8"))
     app.state.categories = [category["name"] for category in report["categories"]]
     app.add_exception_handler(ApiError, api_error_handler)
+    app.include_router(auth.router)
     app.include_router(health.router)
     return app

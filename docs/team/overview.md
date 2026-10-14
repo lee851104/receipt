@@ -109,7 +109,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 
 ### 5.1 共通規則
 
-- **路徑**：API 一律以 `/api` 開頭。v2 網頁由同一個 FastAPI 從 `/` 提供，同一個網域，所以不用設 CORS
+- **路徑**：API 一律以 `/api` 開頭。v2 網頁由同一個 FastAPI 從 `/web/` 提供（`src/web/` 資料夾），同一個網域，所以不用設 CORS。不掛在 `/`，是因為那樣 POST 到不存在的 `/api` 路徑會被靜態檔案接走，回 405 而不是 404
 - **格式**：JSON（UTF-8），欄位名用 snake_case。唯一例外：`/api/me/profile` 的 `months` 原樣沿用現有月報格式（`invoices.build_month` 的輸出，例如 `monthNumber`），現有網頁才不用改
 - **登入**：除了標「免」的端點，都要帶 `Authorization: Bearer <access_token>`。JWT 用 HS256，`sub` 放 user_id（轉成字串），24 小時過期
 - **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤用 FastAPI 預設的 422。需要登入的端點，沒帶 token 或 token 過期都回 401 `not_authenticated`
@@ -283,7 +283,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 
 | 變數 | 預設 | 說明 |
 |---|---|---|
-| `JWT_SECRET` | 無，一定要設 | 簽 JWT 用的密鑰 |
+| `JWT_SECRET` | 無，一定要設 | 簽 JWT 用的密鑰，至少 32 字元 |
 | `JWT_EXPIRE_MINUTES` | 1440 | token 有效時間 |
 | `DEMO_MODE` | 0 | 1 = 開放 `demo-users` 和 `demo-login` |
 | `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git |

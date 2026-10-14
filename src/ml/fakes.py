@@ -29,6 +29,7 @@ def classify(names):
     return answers
 
 
-def describe_items(names):
-    """Every field unknown for every name: the shape of a real answer with nothing guessed."""
+def describe_items(names, ask_model=True):
+    """Every field unknown for every name: the shape of a real answer with nothing guessed. A real model reads only
+    its cache when ask_model is False; the fake has no model to ask, so it answers the same either way."""
     return [dict.fromkeys(FIELDS) for _ in names]

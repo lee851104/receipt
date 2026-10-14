@@ -112,7 +112,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 - **路徑**：API 一律以 `/api` 開頭。v2 網頁由同一個 FastAPI 從 `/web/` 提供（`src/web/` 資料夾），同一個網域，所以不用設 CORS。不掛在 `/`，是因為那樣 POST 到不存在的 `/api` 路徑會被靜態檔案接走，回 405 而不是 404
 - **格式**：JSON（UTF-8），欄位名用 snake_case。唯一例外：`/api/me/profile` 的 `months` 原樣沿用現有月報格式（`invoices.build_month` 的輸出，例如 `monthNumber`），現有網頁才不用改
 - **登入**：除了標「免」的端點，都要帶 `Authorization: Bearer <access_token>`。JWT 用 HS256，`sub` 放 user_id（轉成字串），24 小時過期
-- **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤用 FastAPI 預設的 422。需要登入的端點，沒帶 token 或 token 過期都回 401 `not_authenticated`
+- **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤回 422，格式同 FastAPI 預設（`detail` 是清單，每項有 `type`、`loc`、`msg`），但不回傳被拒絕的輸入值，因為那可能是密碼。需要登入的端點，沒帶 token 或 token 過期都回 401 `not_authenticated`
 - **數字**：`score` 這類小數不先四捨五入。要顯示的整數百分比另外給 `percent`，算法同 `similarity.percent`
 - **18 格順序**：一律照 `configs/traits.json` 的順序
 - **null**：表示「不知道」或「資料不夠」，不能當成 0 或 `false`
@@ -180,7 +180,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 
 ### 5.5 品名即時分類
 
-**`POST /api/items/classify`**：JSON `{"name": "鮮奶茶 微糖"}`，`name` 去掉頭尾空白後 1–100 字元
+**`POST /api/items/classify`**：JSON `{"name": "鮮奶茶 微糖"}`，`name` 去掉頭尾空白後 1–100 字元，不能含控制字元、看不見的字元或換行
 - 回傳：
   ```json
   {"name": "鮮奶茶 微糖",
@@ -191,7 +191,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
   ```
 - `category` 一律是模型的第一名（0–9），`probs` 是 10 類各自的機率
 - `attributes`：16 個屬性加 7 個基本旗標，欄位名同 `attributes.describe`。每個欄位都可能是 `null`
-- 快取裡有 → `ready`。沒有 → `attributes` 為 `null`、`attributes_status` 為 `pending`；GPU 模式下伺服器會同時把它排進背景分析，前端每 2 秒再問一次，最多 5 次
+- 分類框不會在請求裡等 Qwen，只查快取（`describe_items(names, ask_model=False)`）。快取裡有 → `ready`。
 
 ### 5.6 我的品味向量與月報
 
@@ -300,14 +300,17 @@ def classify(names: list[str]) -> list[dict]:
     """每個品名回傳 {"category": 0–9, "probs": [10 個機率]}。"""
 
 # src/ml/attributes.py
-def describe_items(names: list[str]) -> list[dict | None]:
+def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None]:
     """每個品名回傳 16 個屬性 + 7 個基本旗標（欄位名見 src/ml/fields.py），
-    還沒分析過的回傳 None。null 是不知道，不是 false。"""
+    還沒分析過的回傳 None。null 是不知道，不是 false。
+    ask_model=False 時只查快取、不呼叫 Qwen（給即時分類框用）。"""
 ```
 
 `src/ml/fakes.py` 提供同樣介面的假替身，回傳固定結果。後端和 CI 一開始全部用假替身，模型好了再換成真的。
 
 回傳值一律用一般的 Python 型別（numpy 的結果先 `.tolist()`），否則 API 會回 500。在自己的測試裡呼叫 `tests/model_contract.py` 的 `check_classify(self, classify)` 和 `check_describe(self, describe_items)`，就能確認格式對不對。
+
+`describe_items` 連不到 llama-server 時回 `None`，不要丟例外；呼叫 Qwen 要設 timeout。兩個函式會被不同的執行緒同時呼叫（FastAPI 用執行緒跑 `def` 路由），PyTorch 模型和 tokenizer 要自己加鎖。
 
 ## 7. 角色分工
 

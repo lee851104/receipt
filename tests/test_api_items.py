@@ -1,4 +1,5 @@
 """POST /api/items/classify needs a login and answers the category and attributes of one name."""
+import json
 import unittest
 
 from sqlmodel import Session, select
@@ -31,8 +32,9 @@ class ClassifyTests(unittest.TestCase):
             session.delete(session.exec(select(User).where(User.username == "amy")).one())
             session.commit()
         self.assertEqual(register(client, username="bob").json()["user_id"], 1)  # SQLite gave amy's id to bob
-        response = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=old)
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=old).status_code, 401)
+        bob = login(client, username="bob")
+        self.assertEqual(client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=bob).status_code, 200)
 
     def test_classify_answers_the_category_probabilities_and_attributes(self):
         client, headers = self.client_and_headers()
@@ -43,16 +45,32 @@ class ClassifyTests(unittest.TestCase):
         self.assertEqual(body["attributes"], dict.fromkeys(FIELDS))
         self.assertEqual(body["attributes_status"], "ready")
 
+    def test_a_hundred_characters_fit_and_ids_follow_the_report_categories(self):
+        client, headers = self.client_and_headers()
+        long_name = client.post("/api/items/classify", json={"name": " " + "茶" * 100 + " "}, headers=headers)
+        self.assertEqual(long_name.status_code, 200)
+        body = client.post("/api/items/classify", json={"name": "衛生紙"}, headers=headers).json()
+        self.assertEqual(body["category"], {"id": 8, "name": "日用品", "prob": 0.9})
+
     def test_a_name_the_attribute_model_has_not_seen_is_pending(self):
-        client, headers = self.client_and_headers(describe_items=lambda names: [None for _ in names])
+        client, headers = self.client_and_headers(describe_items=lambda names, ask_model=True: [None for _ in names])
         body = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers).json()
         self.assertEqual((body["attributes"], body["attributes_status"]), (None, "pending"))
 
-    def test_an_empty_or_too_long_name_is_422(self):
+    def test_the_classify_box_only_reads_the_cache(self):
+        asked = []
+        client, headers = self.client_and_headers(
+            describe_items=lambda names, ask_model=True: asked.append(ask_model) or [None for _ in names])
+        client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers)
+        self.assertEqual(asked, [False])
+
+    def test_an_empty_too_long_or_unreadable_name_is_422(self):
         client, headers = self.client_and_headers()
-        for name in ("", "   ", "茶" * 101):
-            with self.subTest(length=len(name)):
-                response = client.post("/api/items/classify", json={"name": name}, headers=headers)
+        for name in ("", "   ", "茶" * 101, "a" + chr(10) + "b", chr(0x200B), chr(0), chr(0xD800)):
+            with self.subTest(code_points=[hex(ord(char)) for char in name[:3]], length=len(name)):
+                # json.dumps writes every character as an ASCII escape, so even a lone surrogate can be sent.
+                response = client.post("/api/items/classify", content=json.dumps({"name": name}),
+                                       headers={**headers, "Content-Type": "application/json"})
                 self.assertEqual(response.status_code, 422)
 
 

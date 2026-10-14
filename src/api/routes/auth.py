@@ -1,5 +1,4 @@
 """Accounts: register and log in, and the demo quick switch that exists only when DEMO_MODE=1."""
-import unicodedata
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -12,6 +11,7 @@ from ..db import get_session
 from ..errors import ApiError
 from ..security import MAX_PASSWORD, hash_password, token_response, verify_password
 from ..tables import User
+from ..validation import visible
 
 router = APIRouter(prefix="/api/auth")
 SessionDep = Annotated[Session, Depends(get_session)]
@@ -25,13 +25,8 @@ class Registration(BaseModel):
 
     @field_validator("display_name")
     @classmethod
-    def visible(cls, name):
-        """No control, invisible, private or unassigned characters and no line breaks, which could make a name look
-        blank, break a line or pass for someone else's."""
-        if name is not None and any(unicodedata.category(char)[0] == "C" or unicodedata.category(char) in ("Zl", "Zp")
-                                    for char in name):
-            raise ValueError("display_name holds a control, invisible or line-breaking character")
-        return name
+    def visible_name(cls, name):
+        return None if name is None else visible(name, "display_name")
 
 
 @router.post("/register", status_code=201)

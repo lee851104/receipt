@@ -38,6 +38,8 @@ def check_describe(test, describe_items, names=NAMES):
     """One answer per name, in the same order (not checked here): None for a name never analysed, otherwise
     exactly the 23 fields holding plain values, where None means unknown. Returns the answers for further checks."""
     test.assertEqual(describe_items([]), [])
+    # The classify box asks with ask_model=False, where only the cache may answer; the shape stays the same.
+    test.assertEqual(len(describe_items(names, ask_model=False)), len(names))
     answers = describe_items(names)
     test.assertEqual(len(answers), len(names))
     for name, answer in zip(names, answers):

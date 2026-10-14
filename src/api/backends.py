@@ -15,7 +15,7 @@ class Backends:
     category: str                    # the name /api/health reports
     classify: Callable               # list[str] -> list[{"category": 0-9, "probs": [10 floats]}]
     attributes: str
-    describe_items: Callable         # list[str] -> list[dict | None]
+    describe_items: Callable         # (list[str], ask_model=True) -> list[dict | None]
     gpu_probe: Callable[[], bool]    # whether the llama-server answers right now
 
 

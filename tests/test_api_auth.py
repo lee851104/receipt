@@ -29,6 +29,12 @@ class RegisterTests(unittest.TestCase):
             with self.subTest(fields=fields):
                 self.assertEqual(register(make_client(), **fields).status_code, 422)
 
+    def test_a_rejected_password_is_not_sent_back(self):
+        response = register(make_client(), password="hunter2")
+        self.assertEqual(response.status_code, 422)
+        self.assertNotIn("hunter2", response.text)
+        self.assertEqual(response.json()["detail"][0]["loc"], ["body", "password"])
+
     def test_the_longest_and_shortest_allowed_values_are_accepted(self):
         for fields in ({"username": "abc"}, {"username": "a" * 32}, {"password": "p" * 8}, {"password": "p" * 128},
                        {"display_name": "名" * 20}):

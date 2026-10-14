@@ -301,11 +301,13 @@ def classify(names: list[str]) -> list[dict]:
 
 # src/ml/attributes.py
 def describe_items(names: list[str]) -> list[dict | None]:
-    """每個品名回傳 16 個屬性 + 7 個基本旗標（欄位名同 attributes.describe），
+    """每個品名回傳 16 個屬性 + 7 個基本旗標（欄位名見 src/ml/fields.py），
     還沒分析過的回傳 None。null 是不知道，不是 false。"""
 ```
 
 `src/ml/fakes.py` 提供同樣介面的假替身，回傳固定結果。後端和 CI 一開始全部用假替身，模型好了再換成真的。
+
+回傳值一律用一般的 Python 型別（numpy 的結果先 `.tolist()`），否則 API 會回 500。在自己的測試裡呼叫 `tests/model_contract.py` 的 `check_classify(self, classify)` 和 `check_describe(self, describe_items)`，就能確認格式對不對。
 
 ## 7. 角色分工
 

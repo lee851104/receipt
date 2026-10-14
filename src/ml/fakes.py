@@ -21,11 +21,11 @@ def classify(names):
     """Each name's category 0-9 and the probability of every category."""
     answers = []
     for name in names:
-        match = next((category for category, words in KEYWORDS if any(word in name for word in words)), None)
-        if match is None:
+        guess = next((category for category, words in KEYWORDS if any(word in name for word in words)), None)
+        if guess is None:
             answers.append({"category": 0, "probs": spread(0, UNSURE)})
         else:
-            answers.append({"category": match, "probs": spread(match, SURE)})
+            answers.append({"category": guess, "probs": spread(guess, SURE)})
     return answers
 
 

@@ -190,8 +190,9 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
    "attributes_status": "ready"}
   ```
 - `category` 一律是模型的第一名（0–9），`probs` 是 10 類各自的機率
-- `attributes`：16 個屬性加 7 個基本旗標，欄位名同 `attributes.describe`。每個欄位都可能是 `null`
-- 分類框不會在請求裡等 Qwen，只查快取（`describe_items(names, ask_model=False)`）。快取裡有 → `ready`。
+- `attributes`：16 個屬性加 7 個基本旗標，欄位名見 `src/ml/fields.py`。每個欄位都可能是 `null`
+- 分類框不會在請求裡等 Qwen，只查快取（`describe_items(names, ask_model=False)`）。快取裡有 → `ready`。沒有 → `attributes` 為 `null`、`attributes_status` 為 `pending`
+- 第 2 週起，GPU 模式下伺服器會把 pending 的品名排進背景分析，前端每 2 秒再問一次，最多 5 次。第 1 週還沒有這個排程，pending 不會自己變成 ready，前端先顯示「待分析」就好
 
 ### 5.6 我的品味向量與月報
 
@@ -367,7 +368,7 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
 | 週 | 日期 | 全隊目標 |
 |---|---|---|
 | 1 | 10/14–10/20 | API 規格定案；後端骨架用假替身跑通；假品名；4060 環境與選型 |
-| 2 | 10/21–10/27 | 上傳、背景任務、快取；A/B 重跑與 BERT 第一版；Qwen 介接；300 個假用戶；登入畫面 |
+| 2 | 10/21–10/27 | 上傳、背景任務、快取；分類框 pending 品名的背景分析；A/B 重跑與 BERT 第一版；Qwen 介接；300 個假用戶；登入畫面 |
 | 3 | 10/28–11/03 | **整條管線串通**；評估三項；計算過程面板；CI |
 | 4 | 11/04–11/10 | **11/04 起停止加功能，只修錯誤**；文件、README、發表素材 |
 

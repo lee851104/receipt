@@ -38,14 +38,14 @@ def check_describe(test, describe_items, names=NAMES):
     """One answer per name, in the same order (not checked here): None for a name never analysed, otherwise
     exactly the 23 fields holding plain values, where None means unknown. Returns the answers for further checks."""
     test.assertEqual(describe_items([]), [])
-    # The classify box asks with ask_model=False, where only the cache may answer; the shape stays the same.
-    test.assertEqual(len(describe_items(names, ask_model=False)), len(names))
     answers = describe_items(names)
-    test.assertEqual(len(answers), len(names))
-    for name, answer in zip(names, answers):
-        with test.subTest(name=name):
-            if answer is not None:
-                test.assertEqual(set(answer), set(FIELDS))
-                for field, value in answer.items():
-                    test.assertIn(type(value), VALUE_TYPES, f"{field} is a {type(value).__name__}")
+    # The classify box asks with ask_model=False, where only the cache may answer; its answers keep the same shape.
+    for ask_model, given in ((True, answers), (False, describe_items(names, ask_model=False))):
+        test.assertEqual(len(given), len(names))
+        for name, answer in zip(names, given):
+            with test.subTest(name=name, ask_model=ask_model):
+                if answer is not None:
+                    test.assertEqual(set(answer), set(FIELDS))
+                    for field, value in answer.items():
+                        test.assertIn(type(value), VALUE_TYPES, f"{field} is a {type(value).__name__}")
     return answers

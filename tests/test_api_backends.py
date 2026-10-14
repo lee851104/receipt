@@ -3,6 +3,7 @@ import os
 import socketserver
 import threading
 import unittest
+import urllib.request
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from unittest import mock
@@ -77,7 +78,10 @@ class BackendTests(unittest.TestCase):
 
     def test_the_probe_goes_straight_to_the_server_even_with_a_proxy_set(self):
         with serving(Answer) as url, mock.patch.dict(os.environ, {"HTTP_PROXY": "http://127.0.0.1:9"}):
+            # urllib keeps one shared opener with the proxies it saw first; drop it so the proxy above would count.
+            urllib.request.install_opener(None)
             self.assertTrue(llama_probe(url)())
+        urllib.request.install_opener(None)
 
     def test_an_answer_is_remembered_for_a_while(self):
         with serving(Answer) as url:

@@ -77,11 +77,12 @@ class BackendTests(unittest.TestCase):
         self.assertFalse(llama_probe("http://127.0.0.1:abc")())
 
     def test_the_probe_goes_straight_to_the_server_even_with_a_proxy_set(self):
-        with serving(Answer) as url, mock.patch.dict(os.environ, {"HTTP_PROXY": "http://127.0.0.1:9"}):
-            # urllib keeps one shared opener with the proxies it saw first; drop it so the proxy above would count.
-            urllib.request.install_opener(None)
-            self.assertTrue(llama_probe(url)())
+        # urllib keeps one shared opener with the proxies it saw first. Drop it now so the proxy below would count,
+        # and again afterwards even if this test fails, so no other test inherits the proxy.
         urllib.request.install_opener(None)
+        self.addCleanup(urllib.request.install_opener, None)
+        with serving(Answer) as url, mock.patch.dict(os.environ, {"HTTP_PROXY": "http://127.0.0.1:9"}):
+            self.assertTrue(llama_probe(url)())
 
     def test_an_answer_is_remembered_for_a_while(self):
         with serving(Answer) as url:

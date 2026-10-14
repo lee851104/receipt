@@ -1,8 +1,9 @@
-"""Build the FastAPI app: settings, database, models and the /api routes."""
+"""Build the FastAPI app: settings, database, models, the /api routes, and the web pages under /web/."""
 import json
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
 
 from .backends import load_backends
 from .db import ROOT, init_db, make_engine
@@ -27,4 +28,6 @@ def create_app(settings, backends=None):
         app.include_router(auth.demo_router)
     app.include_router(items.router)
     app.include_router(health.router)
+    # Under /web/ rather than /, so an unknown /api path is a plain 404 instead of a static-file 405.
+    app.mount("/web", StaticFiles(directory=ROOT / "src" / "web", html=True), name="web")
     return app

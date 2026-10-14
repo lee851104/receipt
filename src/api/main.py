@@ -11,7 +11,10 @@ from .app import ROOT, create_app
 from .settings import Settings
 
 load_dotenv(ROOT / ".env")
-settings = Settings.from_env(os.environ)
+try:
+    settings = Settings.from_env(os.environ)
+except ValueError as error:  # a missing secret or a bad setting: one line, not a traceback
+    sys.exit(f"error: {error}")
 if settings.demo_mode:
     print("DEMO_MODE=1: anyone who can reach this server can log in as a demo user without a password. "
           "Keep uvicorn on its default 127.0.0.1; never add --host 0.0.0.0 while it is on.", file=sys.stderr)

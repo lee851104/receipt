@@ -22,6 +22,9 @@ def create_app(settings, backends=None):
     app.add_exception_handler(ApiError, api_error_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.include_router(auth.router)
+    # Without DEMO_MODE the demo endpoints do not exist at all, so they answer 404 and stay out of /docs.
+    if settings.demo_mode:
+        app.include_router(auth.demo_router)
     app.include_router(items.router)
     app.include_router(health.router)
     return app

@@ -2,7 +2,10 @@
 import unittest
 
 from src.api.security import read_token
+from src.api.seed import seed_demo_users
 from tests.api_support import login, make_client, register
+
+PEOPLE = [{"name": "咖啡上班族 A", "type": "咖啡上班族"}, {"name": "健身族 A", "type": "健身族"}]
 
 
 class RegisterTests(unittest.TestCase):
@@ -73,10 +76,53 @@ class LoginTests(unittest.TestCase):
         response = client.post("/api/auth/login", data={"username": "amy", "password": "cafe\u0301-1234"})  # e + accent
         self.assertEqual(response.status_code, 200)
 
+    def test_the_longest_allowed_password_logs_in(self):
+        client = make_client()
+        register(client, password="p" * 128)
+        response = client.post("/api/auth/login", data={"username": "amy", "password": "p" * 128})
+        self.assertEqual(response.status_code, 200)
+
     def test_the_helper_headers_work(self):
         client = make_client()
         register(client)
         self.assertTrue(login(client)["Authorization"].startswith("Bearer "))
+
+
+class DemoTests(unittest.TestCase):
+    def setUp(self):
+        self.client = make_client(demo_mode=True)
+        seed_demo_users(self.client.app.state.engine, PEOPLE)
+        self.real_id = register(self.client).json()["user_id"]
+
+    def test_without_demo_mode_the_demo_endpoints_do_not_exist(self):
+        client = make_client()
+        self.assertEqual(client.get("/api/auth/demo-users").status_code, 404)
+        self.assertEqual(client.post("/api/auth/demo-login", json={"user_id": 1}).status_code, 404)
+
+    def test_demo_users_lists_only_fictional_people_in_order(self):
+        self.assertEqual(self.client.get("/api/auth/demo-users").json(), [
+            {"user_id": 1, "display_name": "咖啡上班族 A", "persona": "咖啡上班族"},
+            {"user_id": 2, "display_name": "健身族 A", "persona": "健身族"}])
+
+    def test_demo_login_gives_a_fictional_person_a_token(self):
+        body = self.client.post("/api/auth/demo-login", json={"user_id": 2}).json()
+        self.assertEqual(read_token(body["access_token"], self.client.app.state.settings)[0], 2)
+        self.assertEqual((body["token_type"], body["expires_in"]), ("bearer", 86400))
+
+    def test_demo_login_refuses_real_accounts_and_unknown_ids(self):
+        real = self.client.post("/api/auth/demo-login", json={"user_id": self.real_id})
+        self.assertEqual((real.status_code, real.json()), (403, {"detail": "not_demo_user"}))
+        unknown = self.client.post("/api/auth/demo-login", json={"user_id": 99})
+        self.assertEqual((unknown.status_code, unknown.json()), (404, {"detail": "not_found"}))
+
+    def test_registering_cannot_make_a_demo_user(self):
+        user_id = register(self.client, username="sneaky", is_demo=True, persona="咖啡上班族").json()["user_id"]
+        response = self.client.post("/api/auth/demo-login", json={"user_id": user_id})
+        self.assertEqual((response.status_code, response.json()), (403, {"detail": "not_demo_user"}))
+
+    def test_a_fictional_person_cannot_log_in_with_a_password(self):
+        response = self.client.post("/api/auth/login", data={"username": "demo_001", "password": "password123"})
+        self.assertEqual(response.status_code, 401)
 
 
 if __name__ == "__main__":

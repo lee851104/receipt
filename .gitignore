@@ -5,6 +5,7 @@
 *.xlsx
 /data/
 /models/
+/runtime/
 
 # Reference photos and screenshots
 *.jpg

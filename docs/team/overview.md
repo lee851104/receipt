@@ -65,7 +65,7 @@ clearance、sugar、quick、cooking、kitchen、sport_supply、sport_gear、car_
 | 20 | 概念說明 | 說明文件，加上配對頁的「計算過程」面板 |
 | 21 | 啟動 | Python 虛擬環境 + 一鍵啟動檔，另做無 GPU 模式 |
 | 22 | GitHub Pages | 現有版本凍結成 v1，README 放 v2 的 demo 影片或動圖 |
-| 23 | API | 第 5 節的 8 項 |
+| 23 | API | 第 5 節：8 項功能、11 個端點 |
 | 24 | 分工 | 角色 1–4（第 7 節） |
 | 25 | 時程 | 第 8 節，盡量全部做完 |
 | 26 | 發表 | 4 人 × 8 分鐘，簡報稍後再做 |
@@ -103,22 +103,194 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 
 預設套件：`fastapi`、`uvicorn`、`sqlmodel`、`python-multipart`、`pyjwt`、`pwdlib[argon2]`（密碼雜湊）、`scikit-learn`、`torch`、`transformers`。Qwen 用 llama.cpp 的 `llama-server`，後端用 HTTP 呼叫它。Python 統一用 3.12。
 
-## 5. API 規格（第一週前兩天定案）
+## 5. API 規格（2026-10-14 定案）
 
-| 功能 | 方法與路徑 | 輸入 | 回傳 |
-|---|---|---|---|
-| 註冊 | `POST /auth/register` | `username`、`password` | 201 |
-| 登入 | `POST /auth/login` | 表單 `username`、`password` | `access_token`、`token_type` |
-| demo 快速切換 | `POST /auth/demo-login` | `user_id` | 同登入；**只在 `DEMO_MODE=1` 時開放** |
-| 上傳發票 | `POST /invoices` | multipart CSV | `job_id` |
-| 處理進度 | `GET /jobs/{job_id}` | | `status`（queued / running / done / failed）、`done`、`total`、`message` |
-| 品名即時分類 | `POST /items/classify` | `name` | `category`（id、名稱、機率）、`attributes`（16 + 7 個欄位，或 `null`）、`attributes_status`（ready / pending） |
-| 我的品味向量與月報 | `GET /me/profile` | | `traits`（18 格，沒資料的為 `null`）、`months`（現有月報資料） |
-| 配對清單 | `GET /matches` | `kind`=similar / opposite、`scope`=all / district / city / region | 前 5 名：`user_id`、`display_name`、`score`、`area` |
-| 計算過程 | `GET /matches/{user_id}/explain` | | 每格的 `mine`、`theirs`、`weight`、`product`，以及 `dot`、`norm_mine`、`norm_theirs`、`shrink`、`score` |
-| 健康檢查 | `GET /health` | | `status`、`gpu_mode`、各模型是否載入 |
+8 項功能、11 個端點。這一節是正式規格；程式寫好後，FastAPI 自動產生的 `/docs` 要和這一節一致，不一致時改程式。
 
-FastAPI 會自動產生 `/docs` 文件頁，那就是規格的正式版本。
+### 5.1 共通規則
+
+- **路徑**：API 一律以 `/api` 開頭。v2 網頁由同一個 FastAPI 從 `/` 提供，同一個網域，所以不用設 CORS
+- **格式**：JSON（UTF-8），欄位名用 snake_case。唯一例外：`/api/me/profile` 的 `months` 原樣沿用現有月報格式（`invoices.build_month` 的輸出，例如 `monthNumber`），現有網頁才不用改
+- **登入**：除了標「免」的端點，都要帶 `Authorization: Bearer <access_token>`。JWT 用 HS256，`sub` 放 user_id（轉成字串），24 小時過期
+- **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤用 FastAPI 預設的 422。需要登入的端點，沒帶 token 或 token 過期都回 401 `not_authenticated`
+- **數字**：`score` 這類小數不先四捨五入。要顯示的整數百分比另外給 `percent`，算法同 `similarity.percent`
+- **18 格順序**：一律照 `configs/traits.json` 的順序
+- **null**：表示「不知道」或「資料不夠」，不能當成 0 或 `false`
+
+### 5.2 端點一覽
+
+| # | 功能 | 方法與路徑 | 登入 | 成功 |
+|---|---|---|---|---|
+| 1 | 帳號 | `POST /api/auth/register` | 免 | 201 |
+| | | `POST /api/auth/login` | 免 | 200 |
+| | | `GET /api/auth/demo-users` | 免，只在 `DEMO_MODE=1` | 200 |
+| | | `POST /api/auth/demo-login` | 免，只在 `DEMO_MODE=1` | 200 |
+| 2 | 上傳發票 | `POST /api/invoices` | 要 | 202 |
+| 3 | 處理進度 | `GET /api/jobs/{job_id}` | 要 | 200 |
+| 4 | 品名即時分類 | `POST /api/items/classify` | 要 | 200 |
+| 5 | 我的品味向量與月報 | `GET /api/me/profile` | 要 | 200 |
+| 6 | 配對清單 | `GET /api/matches` | 要 | 200 |
+| 7 | 計算過程 | `GET /api/matches/{user_id}/explain` | 要 | 200 |
+| 8 | 健康檢查 | `GET /api/health` | 免 | 200 |
+
+### 5.3 帳號
+
+**`POST /api/auth/register`**：JSON `{"username": "amy", "password": "…", "display_name": "Amy"}`
+- `username` 3–32 字元，只能用英數字和底線；`password` 8–128 字元；`display_name` 可省略，1–20 字元，預設同 `username`
+- 回傳 201：`{"user_id": 301, "username": "amy", "display_name": "Amy"}`
+- 錯誤：409 `username_taken`
+
+**`POST /api/auth/login`**：表單（`application/x-www-form-urlencoded`）`username`、`password`，和 FastAPI 的 OAuth2 表單相同，`/docs` 的 Authorize 按鈕可以直接用
+- 回傳：`{"access_token": "…", "token_type": "bearer", "expires_in": 86400}`
+- 錯誤：401 `bad_credentials`（帳號不存在和密碼錯誤用同一個代碼）
+
+**`GET /api/auth/demo-users`**：demo 快速切換的名單，只列假用戶
+- 回傳：`[{"user_id": 1, "display_name": "咖啡上班族 A", "persona": "咖啡上班族"}, …]`
+- `DEMO_MODE` 沒開時回 404，假裝這個端點不存在
+
+**`POST /api/auth/demo-login`**：JSON `{"user_id": 1}`，不用密碼
+- 回傳：同 login
+- 只能切換成假用戶，註冊的真實帳號一定要用密碼登入
+- 錯誤：404（`DEMO_MODE` 沒開，或沒有這個人）、403 `not_demo_user`
+
+### 5.4 上傳與進度
+
+**`POST /api/invoices`**：multipart，欄位名 `file`，一次一個財政部電子發票 CSV（一份一個月），上限 2 MB
+- 伺服器先**當場**用 `invoices.build_month` 的規則解析，格式有錯直接回 400；解析成功才建立背景任務
+- 同一個人重新上傳同一個月份，會取代那個月的舊資料
+- 「作廢」開頭的發票狀態（例如「作廢已確認」）直接跳過，不算消費；只有「開立已確認」會被計入，其他狀態回 400
+- **金額低於 10 元（含 0 元和負數的折扣）或金額有小數的明細直接略過**，不算消費、不分析。月報總金額因此是折扣前的金額
+- 數量有小數的明細（加油的公升數、秤重商品）保留，**數量當 1**。不然加油次數會消失，30 公升也會被「數量 ≥ 3」誤判成囤貨
+- 現有 `build_month` 遇到作廢或小數都會直接報錯，5–8 月的真實發票就有這兩種情況，第二週接上傳前要先修。3–8 月真實發票共 336 列：作廢 2 列、金額規則略過 61 列，留下 273 列
+- 回傳 202：`{"job_id": 12, "month": "2026-05", "rows": 35}`
+- 錯誤：400 `invalid_csv`（`message` 寫原因，例如一份 CSV 有兩個月份）、413 `file_too_large`
+
+**`GET /api/jobs/{job_id}`**
+- 回傳：`{"job_id": 12, "month": "2026-05", "status": "running", "done": 10, "total": 25, "message": "判斷品項屬性"}`
+- `status`：queued / running / done / failed
+- `total` 是這份 CSV 不重複的品名數，`done` 是已經分類並判斷完屬性的品名數。無 GPU 模式下，快取裡沒有的品名直接標「待分析」，也算進 `done`
+- `message`：目前步驟的中文說明；failed 時寫失敗原因
+- 錯誤：404（任務不存在，或不是你的任務）
+
+**背景任務的步驟：**
+1. 列出不重複品名，呼叫 `classify()`。最高機率低於 `CATEGORY_MIN_PROB`（預設 0.5）的品名存成 10 待確認，不算進品味向量
+2. 呼叫 `describe_items()`：先查 `item_cache`，沒有才問 Qwen。無 GPU 模式下沒有快取的回 `None`，算進 `pending_attributes`
+3. 用這個人所有月份的資料重算 18 格，存進 `profiles`
+4. `status` 改成 done。GPU 恢復之後，重新上傳同一個月份就能補算待分析的品名
+
+### 5.5 品名即時分類
+
+**`POST /api/items/classify`**：JSON `{"name": "鮮奶茶 微糖"}`，`name` 去掉頭尾空白後 1–100 字元
+- 回傳：
+  ```json
+  {"name": "鮮奶茶 微糖",
+   "category": {"id": 1, "name": "飲品", "prob": 0.91},
+   "probs": [0.01, 0.91, 0.03, 0.0, 0.0, 0.02, 0.0, 0.0, 0.03, 0.0],
+   "attributes": {"food": true, "drink": true, "sugar": 0.3, "alcohol": false, "fun": null, "…": "共 23 個欄位"},
+   "attributes_status": "ready"}
+  ```
+- `category` 一律是模型的第一名（0–9），`probs` 是 10 類各自的機率
+- `attributes`：16 個屬性加 7 個基本旗標，欄位名同 `attributes.describe`。每個欄位都可能是 `null`
+- 快取裡有 → `ready`。沒有 → `attributes` 為 `null`、`attributes_status` 為 `pending`；GPU 模式下伺服器會同時把它排進背景分析，前端每 2 秒再問一次，最多 5 次
+
+### 5.6 我的品味向量與月報
+
+**`GET /api/me/profile`**
+- 回傳：
+  ```json
+  {"user_id": 301, "display_name": "Amy", "is_demo": false,
+   "ready": true, "item_count": 57, "min_items": 20, "pending_attributes": 3,
+   "areas": ["臺北市大安區", "新北市板橋區"],
+   "traits": [
+     {"id": "spend", "name": "省錢 ↔ 享受", "kind": "two_sided", "ends": ["省錢", "享受"], "value": 0.42},
+     {"id": "sport", "name": "…", "kind": "level", "habit": "運動", "value": null}],
+   "categories": [{"name": "正餐", "color": "#df646b"}],
+   "months": {"2026-05": {"year": 2026, "monthNumber": 5, "rows": ["…現有格式"]}}}
+  ```
+- `traits` 一定有 18 筆。`ready` 為 false 表示有效品項少於 `min_items`，這時 18 格的 `value` 全是 `null`
+- `item_count`：有效品項數，判斷 `ready` 用的就是它
+- `areas`：生活圈，最多 2 個行政區（`places.areas_of`），可能是空陣列
+- `categories`：11 類的名稱和顏色（`configs/report.json`），給現有月報畫面用
+- 還沒上傳過的人：`ready` 為 false，`months` 為 `{}`
+
+### 5.7 配對
+
+**`GET /api/matches?kind=similar&scope=all`**
+- `kind`：similar（相近，`percent` ≥ +30）或 opposite（互補，`percent` ≤ −10），預設 similar。門檻來自 `configs/traits.json` 的 `match`
+- `scope`：all / district / city / region，也就是不限、同區、同縣市、同地區，對應 `places.distance` ≤ 0、1、2。預設 all
+- 對象：自己以外、算得出品味向量的所有使用者（包含假用戶）
+- 排序：similar 分數由高到低，opposite 由低到高；同分時依 `display_name` 的字碼順序，再依 `user_id`；取前 5 名
+- 回傳：
+  ```json
+  {"kind": "similar", "scope": "all", "ready": true, "my_areas": ["臺北市大安區"],
+   "eligible": 12, "within": 12,
+   "people": [{"user_id": 7, "display_name": "咖啡上班族 C", "score": 0.6234, "percent": 62,
+               "area": "臺北市中山區", "distance": 1}]}
+  ```
+- `eligible`：過門檻的人數，不看距離；`within`：過門檻又在範圍內的人數。前端用這兩個數字照 v1 的方式寫狀態文字
+- `area`：對方離我最近的生活圈（`places.closest_area`），可能是 `null`
+- 我自己資料不夠時：`ready` 為 false，`people` 為空陣列，`eligible` 和 `within` 都是 0
+- 錯誤：400 `no_home_area`（看不出我的生活圈，`scope` 卻不是 all）
+
+**`GET /api/matches/{user_id}/explain`**：任何一個使用者都能看，不限前 5 名
+- 回傳：
+  ```json
+  {"user_id": 7, "display_name": "咖啡上班族 C", "comparable": true, "reason": null,
+   "cells": [{"id": "spend", "name": "省錢 ↔ 享受", "kind": "two_sided",
+              "mine": 0.42, "theirs": 0.30, "weight": 1, "shared": true, "product": 0.126, "part": 0.0615}],
+   "shared_two_sided": 9, "min_shared_two_sided": 5,
+   "dot": 1.26, "norm_mine": 1.5, "norm_theirs": 1.2, "shrink": 0.25, "denominator": 2.05,
+   "score": 0.6146, "percent": 61}
+  ```
+- `cells` 一定有 18 筆，算法和 `similarity.compare` 完全一樣：
+  - `shared`：兩邊都有值才是 true。不是 shared 的格子，`product` 和 `part` 為 `null`，也不算進長度
+  - `product` = weight × mine × theirs；`dot` = 所有 `product` 的加總（也就是內積）
+  - `norm` = √(Σ weight × 值²)，只算 shared 的格子
+  - `denominator` = norm_mine × norm_theirs + shrink；`score` = dot ÷ denominator
+  - `part` = product ÷ denominator，是每格對分數的貢獻，全部加起來等於 `score`
+- `comparable` 為 false 時，`reason` 是 `not_enough_items`（任一方有效品項不夠）或 `too_few_shared`（共同的雙向格少於 5 格），`dot` 以下的欄位全部是 `null`
+- 另外有一個 `network` 欄位，給連線圖用，格式和 v1 的 `traitNetworkData` 相同（`build.trait_network_data`），只是 `friends` 換成 `mine` 和 `theirs` 兩個人：
+  ```json
+  "network": {"model": {"…": "同 similarity_model"}, "traits": ["…"], "signals": ["…"], "readout": {"…": "…"},
+              "mine":   {"vector": ["…18 格"], "pushes": ["…"], "signals": ["…46 個訊號"], "items": [[["鮮奶茶", 6], ["美式咖啡", 2]], null]},
+              "theirs": {"vector": ["…"], "pushes": ["…"], "signals": ["…"], "items": ["…"]}}
+  ```
+  `src/web/trait-network.js` 可以直接拿來畫。資料不夠的人，四個欄位都是 `null`
+- `items` 是每個訊號買最多次的 3 個品名和出現的發票張數，品名一律經過 5.8 的處理
+- 錯誤：404（沒有這個人）、400 `self`（查自己）
+
+### 5.8 品名隱私
+
+API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.items`），一律經過 `items.label`，`mine.items` 也照同樣規則處理：
+
+- 去掉地名：所有縣市（含「臺中」這種不帶縣市的簡稱）、縣轄市、這個人買過東西的每個行政區（含「大安」這種簡稱）、`configs/attributes.json` 的 `place_words`（例如「淡水」）。台、臺視為同一個字
+- 住宿一律顯示「旅館住宿」；長途交通只顯示票種，不顯示站名
+- 跟地點有關的 4 個訊號（`list_items` 為 false）不列品名
+- 每個訊號最多 3 個品名，最長 20 字。去掉地名後只剩數字或符號的，改顯示類別名稱
+- 不回店家名稱、發票號碼、日期、金額
+- 漏網的地名（商圈、地標、分店名）加進 `place_words`，不要在 API 裡另寫一套規則
+
+2026-10-14 用 3–8 月真實發票檢查（只看數量）：245 種商品中，2 種改顯示通用名稱、1 種去掉了地名。處理後還有 2 種含「店」字，都是 0 元明細，照 5.4 的金額規則會被略過，不會顯示
+
+### 5.9 健康檢查
+
+**`GET /api/health`**
+- 回傳：`{"status": "ok", "gpu_mode": false, "demo_mode": true, "models": {"category": "fake", "attributes": "cache_only"}}`
+- `gpu_mode`：連得到 `LLAMA_SERVER_URL` 的 llama-server 就是 true
+- `models.category`：fake / tfidf / embedding / bert；`models.attributes`：fake / qwen / cache_only（無 GPU 模式）
+
+### 5.10 設定（`.env`，repo 只放 `.env.example`）
+
+| 變數 | 預設 | 說明 |
+|---|---|---|
+| `JWT_SECRET` | 無，一定要設 | 簽 JWT 用的密鑰 |
+| `JWT_EXPIRE_MINUTES` | 1440 | token 有效時間 |
+| `DEMO_MODE` | 0 | 1 = 開放 `demo-users` 和 `demo-login` |
+| `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git |
+| `LLAMA_SERVER_URL` | `http://127.0.0.1:8080` | Qwen 的 llama-server |
+| `CATEGORY_MODEL` | fake | fake / tfidf / embedding / bert |
+| `ATTRIBUTES_MODEL` | fake | fake / qwen |
+| `CATEGORY_MIN_PROB` | 0.5 | 低於這個機率的品名歸到 10 待確認 |
 
 ## 6. 模型介面（角色 2、3 交給角色 1）
 
@@ -140,7 +312,7 @@ def describe_items(names: list[str]) -> list[dict | None]:
 ### 角色 1：後端與配對（組長）
 
 - **負責：** FastAPI、SQLite、登入、CSV 上傳與背景任務、配對和計算過程 API、一鍵啟動、無 GPU 模式、GitHub Actions
-- **交出：** 第 5 節的 8 項 API，每項都有測試
+- **交出：** 第 5 節的 11 個端點，每個都有測試
 - **先讀：** `src/receipt/invoices.py`、`signals.py`、`traits.py`、`similarity.py`、`personas.py`、`configs/traits.json`
 - **每週：**
   1. API 規格和 4 人確認；FastAPI 骨架、資料表、註冊登入、`/health`；用假替身跑通
@@ -209,11 +381,12 @@ def describe_items(names: list[str]) -> list[dict | None]:
 ## 10. 隱私規則（repo 是公開的）
 
 - **絕對不進 git：** 真實發票 CSV、真實品名和它們的標註、店名、模型檔、`.env`
-- `.gitignore` 已經擋掉 `*.csv`、`/data/`、`/models/`，以及圖片檔（`*.png`、`*.jpg`、`*.gif` 等）
+- `.gitignore` 已經擋掉 `*.csv`、`/data/`、`/models/`、`/runtime/`，以及圖片檔（`*.png`、`*.jpg`、`*.gif` 等）
   - 假資料請存成 JSONL，放在 `datasets/`
   - README 要用的圖，要在 `.gitignore` 加 `!` 例外
 - 真實品名只能用本機模型處理，不可以貼到雲端 AI 或線上服務；假品名可以
 - 評估報告只放數字，逐筆結果留在本機
+- 配對時，對方會看到你每個訊號買最多次的品名（去掉地名後，見 5.8），但看不到店家、日期和金額
 
 ## 11. 評估要交出的東西
 
@@ -236,7 +409,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 |---|---|
 | `0301-0331.csv`、`0401-0430.csv`（根目錄） | 3、4 月真實發票 |
 | `rawdata/` | 5–8 月真實發票 |
-| `data/private/` | 人工確認的品名分類、私人報告設定 |
+| `data/private/` | 人工確認的品名分類、私人報告設定。**一定要放在 `data/` 底下**，放在根目錄的 `private/` 不會被 `.gitignore` 擋住 |
 | `experiments/receipt-attributes/private/`、`results/` | 屬性實驗的真實資料和結果 |
 | `experiments/category-models/data/`、`outputs/` | 分類實驗的標註資料和結果 |
 
@@ -244,7 +417,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 ### 環境
 
-1. 安裝 Python 3.12、Node.js 24、Git。可以順便裝 GitHub CLI（`gh`），開 PR 比較方便
+1. 安裝 Python 3.12、Node.js 24、Git。可以順便裝 GitHub CLI（`gh`），開 PR 比較方便。用 uv 建虛擬環境最快：`uv venv --python 3.12 .venv`
 2. 確認現有測試通過：
    ```
    python -m unittest discover -s tests -v
@@ -254,7 +427,8 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 3. 4060：
    - 安裝 NVIDIA 驅動，用 `nvidia-smi` 確認看得到顯示卡
    - PyTorch 要裝 CUDA 版：到 pytorch.org 選 Windows + pip + CUDA 12.x 取得安裝指令，然後用 `python -c "import torch; print(torch.cuda.is_available())"` 確認輸出 `True`
-   - llama.cpp 要用 CUDA 版的 Windows 執行檔（GitHub releases 裡名稱有 `cuda` 的那個），`gpu_layers` 設成全部載入
+   - PyTorch 用 `uv pip install --python .venv/Scripts/python.exe torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128`（和分類實驗 B 同版本）
+   - llama.cpp 要用 CUDA 版的 Windows 執行檔（GitHub releases 裡名稱有 `cuda` 的那個，加上同版本的 `cudart-llama-bin-win-cuda-12.4-x64.zip`），解壓到 `runtime/llama-b11557-cuda/`，`gpu_layers` 設成全部載入。用 `llama-server.exe --list-devices` 確認看得到 `CUDA0`
 
 ### 其他
 

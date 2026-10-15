@@ -62,6 +62,79 @@ class ReportDataTests(unittest.TestCase):
         self.assertNotIn("測試路", str(month))
         self.assertNotIn("TEST-TAX-ID", str(month))
 
+    def test_an_upload_skips_voided_invoices(self):
+        self.write_rows([
+            ["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, 120],
+            ["20260503", "作廢已確認", "A2", "測試商店", "測試餐盒", 1, 120],
+            ["20260504", "作廢", "A3", "測試商店", "測試餐盒", 1, 120],
+        ])
+        _, month = build_month(self.path, self.catalog, for_upload=True)
+        self.assertEqual([row["day"] for row in month["rows"]], [2])
+
+    def test_an_upload_skips_small_and_decimal_amounts(self):
+        self.write_rows([
+            ["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 2, 240],
+            ["20260502", "開立已確認", "A1", "測試商店", "測試折扣", 1, -20],
+            ["20260502", "開立已確認", "A1", "測試商店", "未知贈品", 1, 0],
+            ["20260502", "開立已確認", "A1", "測試商店", "測試小物", 1, 9],
+            ["20260502", "開立已確認", "A1", "測試商店", "測試秤重", 1, "35.5"],
+            ["20260503", "開立已確認", "A2", "測試商店", "測試十元", 1, 10],
+        ])
+        _, month = build_month(self.path, self.catalog, for_upload=True)
+        self.assertEqual([(row["name"], row["amount"]) for row in month["rows"]], [("測試餐盒", 240), ("測試十元", 10)])
+        self.assertEqual([row["invoice"] for row in month["rows"]], ["2026-05-R01", "2026-05-R02"])
+
+    def test_an_upload_counts_a_decimal_quantity_as_one_and_reads_whole_numbers_written_with_a_point(self):
+        self.write_rows([["20260502", "開立已確認", "A1", "測試加油站", "測試汽油", "30.5", 900],
+                         ["20260502", "開立已確認", "A1", "測試加油站", "測試洗車", "2.0", "240.0"]])
+        _, month = build_month(self.path, self.catalog, for_upload=True)
+        self.assertEqual([(row["quantity"], row["amount"]) for row in month["rows"]], [(1, 900), (2, 240)])
+
+    def test_an_upload_gives_codes_only_to_invoices_with_kept_lines(self):
+        self.write_rows([["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, 120],
+                         ["20260503", "開立已確認", "A2", "測試商店", "測試折扣", "", -20],
+                         ["20260504", "開立已確認", "A3", "測試商店", "測試餐盒", 1, 120]])
+        _, month = build_month(self.path, self.catalog, for_upload=True)
+        # A2 holds only a discount (whose blank quantity is never read), so it gets no code and A3 is R02.
+        self.assertEqual([row["invoice"] for row in month["rows"]], ["2026-05-R01", "2026-05-R02"])
+
+    def test_an_upload_names_a_cell_that_is_no_number_and_refuses_short_lines(self):
+        for amount in ("", "abc", "nan", "inf"):
+            with self.subTest(amount=amount):
+                self.write_rows([["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, amount]])
+                with self.assertRaisesRegex(ValueError, "消費明細_金額 is not a number"):
+                    build_month(self.path, self.catalog, for_upload=True)
+        self.write_rows([["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, "9" * 20]])
+        with self.assertRaisesRegex(ValueError, "消費明細_金額 is too large"):
+            build_month(self.path, self.catalog, for_upload=True)
+        with self.path.open("w", encoding="utf-8-sig", newline="") as stream:
+            header = ",".join(["發票日期", "發票狀態", "發票號碼", "賣方名稱", "消費明細_品名", "消費明細_數量", "消費明細_金額"])
+            stream.write(header + chr(10) + "20260502,開立已確認,A1" + chr(10))
+        with self.assertRaisesRegex(ValueError, "fewer columns"):
+            build_month(self.path, self.catalog, for_upload=True)
+
+    def test_an_upload_still_counts_a_skipped_line_from_another_month(self):
+        self.write_rows([["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, 120],
+                         ["20260601", "開立已確認", "A2", "測試商店", "測試折扣", 1, -20]])
+        with self.assertRaisesRegex(ValueError, "one month"):
+            build_month(self.path, self.catalog, for_upload=True)
+
+    def test_an_upload_names_missing_columns_and_still_refuses_unknown_statuses(self):
+        with self.path.open("w", encoding="utf-8-sig", newline="") as stream:
+            stream.write("發票日期,發票狀態,發票號碼,賣方名稱,消費明細_數量,消費明細_金額\n"
+                         "20260502,開立已確認,A1,測試商店,1,120\n")
+        with self.assertRaisesRegex(ValueError, "Missing column: 消費明細_品名"):
+            build_month(self.path, self.catalog, for_upload=True)
+        self.write_rows([["20260502", "開立待確認", "A1", "測試商店", "測試餐盒", 1, 120]])
+        with self.assertRaisesRegex(ValueError, "Unreviewed"):
+            build_month(self.path, self.catalog, for_upload=True)
+
+    def test_an_upload_of_only_skipped_lines_has_no_records(self):
+        self.write_rows([["20260502", "作廢已確認", "A1", "測試商店", "測試餐盒", 1, 120],
+                         ["20260502", "開立已確認", "A2", "測試商店", "測試折扣", 1, -5]])
+        with self.assertRaisesRegex(ValueError, "No invoice records"):
+            build_month(self.path, self.catalog, for_upload=True)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, StringConstraints, field_validator
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, col, select
+from sqlmodel import col, select
 
-from ..db import get_session
+from ..db import SessionDep
 from ..errors import ApiError
 from ..security import MAX_PASSWORD, hash_password, token_response, verify_password
 from ..tables import User
@@ -15,7 +15,6 @@ from ..validation import RowId, visible
 
 router = APIRouter(prefix="/api/auth")
 demo_router = APIRouter(prefix="/api/auth")
-SessionDep = Annotated[Session, Depends(get_session)]
 
 
 class Registration(BaseModel):

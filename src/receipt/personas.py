@@ -163,12 +163,25 @@ def build_person(name, kind, member, code, rng, calendar):
     return {"name": name, "type": kind["label"], "rows": rows}
 
 
-def build_personas(calendar, per_type=5, seed=SEED):
+def build_personas(calendar, per_type=5, seed=SEED, *, total=None):
+    """Keep v1 defaults; v2 requests total=300 and appends after the original 40."""
+    if total is not None and (type(total) is not int or total < 40 or per_type != 5):
+        raise ValueError("total must be an integer >= 40 with per_type=5")
+    if type(per_type) is not int or not 1 <= per_type <= len(LETTERS):
+        raise ValueError("per_type must be between 1 and 5")
     rng = random.Random(seed)
     people = []
     for kind in TYPES:
         for member in range(per_type):
             people.append(build_person(f"{kind['label']} {LETTERS[member]}", kind, member, f"P{len(people) + 1:02}", rng, calendar))
+    if total is not None:
+        for index in range(len(people), total):
+            kind = TYPES[(index - 40) % len(TYPES)]
+            member = 5 + (index - 40) // len(TYPES)
+            # Cycle the five established habit variants rather than silently
+            # dropping member-specific habits beyond the original five people.
+            name = f"{kind['label']} {member + 1:02}"
+            people.append(build_person(name, kind, member % 5, f"P{index + 1:02}", rng, calendar))
     return people
 
 

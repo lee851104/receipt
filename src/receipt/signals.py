@@ -3,7 +3,7 @@ from collections import Counter
 from datetime import date, timedelta
 from statistics import mean, median
 
-from .attributes import DAILY, DESSERT, DRINK, MEAL, SPORT, TECH, channel_of, describe, fold, has
+from .attributes import DAILY, DESSERT, DRINK, MEAL, SPORT, TECH, channel_of, describe, fold, has, sugar_of
 
 CONFIRMED = 10  # category 10 still waits for review
 MEAL_BILL = {MEAL, DRINK, DESSERT}  # what a meal bill may include when estimating cost per person
@@ -73,7 +73,12 @@ def gather(rows, context):
         merchant = row["merchant"]
         if merchant not in channels:
             channels[merchant] = channel_of(merchant, brands, vocabulary)
-        line = {**row, "channel": channels[merchant], **describe(row, channels[merchant], vocabulary)}
+        supplied = {"external": row["attributes"]} if "attributes" in row else {}
+        values = describe(row, channels[merchant], vocabulary, **supplied)
+        # A purchase quantity belongs to the row, never the name-only model cache.
+        if row.get("attributes") is not None and row["quantity"] >= 3:
+            values["bulk"] = True
+        line = {**row, "channel": channels[merchant], **values}
         lines.append(line)
         invoice = invoices.setdefault(row["invoice"], {
             "date": row["date"], "merchant": merchant, "channel": channels[merchant],
@@ -144,7 +149,8 @@ def quick_habit_meals(meals, off):
 
 def weekday_quick_share(meals, off):
     """Workdays with a quick meal that was bought on at least three different workdays, over workdays with a meal."""
-    workdays = {item["date"] for item in meals if item["date"] not in off}
+    known = [item for item in meals if item["quick"] is not None]
+    workdays = {item["date"] for item in known if item["date"] not in off}
     return share(len({item["date"] for item in quick_habit_meals(meals, off)}), len(workdays))
 
 
@@ -176,6 +182,10 @@ def measure(rows, period, context):
     months = len(period)
     lines, invoices = gather(rows, context)
     items = valid_items(lines)
+    # Only the calculation copy gets a default; the source/API cache stays null.
+    for item in items:
+        if item["category"] == DRINK and item["sugar"] is None and item.get("attributes") is not None:
+            item["sugar"] = sugar_of(item["name"], item["channel"], context["vocabulary"])
     paid = [invoice for invoice in invoices.values() if invoice["total"] > 0]
     paid_bills = {key for key, invoice in invoices.items() if invoice["total"] > 0}
     food = [item for item in items if item["food"]]
@@ -222,7 +232,7 @@ def measure(rows, period, context):
         "store_clearance_share": [item for item in store_food if item["clearance"]],
         "shop_meal_share": [item for item in meals if item["channel"] not in NOT_SHOP_MEALS],
         "fresh_share": [item for item in food if item["cooking"]],
-        "ready_meal_share": meals,
+        "ready_meal_share": [item for item in meals if item["food"]],
         "kitchen_per_month": flagged("kitchen"),
         "sugar_mean": [item for item in drinks if item["sugar"] is not None],
         "dessert_share": [item for item in food if item["category"] == DESSERT],
@@ -251,16 +261,19 @@ def measure(rows, period, context):
     def bills(key):
         return {item["invoice"] for item in behind[key]}
 
+    def known_count(pool, flag):
+        return sum(item[flag] is not None for item in pool)
+
     signals = {
         "meal_cost": median(costs) if len(costs) >= 3 else None,
-        "clearance_share": share(len(behind["clearance_share"]), len(food)),
+        "clearance_share": share(len(behind["clearance_share"]), known_count(food, "clearance")),
         "premium_drink_share": share(len(behind["premium_drink_share"]), len(drinks)),
         "store_meal_share": share(len(behind["store_meal_share"]), len(meals)),
         "weekday_quick_share": weekday_quick_share(meals, off),
-        "store_clearance_share": share(len(behind["store_clearance_share"]), len(store_food)),
+        "store_clearance_share": share(len(behind["store_clearance_share"]), known_count(store_food, "clearance")),
         "shop_meal_share": share(len(behind["shop_meal_share"]), len(meals)),
-        "fresh_share": share(len(behind["fresh_share"]), len(food)),
-        "ready_meal_share": share(len(meals), len(food)),
+        "fresh_share": share(len(behind["fresh_share"]), known_count(food, "cooking")),
+        "ready_meal_share": share(len(behind["ready_meal_share"]), len(food)),
         "kitchen_per_month": len(behind["kitchen_per_month"]) / months,
         "sugar_mean": mean(item["sugar"] for item in behind["sugar_mean"]) if behind["sugar_mean"] else None,
         "dessert_share": share(len(behind["dessert_share"]), len(food)),
@@ -273,7 +286,7 @@ def measure(rows, period, context):
         "away_share": share(len(away), len(located)) if home else None,
         "stays": visits("住宿"), "long_trips": visits("長途交通"),
         "convenience_share": share(len(bills("convenience_share")), len(store_bills)) if len(store_bills) >= 2 else None,
-        "bulk_share": share(len(behind["bulk_share"]), len(daily)),
+        "bulk_share": share(len(behind["bulk_share"]), known_count(daily, "bulk")),
         "small_daily_visits": len(bills("small_daily_visits")) / months,
         "home_items": len(behind["home_items"]) / months,
         "stationery_items": len(behind["stationery_items"]) / months,
@@ -290,6 +303,17 @@ def measure(rows, period, context):
         "alcohol_items": len(behind["alcohol_items"]) / months,
         "bar_visits": visits("酒吧"),
     }
+    if any("attributes" in item for item in items):
+        # Unknown flags supply no positive or negative evidence. Keep known
+        # category/date/channel signals; do not fabricate zero model signals.
+        flags = {"kitchen_per_month": "kitchen", "sport_supplies": "sport_supply", "sport_gear": "sport_gear",
+                 "car_care": "car_care", "home_items": "home", "stationery_items": "stationery",
+                 "fun_visits": "fun", "fun_kinds": "fun", "alcohol_items": "alcohol",
+                 "pet_food_cat": "pet_food", "pet_food_dog": "pet_food",
+                 "pet_supply_cat": "pet_supply", "pet_supply_dog": "pet_supply"}
+        for signal, flag in flags.items():
+            if not known_count(items, flag):
+                signals[signal] = None
     # A signal that cannot be measured lists nothing; a signal missing from `behind` fails here instead of listing nothing.
     if behind.keys() != signals.keys():
         raise KeyError(sorted(behind.keys() ^ signals.keys()))

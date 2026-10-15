@@ -8,6 +8,10 @@ MEAL, DRINK, DESSERT, FRESH, SPORT, DAILY, TECH = 0, 1, 2, 3, 4, 8, 9
 FOOD = {MEAL, DRINK, DESSERT, FRESH}
 GOODS = {4, 5, 6, 7, 8, 9}  # confirmed categories that are not food
 GENERAL = "一般店家"
+_LEGACY = object()
+EXTERNAL_FIELDS = ("clearance", "sugar", "quick", "cooking", "kitchen", "sport_supply", "sport_gear", "car_care",
+                   "bulk", "home", "stationery", "fun", "pet_food", "pet_supply", "species", "alcohol",
+                   "food", "meal", "drink", "fresh", "daily", "tech", "sport")
 
 
 def fold(text):
@@ -55,8 +59,14 @@ def fun_of(name, merchant, vocabulary):
     return next((kind for kind, words in vocabulary["fun"].items() if has(name, words) or has(merchant, words)), None)
 
 
-def describe(row, channel, vocabulary):
-    """Every question the signals ask about one line, answered once."""
+def describe(row, channel, vocabulary, external=_LEGACY):
+    """Omitted external keeps v1 rules; explicit None means pending, never a fallback."""
+    if external is not _LEGACY:
+        if external is None:
+            return dict.fromkeys(EXTERNAL_FIELDS)
+        if set(external) != set(EXTERNAL_FIELDS):
+            raise ValueError("external attributes must contain exactly 23 fields")
+        return dict(external)
     name, category = row["name"], row["category"]
     goods = category in GOODS
     return {

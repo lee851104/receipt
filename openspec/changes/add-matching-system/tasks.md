@@ -41,15 +41,15 @@
 
 ## 4. 角色 3：LLM 屬性與假用戶
 
-- [ ] 4.1 在 4060 電腦上照 overview 第 12 節裝好 NVIDIA 驅動和 CUDA 版的 `llama-server`（放在 `runtime/`）；確認 `nvidia-smi` 看得到顯示卡，`llama-server.exe --list-devices` 看得到 `CUDA0`，對測試 prompt 有回應
-- [ ] 4.2 用 `experiments/receipt-attributes/` 的同一套評估，比較 Qwen3-4B 和約 5 GB 的候選模型，並更新選型紀錄；第 1 週結束還沒定案就用 Qwen3-4B
-- [ ] 4.3 實作 `src/ml/attributes.describe_items`（`ATTRIBUTES_MODEL=qwen`）：呼叫 `LLAMA_SERVER_URL`、套用 `bulk_rule` 和 `sugar_guard`、把 fun 對應成中文值、保留 `null`；用錄下來的回應做測試，不需要 GPU
-- [ ] 4.4 讓 `attributes.describe` 可以接收外部屬性，`channel_of` 照舊；現有測試照樣通過，另外新增外部屬性的測試
-- [ ] 4.5 在品味計算中加入甜度預設補位；測試沒寫甜度的手搖奶茶，屬性回傳的 `sugar` 是 `null`，但 sweet 格把它當成全糖
-- [ ] 4.6 把 `personas.py` 擴充到約 300 人；測試 8 種類型的人數相差不超過 1 人、同一個種子產生的結果完全相同，而且 seed 之後 `/api/auth/demo-users` 列出約 300 人
+- [x] 4.1 在 4060 電腦上照 overview 第 12 節裝好 NVIDIA 驅動和 CUDA 版的 `llama-server`（放在 `runtime/`）；確認 `nvidia-smi` 看得到顯示卡，`llama-server.exe --list-devices` 看得到 `CUDA0`，對測試 prompt 有回應
+- [x] 4.2 用 `experiments/receipt-attributes/` 的同一套評估，比較 Qwen3-4B 和約 5 GB 的候選模型，並更新選型紀錄；第 1 週結束還沒定案就用 Qwen3-4B
+- [x] 4.3 實作 `src/ml/attributes.describe_items`（`ATTRIBUTES_MODEL=qwen`）：呼叫 `LLAMA_SERVER_URL`、套用 `bulk_rule` 和 `sugar_guard`、把 fun 對應成中文值、保留 `null`；用錄下來的回應做測試，不需要 GPU
+- [x] 4.4 讓 `attributes.describe` 可以接收外部屬性，`channel_of` 照舊；現有測試照樣通過，另外新增外部屬性的測試
+- [x] 4.5 在品味計算中加入甜度預設補位；測試沒寫甜度的手搖奶茶，屬性回傳的 `sugar` 是 `null`，但 sweet 格把它當成全糖
+- [x] 4.6 把 `personas.py` 擴充到約 300 人；測試 8 種類型的人數相差不超過 1 人、同一個種子產生的結果完全相同，而且 seed 之後 `/api/auth/demo-users` 列出約 300 人
 - [ ] 4.7 擴充 seed：假發票寫進 `items`，假品名的屬性結果存成 `datasets/synthetic/attribute-cache.jsonl` 並載入 `item_cache`，再走一般的管線算出品味向量；在無 GPU 模式下執行，確認每位假用戶都有品項紀錄，重新計算也得到相同的向量
 - [ ] 4.8 組織 4 人人工複核 100 個品名，產出 23 個欄位的 precision、recall、F1 和 `null` 比例，寫成 `docs/results/attributes.md`（只放彙總數字）；掃描確認裡面沒有任何真實品名
-- [ ] 4.9 訂出「相反類型」對照表，執行配對驗證（整體和 8 種類型各自的同類型命中率，以及相反類型命中率），寫成 `docs/results/matching.md`
+- [x] 4.9 訂出「相反類型」對照表，執行配對驗證（整體和 8 種類型各自的同類型命中率，以及相反類型命中率），寫成 `docs/results/matching.md`
 
 ## 5. 角色 4：前端與展示
 

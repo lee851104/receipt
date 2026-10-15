@@ -52,7 +52,7 @@ def main():
     try:
         engine = make_engine(Settings.from_env(os.environ).database_url)
         init_db(engine)
-        people = build_personas(load_context(ROOT)["calendar"])
+        people = build_personas(load_context(ROOT)["calendar"], total=300)
         added = seed_demo_users(engine, people)
     except ValueError as error:  # a bad setting, or a database that no longer matches the list
         sys.exit(f"error: {error}")

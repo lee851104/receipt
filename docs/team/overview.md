@@ -504,6 +504,12 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
+### 角色 3 開工交接（2026-10-15）
+
+- 在 `codex/role-3/attributes` worktree 實作第 4 區；共用主資料夾 Python 和 llama.cpp，不升級共用套件。
+- 會擴充 `src/receipt/attributes.py`、`signals.py` 的外部屬性入口，以及 `personas.py` 的 v2 人口；保留 v1 預設 40 人與既有結果。`src/api/seed.py` 只改用 v2 人口入口，角色 1 合併時請留意。
+- `src/api/backends.py` 的正式模型啟用與資料庫 `item_cache` 管線仍由角色 1 的 2.15、2.4 接入。
+
 ### 13.1 同一台電腦用 worktree 分開做（2026-10-15）
 
 4060 電腦上每個角色一個 git worktree、一個自己的分支（例如角色 1 在主資料夾 `C:\Users\User\Desktop\AI_project\receipt`，角色 2 在 `C:\Users\User\.codex\worktrees\receipt-role2\receipt`）。

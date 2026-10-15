@@ -9,17 +9,20 @@ from .address import parse_district
 
 REQUIRED = ("發票日期", "發票狀態", "發票號碼", "賣方名稱", "消費明細_品名", "消費明細_數量", "消費明細_金額")
 MIN_AMOUNT = 10  # an uploaded line below this (a discount, a free item, small change) is not analysed
+MAX_NUMBER = 10**9  # far above any receipt line, far below what a database integer holds
 
 
 def whole(text, column):
     """The integer a CSV cell holds (12, or 12.0), or None for a true decimal such as 4.49; a cell that is no finite
-    number raises a ValueError naming the column."""
+    number, or one too large for any receipt, raises a ValueError naming the column."""
     try:
         number = float(text)
     except (TypeError, ValueError):
         number = math.nan
     if not math.isfinite(number):
         raise ValueError(f"{column} is not a number: {text!r}")
+    if abs(number) > MAX_NUMBER:
+        raise ValueError(f"{column} is too large: {text!r}")
     return int(number) if number.is_integer() else None
 
 

@@ -104,6 +104,9 @@ class ReportDataTests(unittest.TestCase):
                 self.write_rows([["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, amount]])
                 with self.assertRaisesRegex(ValueError, "消費明細_金額 is not a number"):
                     build_month(self.path, self.catalog, for_upload=True)
+        self.write_rows([["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, "9" * 20]])
+        with self.assertRaisesRegex(ValueError, "消費明細_金額 is too large"):
+            build_month(self.path, self.catalog, for_upload=True)
         with self.path.open("w", encoding="utf-8-sig", newline="") as stream:
             header = ",".join(["發票日期", "發票狀態", "發票號碼", "賣方名稱", "消費明細_品名", "消費明細_數量", "消費明細_金額"])
             stream.write(header + chr(10) + "20260502,開立已確認,A1" + chr(10))

@@ -13,7 +13,7 @@ from .db import ROOT, init_db, make_engine
 from .errors import ApiError, api_error_handler, internal_error_handler, validation_error_handler
 from .jobs import Worker, fail_unfinished, run_job
 from .limits import UploadLimit
-from .routes import auth, health, invoices, items
+from .routes import auth, health, invoices, items, me
 
 
 def create_app(settings, backends=None):
@@ -41,6 +41,7 @@ def create_app(settings, backends=None):
         app.include_router(auth.demo_router)
     app.include_router(items.router)
     app.include_router(invoices.router)
+    app.include_router(me.router)
     app.include_router(health.router)
     # The v2 pages, under /web/ rather than /, so an unknown /api path is a plain 404 instead of a static-file 405.
     # src/web/ is the frozen v1 report's build input and is never served.

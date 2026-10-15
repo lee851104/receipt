@@ -23,11 +23,11 @@
 | 假用戶 | 8 種類型 × 5 人 = 40 人，2026 年 3–4 月的假發票 | `src/receipt/personas.py` |
 | 網頁 | 單一 HTML 檔，JS 全部內嵌，GitHub Pages 公開中 | `scripts/build_report.py` → `invoice-insights.html` |
 | 後端骨架 | FastAPI + SQLite：註冊、登入、demo 快速切換、品名即時分類、健康檢查，模型先用假替身；v2 網頁從 `/web/` 提供（10/15 完成角色 1 第 1 週） | `src/api/`、`src/ml/`、`src/web_v2/` |
-| 測試 | Python 219 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
+| 測試 | Python 274 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
 | 分類實驗 | 品名 → 10 類。A：TF-IDF + 邏輯迴歸，macro-F1 0.62；B：bge-small-zh（512 維）+ 邏輯迴歸，macro-F1 0.66。只有 57 個人工確認品名，只能驗證 4 類 | `experiments/category-models/`、`docs/category-models-brief.md` |
 | 屬性實驗 | Qwen3-4B（Q4_K_M，2.4 GB）判斷 16 個屬性。真實資料上模型單獨 F1 44%，加規則 94%（事後回測，不是獨立驗證） | `experiments/receipt-attributes/` |
 
-**還沒有的：** 上傳與背景任務、品味向量和配對的 API、帳號管理、真的分類和屬性模型、CI、BERT。
+**還沒有的：** 配對的 API、帳號管理、真的分類和屬性模型、CI、BERT。上傳與背景任務（5.4）、任務最後的品味向量重算和 `GET /api/me/profile`（5.6）已經有了（10/15 完成角色 1 第 2 週第二批）。
 
 ### 18 格品味向量
 
@@ -187,7 +187,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 **`GET /api/jobs/{job_id}`**
 - 回傳：`{"job_id": 12, "month": "2026-05", "status": "running", "done": 10, "total": 25, "message": "判斷品項屬性"}`
 - `status`：queued / running / done / failed
-- `total` 是這份 CSV 不重複的品名數，`done` 是已經分類並判斷完屬性的品名數。無 GPU 模式下，快取裡沒有的品名直接標「待分析」，也算進 `done`
+- `total` 是這份 CSV 不重複的品名數，`done` 是已經分類並判斷完屬性的品名數。無 GPU 模式下，快取裡沒有的品名直接標「待分析」，也算進 `done`。全部品名判斷完之後 `done` 就等於 `total`，但任務還要重算品味向量（步驟 3），要等 `status` 是 `done` 才算做完（10/15 補上）
 - `message`：目前步驟的中文說明；failed 時寫失敗原因：「分類模型無法使用，請稍後重新上傳」「處理失敗，請重新上傳」「服務重新啟動，請重新上傳」
 - 伺服器一次只跑一個任務（只有一個 llama-server，SQLite 也只有一個寫入者）：所有任務交給同一條背景執行緒，依上傳順序（先進先出）一個一個跑，不佔用回應請求的執行緒，所以排隊的任務再多，其他 API 照常回應。別人的任務在跑時，新任務的 `status` 停在 `queued`，前端照常每 2 秒問一次就好。停止伺服器時不會等任務跑完，還沒跑完的任務在下次啟動時標成 failed（10/15 補上）
 - `job_id` 不會重複使用，任務刪掉之後也不會（10/15 補上）
@@ -196,8 +196,8 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 **背景任務的步驟：**
 1. 列出不重複品名，呼叫 `classify()`。最高機率低於 `CATEGORY_MIN_PROB`（預設 0.5）的品名存成 10 待確認，不算進品味向量
 2. 呼叫 `describe_items()`：先查 `item_cache`，沒有才問 Qwen。無 GPU 模式下沒有快取的回 `None`，算進 `pending_attributes`
-3. 用這個人所有月份的資料重算 18 格，存進 `profiles`（第 2 週第二批實作；在那之前任務做完第 2 步就是 done）
-4. `status` 改成 done。GPU 恢復之後，重新上傳同一個月份就能補算待分析的品名
+3. 用這個人所有月份的資料重算 18 格，存進 `profiles`（`message` 是「重算品味向量」）。屬性只讀 `item_cache`（目前的屬性模型），不問模型，沒有的品名當成待分析，見 5.6。重算出錯時任務變成 failed（「處理失敗，請重新上傳」），舊的 profile 不變（10/15 補上）
+4. `status` 改成 done，這是任務的最後一次寫入：看到 done 時 profile 已經更新。GPU 恢復之後，重新上傳同一個月份就能補算待分析的品名
 
 ### 5.5 品名即時分類
 
@@ -230,11 +230,16 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
    "categories": [{"name": "正餐", "color": "#df646b"}],
    "months": {"2026-05": {"year": 2026, "monthNumber": 5, "rows": ["…現有格式"]}}}
   ```
-- `traits` 一定有 18 筆。`ready` 為 false 表示有效品項少於 `min_items`，這時 18 格的 `value` 全是 `null`
+- `traits` 一定有 18 筆。`ready` 為 false 時 18 格的 `value` 全是 `null`；`ready` 為 true 時，某一格資料不夠（沒到 `configs/traits.json` 為那一格設的最低需求，或那一格的訊號都量不到）還是 `null`，其他格有數值
+- `ready`：只有存起來的品味向量存在時才是 true。有效品項（已略過的明細和類別 10 待確認的品項都不算）少於 `min_items`、還沒上傳過、第一個上傳的任務還沒做完，都是 false
 - `item_count`：有效品項數，判斷 `ready` 用的就是它
+- `pending_attributes`（10/15 補上）：這個人所有品項裡，`item_cache` 沒有（以目前的屬性模型）的不重複品名數；每次查詢當場數，不問模型，也不會寫入。品名一進快取就不再算（例如 GPU 恢復後重新上傳同一個月份補算），但 profile 要等那次任務重算才會用到新的答案。用假模型時，任務判斷完每個品名都有答案（全是 `null`），所以任務結束後是 0；換上真的 Qwen 之後，沒有 GPU 時新品名都算
 - `areas`：生活圈，最多 2 個行政區（`places.areas_of`），可能是空陣列
 - `categories`：11 類的名稱和顏色（`configs/report.json`），給現有月報畫面用
-- 還沒上傳過的人：`ready` 為 false，`months` 為 `{}`
+- `months`：由存起來的品項當場整理，格式同月報（10/15 補上：類別 10 待確認的品項也在裡面，`provisional` 一律是 `false`）。上傳一被接受就有了，所以 `months` 不是空的不代表 profile 做好了；`ready`、`item_count`、`areas`、`traits` 是任務最後存起來的 profile，只在任務結束時才變，要先照 5.4 問任務到 `done`
+- profile 在每次上傳的任務最後重算一次（用這個人所有月份），這個端點只讀存好的結果，從不重算
+- 還沒上傳過的人：`ready` 為 false，`item_count` 為 0，`months` 為 `{}`。假用戶的品項和 profile 要等 seed 擴充時才放入（任務 4.7），在那之前查假用戶一樣是 `ready` 為 false
+- 休假日和連假看 `configs/calendar-2026.json`：它目前只列了 2026 年 3–4 月的補假（檔案的 `covers`）。其他月份（包括其他年份）只有週末算休假日，沒有國定假日、補班和連假：`days` 格只用週末算，整個期間沒有任何一段連續三天以上的休假日時，`holiday` 格是 `null`
 
 ### 5.7 配對
 
@@ -403,7 +408,7 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
   2. 屬性介接取代 `attributes.describe` 的來源（`channel_of` 保留）；快取；`personas.py` 擴充到約 300 人
   3. 4 人分著做 100 筆人工複核並算 F1；配對驗證；跑完假用戶品名的 Qwen 結果，把快取放進 git
   4. 修錯；講稿素材
-- **注意：** `INTEGRATION.md` 列了幾個要明確決定的地方：甜度沒寫時回 `null`、fun 的英文值要對應成中文、`null` 不等於 `false`。`experiments/receipt-attributes/CLAUDE.md` 的限制只適用於那個實驗資料夾，正式介接寫在 `src/ml/`
+- **注意：** `INTEGRATION.md` 列了幾個要明確決定的地方：甜度沒寫時回 `null`、fun 的英文值要對應成中文、`null` 不等於 `false`（10/15 決定：甜度預設和 fun 換成中文都由後端的 `attributes.from_model` 做，`describe_items` 照實驗的值交出，見 13.4）。`experiments/receipt-attributes/CLAUDE.md` 的限制只適用於那個實驗資料夾，正式介接寫在 `src/ml/`
 
 ### 角色 4：前端與展示
 
@@ -486,7 +491,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
    .venv/Scripts/python.exe -m unittest discover -s tests -v
    node --test "tests/*.test.cjs"
    ```
-   預期結果：Python 219 個、JS 82 個全部通過
+   預期結果：Python 274 個、JS 82 個全部通過
 3. 後端（角色 1 的第一週成果）：
    - 複製 `.env.example` 成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼：`.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"`
    - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人；名單只能往後加，資料庫裡的帳號和名單對不上時會停下來並說明，這時刪掉 `data/app.db*` 再重來）
@@ -509,9 +514,34 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
+### 13.4 角色 1 轉告（2026-10-15，第 2 週第二批，分支 `role-1/profiles`）
+
+品味向量接好了：每次上傳的任務最後用這個人所有月份的品項重算 18 格，存進 `profiles`（5.4 第 3 步，`message` 是「重算品味向量」），`GET /api/me/profile`（5.6）可以用了。配對和計算過程的 API（5.7）還沒做。
+
+**給角色 4**
+- 5.6 可以用了。上傳照 13.3：拿到 `job_id` 之後每 2 秒問 `GET /api/jobs/{job_id}`，直到 `done` 或 `failed`，再查 `GET /api/me/profile`。進度條到 100%（`done` 等於 `total`）之後還有一小段 `message` 是「重算品味向量」，`status` 還是 `running`，要等 `done`，這時 profile 才更新
+- `months` 由存起來的品項當場整理，上傳一被接受就有了；`ready`、`item_count`、`areas`、`traits` 是任務最後存起來的 profile，任務結束才變。`months` 不是空的不代表 profile 做好了，要先問任務到 `done`。任務 `failed` 時，`months` 已經是新上傳的月份，profile 還是上一次成功的結果，請使用者重新上傳
+- `ready` 為 true 才有品味向量（有效品項至少 `min_items` 個）。false 時 18 筆 `traits` 的 `value` 全是 `null`，畫面可以用 `item_count` 和 `min_items` 顯示「還差幾個品項」。`ready` 為 true 時，個別格子還是可能是 `null`（那一格資料不夠），畫面要畫得出「沒有資料」
+- `item_count` 是有效品項數（略過的明細和類別 10 待確認的品項不算）。`months` 裡的品項照樣包含類別 10，`provisional` 一律是 `false`，畫面用 `category` 是不是 10 顯示「待確認」
+- `pending_attributes` 是屬性模型還沒判斷過的不重複品名數，大於 0 時可以提示「有 N 個品名還在分析」。現在用假模型，任務結束後是 0，換上真的 Qwen、沒有 GPU 時新品名才會算進去
+- 還沒上傳過的人和假用戶（`is_demo`，假用戶的資料要等 seed 擴充，任務 4.7）：`ready` 為 false、`item_count` 為 0、`months` 為 `{}`，不是錯誤
+- `configs/calendar-2026.json` 只列了 2026 年 3–4 月的補假，其他月份只算週末，所以沒有連假的期間 `holiday` 格是 `null`（見 5.6 最後一點）
+
+**給角色 3**
+- 品味計算現在讀你的 `describe_items` 結果：上傳任務把它存進 `item_cache`，重算 profile 時只讀快取，不問模型。換成訊號用的答案時（`src/receipt/attributes.from_model`），`null` 是「不知道」，比例的分母只算已知的答案，所以不確定就給 `null`，不要猜 `false`（design D6）
+- `fun` 一律用實驗的英文值 `movie`、`singing`、`show`、`game`，後端自己換成 電影／唱歌／展演／遊樂。**`describe_items` 不要換成中文**（任務 4.3 原本寫的「把 fun 對應成中文值」改由後端做）：不是這四個值的 `fun`（包含中文）會被當成沒給，改看店家名稱有沒有娛樂的字
+- `species` 只認 `cat`、`dog`，其他是 `null`（不知道）
+- `sugar` 是 0 到 1 的數字，不知道給 `null`：後端會套現有的甜度預設規則（奶茶、手搖店的飲品全糖，美式無糖……）。後端不檢查範圍，給了就直接拿去算，請自己保證在 0–1
+- 類別決定問題適不適用：`clearance` 只看食物、`quick` 只看正餐、`cooking` 只看生鮮、`kitchen` 只看生鮮和日用品、`sport_gear`／`car_care`／`home`／`stationery` 只看非食物，不適用的類別不管模型怎麼答，都當成已知的「沒有」。數量 ≥ 3 的 `bulk` 也由後端直接當 `true`
+- 任務 4.4（讓品味計算接收外部屬性）和 4.5（甜度預設補位）的內容已經由 `from_model` 和 `attributes` 參數做完，不要再另外做一份
+
+**給做帳號管理（任務 2.8、2.9）的人**
+- `profiles.user_id` 是外鍵：刪帳號要先刪 `profiles` 的那一列，再刪 `users`（5.11 的順序已經是這樣）。每個跑完任務的人都有一列
+- 刪掉一個月之後重算 profile，直接呼叫 `profiles.recompute(session, backends, context, user_id)`（`src/api/profiles.py`）；沒有任何品項時它存成 `ready` 為 false 的空 profile
+
 ### 13.3 角色 1 轉告（2026-10-15，第 2 週上傳管線，分支 `role-1/uploads`）
 
-上傳（5.4）、任務進度和即時分類的屬性快取（5.5）都接好了，規格的增補都標了「10/15」。品味向量的重算（5.4 第 3 步）、`GET /api/me/profile` 和帳號管理在下一批。
+上傳（5.4）、任務進度和即時分類的屬性快取（5.5）都接好了，規格的增補都標了「10/15」。品味向量的重算（5.4 第 3 步）和 `GET /api/me/profile` 在下一批做好了，見 13.4；帳號管理還沒做。
 
 **給所有人**
 - 資料表變了（多了 `jobs`、`items`、`item_cache`、`profiles`，外鍵會檢查）。第 1 週的資料庫（只有 `users`）不用刪：啟動時會自動補上新的資料表。只有用這個分支較早的 commit 建出來的資料庫要刪掉 `data/app.db*`（資料庫和它的 `-wal`、`-shm` 檔）再跑一次 seed，因為那時的 `items` 等資料表和現在的欄位、索引不同，啟動時不會被改過來

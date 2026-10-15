@@ -93,11 +93,21 @@
 
 ### D6. 屬性來源的接法
 
-`src/ml/attributes.describe_items(names)` 回傳 23 個欄位，或 `None`（待分析）。`attributes.describe` 新增一個參數，可以接收外部提供的屬性：
+`src/ml/attributes.describe_items(names)` 回傳 23 個欄位，或 `None`（待分析）。品味計算（`signals.gather`／`measure`、`traits.explain`）多一個 `attributes` 參數，內容是 `{品名: 23 個欄位或 None}`；給了就用 `attributes.from_model(row, channel, fields, vocabulary)` 把它換成 `describe` 同樣的 17 個答案，不給就照舊用 `describe`。重算 profile 時屬性只讀 `item_cache`（目前的屬性模型），不問模型，快取裡沒有的品名就是待分析。換算規則（10/15 決定）：
 
-- 店家通路 `channel_of` 照舊用規則，不交給 LLM
-- fun 的英文值對應成現有的中文值：movie → 電影、singing → 唱歌、show → 展演、game → 遊樂
-- 甜度預設規則留在品味計算時補位（見 taste-profile 規格）
+- 店家通路 `channel_of` 照舊用規則，不交給 LLM；7 個基本旗標先不用，類別仍然來自分類模型
+- **類別是已知的事實**：問題只在自己的類別門檻內才用模型的值，門檻外一律是 `False`（不適用），模型的 `null` 在門檻內保持 `null`。門檻照舊：`clearance` 只看食物、`quick` 只看正餐、`cooking` 只看生鮮、`kitchen` 只看生鮮和日用品、`sport_gear`／`car_care`／`home`／`stationery` 只看非食物（已確認的類別 4–9）
+- `bulk`：數量 ≥ 3 一定是 `True`（數量是發票上的事實，模型看不到），否則用模型的值
+- `sugar`：只有飲品有；模型給 `null` 時套用現有的甜度預設規則（見 taste-profile 規格）
+- `fun`：模型的 movie、singing、show、game 換成 電影、唱歌、展演、遊樂；模型沒給，或給了這四個以外的值，改看店家名稱有沒有娛樂的字（不看品名）
+- `species`：只接受 `cat`、`dog`，其他是 `null`
+- 待分析的品名（`fields is None`）當成 23 個欄位都是 `null` 的模型答案，套用同一組規則：類別門檻外是 `False`，門檻內是 `null`；數量 ≥ 3 的 `bulk` 是 `True`；飲品的 `sugar` 用預設規則；`fun` 看店家名稱；`species` 是 `null`
+
+**`null` 是沒有資料，不是「沒有」：**
+- 計次型的訊號（例如 `alcohol_items`）本來就只數 `True`
+- 五個只算已知品項的比例訊號（`clearance_share`、`store_clearance_share`、`fresh_share`、`bulk_share`、`weekday_quick_share`），分母只算那個答案已知的品項；`weekday_quick_share` 的分母是至少有一筆 `quick` 已知的正餐的上班日
+- 分母裡有未知的答案、而且已知的少於 5 個（`MIN_KNOWN`）時，這個訊號是量不到（`null`），權重交給同一格的其他訊號，免得幾個碰巧已知的答案代表全部。全部已知時（關鍵字規則一定是）照舊，所以 v1 的結果不變
+- 品味格子的最低品項需求（`requires` 的 `food_items`、`store_food_items`、`daily_items`、`meal_items`）照舊數全部品項，不只數屬性已知的
 
 API 路徑一律使用模型屬性；關鍵字規則只留給 v1 靜態建置和現有測試。
 

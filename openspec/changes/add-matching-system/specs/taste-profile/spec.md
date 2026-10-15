@@ -55,3 +55,26 @@
 #### Scenario: 部分品項待分析
 - **WHEN** 使用者有 30 個品項，其中 5 個不同品名的屬性是待分析
 - **THEN** 品味向量照常算出，只有依賴那 5 個品項屬性的計算少了它們，`pending_attributes` 是 5
+
+### Requirement: 未知的屬性不當成「沒有」
+用模型屬性計算時，`null`（未知，包含還在待分析的品名）SHALL 視為沒有資料，MUST NOT 當成 `false`。五個只算已知品項的比例訊號（`clearance_share`、`store_clearance_share`、`fresh_share`、`bulk_share`、`weekday_quick_share`）的分母 SHALL 只算那個屬性已知的品項；`weekday_quick_share` 的分母是至少有一筆 `quick` 已知的正餐的上班日。計次的訊號（例如 `alcohol_items`）只數答案是 `true` 的品項。分母裡有未知的答案、而且已知的少於 5 個時，那個訊號 SHALL 是 `null`（量不到），權重交給同一格的其他訊號；每個答案都已知時，結果 MUST 和照原本的比例算出的一樣。品味格子的最低品項需求（例如 `food_items`、`meal_items`）SHALL 照舊數全部品項，不只數屬性已知的。類別已經說明問題不適用時（例如正餐的 `cooking`），答案是已知的「沒有」，不是未知。
+
+#### Scenario: 未知的答案不算進分母
+- **WHEN** 使用者有 12 個食物品項，其中 4 個品名還在待分析，其餘 8 個的 `clearance` 已知，而且其中 2 個是 `true`
+- **THEN** `clearance_share` 是 2 ÷ 8 = 0.25，不是 2 ÷ 12
+
+#### Scenario: 已知的答案太少
+- **WHEN** 使用者有 12 個食物品項，其中 9 個品名還在待分析，只有 3 個的 `clearance` 已知
+- **THEN** `clearance_share` 是 `null`，不拿那 3 個碰巧已知的答案代表全部，權重交給同一格的其他訊號
+
+#### Scenario: 答案全部已知
+- **WHEN** 同一份品項，每個答案都已知，而且和關鍵字規則給的答案一樣
+- **THEN** 品味向量和用關鍵字規則算出的完全一樣；已知的答案再少，比例訊號也不會因為少於 5 個而變成 `null`
+
+#### Scenario: 待分析的品項照樣算進最低品項需求
+- **WHEN** 使用者有 10 個食物品項，其中 6 個品名還在待分析
+- **THEN** `food_items` 仍然是 10，需要 10 個食物品項的格子不因此被判為資料不足
+
+#### Scenario: 類別不適用
+- **WHEN** 使用者的食物品項裡有一個正餐，它的品名還在待分析
+- **THEN** 它的 `cooking` 是已知的「沒有」（正餐不是生鮮），照樣算進 `fresh_share` 的分母；它的 `clearance` 是未知，不算進 `clearance_share` 的分母

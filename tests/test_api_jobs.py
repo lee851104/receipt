@@ -144,7 +144,8 @@ class JobTests(unittest.TestCase):
 
 class ConnectionTests(unittest.TestCase):
     def test_no_connection_is_held_while_the_model_works(self):
-        """The request's session closes before its background task, and the job lets go of its own before asking."""
+        """The request's session closes when its route returns, not when its job on the worker thread ends, and the job
+        lets go of its own before asking."""
         held = []
 
         def describe_items(names, ask_model=True):

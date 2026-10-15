@@ -7,6 +7,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 
 from .backends import load_backends
+from .cache import Judging
 from .db import ROOT, init_db, make_engine
 from .errors import ApiError, api_error_handler, internal_error_handler, validation_error_handler
 from .jobs import Worker, fail_unfinished, run_job
@@ -24,6 +25,7 @@ def create_app(settings, backends=None):
     app.state.backends = backends or load_backends(settings)
     # Upload jobs run here, one at a time in upload order, never on the threads that answer requests.
     app.state.worker = Worker(partial(run_job, app.state.engine, app.state.backends, settings))
+    app.state.judging = Judging()  # the names the classify box has being judged in the background
     report = json.loads((ROOT / "configs" / "report.json").read_text(encoding="utf-8"))
     app.state.categories = [category["name"] for category in report["categories"]]
     app.add_exception_handler(ApiError, api_error_handler)

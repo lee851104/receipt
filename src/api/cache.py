@@ -1,6 +1,7 @@
 """Attributes through the item_cache table, so each product name is judged once per attribute model."""
 import json
 import logging
+import threading
 
 from sqlalchemy.dialects.sqlite import insert
 from sqlmodel import Session, col, select
@@ -37,8 +38,30 @@ def describe(session, backends, names, ask_model):
     return [known.get(name) for name in names]
 
 
-def describe_later(engine, backends, name):
-    """Judge one name in the background, for the classify box: its answer is waiting in the cache next time."""
+class Judging:
+    """The names the classify box has being judged in the background right now. The page asks about a pending name
+    again every 2 seconds, up to 5 times, and each ask would otherwise send the same name to the model once more."""
+
+    def __init__(self):
+        self.names = set()
+        self.lock = threading.Lock()  # requests run on many threads at once
+
+    def take(self, name):
+        """True when nobody is judging the name and the caller now is; False while it is judged already."""
+        with self.lock:
+            if name in self.names:
+                return False
+            self.names.add(name)
+            return True
+
+    def drop(self, name):
+        with self.lock:
+            self.names.discard(name)
+
+
+def describe_later(engine, backends, name, judging):
+    """Judge one name in the background, for the classify box: its answer is waiting in the cache next time. The
+    name was taken in judging, and is dropped from it however this ends."""
     # The answer has gone out already, so a failure is only logged; the name stays pending and is asked again
     # next time. The log leaves the name out: it may be a real product name.
     try:
@@ -46,3 +69,5 @@ def describe_later(engine, backends, name):
             describe(session, backends, [name], ask_model=True)
     except Exception:
         log.exception("judging a name in the background failed")
+    finally:
+        judging.drop(name)

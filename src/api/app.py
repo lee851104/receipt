@@ -29,6 +29,7 @@ def create_app(settings, backends=None):
         app.include_router(auth.demo_router)
     app.include_router(items.router)
     app.include_router(health.router)
-    # Under /web/ rather than /, so an unknown /api path is a plain 404 instead of a static-file 405.
-    app.mount("/web", StaticFiles(directory=ROOT / "src" / "web", html=True), name="web")
+    # The v2 pages, under /web/ rather than /, so an unknown /api path is a plain 404 instead of a static-file 405.
+    # src/web/ is the frozen v1 report's build input and is never served.
+    app.mount("/web", StaticFiles(directory=ROOT / "src" / "web_v2", html=True), name="web")
     return app

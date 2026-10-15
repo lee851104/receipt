@@ -1,27 +1,33 @@
 /* Workspace rendering is separate from login and classification DOM handling. */
 (function(root){
  'use strict';
- function createWorkspaceUI({api,session}){
+ function createWorkspaceUI({api,session,onIdentityChange=()=>{},onEnded=()=>{}}){
   const $=id=>document.getElementById(id);
+  let accountUI,credentialChange=false;
   let enabled=false,current='classify',lastProfile=null,lastNetwork=null,networkRenderError='',sessionVersion=-1;
   const work=ReceiptWorkspace.createWorkspace({api,session,onChange:render});
   const make=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
   function clearFrame(id){const frame=$(id);frame.hidden=true;frame.removeAttribute('src');}
   function navigate(page,load=true){
    if(!enabled)return;
-   current=['classify','upload','profile','matches'].includes(page)?page:'classify';
-   for(const name of ['classify','upload','profile','matches'])$(name+'-panel').hidden=name!==current;
+   if(credentialChange)page='settings';
+   current=['classify','upload','profile','matches','settings'].includes(page)?page:'classify';
+   for(const name of ['classify','upload','profile','matches','settings'])$(name+'-panel').hidden=name!==current;
    for(const button of document.querySelectorAll('[data-workspace]')){
     if(button.dataset.workspace===current)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
    }
    history.replaceState(null,'','#'+current);
+   if(load && current==='settings' && accountUI.state().status==='idle')accountUI.load();
    if(load && current==='profile' && work.state().profile.status==='idle')work.loadProfile();
    if(load && current==='matches' && work.state().matches.status==='idle')work.loadMatches();
   }
   function render(state){
+   for(const button of document.querySelectorAll('[data-workspace]'))button.disabled=credentialChange;
+   $('refresh-profile').disabled=credentialChange;$('refresh-matches').disabled=credentialChange;
    const upload=state.upload,demo=session.get()?.isDemo||state.profile.data?.is_demo;
    const running=['sending','queued','running'].includes(upload.status);
-   $('upload-demo-note').hidden=!demo;$('upload-submit').disabled=running||demo;$('invoice-file').disabled=running||demo;
+   accountUI?.setProcessing(running||(upload.status==='error'&&!!upload.jobId));
+   $('upload-demo-note').hidden=!demo;$('upload-submit').disabled=running||demo||credentialChange;$('invoice-file').disabled=running||demo||credentialChange;
    $('upload-state').textContent=({idle:'等待上傳',sending:'上傳中',queued:'排隊中',running:'分析中',done:'處理完成',failed:'處理失敗',error:'暫時無法完成'})[upload.status];
    $('upload-message').textContent=upload.message||'選擇 CSV 後開始分析。';
    $('upload-progress').hidden=!['queued','running','done'].includes(upload.status);
@@ -79,22 +85,31 @@
    profile:()=>enabled&&session.get()?work.state().profile.data:null,
    network:()=>enabled&&session.get()?work.state().network.data:null
   };
+  accountUI=ReceiptAccountUI.createAccountUI({api,session,onEnded,onRotating(value){
+   credentialChange=value;
+   if(value){work.invalidateViews();onIdentityChange();}
+   render(work.state());
+  },onChanged(kind){
+   sessionVersion=session.version();
+   if(kind==='password')work.reset();else work.invalidateViews();
+   onIdentityChange();
+  }});
   for(const button of document.querySelectorAll('[data-workspace]'))button.addEventListener('click',()=>navigate(button.dataset.workspace));
-  $('upload-form').addEventListener('submit',async event=>{event.preventDefault();const file=$('invoice-file').files?.[0];await work.upload(file);if(work.state().upload.status==='done')$('invoice-file').value='';});
+  $('upload-form').addEventListener('submit',async event=>{event.preventDefault();if(credentialChange)return;const file=$('invoice-file').files?.[0];await work.upload(file);if(work.state().upload.status==='done')$('invoice-file').value='';});
   $('retry-job').addEventListener('click',()=>work.resumeUpload());
   $('open-profile').addEventListener('click',()=>navigate('profile'));
   $('refresh-profile').addEventListener('click',()=>work.loadProfile());
   $('refresh-matches').addEventListener('click',()=>work.loadMatches(work.state().kind,work.state().scope));
   $('match-scope').addEventListener('change',()=>work.loadMatches(work.state().kind,$('match-scope').value));
   for(const button of document.querySelectorAll('[data-match-kind]'))button.addEventListener('click',()=>work.loadMatches(button.dataset.matchKind,$('match-scope').value));
-  return {sync(auth){
+  return {busyCredentials:()=>credentialChange,sync(auth){
    if(auth.view!=='workspace'){
     if(enabled||sessionVersion!==session.version()){
-     enabled=false;work.reset();$('invoice-file').value='';clearFrame('report-frame');clearFrame('network-frame');
+     enabled=false;work.reset();accountUI.reset();$('invoice-file').value='';clearFrame('report-frame');clearFrame('network-frame');
     }
     sessionVersion=session.version();return;
    }
-   if(!enabled||sessionVersion!==session.version()){work.reset();enabled=true;sessionVersion=session.version();}
+   if(!enabled||sessionVersion!==session.version()){work.reset();accountUI.reset();enabled=true;sessionVersion=session.version();}
    navigate(location.hash.slice(1),true);render(work.state());
   }};
  }

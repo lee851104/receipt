@@ -12,6 +12,7 @@
     not_found: '找不到這筆資料，請重新整理。', internal_error: '系統暫時發生錯誤，請稍後再試。',
     invalid_csv: '發票檔案格式不符。', file_too_large: '檔案太大，請改用較小的 CSV。',
     demo_user_read_only: '示範帳號僅供體驗，無法修改資料。',
+    wrong_password: '目前密碼不正確，請重新輸入。', month_not_found: '這個月份已不存在，請重新載入帳號資料。',
     model_unavailable: '分類模型尚未就緒，請稍後再試。',
     no_home_area: '目前資料不足以判斷生活圈。', job_in_progress: '資料仍在處理，請稍後再試。'
   };
@@ -40,6 +41,7 @@
       return current;
     }
     return {get, clear, version: () => revision,
+      rename(label){if(!get())return;current={...current,label:String(label)};persist();},
       set(data, label, {isDemo=false} = {}) {
         if (typeof data?.access_token !== 'string' || !data.access_token || !Number.isFinite(data.expires_in) || data.expires_in <= 0) throw new ApiError('伺服器回應格式有誤，請稍後再試。');
         current = {token:data.access_token, expiresAt:now()+data.expires_in*1000, label:String(label || '已登入'), isDemo:isDemo===true};

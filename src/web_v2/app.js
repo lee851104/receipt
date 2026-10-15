@@ -63,7 +63,7 @@
     }
     $('pending-note').textContent=classification.message==='稍後再查'?'屬性尚未完成分析，請稍後再查。':'屬性分析中，每 2 秒重新查詢，最多 5 次。';
     if(lastView!==state.view){
-      history.replaceState(null,'',workspace?(['#upload','#profile','#matches'].includes(location.hash)?location.hash:'#classify'):'#'+state.view);
+      history.replaceState(null,'',workspace?(['#upload','#profile','#matches','#settings'].includes(location.hash)?location.hash:'#classify'):'#'+state.view);
       $('login-password').value='';$('register-password').value='';
       if(!workspace)$('item-name').value='';
       if(lastView!==undefined)$(workspace?'workspace-title':'auth-title').focus();
@@ -72,7 +72,7 @@
     workspaceUI?.sync(state);
   }
   flow=ReceiptFlow.createFlow({api,session,onChange:render});
-  workspaceUI=ReceiptWorkspaceUI.createWorkspaceUI({api,session});
+  workspaceUI=ReceiptWorkspaceUI.createWorkspaceUI({api,session,onIdentityChange:()=>flow.identityChanged(),onEnded:()=>flow.switchAccount()});
   $('login-tab').addEventListener('click',()=>flow.showAuth('login'));
   $('register-tab').addEventListener('click',()=>flow.showAuth('register'));
   $('switch-account').addEventListener('click',()=>flow.switchAccount());
@@ -83,7 +83,7 @@
     try{await flow.register($('register-username').value,$('register-password').value,$('register-display').value);}finally{$('register-password').value='';}
   });
   $('demo-form').addEventListener('submit',event=>{event.preventDefault();return flow.demoLogin($('demo-user').value);});
-  $('classify-form').addEventListener('submit',event=>{event.preventDefault();return flow.classify($('item-name').value);});
+  $('classify-form').addEventListener('submit',event=>{event.preventDefault();if(workspaceUI.busyCredentials())return;return flow.classify($('item-name').value);});
   for(const button of document.querySelectorAll('[data-example]'))button.addEventListener('click',()=>{$('item-name').value=button.dataset.example;$('item-name').focus();});
   function restore(){
     if(!session.get())flow.showAuth(location.hash==='#register'?'register':'login');

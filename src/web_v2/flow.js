@@ -55,6 +55,7 @@
         if(id===healthId)emit();
       },
       showAuth(view){reset(view==='register'?'register':'login');},
+      identityChanged(){cancel();data={...data,classification:emptyClassification()};emit();},
       switchAccount(){session.clear();reset('login');},
       unauthorized(message='登入已失效，請重新登入。'){session.clear();reset('login',message);},
       login(username,password){return authenticate('/auth/login',{method:'POST',body:new URLSearchParams({username:username.trim(),password})},username.trim());},

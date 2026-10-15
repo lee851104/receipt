@@ -49,6 +49,7 @@
   }
   return {
    state:()=>data,
+   invalidateViews(){for(const key of ['profile','matches','network'])channels[key]?.abort();data={...data,profile:empty(),matches:empty(),network:empty()};emit();},
    reset(){Object.values(channels).forEach(c=>c.abort());data=initial();emit();},
    async upload(file){
     if(['sending','queued','running'].includes(data.upload.status))return;

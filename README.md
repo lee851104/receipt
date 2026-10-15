@@ -1,5 +1,53 @@
 # You are what you buy.
 
+## v2 本機應用（開發中）
+
+v2 由 FastAPI 提供 `/web/`，包含登入、CSV 上傳與進度、品名分類、品味月報、配對計算及帳號設定。資料保留在本機 SQLite；API 規格與各角色進度見 [團隊總覽](docs/team/overview.md)。
+
+**本分支已驗證的實際串接：** 註冊／登入、上傳／工作進度、假模型分類。**目前前端契約已完成、後端仍待交付：** 月報／配對／計算過程及帳號管理 API。因此這些頁面在目前本機服務會顯示尚未就緒，不會自動載入假資料。
+
+### v2 前端展示
+
+以下是 **虛構資料與模擬 API 的前端契約展示**，不是完整後端或真模型驗收影片。每個畫面下方均標示模擬狀態。
+
+![v2 前端契約展示：登入、分類、上傳、月報、配對、計算與帳號管理；使用虛構資料與模擬 API](docs/assets/v2-contract-demo.gif)
+
+可重現錄製方式：在有 Playwright／Chromium 的工具環境啟動本機服務，執行 `node scripts/capture_v2_demo.cjs`，再在有 Pillow 的工具環境執行 `python scripts/build_v2_demo_gif.py`。錄製腳本攔截全部 `/api/` 請求，不建立真實帳號或發票；中間截圖留在被忽略的 `runtime/`。
+
+### 目前可用的啟動方式（Windows）
+
+使用 Python 3.12、Node 24。建立虛擬環境並安裝 `requirements.txt`，不要使用 `uv sync`（`pyproject.toml` 未列服務套件）。
+
+```powershell
+python -m venv .venv
+.venv/Scripts/python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env
+```
+
+在本機 `.env` 設定至少 32 字元的隨機 `JWT_SECRET`，保持 `CATEGORY_MODEL=fake`、`ATTRIBUTES_MODEL=fake` 以驗證流程。不要提交 `.env`；已有設定時不要重新覆蓋。
+
+```powershell
+.venv/Scripts/python.exe -m src.api.seed
+.venv/Scripts/python.exe -m uvicorn src.api.main:app --host 127.0.0.1 --port 8001
+```
+
+開啟 [v2 本機頁面](http://127.0.0.1:8001/web/) 或 [API 文件](http://127.0.0.1:8001/docs)。demo 帳號為唯讀；上傳請註冊自己的帳號。角色 worktree 可共用主資料夾 `.venv`，但 `.env`／資料庫各自獨立，做法見團隊總覽 13.1。
+
+### Docker 交付狀態
+
+**目前本分支沒有 Dockerfile 或 Compose 設定，不能用 Docker 一鍵啟動。** 角色 1 完成容器交付並合併後，預定操作為在專案根目錄設定 `.env`，執行 `docker compose up`，依容器啟動輸出開啟 `/web/`；停止時執行 `docker compose down`。實際 port、模型下載與持久化設定須等 Compose 檔確認，之後才補上可照做的完整步驟。這段是待整合操作說明，尚未通過乾淨電腦驗收。
+
+### 概念與驗證
+
+- [向量化、內積、餘弦與收縮項](docs/team/concepts.md)：兩位虛構人物的 +82% 範例，附本機重算腳本；真正 explain API 重現仍待後端。
+- `node --test "tests/*.test.cjs"`：前端與既有 v1 回歸。
+- `.venv/Scripts/python.exe -m unittest discover -s tests`：後端及計算核心回歸。
+- 瀏覽器契約驗證：`tests/web-v2-account-browser.cjs`、`tests/web-v2-explanation-browser.cjs`；可設定 `NODE_PATH`、`BROWSER_EXECUTABLE` 指向既有 Playwright／Chromium。
+
+## v1 靜態原型
+
+以下內容為 v1 原型的功能與歷史技術規劃；v2 以本頁上方與團隊總覽的現況為準。v1 原始檔維持不變。
+
 ## 主要功能
 
 製作自己的每月消費回顧（Recap），分析消費習慣，也和朋友比較品味相似度。
@@ -13,7 +61,7 @@
 | 配對品味相近的朋友 | 依喜好與生活圈找同好、交友 | 以交友誘因，協助財政部推廣雲端發票使用 |
 | 補登無發票消費 | 補足紀錄，解鎖更多配對 | 無發票消費紀錄做為查稅參考依據 |
 
-[開啟整合示範版：消費洞察＋朋友品味比較](https://lee851104.github.io/receipt/invoice-insights.html)
+[開啟 v1 靜態原型：消費洞察＋朋友品味比較](https://lee851104.github.io/receipt/invoice-insights.html)
 
 ![專題網頁預覽：虛構示範人物的品味特質連線圖，中間是品味相似度](readme_pic1.png)
 

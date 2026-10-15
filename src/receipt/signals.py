@@ -9,6 +9,9 @@ CONFIRMED = 10  # category 10 still waits for review
 MEAL_BILL = {MEAL, DRINK, DESSERT}  # what a meal bill may include when estimating cost per person
 NOT_SHOP_MEALS = {"超商", "量販", "超市"}
 STORES = {"超商", "量販"}
+# A share over a model's answers needs this many known ones once some are unknown, so a lucky few answers cannot
+# stand for the whole (like meal_cost needing 3 costs and convenience_share 2 store bills).
+MIN_KNOWN = 5
 SPLIT = {"cat": (("cat", 1.0),), "dog": (("dog", 1.0),), None: (("cat", 0.5), ("dog", 0.5))}
 
 
@@ -51,6 +54,17 @@ def count(pool, test):
 def known(pool, flag):
     """The items whose answer to this question is known; an unknown answer is not a 'no', so a share leaves it out."""
     return [item for item in pool if item[flag] is not None]
+
+
+def known_share(part, answered, total):
+    """A share over the entries with a known answer; None when unknown answers leave fewer than MIN_KNOWN to rest on.
+
+    With every answer known, as the keyword rules always give, this is plain share(): a small denominator is left to
+    the trait's own minimum.
+    """
+    if answered < total and answered < MIN_KNOWN:
+        return None
+    return share(part, answered)
 
 
 def ranked(counter):
@@ -156,14 +170,16 @@ def quick_habit_meals(meals, off):
 def weekday_quick_share(meals, off):
     """Workdays with a quick meal that was bought on at least three different workdays, over workdays with a meal
     whose quick answer is known."""
-    workdays = {item["date"] for item in known(meals, "quick") if item["date"] not in off}
-    return share(len({item["date"] for item in quick_habit_meals(meals, off)}), len(workdays))
+    workday_meals = [item for item in meals if item["date"] not in off]
+    answered = {item["date"] for item in known(workday_meals, "quick")}
+    workdays = {item["date"] for item in workday_meals}
+    return known_share(len({item["date"] for item in quick_habit_meals(meals, off)}), len(answered), len(workdays))
 
 
 def bill_species(invoice):
     """The one species a pet-shop bill's pet items name, or None when they name neither or both."""
-    known = {line["species"] for line in invoice["lines"] if line["species"] and (line["pet_food"] or line["pet_supply"])}
-    return known.pop() if len(known) == 1 else None
+    named = {line["species"] for line in invoice["lines"] if line["species"] and (line["pet_food"] or line["pet_supply"])}
+    return named.pop() if len(named) == 1 else None
 
 
 def pet_signals(items, paid, months):
@@ -268,13 +284,14 @@ def measure(rows, period, context, attributes=None):
 
     signals = {
         "meal_cost": median(costs) if len(costs) >= 3 else None,
-        "clearance_share": share(len(behind["clearance_share"]), len(known(food, "clearance"))),
+        "clearance_share": known_share(len(behind["clearance_share"]), len(known(food, "clearance")), len(food)),
         "premium_drink_share": share(len(behind["premium_drink_share"]), len(drinks)),
         "store_meal_share": share(len(behind["store_meal_share"]), len(meals)),
         "weekday_quick_share": weekday_quick_share(meals, off),
-        "store_clearance_share": share(len(behind["store_clearance_share"]), len(known(store_food, "clearance"))),
+        "store_clearance_share": known_share(len(behind["store_clearance_share"]), len(known(store_food, "clearance")),
+                                             len(store_food)),
         "shop_meal_share": share(len(behind["shop_meal_share"]), len(meals)),
-        "fresh_share": share(len(behind["fresh_share"]), len(known(food, "cooking"))),
+        "fresh_share": known_share(len(behind["fresh_share"]), len(known(food, "cooking")), len(food)),
         "ready_meal_share": share(len(meals), len(food)),
         "kitchen_per_month": len(behind["kitchen_per_month"]) / months,
         "sugar_mean": mean(item["sugar"] for item in behind["sugar_mean"]) if behind["sugar_mean"] else None,
@@ -288,7 +305,7 @@ def measure(rows, period, context, attributes=None):
         "away_share": share(len(away), len(located)) if home else None,
         "stays": visits("住宿"), "long_trips": visits("長途交通"),
         "convenience_share": share(len(bills("convenience_share")), len(store_bills)) if len(store_bills) >= 2 else None,
-        "bulk_share": share(len(behind["bulk_share"]), len(known(daily, "bulk"))),
+        "bulk_share": known_share(len(behind["bulk_share"]), len(known(daily, "bulk")), len(daily)),
         "small_daily_visits": len(bills("small_daily_visits")) / months,
         "home_items": len(behind["home_items"]) / months,
         "stationery_items": len(behind["stationery_items"]) / months,

@@ -7,7 +7,7 @@ from pathlib import Path
 from src.ml.fields import ATTRIBUTES, FIELDS
 from src.receipt.attributes import FUN_WORDS, channel_of, describe, from_model
 from src.receipt.signals import calendar_days, gather, measure
-from src.receipt.traits import build_vector, explain, load_context
+from src.receipt.traits import build_vector, explain, load_context, trait_value
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTEXT = load_context(ROOT)
@@ -200,6 +200,71 @@ class SignalTests(unittest.TestCase):
         self.assertEqual(len(explained["vector"]), 18)
 
 
+# Per share over a pool: (category, shop, question, a name answered yes, a name answered no). The waiting names have
+# no answer. In each case below the shares count 2 yes among the answered.
+POOLS = {"clearance_share": (0, "測試便當店", "clearance", "測試即期便當", "測試排骨便當"),
+         "store_clearance_share": (0, "示範超商", "clearance", "測試即期便當", "測試排骨便當"),
+         "fresh_share": (3, "測試傳統市場", "cooking", "測試高麗菜", "測試香蕉"),
+         "bulk_share": (8, "測試量販店", "bulk", "測試衛生紙箱", "測試牙刷")}
+
+
+def pool_case(signal, answered, waiting):
+    """Rows and attributes where `answered` lines have a known answer, the first two yes, and `waiting` lines have none."""
+    category, shop, question, yes, no = POOLS[signal]
+    rows = bought((WORKDAYS[:2], yes, category, 100, shop), (WORKDAYS[2:answered], no, category, 100, shop),
+                  (WORKDAYS[answered:answered + waiting], "測試新品", category, 100, shop))
+    return rows, {yes: model(**{question: True}), no: model(**{question: False}), "測試新品": None}
+
+
+def quick_case(answered, waiting):
+    """Workdays with a meal: `answered` have a known quick answer (the first three a rice ball, the rest noodles) and
+    `waiting` have only a meal that still waits."""
+    rows = bought((WORKDAYS[:3], "測試鮪魚飯糰", 0, 45, "示範超商"), (WORKDAYS[3:answered], "測試牛肉麵", 0, 150, "測試麵館"),
+                  (WORKDAYS[answered:answered + waiting], "測試新品套餐", 0, 120, "測試便當店"))
+    return rows, {"測試鮪魚飯糰": model(quick=True), "測試牛肉麵": model(quick=False), "測試新品套餐": None}
+
+
+class ThinAnswerTests(unittest.TestCase):
+    def check(self, signal, case, expected):
+        rows, attributes = case
+        measured = measure(rows, PERIOD, CONTEXT, attributes)
+        self.assertEqual(measured["signals"][signal], expected, msg=signal)
+        if expected is None:
+            # A share that is not measured lists no purchases.
+            self.assertEqual(measured["purchases"][signal], [], msg=signal)
+
+    def test_a_share_with_unknown_answers_needs_five_known_ones(self):
+        for signal in POOLS:
+            with self.subTest(signal=signal):
+                self.check(signal, pool_case(signal, 4, 6), None)
+                self.check(signal, pool_case(signal, 5, 6), 2 / 5)
+        self.check("weekday_quick_share", quick_case(4, 6), None)
+        self.check("weekday_quick_share", quick_case(5, 6), 3 / 5)
+
+    def test_a_share_with_every_answer_known_is_measured_however_few(self):
+        # What the rules give: no answer is ever unknown, and the trait's own minimum is the only one.
+        for signal in POOLS:
+            with self.subTest(signal=signal):
+                self.check(signal, pool_case(signal, 3, 0), 2 / 3)
+        self.check("weekday_quick_share", quick_case(4, 0), 3 / 4)
+
+    def test_one_known_store_meal_among_eight_does_not_settle_the_motive_trait(self):
+        motive = next(trait for trait in CONTEXT["traits"]["traits"] if trait["id"] == "motive")
+        rows = bought((WORKDAYS[:1], "測試即期便當", 0, 69, "示範超商"), (WORKDAYS[1:8], "測試新品便當", 0, 90, "示範超商"))
+        measured = measure(rows, PERIOD, CONTEXT, {"測試即期便當": model(clearance=True, quick=False), "測試新品便當": None})
+        self.assertEqual(measured["counts"]["store_food_items"], 8)
+        self.assertIsNone(measured["signals"]["store_clearance_share"])
+        self.assertIsNone(trait_value(motive, measured))
+        # With enough known quick answers the habit alone decides, not the single clearance meal.
+        rows = bought((WORKDAYS[:6], "測試鮪魚飯糰", 0, 45, "示範超商"), (WORKDAYS[6:7], "測試即期便當", 0, 69, "示範超商"),
+                      (WORKDAYS[7:9], "測試新品便當", 0, 90, "示範超商"))
+        measured = measure(rows, PERIOD, CONTEXT, {"測試鮪魚飯糰": model(quick=True),
+                                                   "測試即期便當": model(clearance=True), "測試新品便當": None})
+        self.assertIsNone(measured["signals"]["store_clearance_share"])
+        self.assertEqual(measured["signals"]["weekday_quick_share"], 6 / 6)
+        self.assertEqual(trait_value(motive, measured), 1)
+
+
 def a_month_of_everything():
     """Fictional rows touching every question the signals ask, each name with one category and one shop."""
     return bought((WORKDAYS[:12], "測試排骨便當", 0, 100, "測試便當店"),
@@ -256,7 +321,7 @@ class SameAnswersTests(unittest.TestCase):
         self.assertEqual(explain(rows, PERIOD, CONTEXT, attributes), before)
         self.assertEqual(build_vector(rows, PERIOD, CONTEXT, attributes), before["vector"])
 
-    def test_the_rules_never_leave_a_question_unknown_except_sugar(self):
+    def test_the_rules_leave_only_sugar_fun_and_species_unanswered(self):
         rows = a_month_of_everything()
         for row in rows:
             answers = describe(row, channel_of(row["merchant"], BRANDS, WORDS), WORDS)

@@ -39,6 +39,11 @@ class SettingsTests(unittest.TestCase):
             with self.subTest(key=key), self.assertRaisesRegex(ValueError, key):
                 Settings.from_env({"JWT_SECRET": SECRET, key: "gpt"})
 
+    def test_a_database_other_than_plain_sqlite_stops_the_server(self):
+        for url in ("postgresql://localhost/app", "sqlite+pysqlite:///data/app.db"):
+            with self.subTest(url=url), self.assertRaisesRegex(ValueError, "DATABASE_URL"):
+                Settings.from_env({"JWT_SECRET": SECRET, "DATABASE_URL": url})
+
     def test_blank_values_mean_the_default(self):
         settings = Settings.from_env({"JWT_SECRET": SECRET, "JWT_EXPIRE_MINUTES": "", "DATABASE_URL": "  ",
                                       "CATEGORY_MODEL": "", "CATEGORY_MIN_PROB": " "})

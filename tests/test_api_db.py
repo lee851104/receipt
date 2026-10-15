@@ -49,6 +49,13 @@ class DatabaseTests(unittest.TestCase):
                 engine.dispose()  # Windows cannot delete a file that is still open, even after a failed check
         self.assertEqual((mode, keys), ("wal", 1))
 
+    def test_items_have_one_index_for_a_users_month(self):
+        engine = make_engine(MEMORY)
+        init_db(engine)
+        with engine.connect() as connection:
+            indexes = [row[1] for row in connection.exec_driver_sql("PRAGMA index_list(items)").all()]
+        self.assertEqual(indexes, ["ix_items_user_month"])
+
     def test_a_row_for_a_missing_user_is_refused(self):
         engine = make_engine(MEMORY)
         init_db(engine)

@@ -59,4 +59,7 @@ class Settings:
             raise ValueError(f"CATEGORY_MODEL must be one of {', '.join(CATEGORY_MODELS)}; got {settings.category_model!r}")
         if settings.attributes_model not in ATTRIBUTE_MODELS:
             raise ValueError(f"ATTRIBUTES_MODEL must be one of {', '.join(ATTRIBUTE_MODELS)}; got {settings.attributes_model!r}")
+        # Only plain SQLite URLs get the root-relative path, foreign keys and write-ahead logging (db.make_engine).
+        if not settings.database_url.startswith("sqlite://"):
+            raise ValueError(f"DATABASE_URL must be a SQLite URL such as sqlite:///data/app.db; got {settings.database_url!r}")
         return settings

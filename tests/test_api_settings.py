@@ -40,9 +40,12 @@ class SettingsTests(unittest.TestCase):
                 Settings.from_env({"JWT_SECRET": SECRET, key: "gpt"})
 
     def test_a_database_other_than_plain_sqlite_stops_the_server(self):
-        for url in ("postgresql://localhost/app", "sqlite+pysqlite:///data/app.db"):
-            with self.subTest(url=url), self.assertRaisesRegex(ValueError, "DATABASE_URL"):
+        for url in ("postgresql://localhost/app", "sqlite+pysqlite:///data/app.db", "sqlite://foo",
+                    "postgresql://amy:secret@localhost/app"):
+            with self.subTest(url=url), self.assertRaisesRegex(ValueError, "DATABASE_URL") as caught:
                 Settings.from_env({"JWT_SECRET": SECRET, "DATABASE_URL": url})
+            # A rejected URL may carry a password, so the message never repeats it.
+            self.assertNotIn(url, str(caught.exception))
 
     def test_blank_values_mean_the_default(self):
         settings = Settings.from_env({"JWT_SECRET": SECRET, "JWT_EXPIRE_MINUTES": "", "DATABASE_URL": "  ",

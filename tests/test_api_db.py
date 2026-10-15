@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from src.api.db import MEMORY, ROOT, file_url, init_db, make_engine
-from src.api.tables import Job, User
+from src.api.tables import ItemCache, Job, User
 
 
 def add_amy(engine):
@@ -48,6 +48,31 @@ class DatabaseTests(unittest.TestCase):
             finally:
                 engine.dispose()  # Windows cannot delete a file that is still open, even after a failed check
         self.assertEqual((mode, keys), ("wal", 1))
+
+    def test_every_engine_hides_statement_parameters(self):
+        with tempfile.TemporaryDirectory() as folder:
+            for url in (MEMORY, "sqlite:///:memory:", "sqlite:///" + (Path(folder) / "app.db").as_posix()):
+                engine = make_engine(url)
+                try:
+                    with self.subTest(url=url.rpartition("/")[2]):
+                        self.assertTrue(engine.hide_parameters)
+                finally:
+                    engine.dispose()  # Windows cannot delete a file that is still open
+
+    def test_an_error_never_holds_a_product_name(self):
+        engine = make_engine(MEMORY)
+        init_db(engine)
+        with Session(engine) as session:
+            session.add_all([ItemCache(name="鮮奶茶", model="fake", fields="{}") for _ in range(2)])
+            with self.assertRaises(IntegrityError) as caught:
+                session.commit()
+        self.assertNotIn("鮮奶茶", str(caught.exception))
+
+    def test_a_url_that_is_not_sqlite_is_refused_without_echoing_it(self):
+        for url in ("postgresql://amy:secret@localhost/app", "sqlite://foo"):
+            with self.subTest(url=url), self.assertRaisesRegex(ValueError, "DATABASE_URL must be a SQLite URL") as caught:
+                make_engine(url)
+            self.assertNotIn(url, str(caught.exception))
 
     def test_items_have_one_index_for_a_users_month(self):
         engine = make_engine(MEMORY)

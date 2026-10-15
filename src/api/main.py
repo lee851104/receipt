@@ -1,6 +1,9 @@
 """The app uvicorn serves. Run from the repository root:
 
     .venv/Scripts/python.exe -m uvicorn src.api.main:app --reload
+
+Run it as ONE process: no --workers, and no second server on the same database. Start-up fails every unfinished
+job, and the lock that runs one job at a time only works inside one process.
 """
 import os
 import sys

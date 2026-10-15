@@ -1,5 +1,6 @@
 """The half of an upload that runs after the answer: categories, then attributes, then the job is done."""
 import logging
+import threading
 
 from sqlmodel import Session, col, select
 
@@ -9,6 +10,9 @@ from .tables import Item, Job
 PENDING = 10   # 待確認: the model was not sure enough, so the item stays out of the taste vector
 BATCH = 20     # names judged between two progress updates
 UNFINISHED = ("queued", "running")
+# One job runs at a time: there is a single llama-server, SQLite has a single writer, and the next batch updates a
+# profile at the end of a job. A waiting job holds no connection and honestly stays "queued".
+WORK = threading.Lock()
 log = logging.getLogger(__name__)
 
 
@@ -22,16 +26,17 @@ def update(session, job, **changes):
 def classify_items(session, job, backends, min_prob, names):
     """Store each name's category on the job's items: the model's first choice, or 10 below min_prob."""
     chosen = {}
-    for name, answer in zip(names, backends.classify(names)):
+    # strict: a model that answers for fewer names fails the job instead of leaving names pending unnoticed.
+    for name, answer in zip(names, backends.classify(names), strict=True):
         category = answer["category"]
         chosen[name] = category if answer["probs"][category] >= min_prob else PENDING
-    items = session.exec(select(Item).where(Item.user_id == job.user_id, Item.month == job.month,
-                                            col(Item.name).in_(list(chosen)))).all()
-    # Only these names: a newer upload of the same month may have replaced the items meanwhile; its own job
-    # classifies those.
+    items = session.exec(select(Item).where(Item.user_id == job.user_id, Item.month == job.month)).all()
     for item in items:
-        item.category = chosen[item.name]
-        session.add(item)
+        # Only these names: a newer upload of the same month may have replaced the items meanwhile; its own job
+        # classifies those.
+        if item.name in chosen:
+            item.category = chosen[item.name]
+            session.add(item)
     session.commit()
 
 
@@ -52,16 +57,31 @@ def process(session, job, backends, settings):
     update(session, job, status="done", message="完成")
 
 
-def run_job(engine, backends, settings, job_id):
-    """Background task for one upload. Any crash marks the job failed instead of leaving it running."""
-    with Session(engine) as session:
+def mark_failed(session, job_id):
+    """Fail the job after a crash. It may be gone (its account was deleted meanwhile) and the database may be what
+    crashed, so a write that does not work is logged instead of raised: nothing can be done about it here, and the
+    next start-up fails the job anyway."""
+    try:
+        session.rollback()
         job = session.get(Job, job_id)
+        if job is not None:
+            update(session, job, status="failed", message="處理失敗，請重新上傳")
+    except Exception:
+        log.exception("could not mark upload job %s failed", job_id)
+
+
+def run_job(engine, backends, settings, job_id):
+    """Background task for one upload. Any crash marks the job failed instead of leaving it running. A job whose
+    account was deleted meanwhile has nothing left to do."""
+    with WORK, Session(engine) as session:
         try:
+            job = session.get(Job, job_id)
+            if job is None:
+                return
             process(session, job, backends, settings)
         except Exception:
             log.exception("upload job %s failed", job_id)
-            session.rollback()
-            update(session, session.get(Job, job_id), status="failed", message="處理失敗，請重新上傳")
+            mark_failed(session, job_id)
 
 
 def fail_unfinished(engine):

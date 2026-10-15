@@ -60,6 +60,7 @@ class Settings:
         if settings.attributes_model not in ATTRIBUTE_MODELS:
             raise ValueError(f"ATTRIBUTES_MODEL must be one of {', '.join(ATTRIBUTE_MODELS)}; got {settings.attributes_model!r}")
         # Only plain SQLite URLs get the root-relative path, foreign keys and write-ahead logging (db.make_engine).
-        if not settings.database_url.startswith("sqlite://"):
-            raise ValueError(f"DATABASE_URL must be a SQLite URL such as sqlite:///data/app.db; got {settings.database_url!r}")
+        # The message leaves the value out: a rejected URL may carry a password.
+        if settings.database_url != "sqlite://" and not settings.database_url.startswith("sqlite:///"):
+            raise ValueError("DATABASE_URL must be a SQLite URL such as sqlite:///data/app.db")
         return settings

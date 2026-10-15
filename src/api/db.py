@@ -35,17 +35,20 @@ def pragmas(write_ahead):
 def make_engine(url):
     """An engine for url. An in-memory database (for tests only) keeps one shared connection, or each request
     would see an empty one; that single connection cannot serve requests running at the same time."""
+    # hide_parameters: a database error may reach the log, and the log must never hold real product names
+    # (overview section 10); SQLAlchemy otherwise prints the statement's parameters in the message.
     if url in (MEMORY, "sqlite:///:memory:"):
-        engine = create_engine(url, connect_args={"check_same_thread": False}, poolclass=StaticPool)
+        engine = create_engine(url, connect_args={"check_same_thread": False}, poolclass=StaticPool,
+                               hide_parameters=True)
         event.listen(engine, "connect", pragmas(write_ahead=False))
         return engine
     if url.startswith("sqlite:///"):
         url = file_url(url)
         Path(url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
-        engine = create_engine(url, connect_args={"check_same_thread": False})
+        engine = create_engine(url, connect_args={"check_same_thread": False}, hide_parameters=True)
         event.listen(engine, "connect", pragmas(write_ahead=True))
         return engine
-    return create_engine(url, connect_args={"check_same_thread": False})
+    raise ValueError("DATABASE_URL must be a SQLite URL such as sqlite:///data/app.db")
 
 
 def init_db(engine):
@@ -59,4 +62,6 @@ def get_session(request: Request):
         yield session
 
 
-SessionDep = Annotated[Session, Depends(get_session)]
+# scope="function": the session closes when the route returns, not after the response and its background task, which
+# would keep a connection checked out for a whole upload job.
+SessionDep = Annotated[Session, Depends(get_session, scope="function")]

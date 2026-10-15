@@ -20,6 +20,11 @@ from ..validation import PathId
 router = APIRouter(prefix="/api")
 UserDep = Annotated[User, Depends(current_user)]
 MAX_BYTES = 2 * 1024 * 1024
+# The limit on a whole request body (limits.UploadLimit): room for the multipart boundary and part headers around the
+# file, which the route still checks against MAX_BYTES itself.
+MAX_BODY = MAX_BYTES + 64 * 1024
+# Real months have about 50 kept lines; this keeps one upload's job under about an hour of Qwen.
+MAX_ROWS = 2000
 
 
 def parse(data):
@@ -43,10 +48,12 @@ def upload(file: UploadFile, user: UserDep, request: Request, background: Backgr
         raise ApiError(413, "file_too_large")
     try:
         month_key, month = parse(data)
-    # ValueError covers UnicodeDecodeError, bad dates and numbers and every rule build_month enforces; csv.Error
-    # a NUL byte or a broken quote.
+    # ValueError covers UnicodeDecodeError, bad dates and numbers and every rule build_month enforces; csv.Error a
+    # field over csv's 131,072-character limit.
     except (ValueError, csv.Error) as error:
         raise ApiError(400, "invalid_csv", str(error)) from None
+    if len(month["rows"]) > MAX_ROWS:
+        raise ApiError(400, "invalid_csv", f"A month may have at most {MAX_ROWS} kept lines")
     # The new file replaces the month: its old items go, and so do its finished jobs.
     session.exec(delete(Item).where(Item.user_id == user.id, Item.month == month_key))
     session.exec(delete(Job).where(Job.user_id == user.id, Job.month == month_key, col(Job.status).not_in(UNFINISHED)))
@@ -57,7 +64,6 @@ def upload(file: UploadFile, user: UserDep, request: Request, background: Backgr
     job = Job(user_id=user.id, month=month_key, total=len({row["name"] for row in month["rows"]}))
     session.add(job)
     session.commit()
-    session.refresh(job)
     state = request.app.state
     background.add_task(run_job, state.engine, state.backends, state.settings, job.id)
     return {"job_id": job.id, "month": month_key, "rows": len(month["rows"])}

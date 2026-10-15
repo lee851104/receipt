@@ -56,9 +56,79 @@ class UploadTests(unittest.TestCase):
                 self.assertIn(reason, response.json()["message"])
         self.assertEqual(self.rows(Job), [])
 
+    def test_uploading_a_month_again_leaves_another_users_same_month_alone(self):
+        register(self.client, username="bob")
+        bob = login(self.client, username="bob")
+        upload(self.client, bob, invoice_csv(MAY))
+        upload(self.client, self.headers, invoice_csv(MAY))
+        upload(self.client, self.headers, invoice_csv([MAY[2]]))
+        self.assertEqual(sorted((item.user_id, item.name) for item in self.rows(Item)),
+                         [(1, "衛生紙"), (2, "滷肉飯"), (2, "衛生紙"), (2, "鮮奶茶")])
+        self.assertEqual(sorted((job.user_id, job.status) for job in self.rows(Job)), [(1, "done"), (2, "done")])
+
+    def test_uploading_a_month_again_keeps_its_unfinished_job(self):
+        with Session(self.client.app.state.engine) as session:
+            session.add(Job(user_id=1, month="2026-05", status="queued"))
+            session.commit()
+        upload(self.client, self.headers, invoice_csv(MAY))
+        self.assertEqual([(job.id, job.status) for job in self.rows(Job)], [(1, "queued"), (2, "done")])
+
+    def test_a_refused_upload_leaves_the_month_already_uploaded_as_it_was(self):
+        upload(self.client, self.headers, invoice_csv(MAY))
+        before = [row.model_dump() for model in (Item, Job) for row in self.rows(model)]
+        two_months = invoice_csv([MAY[0], ["20260601", *MAY[0][1:]]])
+        for data, status in ((two_months, 400), (b"x" * (invoices.MAX_BYTES + 1), 413),
+                             (b"x" * (invoices.MAX_BODY + 1), 413)):
+            with self.subTest(status=status, size=len(data)):
+                self.assertEqual(upload(self.client, self.headers, data).status_code, status)
+        self.assertEqual([row.model_dump() for model in (Item, Job) for row in self.rows(model)], before)
+
+    def test_a_field_over_the_csv_field_limit_is_400(self):
+        huge = [["20260502", "開立已確認", "TEST-INV-1", "測試飲料店", "臺北市大安區測試路1號", "x" * 131_073, 1, 60]]
+        response = upload(self.client, self.headers, invoice_csv(huge))
+        self.assertEqual((response.status_code, response.json()["detail"]), (400, "invalid_csv"))
+        self.assertIn("field limit", response.json()["message"])
+
+    def test_a_month_with_more_kept_lines_than_the_limit_is_400_and_stores_nothing(self):
+        with mock.patch.object(invoices, "MAX_ROWS", 2):
+            response = upload(self.client, self.headers, invoice_csv(MAY))
+        self.assertEqual((response.status_code, response.json()["detail"]), (400, "invalid_csv"))
+        self.assertIn("at most 2", response.json()["message"])
+        self.assertEqual((self.rows(Item), self.rows(Job)), ([], []))
+
+    def test_a_month_with_exactly_the_limit_of_kept_lines_is_accepted(self):
+        with mock.patch.object(invoices, "MAX_ROWS", 3):
+            self.assertEqual(upload(self.client, self.headers, invoice_csv(MAY)).status_code, 202)
+
     def test_a_file_over_two_megabytes_is_413(self):
         response = upload(self.client, self.headers, b"x" * (2 * 1024 * 1024 + 1))
         self.assertEqual((response.status_code, response.json()), (413, {"detail": "file_too_large"}))
+
+    def test_a_file_of_exactly_two_megabytes_is_read_not_refused(self):
+        response = upload(self.client, self.headers, b"x" * invoices.MAX_BYTES)
+        self.assertEqual((response.status_code, response.json()["detail"]), (400, "invalid_csv"))
+
+    def test_a_body_over_the_limit_is_refused_before_the_login_check(self):
+        response = upload(self.client, {}, b"x" * (invoices.MAX_BODY + 1))
+        self.assertEqual((response.status_code, response.json()), (413, {"detail": "file_too_large"}))
+
+    def test_a_body_without_a_length_is_411(self):
+        response = self.client.post("/api/invoices", content=(part for part in [b"x"]),
+                                    headers={**self.headers, "Content-Type": "multipart/form-data; boundary=x"})
+        self.assertNotIn("content-length", response.request.headers)  # httpx sent it chunked, as intended
+        self.assertEqual((response.status_code, response.json()), (411, {"detail": "length_required"}))
+
+    def test_a_chunked_body_is_411_whatever_length_it_claims(self):
+        response = self.client.post("/api/invoices", content=b"x",
+                                    headers={**self.headers, "Content-Length": "1", "Transfer-Encoding": "chunked"})
+        self.assertEqual((response.status_code, response.json()), (411, {"detail": "length_required"}))
+
+    def test_a_length_that_is_not_a_number_is_413(self):
+        for length in ("abc", "-1", "1.5", "", "9" * 5000):
+            with self.subTest(length=length[:12]):
+                response = self.client.post("/api/invoices", content=b"x",
+                                            headers={**self.headers, "Content-Length": length})
+                self.assertEqual((response.status_code, response.json()), (413, {"detail": "file_too_large"}))
 
     def test_the_uploaded_file_is_not_kept(self):
         made, original = [], invoices.tempfile.NamedTemporaryFile

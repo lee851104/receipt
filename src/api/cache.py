@@ -18,10 +18,12 @@ def describe(session, backends, names, ask_model):
     rows = session.exec(select(ItemCache).where(ItemCache.model == backends.attributes,
                                                 col(ItemCache.name).in_(names))).all()
     known = {row.name: json.loads(row.fields) for row in rows}
+    # End the read here: its open transaction would keep a connection checked out through the slow model call below.
+    session.commit()
     missing = [name for name in dict.fromkeys(names) if name not in known]
     if missing:
         answers = backends.describe_items(missing, ask_model=ask_model and model_ready(backends))
-        found = {name: fields for name, fields in zip(missing, answers) if fields is not None}
+        found = {name: fields for name, fields in zip(missing, answers, strict=True) if fields is not None}
         if found:
             rows = [{"name": name, "model": backends.attributes, "fields": json.dumps(fields)}
                     for name, fields in found.items()]

@@ -9,6 +9,7 @@ from .backends import load_backends
 from .db import ROOT, init_db, make_engine
 from .errors import ApiError, api_error_handler, internal_error_handler, validation_error_handler
 from .jobs import fail_unfinished
+from .limits import UploadLimit
 from .routes import auth, health, invoices, items
 
 
@@ -25,6 +26,8 @@ def create_app(settings, backends=None):
     app.add_exception_handler(ApiError, api_error_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(Exception, internal_error_handler)
+    # Before any body is read, so an oversized upload is refused without the server writing it to disk.
+    app.add_middleware(UploadLimit, path="/api/invoices", limit=invoices.MAX_BODY)
     app.include_router(auth.router)
     # Without DEMO_MODE the demo endpoints do not exist at all, so they answer 404 and stay out of /docs.
     if settings.demo_mode:

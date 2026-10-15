@@ -29,10 +29,12 @@ class DatabaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "nested" / "app.db"
             engine = make_engine("sqlite:///" + path.as_posix())
-            init_db(engine)
-            add_amy(engine)
-            self.assertEqual(usernames(engine), ["amy"])
-            engine.dispose()  # Windows cannot delete a file that is still open
+            try:
+                init_db(engine)
+                add_amy(engine)
+                self.assertEqual(usernames(engine), ["amy"])
+            finally:
+                engine.dispose()  # Windows cannot delete a file that is still open, even after a failed check
             self.assertTrue(path.is_file())
 
     def test_both_in_memory_spellings_share_one_database_across_threads(self):

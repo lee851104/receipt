@@ -43,7 +43,8 @@ class Garbage(socketserver.BaseRequestHandler):
 def serving(handler, server_class=HTTPServer):
     """The base URL of a stand-in server on a free local port, shut down afterwards."""
     server = server_class(("127.0.0.1", 0), handler)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
+    # A short poll interval lets shutdown() return at once instead of after the default half second.
+    threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True).start()
     try:
         yield f"http://127.0.0.1:{server.server_address[1]}"
     finally:

@@ -8,3 +8,7 @@ pwdlib[argon2]==0.3.1
 python-dotenv==1.2.4
 # Starlette's TestClient wants httpx2; plain httpx only gives a deprecation warning.
 httpx2==2.13.1
+# Pinned too, because the code relies on how these versions behave (TestClient, validation, SQLite pooling).
+starlette==1.8.0
+pydantic==2.14.1
+sqlalchemy==2.1.4

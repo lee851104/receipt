@@ -28,7 +28,8 @@ def clash(username, user, person):
 
 def seed_demo_users(engine, people):
     """One demo user per fictional person, demo_001 onwards by position, adding only the ones not there yet.
-    A username held by anyone else stops the seed, so the demo users always are exactly the fictional list."""
+    A username held by anyone else stops the seed. The list may only grow at the end: a shorter list leaves the
+    extra demo users in place."""
     wanted = {f"demo_{index:03}": person for index, person in enumerate(people, start=1)}
     with Session(engine) as session:
         existing = {user.username: user

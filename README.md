@@ -150,7 +150,7 @@ receipt/
     └── annual-review.html        # 保留的早期年度回顧原型
 ```
 
-目前 Python 程式只使用標準函式庫，需 Python 3.10 以上；前端測試另需 Node.js。
+報表核心程式（`src/receipt/`）只使用標準函式庫，需 Python 3.10 以上；後端（`src/api/`）需要的套件列在 `requirements.txt`；前端測試另需 Node.js。
 
 ```sh
 python scripts/build_report.py

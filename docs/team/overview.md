@@ -112,7 +112,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 - **路徑**：API 一律以 `/api` 開頭。v2 網頁由同一個 FastAPI 從 `/web/` 提供（`src/web/` 資料夾），同一個網域，所以不用設 CORS。不掛在 `/`，是因為那樣 POST 到不存在的 `/api` 路徑會被靜態檔案接走，回 405 而不是 404
 - **格式**：JSON（UTF-8），欄位名用 snake_case。唯一例外：`/api/me/profile` 的 `months` 原樣沿用現有月報格式（`invoices.build_month` 的輸出，例如 `monthNumber`），現有網頁才不用改
 - **登入**：除了標「免」的端點，都要帶 `Authorization: Bearer <access_token>`。JWT 用 HS256，`sub` 放 user_id（轉成字串），24 小時過期
-- **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤回 422，格式同 FastAPI 預設（`detail` 是清單，每項有 `type`、`loc`、`msg`），但不回傳被拒絕的輸入值，因為那可能是密碼。需要登入的端點，沒帶 token 或 token 過期都回 401 `not_authenticated`
+- **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤回 422，格式同 FastAPI 預設（`detail` 是清單，每項有 `type`、`loc`、`msg`），但不回傳被拒絕的輸入值，因為那可能是密碼。需要登入的端點，沒帶 token 或 token 過期都回 401 `not_authenticated`。框架自己回的錯誤（例如不存在的路徑是 404、方法不對是 405）`detail` 是英文句子而不是代碼，前端遇到不認得的 `detail` 一律顯示通用錯誤訊息
 - **數字**：`score` 這類小數不先四捨五入。要顯示的整數百分比另外給 `percent`，算法同 `similarity.percent`
 - **18 格順序**：一律照 `configs/traits.json` 的順序
 - **null**：表示「不知道」或「資料不夠」，不能當成 0 或 `false`
@@ -291,7 +291,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `JWT_SECRET` | 無，一定要設 | 簽 JWT 用的密鑰，至少 32 字元 |
 | `JWT_EXPIRE_MINUTES` | 1440 | token 有效時間 |
 | `DEMO_MODE` | 0 | 1 = 開放 `demo-users` 和 `demo-login` |
-| `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git |
+| `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git。相對路徑一律從 repo 根目錄算起，不管在哪個資料夾啟動 |
 | `LLAMA_SERVER_URL` | `http://127.0.0.1:8080` | Qwen 的 llama-server |
 | `CATEGORY_MODEL` | fake | fake / tfidf / embedding / bert |
 | `ATTRIBUTES_MODEL` | fake | fake / qwen |
@@ -313,7 +313,7 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
 
 `src/ml/fakes.py` 提供同樣介面的假替身，回傳固定結果。後端和 CI 一開始全部用假替身，模型好了再換成真的。
 
-回傳值一律用一般的 Python 型別（numpy 的結果先 `.tolist()`），否則 API 會回 500。在自己的測試裡呼叫 `tests/model_contract.py` 的 `check_classify(self, classify)` 和 `check_describe(self, describe_items)`，就能確認格式對不對。
+回傳值一律用一般的 Python 型別（numpy 的結果先 `.tolist()`），否則 API 會回 500。在自己的測試裡呼叫 `tests/model_contract.py` 的 `check_classify(self, classify)` 和 `check_describe(self, describe_items)`，就能確認格式對不對。`probs` 不要四捨五入（至少保留 4 位小數），檢查允許的加總誤差是 0.001。
 
 `describe_items` 連不到 llama-server 時回 `None`，不要丟例外；呼叫 Qwen 要設 timeout。兩個函式會被不同的執行緒同時呼叫（FastAPI 用執行緒跑 `def` 路由），PyTorch 模型和 tokenizer 要自己加鎖。
 
@@ -385,7 +385,7 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
 - 每個角色在自己的分支工作（例如 `role-1/upload-api`），開 PR 合併進 `main`，CI 通過才合併
 - 介面先定好再開發；別人的部分還沒好，就用假替身，不要等
 - 改到別人負責的檔案時，PR 裡要標註那個角色
-- 修改 `src/receipt/` 的行為之前，先確認現有 159 個測試仍然通過
+- 修改 `src/receipt/` 的行為之前，先確認全部測試仍然通過（後端骨架合併之後是 Python 149 個、JS 82 個）
 - commit 訊息用英文，文件用繁體中文
 
 ## 10. 隱私規則（repo 是公開的）
@@ -433,8 +433,16 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
    python -m unittest discover -s tests -v
    node --test "tests/*.test.cjs"
    ```
-   預期結果：Python 77 個、JS 82 個全部通過
-3. 4060：
+   預期結果：Python 77 個、JS 82 個全部通過（後端骨架合併之後是 Python 149 個）
+3. 後端（角色 1 的第一週成果）：
+   - 安裝套件：`uv pip install --python .venv/Scripts/python.exe -r requirements.txt`
+   - 複製 `.env.example` 成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼：`.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"`
+   - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人）
+   - 啟動：`.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload`，打開 `http://127.0.0.1:8000/docs`。網頁在 `http://127.0.0.1:8000/web/match.html` 這類網址，角色 4 接上 API 之前畫面是空的
+   - 改了 `.env` 要手動重啟伺服器（`--reload` 只看 `.py` 檔）
+   - `src/api/tables.py` 的資料表有變動時，刪掉 `data/app.db` 再重新放入 demo 用戶
+   - `DEMO_MODE=1` 時不要加 `--host 0.0.0.0`，啟動時會印出提醒
+4. 4060：
    - 安裝 NVIDIA 驅動，用 `nvidia-smi` 確認看得到顯示卡
    - PyTorch 要裝 CUDA 版：到 pytorch.org 選 Windows + pip + CUDA 12.x 取得安裝指令，然後用 `python -c "import torch; print(torch.cuda.is_available())"` 確認輸出 `True`
    - PyTorch 用 `uv pip install --python .venv/Scripts/python.exe torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128`（和分類實驗 B 同版本）

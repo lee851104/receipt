@@ -2,6 +2,7 @@
 
 import calendar
 import csv
+import math
 from datetime import datetime
 
 from .address import parse_district
@@ -10,13 +11,16 @@ REQUIRED = ("發票日期", "發票狀態", "發票號碼", "賣方名稱", "消
 MIN_AMOUNT = 10  # an uploaded line below this (a discount, a free item, small change) is not analysed
 
 
-def whole(text):
-    """The integer a CSV cell holds, or None for a decimal such as 4.49; text that is no number raises ValueError."""
+def whole(text, column):
+    """The integer a CSV cell holds (12, or 12.0), or None for a true decimal such as 4.49; a cell that is no finite
+    number raises a ValueError naming the column."""
     try:
-        return int(text)
-    except ValueError:
-        float(text)
-        return None
+        number = float(text)
+    except (TypeError, ValueError):
+        number = math.nan
+    if not math.isfinite(number):
+        raise ValueError(f"{column} is not a number: {text!r}")
+    return int(number) if number.is_integer() else None
 
 
 def build_month(path, catalog, for_upload=False):
@@ -37,19 +41,23 @@ def build_month(path, catalog, for_upload=False):
         for row in reader:
             if not row.get("發票日期"):
                 continue  # CSV export footer, not a transaction.
+            if for_upload and any(row.get(column) is None for column in REQUIRED):
+                raise ValueError("A line has fewer columns than the header")
             if for_upload and row["發票狀態"].startswith("作廢"):
                 continue  # A voided invoice was never a purchase.
             if row["發票狀態"] != "開立已確認":
-                raise ValueError("Unreviewed invoice status: " + row["發票狀態"])
+                raise ValueError(f"Unreviewed invoice status: {row['發票狀態']!r}")
             date = datetime.strptime(row["發票日期"], "%Y%m%d")
             key = date.strftime("%Y-%m")
             if month_key and month_key != key:
                 raise ValueError("Expected one month per CSV")
             month_key = key
             if for_upload:
-                amount, quantity = whole(row["消費明細_金額"]), whole(row["消費明細_數量"])
+                # The amount decides first, so a skipped line's quantity is never read and cannot spoil the upload.
+                amount = whole(row["消費明細_金額"], "消費明細_金額")
                 if amount is None or amount < MIN_AMOUNT:
                     continue
+                quantity = whole(row["消費明細_數量"], "消費明細_數量")
                 if quantity is None:
                     quantity = 1
             else:

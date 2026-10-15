@@ -1,6 +1,6 @@
 # 假品名屬性逐筆複核
 
-2026-10-15；107 筆全部為公開假品名。以下是助理逐欄複核結果，尚未經真人確認；不標成 human_corrected，也不當人工 gold 或正式模型準確率。
+2026-10-15；107 筆全部為公開假品名。以下由助理逐欄複核，使用者已檢查並確認 107 筆。確認來源為使用者對 commit 0e98b71 檢查表的核准，逐筆綁定屬性內容雜湊。這是合成集參考答案，不是私人真人發票的盲標成績。
 
 舊模型與此複核有 53 筆／91 欄差異；新版實際重跑後仍有 46 筆／70 欄差異。有效快取採下表修正，原模型與新模型輸出都獨立保留。
 
@@ -21,7 +21,7 @@
 - [逐筆 23 欄複核](../../datasets/synthetic/attribute-review.jsonl)
 - [有效快取與每欄差異](../../datasets/synthetic/attribute-cache.jsonl)
 
-model_version：`qwen3-4b:2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e:5e86775fba0e8c8a2fe31adc0c3fc420cd37b5daa3a1538b214c3866c97511a9:guards-v1:input-v2:batch1`。每筆有 original_model_attributes、model_attributes、corrections；review_status 為 assistant_corrected 或 assistant_reviewed，human_confirmed=false。真人確認後才可升級狀態。
+model_version：`qwen3-4b:2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e:5e86775fba0e8c8a2fe31adc0c3fc420cd37b5daa3a1538b214c3866c97511a9:guards-v1:input-v2:batch1`。每筆有 original_model_attributes、model_attributes、corrections；目前 review_status 為 human_confirmed, human_corrected；人工確認 107 筆，原始準備者 reviewer=assistant、確認者 confirmation.confirmed_by=user 分開保留。重建會保留確認；若屬性改變，舊確認自動失效。
 
 ## 107 筆檢查表
 

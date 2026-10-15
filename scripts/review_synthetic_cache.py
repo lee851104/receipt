@@ -1,8 +1,9 @@
 """Rebuild the public synthetic cache from preserved predictions and explicit review.
 
-No model calls and no real data. Review provenance is never promoted to human.
+No model calls and no real data. Human confirmation applies only to the exact approved attribute values.
 Run: python -m scripts.review_synthetic_cache
 """
+import hashlib
 import json
 from pathlib import Path
 
@@ -12,6 +13,18 @@ DATA = ROOT / 'datasets/synthetic'
 
 def read(name):
     return [json.loads(line) for line in (DATA / name).read_text(encoding='utf-8').splitlines()]
+
+
+def review_metadata(row, corrected):
+    """Preserve explicit user approval; edited values require renewed review."""
+    confirmation = row.get('confirmation') or {}
+    digest = hashlib.sha256(json.dumps(row['attributes'], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    confirmed = (confirmation.get('confirmed_by') == 'user' and bool(confirmation.get('date'))
+                 and bool(confirmation.get('source')) and confirmation.get('attributes_sha256') == digest)
+    return {'reviewer': 'assistant', 'human_confirmed': confirmed,
+            'review_status': ('human_corrected' if corrected else 'human_confirmed') if confirmed
+                             else ('assistant_corrected' if corrected else 'assistant_reviewed'),
+            **({'confirmation': dict(confirmation)} if confirmation else {})}
 
 
 def main():
@@ -29,8 +42,7 @@ def main():
                        'original_model_version': old[name]['model_version'],
                        'original_model_attributes': old[name]['attributes'], 'model_attributes': new[name]['attributes'],
                        'attributes': row['attributes'], 'corrections': corrections,
-                       'review_status': 'assistant_corrected' if corrections else 'assistant_reviewed',
-                       'reviewer': 'assistant', 'human_confirmed': False, 'review_date': '2026-10-15',
+                       **review_metadata(row, corrected=bool(corrections)), 'review_date': '2026-10-15',
                        'cache_revision': 'synthetic-review-20261015-v2'})
     (DATA / 'attribute-cache.jsonl').write_text(''.join(json.dumps(r, ensure_ascii=False)+'\n' for r in result), encoding='utf-8')
     old_diffs = [sum(r['original_model_attributes'][k] != v for k, v in r['attributes'].items()) for r in result]
@@ -38,10 +50,10 @@ def main():
     fields = sum(len(r['corrections']) for r in result)
     stats = {'items_reviewed': len(result), 'old_model_differing_items': sum(n > 0 for n in old_diffs),
              'old_model_differing_fields': sum(old_diffs), 'new_model_differing_items': changed,
-             'new_model_differing_fields': fields, 'human_confirmed': 0,
+             'new_model_differing_fields': fields, 'human_confirmed': sum(r['human_confirmed'] for r in result),
              'model_version': result[0]['model_version']}
     (ROOT / 'docs/results/synthetic-cache-review.json').write_text(json.dumps(stats, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
-    lines = ['# 假品名屬性逐筆複核', '', '2026-10-15；107 筆全部為公開假品名。以下是助理逐欄複核結果，尚未經真人確認；不標成 human_corrected，也不當人工 gold 或正式模型準確率。', '',
+    lines = ['# 假品名屬性逐筆複核', '', f"2026-10-15；107 筆全部為公開假品名。以下由助理逐欄複核，使用者已檢查並確認 {stats['human_confirmed']} 筆。確認來源為使用者對 commit 0e98b71 檢查表的核准，逐筆綁定屬性內容雜湊。這是合成集參考答案，不是私人真人發票的盲標成績。", '',
              f"舊模型與此複核有 {stats['old_model_differing_items']} 筆／{sum(old_diffs)} 欄差異；新版實際重跑後仍有 {changed} 筆／{fields} 欄差異。有效快取採下表修正，原模型與新模型輸出都獨立保留。", '',
              '## 原因對照', '',
              '同一個 4B GGUF、temperature=0、seed=42、quantity=1，重跑全部 107 筆。指定 15 個錯誤：原批次 3 筆／有前綴／空店家為 15；移除前綴 10；只補店家 13；兩者合用 10；單筆保留前綴 7；單筆去前綴 7；單筆去前綴＋新版 prompt 5。', '',
@@ -53,7 +65,7 @@ def main():
              '- [新版實際模型輸出](../../datasets/synthetic/attribute-cache.model-v2.jsonl)',
              '- [逐筆 23 欄複核](../../datasets/synthetic/attribute-review.jsonl)',
              '- [有效快取與每欄差異](../../datasets/synthetic/attribute-cache.jsonl)', '',
-             f"model_version：`{stats['model_version']}`。每筆有 original_model_attributes、model_attributes、corrections；review_status 為 assistant_corrected 或 assistant_reviewed，human_confirmed=false。真人確認後才可升級狀態。", '',
+             f"model_version：`{stats['model_version']}`。每筆有 original_model_attributes、model_attributes、corrections；目前 review_status 為 {', '.join(sorted({r['review_status'] for r in result}))}；人工確認 {stats['human_confirmed']} 筆，原始準備者 reviewer=assistant、確認者 confirmation.confirmed_by=user 分開保留。重建會保留確認；若屬性改變，舊確認自動失效。", '',
              '## 107 筆檢查表', '',
              '「成立屬性」列出 true 與有值的三個列舉欄位；未列布林為 false，未列 sugar/fun/species 為 null。「修正欄位」是相對新版模型的差異。', '',
              '| # | 假品名 | 成立屬性 | 修正欄位 |', '|---:|---|---|---|']

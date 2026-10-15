@@ -119,10 +119,10 @@
     "reviewed_items": 107,
     "corrected_items": 46,
     "corrected_fields": 70,
-    "human_confirmed_items": 0,
+    "human_confirmed_items": 107,
     "statuses": [
-      "assistant_corrected",
-      "assistant_reviewed"
+      "human_confirmed",
+      "human_corrected"
     ]
   },
   "cache_revisions": [

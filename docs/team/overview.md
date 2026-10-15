@@ -513,7 +513,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 - `(model_version, name)` mapping 是程序內快取，不是資料庫；持久化 `item_cache` 與版本清理由 2.3/2.4 負責。4.7 必須等 2.3/2.4 完成，再把假發票、屬性與 profiles 接入一般管線；不要把目前核心驗證當成完整 seed 已完成。
 - 介面只有 names，merchant 固定空字串、quantity=1；品項數量的 bulk 補位只在計算副本。新版採單筆推論、輸入只去開頭「示範」、保留原名快取鍵；prompt hash 與 input-v2:batch1 已進 model_version。換版本須重算舊屬性，不能沿用舊版本 cache。
 - `build_personas(calendar, total=300)` 尾端擴充、保留原 40 人順序；v1 未指定 total 仍是 40 人。先前 seed 入口改為 300 的變更請在角色 1 合併時確認，本次不再修改該檔案。
-- 107 筆假品名逐筆對照見 `docs/results/synthetic-cache-review.md`，舊／新模型輸出分存 `datasets/synthetic/attribute-cache.model-v1.jsonl`、`attribute-cache.model-v2.jsonl`；有效快取保留每欄 corrections。目前是助理複核、待真人確認，不能當 human gold。配對數字見 `docs/results/matching.md`，僅核心公式，尚未驗證分類/API/DB 端到端。
+- 107 筆假品名逐筆對照見 `docs/results/synthetic-cache-review.md`，舊／新模型輸出分存 `datasets/synthetic/attribute-cache.model-v1.jsonl`、`attribute-cache.model-v2.jsonl`；有效快取保留每欄 corrections。2026-10-15 使用者檢查並確認全部 107 筆：46 筆為 `human_corrected`、61 筆為 `human_confirmed`，保留助理準備與使用者確認的來源，並用屬性雜湊避免重建或後續修改誤用核准；此確認僅涵蓋公開假品名。配對數字見 `docs/results/matching.md`，僅核心公式，尚未驗證分類/API/DB 端到端。
 - 真人盲標檔在主資料夾 `C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-review-20261015\`：4 份各 25 筆，另有獨立預測；品名只准本機腳本處理、畫面只印彙總。4.8 仍待真人複核；舊版私人預測不能當新版品質證據。
 - 工作區為 `codex/role-3/attributes` worktree；共用主資料夾 Python 與 llama.cpp，不升級共用套件。本角色此次只修改自身檔案與 `src/receipt/` 新增的外部屬性邏輯。
 

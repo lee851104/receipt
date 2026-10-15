@@ -2,6 +2,7 @@
 import secrets
 from datetime import datetime, timezone
 
+from sqlalchemy import Index
 from sqlmodel import Field, SQLModel
 
 
@@ -40,9 +41,11 @@ class Job(SQLModel, table=True):
 class Item(SQLModel, table=True):
     """One purchase line kept from an upload. Only what the analysis needs: no address, no invoice number."""
     __tablename__ = "items"
+    # Every look-up is one user's items, often of one month: one index serves both.
+    __table_args__ = (Index("ix_items_user_month", "user_id", "month"),)
     id: int | None = Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="users.id", index=True)
-    month: str = Field(index=True)    # YYYY-MM
+    user_id: int = Field(foreign_key="users.id")
+    month: str                        # YYYY-MM
     day: int
     invoice: str                      # the coded YYYY-MM-Rnn, never the real invoice number
     merchant: str
@@ -51,7 +54,6 @@ class Item(SQLModel, table=True):
     quantity: int
     amount: int
     category: int = 10                # 0-9, or 10 (待確認) until classified or when the model is unsure
-    provisional: bool = True          # True while category is 10
 
 
 class ItemCache(SQLModel, table=True):

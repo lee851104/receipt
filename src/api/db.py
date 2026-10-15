@@ -19,31 +19,38 @@ def file_url(url):
     return "sqlite:///" + (ROOT / url.removeprefix("sqlite:///")).as_posix()
 
 
-def write_ahead(connection, record):
-    """Readers no longer wait for a background upload's writes, and a busy database is waited on for 5 seconds
-    instead of failing at once."""
-    cursor = connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA busy_timeout=5000")
-    cursor.close()
+def pragmas(write_ahead):
+    """What each new connection turns on. Foreign keys, so a row for a missing user fails at once instead of waiting
+    for the next account that gets the same id; and for a file, write-ahead logging, so readers do not wait for a
+    background upload's writes. (Python's sqlite3 already waits up to 5 seconds for a busy database.)"""
+    def run(connection, record):
+        cursor = connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        if write_ahead:
+            cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.close()
+    return run
 
 
 def make_engine(url):
     """An engine for url. An in-memory database (for tests only) keeps one shared connection, or each request
     would see an empty one; that single connection cannot serve requests running at the same time."""
     if url in (MEMORY, "sqlite:///:memory:"):
-        return create_engine(url, connect_args={"check_same_thread": False}, poolclass=StaticPool)
+        engine = create_engine(url, connect_args={"check_same_thread": False}, poolclass=StaticPool)
+        event.listen(engine, "connect", pragmas(write_ahead=False))
+        return engine
     if url.startswith("sqlite:///"):
         url = file_url(url)
         Path(url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(url, connect_args={"check_same_thread": False})
-    event.listen(engine, "connect", write_ahead)
-    return engine
+        engine = create_engine(url, connect_args={"check_same_thread": False})
+        event.listen(engine, "connect", pragmas(write_ahead=True))
+        return engine
+    return create_engine(url, connect_args={"check_same_thread": False})
 
 
 def init_db(engine):
-    """Create the tables that do not exist yet. It never changes a table that exists, so after a column is added
-    to tables.py, delete data/app.db and run the seed again."""
+    """Create the tables that do not exist yet. It never changes a table that exists, so after a column or an index
+    is added to tables.py, delete data/app.db* (the database and its -wal and -shm files) and run the seed again."""
     SQLModel.metadata.create_all(engine)
 
 

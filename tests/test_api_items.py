@@ -58,12 +58,45 @@ class ClassifyTests(unittest.TestCase):
         body = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers).json()
         self.assertEqual((body["attributes"], body["attributes_status"]), (None, "pending"))
 
-    def test_the_classify_box_only_reads_the_cache(self):
+    def test_the_classify_box_reads_only_the_cache_and_asks_the_model_afterwards(self):
         asked = []
         client, headers = self.client_and_headers(
             describe_items=lambda names, ask_model=True: asked.append(ask_model) or [None for _ in names])
+        body = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers).json()
+        self.assertEqual(body["attributes_status"], "pending")
+        # The answer went out after the cache-only look-up; the background judgement came afterwards.
+        self.assertEqual(asked, [False, True])
+
+    def test_with_the_gpu_a_new_name_is_ready_the_next_time(self):
+        client, headers = self.client_and_headers(
+            attributes="qwen", gpu_probe=lambda: True,
+            describe_items=lambda names, ask_model=True: [dict.fromkeys(FIELDS) if ask_model else None for _ in names])
+        first = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers).json()
+        second = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers).json()
+        self.assertEqual((first["attributes_status"], second["attributes_status"]), ("pending", "ready"))
+
+    def test_without_the_gpu_nothing_is_judged_in_the_background(self):
+        asked = []
+        client, headers = self.client_and_headers(
+            attributes="qwen", describe_items=lambda names, ask_model=True: asked.append(ask_model) or [None for _ in names])
         client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers)
         self.assertEqual(asked, [False])
+
+    def test_a_background_judgement_that_fails_is_logged_without_the_name(self):
+        def judged(names, ask_model=True):
+            if ask_model:
+                raise RuntimeError("llama-server went away")
+            return [None for _ in names]
+        client, headers = self.client_and_headers(describe_items=judged)
+        with self.assertLogs("src.api.cache", level="ERROR") as logs:
+            response = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers)
+        self.assertEqual((response.status_code, response.json()["attributes_status"]), (200, "pending"))
+        self.assertNotIn("鮮奶茶", "\n".join(logs.output))
+
+    def test_an_unavailable_classifier_is_503(self):
+        client, headers = self.client_and_headers(category="unavailable")
+        response = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers)
+        self.assertEqual((response.status_code, response.json()), (503, {"detail": "model_unavailable"}))
 
     def test_a_crashing_model_still_answers_json(self):
         app = make_client(classify=lambda names: 1 / 0).app

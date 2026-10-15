@@ -1,10 +1,13 @@
 """Attributes through the item_cache table, so each product name is judged once per attribute model."""
 import json
+import logging
 
 from sqlalchemy.dialects.sqlite import insert
 from sqlmodel import Session, col, select
 
 from .tables import ItemCache
+
+log = logging.getLogger(__name__)
 
 
 def model_ready(backends):
@@ -36,5 +39,10 @@ def describe(session, backends, names, ask_model):
 
 def describe_later(engine, backends, name):
     """Judge one name in the background, for the classify box: its answer is waiting in the cache next time."""
-    with Session(engine) as session:
-        describe(session, backends, [name], ask_model=True)
+    # The answer has gone out already, so a failure is only logged; the name stays pending and is asked again
+    # next time. The log leaves the name out: it may be a real product name.
+    try:
+        with Session(engine) as session:
+            describe(session, backends, [name], ask_model=True)
+    except Exception:
+        log.exception("judging a name in the background failed")

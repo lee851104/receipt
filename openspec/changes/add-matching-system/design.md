@@ -99,7 +99,7 @@
 - **類別是已知的事實**：問題只在自己的類別門檻內才用模型的值，門檻外一律是 `False`（不適用），模型的 `null` 在門檻內保持 `null`。門檻照舊：`clearance` 只看食物、`quick` 只看正餐、`cooking` 只看生鮮、`kitchen` 只看生鮮和日用品、`sport_gear`／`car_care`／`home`／`stationery` 只看非食物（已確認的類別 4–9）
 - `bulk`：數量 ≥ 3 一定是 `True`（數量是發票上的事實，模型看不到），否則用模型的值
 - `sugar`：只有飲品有；模型給 `null` 時套用現有的甜度預設規則（見 taste-profile 規格）
-- `fun`：模型的 movie、singing、show、game 換成 電影、唱歌、展演、遊樂；模型沒給，或給了這四個以外的值，改看店家名稱有沒有娛樂的字（不看品名）
+- `fun`：`describe_items` 交出中文的 電影、唱歌、展演、遊樂（任務 4.3），照單全收；實驗的英文值 movie、singing、show、game 也接受，換成同一組中文；模型沒給，或給了這八個以外的值，改看店家名稱有沒有娛樂的字（不看品名）
 - `species`：只接受 `cat`、`dog`，其他是 `null`
 - 待分析的品名（`fields is None`）當成 23 個欄位都是 `null` 的模型答案，套用同一組規則：類別門檻外是 `False`，門檻內是 `null`；數量 ≥ 3 的 `bulk` 是 `True`；飲品的 `sugar` 用預設規則；`fun` 看店家名稱；`species` 是 `null`
 

@@ -23,7 +23,7 @@
 | 假用戶 | 8 種類型 × 5 人 = 40 人，2026 年 3–4 月的假發票 | `src/receipt/personas.py` |
 | 網頁 | 單一 HTML 檔，JS 全部內嵌，GitHub Pages 公開中 | `scripts/build_report.py` → `invoice-insights.html` |
 | 後端骨架 | FastAPI + SQLite：註冊、登入、demo 快速切換、品名即時分類、健康檢查，模型先用假替身；v2 網頁從 `/web/` 提供（10/15 完成角色 1 第 1 週） | `src/api/`、`src/ml/`、`src/web_v2/` |
-| 測試 | Python 274 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
+| 測試 | Python 275 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
 | 分類實驗 | 品名 → 10 類。A：TF-IDF + 邏輯迴歸，macro-F1 0.62；B：bge-small-zh（512 維）+ 邏輯迴歸，macro-F1 0.66。只有 57 個人工確認品名，只能驗證 4 類 | `experiments/category-models/`、`docs/category-models-brief.md` |
 | 屬性實驗 | Qwen3-4B（Q4_K_M，2.4 GB）判斷 16 個屬性。真實資料上模型單獨 F1 44%，加規則 94%（事後回測，不是獨立驗證） | `experiments/receipt-attributes/` |
 
@@ -408,7 +408,7 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
   2. 屬性介接取代 `attributes.describe` 的來源（`channel_of` 保留）；快取；`personas.py` 擴充到約 300 人
   3. 4 人分著做 100 筆人工複核並算 F1；配對驗證；跑完假用戶品名的 Qwen 結果，把快取放進 git
   4. 修錯；講稿素材
-- **注意：** `INTEGRATION.md` 列了幾個要明確決定的地方：甜度沒寫時回 `null`、fun 的英文值要對應成中文、`null` 不等於 `false`（10/15 決定：甜度預設和 fun 換成中文都由後端的 `attributes.from_model` 做，`describe_items` 照實驗的值交出，見 13.4）。`experiments/receipt-attributes/CLAUDE.md` 的限制只適用於那個實驗資料夾，正式介接寫在 `src/ml/`
+- **注意：** `INTEGRATION.md` 列了幾個要明確決定的地方：甜度沒寫時回 `null`、fun 的英文值要對應成中文、`null` 不等於 `false`（10/15 決定：`describe_items` 照任務 4.3 把 fun 對應成中文值交出；後端的 `attributes.from_model` 也接受實驗的英文值，兩種以外的 fun 一律當成沒給。甜度預設由後端補，見 13.4）。`experiments/receipt-attributes/CLAUDE.md` 的限制只適用於那個實驗資料夾，正式介接寫在 `src/ml/`
 
 ### 角色 4：前端與展示
 
@@ -491,7 +491,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
    .venv/Scripts/python.exe -m unittest discover -s tests -v
    node --test "tests/*.test.cjs"
    ```
-   預期結果：Python 274 個、JS 82 個全部通過
+   預期結果：Python 275 個、JS 82 個全部通過
 3. 後端（角色 1 的第一週成果）：
    - 複製 `.env.example` 成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼：`.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"`
    - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人；名單只能往後加，資料庫裡的帳號和名單對不上時會停下來並說明，這時刪掉 `data/app.db*` 再重來）
@@ -529,7 +529,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 **給角色 3**
 - 品味計算現在讀你的 `describe_items` 結果：上傳任務把它存進 `item_cache`，重算 profile 時只讀快取，不問模型。換成訊號用的答案時（`src/receipt/attributes.from_model`），`null` 是「不知道」，比例的分母只算已知的答案，所以不確定就給 `null`，不要猜 `false`（design D6）
-- `fun` 一律用實驗的英文值 `movie`、`singing`、`show`、`game`，後端自己換成 電影／唱歌／展演／遊樂。**`describe_items` 不要換成中文**（任務 4.3 原本寫的「把 fun 對應成中文值」改由後端做）：不是這四個值的 `fun`（包含中文）會被當成沒給，改看店家名稱有沒有娛樂的字
+- `fun`：`describe_items` 照任務 4.3 把它對應成中文值交出（電影、唱歌、展演、遊樂），後端照單全收；實驗的英文值 `movie`、`singing`、`show`、`game` 後端也接受，換成同一組中文。兩種以外的值會被當成沒給，改看店家名稱有沒有娛樂的字
 - `species` 只認 `cat`、`dog`，其他是 `null`（不知道）
 - `sugar` 是 0 到 1 的數字，不知道給 `null`：後端會套現有的甜度預設規則（奶茶、手搖店的飲品全糖，美式無糖……）。後端不檢查範圍，給了就直接拿去算，請自己保證在 0–1
 - 類別決定問題適不適用：`clearance` 只看食物、`quick` 只看正餐、`cooking` 只看生鮮、`kitchen` 只看生鮮和日用品、`sport_gear`／`car_care`／`home`／`stationery` 只看非食物，不適用的類別不管模型怎麼答，都當成已知的「沒有」。數量 ≥ 3 的 `bulk` 也由後端直接當 `true`

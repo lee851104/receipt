@@ -43,7 +43,7 @@
 
 - [ ] 4.1 在 4060 電腦上照 overview 第 12 節裝好 NVIDIA 驅動和 CUDA 版的 `llama-server`（放在 `runtime/`）；確認 `nvidia-smi` 看得到顯示卡，`llama-server.exe --list-devices` 看得到 `CUDA0`，對測試 prompt 有回應
 - [ ] 4.2 用 `experiments/receipt-attributes/` 的同一套評估，比較 Qwen3-4B 和約 5 GB 的候選模型，並更新選型紀錄；第 1 週結束還沒定案就用 Qwen3-4B
-- [ ] 4.3 實作 `src/ml/attributes.describe_items`（`ATTRIBUTES_MODEL=qwen`）：呼叫 `LLAMA_SERVER_URL`、套用 `bulk_rule` 和 `sugar_guard`、保留 `null`；用錄下來的回應做測試，不需要 GPU（10/15 決定：fun 照實驗的英文值 movie、singing、show、game 交出，換成中文由後端的 `attributes.from_model` 做，見 design D6）
+- [ ] 4.3 實作 `src/ml/attributes.describe_items`（`ATTRIBUTES_MODEL=qwen`）：呼叫 `LLAMA_SERVER_URL`、套用 `bulk_rule` 和 `sugar_guard`、把 fun 對應成中文值、保留 `null`；用錄下來的回應做測試，不需要 GPU
 - [ ] 4.4 讓 `attributes.describe` 可以接收外部屬性，`channel_of` 照舊；現有測試照樣通過，另外新增外部屬性的測試（10/15：角色 1 已用 `attributes.from_model` 和 `signals`／`traits` 的 `attributes` 參數做完，在 `role-1/profiles`，見 design D6）
 - [ ] 4.5 在品味計算中加入甜度預設補位；測試沒寫甜度的手搖奶茶，屬性回傳的 `sugar` 是 `null`，但 sweet 格把它當成全糖（10/15：預設補位已在 `attributes.from_model` 裡，角色 1 做完，在 `role-1/profiles`）
 - [ ] 4.6 把 `personas.py` 擴充到約 300 人；測試 8 種類型的人數相差不超過 1 人、同一個種子產生的結果完全相同，而且 seed 之後 `/api/auth/demo-users` 列出約 300 人

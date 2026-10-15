@@ -1,4 +1,5 @@
-"""The half of an upload that runs after the answer: categories, then attributes, then the job is done."""
+"""The half of an upload that runs after the answer: categories, then attributes, then the taste profile, then the
+job is done."""
 import logging
 import queue
 import threading
@@ -6,7 +7,7 @@ import threading
 from sqlmodel import Session, col, select
 from sqlmodel import update as update_rows
 
-from . import cache
+from . import cache, profiles
 from .tables import Item, Job
 
 PENDING = 10   # 待確認: the model was not sure enough, so the item stays out of the taste vector
@@ -38,7 +39,7 @@ def classify_items(session, job, backends, min_prob, names):
     session.commit()
 
 
-def process(session, job, backends, settings):
+def process(session, job, backends, settings, context):
     names = sorted(set(session.exec(select(Item.name).where(Item.user_id == job.user_id,
                                                             Item.month == job.month)).all()))
     update(session, job, status="running", done=0, total=len(names), message="分類品名")
@@ -52,6 +53,9 @@ def process(session, job, backends, settings):
         # A name the model cannot judge now (no GPU) stays pending, yet counts as handled.
         cache.describe(session, backends, batch, ask_model=True)
         update(session, job, done=job.done + len(batch))
+    update(session, job, message="重算品味向量")
+    profiles.recompute(session, backends, context, job.user_id)
+    # Last, because an upload deletes the finished jobs of its month: a job that says done has written everything.
     update(session, job, status="done", message="完成")
 
 
@@ -68,7 +72,7 @@ def mark_failed(session, job_id):
         log.exception("could not mark upload job %s failed", job_id)
 
 
-def run_job(engine, backends, settings, job_id):
+def run_job(engine, backends, settings, context, job_id):
     """One upload's job, run by the Worker. Any crash marks the job failed instead of leaving it running. A job
     whose account was deleted meanwhile has nothing left to do."""
     with Session(engine) as session:
@@ -76,7 +80,7 @@ def run_job(engine, backends, settings, job_id):
             job = session.get(Job, job_id)
             if job is None:
                 return
-            process(session, job, backends, settings)
+            process(session, job, backends, settings, context)
         except Exception:
             log.exception("upload job %s failed", job_id)
             mark_failed(session, job_id)

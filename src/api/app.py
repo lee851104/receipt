@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 
+from ..receipt.traits import load_context
 from .backends import load_backends
 from .cache import Judging
 from .db import ROOT, init_db, make_engine
@@ -23,8 +24,9 @@ def create_app(settings, backends=None):
     init_db(app.state.engine)
     fail_unfinished(app.state.engine)
     app.state.backends = backends or load_backends(settings)
+    app.state.context = load_context(ROOT)  # what the taste pipeline reads, loaded once
     # Upload jobs run here, one at a time in upload order, never on the threads that answer requests.
-    app.state.worker = Worker(partial(run_job, app.state.engine, app.state.backends, settings))
+    app.state.worker = Worker(partial(run_job, app.state.engine, app.state.backends, settings, app.state.context))
     app.state.judging = Judging()  # the names the classify box has being judged in the background
     report = json.loads((ROOT / "configs" / "report.json").read_text(encoding="utf-8"))
     app.state.categories = [category["name"] for category in report["categories"]]

@@ -52,8 +52,10 @@ def make_engine(url):
 
 
 def init_db(engine):
-    """Create the tables that do not exist yet. It never changes a table that exists, so after a column or an index
-    is added to tables.py, delete data/app.db* (the database and its -wal and -shm files) and run the seed again."""
+    """Create the tables that do not exist yet, so a database from before new tables were added (week 1's, which
+    has only users) simply gains them. It never changes a table that exists: only after a column or an index of an
+    existing table changes in tables.py (as in databases made from earlier commits of role-1/uploads), delete
+    data/app.db* (the database and its -wal and -shm files) and run the seed again."""
     SQLModel.metadata.create_all(engine)
 
 

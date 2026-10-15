@@ -1,6 +1,6 @@
 # 品名分類實驗：A 與 B
 
-只讀品名，預測 0～9 的消費類別。A 使用 TF-IDF，B 使用固定的中文 Embedding，兩者都以邏輯迴歸分類。此為獨立實驗，不改主程式、正式對照表或網頁。C 尚未實作。
+只讀品名，預測 0～9 的消費類別。A 使用 TF-IDF，B 使用固定的中文 Embedding，兩者都以邏輯迴歸分類。此為獨立實驗，不改主程式、正式對照表或網頁。C 的 BERT 三種子微調已實作，使用方式見最後章節。
 
 ## 安裝與測試
 
@@ -37,7 +37,9 @@ experiments/category-models/.venv/Scripts/python.exe experiments/category-models
 
 只取正金額，略過對照表未確認或無對應的品項。品名重複購買不增加獨立樣本數。此命令不等於再次人工核對，也不自動加入變體群組。
 
-## 訓練
+## 舊版開發 CV 訓練
+
+以下 CV 指令保留供歷史重現。角色 2 的 v2 混合來源資料請使用本文最後的「固定切分 A/B」流程；真實品名及模型輸出統一使用主專案 `C:/Users/User/Desktop/AI_project/receipt/data/role2/`，不要放入 worktree。
 
 ```powershell
 experiments/category-models/.venv/Scripts/python.exe experiments/category-models/tfidf_lr.py train --data experiments/category-models/data/items.jsonl --out experiments/category-models/outputs/tfidf-run-01
@@ -52,7 +54,7 @@ experiments/category-models/.venv/Scripts/python.exe experiments/category-models
 3. 對照「永遠猜該折訓練集最多類別」的基準。Macro-F1 只平均有驗證樣本的類別，完整 10 類分數不足時為 `null`。
 4. 另用全部已確認資料訓練最終模型。它沒有獨立測試成績，不列訓練集準確率充當效果。
 
-若不足兩個類別各有三個群組，仍可訓練至少兩類的模型，但報告會顯示無法交叉驗證。之後蒐集足夠資料再建立固定 70/15/15 的共同實驗資料，本次程式尚未實作該最終測試流程。
+若不足兩個類別各有三個群組，仍可訓練至少兩類的模型，但報告會顯示無法交叉驗證。之後蒐集足夠資料再建立固定 70/15/15 的共同實驗資料，本輪固定切分程式已支援保留測試集，但尚未執行正式最終測試。
 
 輸出：
 
@@ -130,3 +132,159 @@ experiments/category-models/.venv/Scripts/python.exe experiments/category-models
 `predict` 接受每行只有 `name` 的 JSONL；`evaluate` 必須提供已人工確認的標籤，可先使用上方 `prepare_data.py` 從 CSV 準備。兩者皆固定輸出類別 0～9 的機率，尚未校準。B 沒有 A 的 TF-IDF `out_of_vocabulary` 欄位；能產生向量不代表一定分對。
 
 搬移模型時須保留編碼器資料夾及 `encoder-manifest.json`。預設依 `model.joblib` 記錄的相對路徑尋找編碼器，也可用 `--encoder-dir` 指定新位置；檔案、編碼設定及相關套件版本必須符合訓練紀錄。只載入可信的 joblib。B 與 A 的比較見 [RESULTS-B.md](RESULTS-B.md)。
+
+## 角色 2：新版訓練資料切分（2026-10-15，v2 修訂）
+
+資料工具只用 Python 標準函式庫。請在角色 2 worktree 根目錄執行：
+`C:\Users\User\.codex\worktrees\receipt-role2\receipt`。
+
+### 可重現的合成品名
+
+`synthetic_names.py` 包含可進 Git 的候選清單、子類配額與生成指令，取代舊的 `data/role2/synthetic_candidates.py`。只根據公開的 `docs/category-models-brief.md` 和常識撰寫，不讀取或參考任何真實品名。
+
+每類分配 6 個子類，每子類 10 筆（3 筆發票式簡寫、7 筆完整描述），全部輸出，不再取每類前 50 筆。總計 600 筆，每類 60 筆、簡寫 18 筆（30%）。運動補給、汽柴油／充換電、寵物飼料與用品都有獨立配額；球鞋、瑜伽墊等待決定運動裝備沒有納入。各子類數量見 `docs/results/classification-data.md`。
+
+```powershell
+$role2Python = 'C:\Users\User\Desktop\AI_project\receipt\.venv\Scripts\python.exe'
+& $role2Python experiments/category-models/synthetic_names.py --out datasets/synthetic/item-names.jsonl --force
+& $role2Python experiments/category-models/synthetic_names.py --out datasets/synthetic/item-names.jsonl --check
+```
+
+`--force` 只用於明確指定的合成輸出；不加時拒絕覆寫已存在檔案。`--check` 逐位元組確認 JSONL 與候選清單一致。公開 JSONL 仍只有 `name`、`category`、`source="synthetic"`，子類與樣式僅用於生成和覆蓋檢查，不作為分類模型輸入。合成資料不等於人工確認標籤，只供訓練；30% 簡寫也不能保證模型已能泛化到真實發票。
+
+### 本機隱私比對
+
+比對真實資料只執行 `audit_synthetic.py`，不讀取或列印私人品名。以下來源是主資料夾實際存在的人工標註、私人對照表與 CSV，指令只回報彙總數字：
+
+```powershell
+$role2Python = 'C:\Users\User\Desktop\AI_project\receipt\.venv\Scripts\python.exe'
+$role2AuditArgs = @(
+    'experiments/category-models/audit_synthetic.py',
+    '--synthetic', 'datasets/synthetic/item-names.jsonl',
+    '--reviewed', 'C:\Users\User\Desktop\AI_project\receipt\data\private\category-review-20261012\labeled-items.jsonl',
+    '--catalog', 'C:\Users\User\Desktop\AI_project\receipt\data\private\item-categories.json'
+)
+$role2Invoices = @(Get-ChildItem -LiteralPath 'C:\Users\User\Desktop\AI_project\receipt' -Filter '*.csv' -File) + @(Get-ChildItem -LiteralPath 'C:\Users\User\Desktop\AI_project\receipt\rawdata' -Filter '*.csv' -File -Recurse)
+foreach ($role2Invoice in $role2Invoices) { $role2AuditArgs += @('--invoice', $role2Invoice.FullName) }
+& $role2Python @role2AuditArgs
+```
+
+至少提供一份非空的私人參考資料；撞名或格式錯誤回非零 exit code，不印品名。本輪查核 6 份 CSV、對照表與標註，232 個正規化不同品名的完全撞名數為 0。此檢查僅涵蓋指定來源的正規化完全比對，不代表世界上不存在同名商品。
+
+### 固定切分與資料位置
+
+含真實品名的切分結果統一放在主資料夾的 `C:\Users\User\Desktop\AI_project\receipt\data\role2\`，不放 worktree。舊版 `split-20261015` 已搬到該位置；新版為 `split-20261015-v2`，舊版不覆寫。
+
+以下是本輪實際執行的命令。**v2 已存在，重新 prepare 請將輸出改為新的版本名稱（例如 v3）**；check 可直接重跑：
+
+```powershell
+$role2Python = 'C:\Users\User\Desktop\AI_project\receipt\.venv\Scripts\python.exe'
+& $role2Python experiments/category-models/dataset_split.py prepare --real 'C:\Users\User\Desktop\AI_project\receipt\data\private\category-review-20261012\labeled-items.jsonl' --legacy-real --synthetic datasets/synthetic/item-names.jsonl --out 'C:\Users\User\Desktop\AI_project\receipt\data\role2\split-20261015-v2'
+& $role2Python experiments/category-models/dataset_split.py check --dataset 'C:\Users\User\Desktop\AI_project\receipt\data\role2\split-20261015-v2'
+```
+
+真實輸入需要 `id`、`name`、0–9 整數 `category`、`source="real"`、`review_status="human_confirmed"`，可附 `group` 和 `name_only_context_needed`。上述歷史檔缺少 `source`，因此明確加 `--legacy-real`，manifest 會記錄這個聲明；它不會覆蓋已存在的 synthetic 來源，也不會自動把待複核資料變成已確認。
+
+- seed=42，按類別分群後切出約 15% 驗證群與 15% 測試群。3 群以上的類別至少各留 1 群；不足 3 群只進訓練。群組大小不一，筆數比例不保證精確 70/15/15。
+- NFKC、忽略大小寫與空白後同名，以及明確 group 的傳遞關係會一起切分。先保留群組關係，再將正規化同名合併為一筆；語義近似仍需人工標記。
+- 合成資料只進訓練；與真實名稱正規化撞名的合成項目剔除。驗證與測試只接受 real + human_confirmed。
+- 輸出 train/validation/test JSONL 與 manifest，包含來源及輸出指紋、數量與不足 5 筆真實測試品名的類別；既有目錄拒絕覆寫。SHA256 用於偵測意外修改，不是防惡意竄改的簽章。
+- **逐筆檔與 manifest 都含私人資訊，只留在主資料夾被 Git 忽略的 data/role2；不可提交或上傳雲端。** CLI 只印彙總數字。舊 57 筆曾用於 A/B 開發驗證，新的留出切分不能宣稱為獨立最終測試。
+- 舊 A/B CLI 要求 human_confirmed 並使用三折 CV，不能直接餵新混合訓練檔，也不能把 synthetic 改成 human_confirmed。第 3.4 已新增下方共用固定切分流程。
+
+### 驗證
+
+```powershell
+$role2Python = 'C:\Users\User\Desktop\AI_project\receipt\.venv\Scripts\python.exe'
+& $role2Python -m unittest discover -s experiments/category-models -p 'test_synthetic_names.py'
+& $role2Python -m unittest discover -s experiments/category-models -p 'test_dataset_split.py'
+& $role2Python -m unittest discover -s experiments/category-models -p 'test_audit_synthetic.py'
+& $role2Python -m unittest discover -s tests
+```
+
+## 固定切分 A/B（角色 2 第 3.4 項，2026-10-15）
+
+`fixed_split_train.py` 只用 train 擬合，保留 real/synthetic 來源，validation 只作開發驗證，test 不預測、不計分。每次輸出使用新的目錄；已有目錄會拒絕。模型與逐筆預測含私人品名，一律輸出到主專案的 Git 忽略目錄。
+
+下列從角色 2 worktree 執行。公開 BGE 權重已下載到主專案指定位置；首次需另用 `download_embedding.py --out` 下載到該位置（不要覆寫既有模型）。CPU 套件安裝步驟同上方 B 章節。
+
+```powershell
+$role2ModelPython = '.\experiments\category-models\.venv\Scripts\python.exe'
+$role2Dataset = 'C:\Users\User\Desktop\AI_project\receipt\data\role2\split-20261015-v2'
+$role2Runs = 'C:\Users\User\Desktop\AI_project\receipt\data\role2\runs'
+$role2Encoder = 'C:\Users\User\Desktop\AI_project\receipt\data\role2\models\bge-small-zh-v1.5'
+
+& $role2ModelPython experiments/category-models/fixed_split_train.py --model tfidf --dataset $role2Dataset --out "$role2Runs/tfidf-v2-reproduction-01"
+& $role2ModelPython experiments/category-models/fixed_split_train.py --model embedding --dataset $role2Dataset --encoder-dir $role2Encoder --out "$role2Runs/embedding-v2-reproduction-01"
+& $role2ModelPython -m unittest discover -s experiments/category-models -p 'test_*.py'
+```
+
+本次實際 run 為 `tfidf-v2-20261015` 與 `embedding-v2-20261015`。每個 run 有 `model.joblib`、`report.json`、`validation-predictions.jsonl`；沒有 test 預測檔。模型使用既有 A/B 的 `Classifier.load` 介面，bundle 保留訓練來源與資料指紋。只載入自己產生或可信來源的 joblib。
+
+- 載入與輸出前核對資料 manifest、來源／切分指紋及來源邊界，資料變動則失敗。
+- 模型儲存前後比較所有 validation 與最多 10 筆 train 探針的類別及完整 10 維機率；空 validation 也不能跳過重載檢查。探針不加入分數。
+- 驗證類別少於 5 筆時，precision／recall／F1 不計分，macro-F1 只平均合格類別；全都不足時為 null。空 validation 的 accuracy 為 null。
+- CPU 1000 筆測速採循環訓練名稱，暖機後執行完整分類，B 不使用向量快取；報告分開記錄編碼、fit、初次載入及重載時間，B 模型大小包含編碼器。
+- CLI 成功時只印彙總，失敗不回顯輸入內容。下載與訓練分離，訓練強制離線。
+
+目前 train 643（43 real、600 synthetic）、validation 7、test 7。A/B 在驗證集各答對 6/7；每類不足 5，macro-F1 不可計算，test 未評分。資料曾用於早期開發 CV，且近似名稱群組仍待人工複核，不能宣稱獨立最終測試。完整彙總及成本見 [classification-baselines.md](../../docs/results/classification-baselines.md)。
+
+## C：本機 BERT 微調與三模型比較
+
+`bert_finetune.py` 全參數微調 [google-bert/bert-base-chinese](https://huggingface.co/google-bert/bert-base-chinese/tree/8f23c25b06e129b6c986331a13d8d025a92cf0ea)，固定 revision `8f23c25b06e129b6c986331a13d8d025a92cf0ea`。分類 head 為 10 類；從預訓練模型載入時提示 head 為新初始化是預期行為。公開下載程式不讀取任何品名，逐檔核對上游雜湊。
+
+GPU 訓練另建環境，保留 A/B 的 CPU 環境。以下在角色 2 worktree 執行，CUDA 安裝入口依 [PyTorch 官方歷史版本說明](https://pytorch.org/get-started/previous-versions/)：
+
+```powershell
+$role2GpuPython = '.\experiments\category-models\bert-runtime\.venv\Scripts\python.exe'
+# 環境已存在時，省略 venv 建立。
+uv venv --python .\experiments\category-models\.venv\Scripts\python.exe experiments/category-models/bert-runtime/.venv
+uv pip install --python $role2GpuPython torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128
+uv pip install --python $role2GpuPython -r experiments/category-models/requirements-bert.txt
+uv pip check --python $role2GpuPython
+
+$role2Data = 'C:\Users\User\Desktop\AI_project\receipt\data\role2'
+& $role2GpuPython experiments/category-models/download_bert.py --out "$role2Data/models/bert-base-chinese"
+foreach ($role2Seed in @(42,43,44)) {
+    & $role2GpuPython experiments/category-models/bert_finetune.py --dataset "$role2Data/split-20261015-v2" --pretrained "$role2Data/models/bert-base-chinese" --out "$role2Data/runs/bert-v2-reproduction-seed$role2Seed" --seed $role2Seed --device cuda
+    if ($LASTEXITCODE -ne 0) { break }
+}
+```
+
+每個種子必須使用新的輸出目錄。設定固定為 max_length=32、batch=16、AdamW lr=2e-5、weight_decay=.01、gradient clipping=1、FP32、最多 10 輪、patience=2、min_delta=1e-4。只有 train 參與梯度；每輪 validation cross entropy 決定是否保存。微小 loss 改善仍保存最小值，但不重設 patience。沒有根據測試集調參。
+
+模型保存在 run 的 `model/`，包含完整 safetensors、tokenizer、設定與檔案指紋；不包含明文訓練名稱清單，仍視為私人模型，不能進 Git 或自行公開。run 另外保存 `report.json`（每輪 loss、最佳 epoch、資料指紋與成本）及私人 `validation-predictions.jsonl`。`bert_model.Classifier.load(model_dir).predict(names)` 回傳類別 0～9 與 10 維機率，模型載入全離線，損壞或多出的未驗證模型檔會拒絕。
+
+訓練結束先在 CPU 比對保存前與重載後的驗證集及 10 筆 train 探針，完整機率一致才寫成功報告。`test` 在訓練中不預測、不評分。CPU 1000 筆測速是循環 train 名稱，不是額外評估樣本；訓練報告的 RSS 包含訓練，正式比較另以乾淨 CPU 子程序量測推論 RSS。
+
+### 凍結後的一次性測試
+
+`compare_fixed_models.py` 要求 A、B、三個不同種子的 BERT 來自同一份固定切分；BERT 必須同一預訓練來源及超參數。候選種子只依最低 validation loss 選擇，再凍結模型／報告／資料指紋。下方是本次執行紀錄，**已完成的資料集不可再次執行**：
+
+```powershell
+$role2CpuPython = '.\experiments\category-models\.venv\Scripts\python.exe'
+$role2Data = 'C:\Users\User\Desktop\AI_project\receipt\data\role2'
+& $role2CpuPython experiments/category-models/compare_fixed_models.py --dataset "$role2Data/split-20261015-v2" --a "$role2Data/runs/tfidf-v2-20261015" --b "$role2Data/runs/embedding-v2-20261015" --bert "$role2Data/runs/bert-v2-20261015-seed42" --bert "$role2Data/runs/bert-v2-20261015-seed43" --bert "$role2Data/runs/bert-v2-20261015-seed44" --out "$role2Data/runs/comparison-v2-20261015"
+```
+
+一次性標記 `test-evaluation-claimed.json` 與 `test-evaluation-model-claims/` 留在該資料集；每模型只預測一次相同 test 名稱。標記綁定評估計畫 SHA256，不能換輸出目錄、負索引或重跑 worker 繞過。中途中斷也保留標記；不要刪除標記重跑以挑結果，應保留失敗紀錄並人工確認是否已消耗 test。後續新實驗需另收集資料與新切分，不能把重新複製舊 test 當作新的獨立測試。
+
+每模型以既有 CPU 環境啟動獨立程序，量測完整 tokenizer／模型／分類流程 1000 筆時間、模型大小與程序峰值 RSS。BERT 三種子列出各自分數及平均±母體標準差，不挑 test 最好的一次。所有結果仍屬開發留出：57 筆資料曾用於舊 CV，而且各類 test 少於 5 筆，macro-F1 全部為 null。
+
+驗證指令（測試皆使用虛構資料與隨機 tiny BERT，無須下載模型或 GPU）：
+
+```powershell
+& $role2CpuPython -m unittest discover -s experiments/category-models -p 'test_*.py'
+& 'C:\Users\User\Desktop\AI_project\receipt\.venv\Scripts\python.exe' -m unittest discover -s tests
+node --test "tests/*.test.cjs"
+```
+
+彙總與限制見 [classification.md](../../docs/results/classification.md)。BERT 微調不等於已接上 API；服務整合與模型公開另行處理。
+
+### 公開報告隱私複核狀態
+
+`audit_synthetic.py` 可在既有私人來源參數後加 `--public-text <公開文字檔>`，逐檔做正規化子字串掃描，只輸出命中數，不列出命中文字。命中可能包括一般詞彙，需本機人工判讀，不能視為必然揭露了私人購買資訊。
+
+本輪比較計算已完成，但完整報告的文字掃描有 1 個名稱片段重合。完整報告先保留於主專案 `data/role2/runs/comparison-v2-20261015/report-detail.md`（Git 忽略），`docs/results/classification.md` 只保留待複核狀態。不要把命中的真實品名貼回聊天；使用者可在本機確認後再決定公開版本。
+
+如需在本機人工判讀，可另外加 `--local-match-report <新的私人JSON檔路徑>`；名稱與行號只寫入該檔，終端仍只有數字。此檔必須放主專案被 Git 忽略的 `data/role2/`，不應提交、列印或貼給雲端。已有檔案會拒絕覆寫。本輪已產生 `data/role2/runs/comparison-v2-20261015/privacy-review.json`，雲端 AI 未讀回內容。

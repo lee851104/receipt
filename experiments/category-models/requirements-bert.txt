@@ -1,0 +1,3 @@
+-r requirements-b.txt
+# GPU training only: first install torch==2.8.0 from the official cu128 index.
+# CPU inference/tests keep using the existing category-models/.venv CPU environment.

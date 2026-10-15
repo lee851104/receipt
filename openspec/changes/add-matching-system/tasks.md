@@ -29,11 +29,11 @@
 
 ## 3. 角色 2：分類模型
 
-- [ ] 3.1 用 AI 生成稀少類別的假品名，每類至少 50 個，存成 `datasets/synthetic/item-names.jsonl`（`name`、`category`、`source="synthetic"`）；用腳本確認各類的數量，並掃描確認沒有任何真實品名
-- [ ] 3.2 在本機切分訓練集和測試集，測試集只放人工確認過的真實品名；切分檢查腳本確認測試集裡沒有假品名
+- [x] 3.1 用 AI 生成稀少類別的假品名，每類至少 50 個，存成 `datasets/synthetic/item-names.jsonl`（`name`、`category`、`source="synthetic"`）；用腳本確認各類的數量，並掃描確認沒有任何真實品名
+- [x] 3.2 在本機切分訓練集和測試集，測試集只放人工確認過的真實品名；切分檢查腳本確認測試集裡沒有假品名
 - [ ] 3.3 和角色 3 合作，讓 Qwen 預標真實品名，再由 4 人分工複核；確認每個真實品名都已標示為人工確認
-- [ ] 3.4 用新資料重跑 A（TF-IDF）和 B（embedding）兩個基準，產出和 `experiments/category-models/RESULTS-B.md` 同樣格式的結果
-- [ ] 3.5 在 4060（或 Colab）上微調 `bert-base-chinese`，保存模型和訓練紀錄；確認模型可以重新載入，並對測試集跑完預測
+- [x] 3.4 用新資料重跑 A（TF-IDF）和 B（embedding）兩個基準，產出和 `experiments/category-models/RESULTS-B.md` 同樣格式的結果
+- [x] 3.5 在 4060（或 Colab）上微調 `bert-base-chinese`，保存模型和訓練紀錄；確認模型可以重新載入，並對測試集跑完預測
 - [ ] 3.6 用 BERT 實作 `src/ml/category.classify`，`CATEGORY_MODEL=bert` 時從 `CATEGORY_MODEL_DIR` 載入，並把 CPU 版的 `torch`、`transformers` 加進服務的套件清單；測試沒有模型檔時健康檢查顯示 `unavailable` 而不是猜一個類別，並記下用 CPU 分類 1000 個品名的時間
 - [ ] 3.7 依 model-evaluation 規格產出三個模型的比較表和混淆矩陣（同一份測試集；測試資料少於 5 筆的類別不計分並列出），寫成 `docs/results/classification.md`；掃描確認裡面沒有任何真實品名
 - [ ] 3.8 在 `docs/team/concepts.md` 寫「邏輯迴歸」段落，用 1–2 個假品名說明從向量到機率的過程

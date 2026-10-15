@@ -13,7 +13,9 @@ class UploadLimit:
         self.app, self.path, self.limit = app, path, limit
 
     async def __call__(self, scope, receive, send):
-        limited = scope["type"] == "http" and scope["method"] == "POST" and scope["path"] == self.path
+        # Behind uvicorn --root-path the path starts with that prefix; the routes see it without, and so does this.
+        path = scope.get("path", "").removeprefix(scope.get("root_path", ""))
+        limited = scope["type"] == "http" and scope["method"] == "POST" and path == self.path
         refusal = self.refusal(scope["headers"]) if limited else None
         if refusal is None:
             await self.app(scope, receive, send)

@@ -102,16 +102,34 @@ class ReportDataTests(unittest.TestCase):
         for amount in ("", "abc", "nan", "inf"):
             with self.subTest(amount=amount):
                 self.write_rows([["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, amount]])
-                with self.assertRaisesRegex(ValueError, "消費明細_金額 is not a number"):
+                with self.assertRaisesRegex(ValueError, "^Line 2: 消費明細_金額 is not a number$"):
                     build_month(self.path, self.catalog, for_upload=True)
         self.write_rows([["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, "9" * 20]])
-        with self.assertRaisesRegex(ValueError, "消費明細_金額 is too large"):
+        with self.assertRaisesRegex(ValueError, "^Line 2: 消費明細_金額 is too large$"):
             build_month(self.path, self.catalog, for_upload=True)
         with self.path.open("w", encoding="utf-8-sig", newline="") as stream:
             header = ",".join(["發票日期", "發票狀態", "發票號碼", "賣方名稱", "消費明細_品名", "消費明細_數量", "消費明細_金額"])
             stream.write(header + chr(10) + "20260502,開立已確認,A1" + chr(10))
         with self.assertRaisesRegex(ValueError, "fewer columns"):
             build_month(self.path, self.catalog, for_upload=True)
+
+    def test_an_upload_points_at_the_line_and_column_of_a_bad_cell_without_repeating_it(self):
+        # In a line whose columns have shifted, any cell can hold a piece of a product name, which must not reach
+        # the message the page shows.
+        good = ["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, 120]
+        secret = "測試祕密品名"
+        cases = [(0, "Line 3: 發票日期 is not a date written YYYYMMDD"),
+                 (1, "Line 3: Unreviewed invoice status in 發票狀態"),
+                 (5, "Line 3: 消費明細_數量 is not a number"),
+                 (6, "Line 3: 消費明細_金額 is not a number")]
+        for column, message in cases:
+            with self.subTest(message=message):
+                bad = list(good)
+                bad[column] = secret
+                self.write_rows([good, bad])
+                with self.assertRaises(ValueError) as caught:
+                    build_month(self.path, self.catalog, for_upload=True)
+                self.assertEqual(str(caught.exception), message)
 
     def test_an_upload_still_counts_a_skipped_line_from_another_month(self):
         self.write_rows([["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, 120],
@@ -126,7 +144,7 @@ class ReportDataTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Missing column: 消費明細_品名"):
             build_month(self.path, self.catalog, for_upload=True)
         self.write_rows([["20260502", "開立待確認", "A1", "測試商店", "測試餐盒", 1, 120]])
-        with self.assertRaisesRegex(ValueError, "Unreviewed"):
+        with self.assertRaisesRegex(ValueError, "^Line 2: Unreviewed invoice status in 發票狀態$"):
             build_month(self.path, self.catalog, for_upload=True)
 
     def test_an_upload_of_only_skipped_lines_has_no_records(self):

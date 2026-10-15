@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest import mock
 
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 from sqlmodel import Session, select
 
 from src.api import cache, jobs
@@ -123,6 +124,20 @@ class JobTests(unittest.TestCase):
         upload(client, headers, invoice_csv(rows))
         [job] = self.rows(client, Job)
         self.assertEqual((job.status, job.done, job.total), ("done", 25, 25))
+
+    def test_a_job_asked_about_midway_is_running_with_its_progress(self):
+        seen = []
+
+        def describe_items(names, ask_model=True):
+            seen.append(client.get("/api/jobs/1", headers=headers).json())
+            return fakes.describe_items(names, ask_model)
+        rows = [["20260502", "開立已確認", "TEST-INV-1", "測試飲料店", "臺北市大安區測試路1號", f"測試品{number}", 1, 50]
+                for number in range(25)]
+        client, headers = self.client(describe_items=describe_items)
+        upload(client, headers, invoice_csv(rows))
+        # Asked before each batch of 20 names is judged.
+        self.assertEqual(seen, [{"job_id": 1, "month": "2026-05", "status": "running", "done": done, "total": 25,
+                                 "message": "判斷品項屬性"} for done in (0, 20)])
 
 
 class ConnectionTests(unittest.TestCase):
@@ -254,6 +269,27 @@ class RunJobTests(unittest.TestCase):
             classify_items(session, session.get(Job, 1), fake_backends(), 0.5, ["鮮奶茶"])
         items = table(self.engine, Item)
         self.assertEqual(sorted((item.name, item.category) for item in items), [("衛生紙", 10), ("鮮奶茶", 1)])
+
+    def test_a_month_uploaded_again_while_categories_are_written_gets_them_by_name(self):
+        """The new upload's items take the old ones' ids again (SQLite reuses them), so a category written by id
+        would land on another name."""
+        add_queued_job(self.engine, names=("鮮奶茶", "衛生紙"))  # ids 1 and 2
+
+        def upload_again_first(connection, cursor, statement, parameters, context, executemany):
+            if statement.startswith("UPDATE items") and not replaced:
+                replaced.append(True)
+                cursor.connection.execute("DELETE FROM items")
+                for name in ("衛生紙", "測試新品"):  # ids 1 and 2 once more
+                    cursor.connection.execute(
+                        "INSERT INTO items (user_id, month, day, invoice, merchant, name, quantity, amount, category)"
+                        " VALUES (1, '2026-05', 2, '2026-05-R01', '測試飲料店', ?, 1, 60, 10)", (name,))
+        replaced = []
+        event.listen(self.engine, "before_cursor_execute", upload_again_first)
+        with Session(self.engine) as session:
+            classify_items(session, session.get(Job, 1), fake_backends(), 0.5, ["衛生紙", "鮮奶茶"])
+        self.assertEqual(replaced, [True])
+        items = table(self.engine, Item)
+        self.assertEqual(sorted((item.name, item.category) for item in items), [("測試新品", 10), ("衛生紙", 8)])
 
 
 class CacheTests(unittest.TestCase):

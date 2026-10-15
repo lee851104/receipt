@@ -4,6 +4,7 @@ import queue
 import threading
 
 from sqlmodel import Session, col, select
+from sqlmodel import update as update_rows
 
 from . import cache
 from .tables import Item, Job
@@ -23,18 +24,17 @@ def update(session, job, **changes):
 
 def classify_items(session, job, backends, min_prob, names):
     """Store each name's category on the job's items: the model's first choice, or 10 below min_prob."""
-    chosen = {}
+    by_category = {}
     # strict: a model that answers for fewer names fails the job instead of leaving names pending unnoticed.
     for name, answer in zip(names, backends.classify(names), strict=True):
         category = answer["category"]
-        chosen[name] = category if answer["probs"][category] >= min_prob else PENDING
-    items = session.exec(select(Item).where(Item.user_id == job.user_id, Item.month == job.month)).all()
-    for item in items:
-        # Only these names: a newer upload of the same month may have replaced the items meanwhile; its own job
-        # classifies those.
-        if item.name in chosen:
-            item.category = chosen[item.name]
-            session.add(item)
+        by_category.setdefault(category if answer["probs"][category] >= min_prob else PENDING, []).append(name)
+    # One UPDATE per category, matched by name, never by row: a newer upload of the same month may replace the items
+    # at any moment, and its rows can take the old rows' ids. Its names that are not among these wait for its own
+    # job; a name both uploads have gets the same category either way.
+    for category, group in by_category.items():
+        session.exec(update_rows(Item).values(category=category)
+                     .where(Item.user_id == job.user_id, Item.month == job.month, col(Item.name).in_(group)))
     session.commit()
 
 

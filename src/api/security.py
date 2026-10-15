@@ -17,7 +17,10 @@ HASHER = PasswordHash.recommended()  # argon2
 # Checked when there is no password to check, so a wrong username takes as long as a wrong password.
 DUMMY_HASH = HASHER.hash("no account has this password")
 ALGORITHM = "HS256"
-MAX_PASSWORD = 128  # characters; register refuses longer ones, so a longer login password can never match
+MAX_PASSWORD = 128  # characters register accepts
+# The most of a login password that is ever normalised: room for any registered password typed decomposed
+# (é as e plus an accent doubles its length), while NFKC on 100,000 characters would stall the server.
+MAX_LOGIN_TEXT = 4 * MAX_PASSWORD
 # auto_error=False: a missing token reaches current_user, which answers in the API's own error format.
 bearer = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
@@ -32,11 +35,11 @@ def hash_password(password):
 
 
 def verify_password(password, hashed):
-    """Whether password matches hashed. Always False without a hash (no such user, or a demo user) or for a password
-    longer than any account can have, after the same work, so neither answers faster. The cap comes before NFKC,
-    which is slow on long text and would stall the server."""
-    if not hashed or len(password) > MAX_PASSWORD:
-        HASHER.verify(normalized(password[:MAX_PASSWORD]), DUMMY_HASH)
+    """Whether password matches hashed. Always False without a hash (no such user, or a demo user) or for text far
+    longer than any registered password, after the same work, so neither answers faster. The cap comes before
+    NFKC, which is slow on long text and would stall the server."""
+    if not hashed or len(password) > MAX_LOGIN_TEXT:
+        HASHER.verify(normalized(password[:MAX_LOGIN_TEXT]), DUMMY_HASH)
         return False
     return HASHER.verify(normalized(password), hashed)
 

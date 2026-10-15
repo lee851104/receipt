@@ -23,3 +23,8 @@ async def validation_error_handler(request: Request, error: RequestValidationErr
     surrogate) cannot even be sent back."""
     details = [{key: value for key, value in item.items() if key != "input"} for item in error.errors()]
     return JSONResponse(status_code=422, content={"detail": jsonable_encoder(details)})
+
+
+async def internal_error_handler(request: Request, error: Exception):
+    """Any crash still answers JSON, so a page can always read the error; the details stay in the server's log."""
+    return JSONResponse(status_code=500, content={"detail": "internal_error"})

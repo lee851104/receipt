@@ -36,5 +36,6 @@ Thumbs.db
 # Local report containing real purchases
 /invoice-insights-private.html
 /report-data.js
-# Generated report data must never sit in the folder the API server hands out under /web/
+# Generated report data is never committed from the web folder. The server would still hand such a file out
+# under /web/ while it sits there, so keep it out of src/web/ altogether.
 /src/web/*-data.js

@@ -8,7 +8,7 @@ from unittest import mock
 import jwt
 
 from src.api import security
-from src.api.security import MAX_PASSWORD, create_token, hash_password, read_token, verify_password
+from src.api.security import MAX_LOGIN_TEXT, create_token, hash_password, read_token, verify_password
 from src.api.settings import Settings
 from src.api.tables import User
 
@@ -39,7 +39,7 @@ class PasswordTests(unittest.TestCase):
         with mock.patch.object(security, "normalized", side_effect=lambda text: lengths.append(len(text)) or original(text)):
             self.assertFalse(verify_password("p" * 100_000, hashed))
         self.assertTrue(lengths)
-        self.assertLessEqual(max(lengths), MAX_PASSWORD)
+        self.assertLessEqual(max(lengths), MAX_LOGIN_TEXT)
 
 
 class TokenTests(unittest.TestCase):

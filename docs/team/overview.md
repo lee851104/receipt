@@ -97,7 +97,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 |---|---|---|
 | `src/receipt/` | 現有核心邏輯，盡量不改行為 | 全體 |
 | `src/api/` | FastAPI：路由、資料庫、登入、背景任務 | 角色 1 |
-| `src/ml/` | 模型介面與假替身：`category.py`、`attributes.py`、`fakes.py` | 角色 2、3 |
+| `src/ml/` | 模型介面與假替身：`category.py`、`attributes.py`、`fakes.py`、`fields.py`（共用的欄位名） | 角色 2、3 |
 | `datasets/synthetic/` | 假品名和假用戶資料（JSONL），可以進 git | 角色 2、3 |
 | `docs/team/` | 這份總覽、概念說明 | 全體 |
 
@@ -112,7 +112,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 - **路徑**：API 一律以 `/api` 開頭。v2 網頁由同一個 FastAPI 從 `/web/` 提供（`src/web/` 資料夾），同一個網域，所以不用設 CORS。不掛在 `/`，是因為那樣 POST 到不存在的 `/api` 路徑會被靜態檔案接走，回 405 而不是 404
 - **格式**：JSON（UTF-8），欄位名用 snake_case。唯一例外：`/api/me/profile` 的 `months` 原樣沿用現有月報格式（`invoices.build_month` 的輸出，例如 `monthNumber`），現有網頁才不用改
 - **登入**：除了標「免」的端點，都要帶 `Authorization: Bearer <access_token>`。JWT 用 HS256，`sub` 放 user_id（轉成字串），24 小時過期
-- **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤回 422，格式同 FastAPI 預設（`detail` 是清單，每項有 `type`、`loc`、`msg`），但不回傳被拒絕的輸入值，因為那可能是密碼。需要登入的端點，沒帶 token 或 token 過期都回 401 `not_authenticated`。框架自己回的錯誤（例如不存在的路徑是 404、方法不對是 405）`detail` 是英文句子而不是代碼，前端遇到不認得的 `detail` 一律顯示通用錯誤訊息
+- **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤回 422，格式同 FastAPI 預設（`detail` 是清單，每項有 `type`、`loc`、`msg`），但不回傳被拒絕的輸入值，因為那可能是密碼。需要登入的端點，沒帶 token 或 token 過期都回 401 `not_authenticated`。框架自己回的錯誤（例如不存在的路徑是 404、方法不對是 405）`detail` 是英文句子而不是代碼，前端遇到不認得的 `detail` 一律顯示通用錯誤訊息。程式本身出錯時回 500 `{"detail": "internal_error"}`，細節只留在伺服器的紀錄裡
 - **數字**：`score` 這類小數不先四捨五入。要顯示的整數百分比另外給 `percent`，算法同 `similarity.percent`
 - **18 格順序**：一律照 `configs/traits.json` 的順序
 - **null**：表示「不知道」或「資料不夠」，不能當成 0 或 `false`
@@ -385,7 +385,7 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
 - 每個角色在自己的分支工作（例如 `role-1/upload-api`），開 PR 合併進 `main`，CI 通過才合併
 - 介面先定好再開發；別人的部分還沒好，就用假替身，不要等
 - 改到別人負責的檔案時，PR 裡要標註那個角色
-- 修改 `src/receipt/` 的行為之前，先確認全部測試仍然通過（後端骨架合併之後是 Python 149 個、JS 82 個）
+- 修改 `src/receipt/` 的行為之前，先確認全部測試仍然通過（`.venv/Scripts/python.exe -m unittest discover -s tests` 和 `node --test "tests/*.test.cjs"`）
 - commit 訊息用英文，文件用繁體中文
 
 ## 10. 隱私規則（repo 是公開的）
@@ -428,14 +428,14 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 ### 環境
 
 1. 安裝 Python 3.12、Node.js 24、Git。可以順便裝 GitHub CLI（`gh`），開 PR 比較方便。用 uv 建虛擬環境最快：`uv venv --python 3.12 .venv`
-2. 確認現有測試通過：
+2. 安裝套件，再確認現有測試通過。每個人都要裝 `requirements.txt`，API 的測試需要它；之後一律用 `.venv` 裡的 Python。不要用 `uv sync`：`pyproject.toml` 沒有列這些套件，它會把它們移除：
    ```
-   python -m unittest discover -s tests -v
+   uv pip install --python .venv/Scripts/python.exe -r requirements.txt
+   .venv/Scripts/python.exe -m unittest discover -s tests -v
    node --test "tests/*.test.cjs"
    ```
-   預期結果：Python 77 個、JS 82 個全部通過（後端骨架合併之後是 Python 149 個）
+   預期結果：Python 153 個、JS 82 個全部通過
 3. 後端（角色 1 的第一週成果）：
-   - 安裝套件：`uv pip install --python .venv/Scripts/python.exe -r requirements.txt`
    - 複製 `.env.example` 成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼：`.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"`
    - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人）
    - 啟動：`.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload`，打開 `http://127.0.0.1:8000/docs`。網頁在 `http://127.0.0.1:8000/web/match.html` 這類網址，角色 4 接上 API 之前畫面是空的

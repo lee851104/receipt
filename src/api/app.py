@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .backends import load_backends
 from .db import ROOT, init_db, make_engine
-from .errors import ApiError, api_error_handler, validation_error_handler
+from .errors import ApiError, api_error_handler, internal_error_handler, validation_error_handler
 from .routes import auth, health, items
 
 
@@ -22,6 +22,7 @@ def create_app(settings, backends=None):
     app.state.categories = [category["name"] for category in report["categories"]]
     app.add_exception_handler(ApiError, api_error_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
+    app.add_exception_handler(Exception, internal_error_handler)
     app.include_router(auth.router)
     # Without DEMO_MODE the demo endpoints do not exist at all, so they answer 404 and stay out of /docs.
     if settings.demo_mode:

@@ -46,19 +46,19 @@
 
 ## 實作時的變更（2026-10-15）
 
-每個任務都經過規格審查和程式品質審查，修正後的程式碼和下面各任務的程式碼區塊有出入，**以 repo 裡的程式碼為準**。最後 Python 測試 149 個（原本預期 121）。主要差異：
+每個任務都經過規格審查和程式品質審查，修正後的程式碼和下面各任務的程式碼區塊有出入，**以 repo 裡的程式碼為準**。最後 Python 測試 153 個（原本預期 121）。主要差異：
 
 - `src/ml/`：`describe_items(names, ask_model=True)`；新增 `tests/model_contract.py`，角色 2、3 可以拿來檢查真模型的回傳格式（一般 Python 型別、機率加總為 1 等）
 - `settings.py`：留空等於預設值；數字錯誤或超出範圍時錯誤訊息會指出變數名稱；`repr` 不印密鑰
 - `backends.py`：llama-server 偵測不經過 proxy、不會丟例外、結果記住 5 秒
 - `db.py`：`ROOT` 移到這裡；相對路徑的 SQLite 檔從 repo 根目錄算起（新增 `tests/test_api_db.py`）
-- `tables.py`、`security.py`：每個使用者有隨機 `token_key`，token 帶著它，帳號 id 被重用時舊 token 失效；DEMO_MODE 關閉時 demo token 立刻失效；密碼做 NFKC 正規化，超過 128 字元先擋下
+- `tables.py`、`security.py`：每個使用者有隨機 `token_key`，token 帶著它，帳號 id 被重用時舊 token 失效；DEMO_MODE 關閉時 demo token 立刻失效；密碼做 NFKC 正規化，登入時先截到 512 字元再正規化
 - `routes/auth.py`：帳號一律存成小寫、不能以 `demo_` 開頭；顯示名稱不能有控制或看不見的字元；登入失敗的 401 帶 `WWW-Authenticate`；demo-login 的 `user_id` 只接受 1 到 2^63−1 的整數
 - `routes/items.py`：品名不能有控制或看不見的字元；分類框只查快取（`ask_model=False`）
-- `errors.py`：422 不回傳被拒絕的輸入值
+- `errors.py`：422 不回傳被拒絕的輸入值；程式出錯時回 500 JSON `internal_error`
 - `seed.py`：資料庫裡的 demo 用戶跟假用戶清單對不上時停下來，不會默默略過
-- `main.py`：DEMO_MODE 開啟時印提醒；設定錯誤只印一行
-- `.gitignore`：擋住 `/runtime/` 和 `/src/web/*-data.js`
+- `main.py`：DEMO_MODE 開啟時印提醒；設定錯誤或模型還沒有時只印一行（新增 `tests/test_api_main.py`）
+- `.gitignore`：擋住 `/src/web/*-data.js`
 
 ## 檔案
 

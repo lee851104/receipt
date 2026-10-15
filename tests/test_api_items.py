@@ -2,6 +2,7 @@
 import json
 import unittest
 
+from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from src.api.security import create_token
@@ -63,6 +64,13 @@ class ClassifyTests(unittest.TestCase):
             describe_items=lambda names, ask_model=True: asked.append(ask_model) or [None for _ in names])
         client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers)
         self.assertEqual(asked, [False])
+
+    def test_a_crashing_model_still_answers_json(self):
+        app = make_client(classify=lambda names: 1 / 0).app
+        client = TestClient(app, raise_server_exceptions=False)
+        register(client)
+        response = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=login(client))
+        self.assertEqual((response.status_code, response.json()), (500, {"detail": "internal_error"}))
 
     def test_an_empty_too_long_or_unreadable_name_is_422(self):
         client, headers = self.client_and_headers()

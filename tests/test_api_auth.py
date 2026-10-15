@@ -88,6 +88,13 @@ class LoginTests(unittest.TestCase):
         response = client.post("/api/auth/login", data={"username": "amy", "password": "p" * 128})
         self.assertEqual(response.status_code, 200)
 
+    def test_a_long_password_typed_decomposed_still_logs_in(self):
+        client = make_client()
+        register(client, password=chr(0xE9) * 100)  # é as one character: 100 characters
+        typed = (chr(0x65) + chr(0x301)) * 100  # e followed by a combining accent: 200 characters
+        response = client.post("/api/auth/login", data={"username": "amy", "password": typed})
+        self.assertEqual(response.status_code, 200)
+
     def test_the_helper_headers_work(self):
         client = make_client()
         register(client)

@@ -89,6 +89,32 @@ demo 模式下，服務以空的資料庫啟動時，SHALL 自動匯入約 300 �
 - **WHEN** `JWT_SECRET` 只有 16 個字元
 - **THEN** 服務不啟動，並說明密鑰至少要 32 個字元
 
+### Requirement: 設定寫錯時停止啟動
+設定留空 SHALL 等於預設值。數字寫錯或超出範圍、模型名稱不在允許的清單裡時，服務 MUST 拒絕啟動，並用一行訊息說明是哪個設定變數有問題，而不是印出程式錯誤的堆疊。
+
+#### Scenario: 數字寫錯
+- **WHEN** `JWT_EXPIRE_MINUTES` 是 `abc` 或 0，或 `CATEGORY_MIN_PROB` 是 1.5
+- **THEN** 服務不啟動，訊息裡有那個變數的名稱
+
+#### Scenario: 不認得的模型名稱
+- **WHEN** `CATEGORY_MODEL` 設成 `gpt`
+- **THEN** 服務不啟動，訊息裡有 `CATEGORY_MODEL` 和可以用的名稱
+
+#### Scenario: 留空
+- **WHEN** `.env` 裡的 `JWT_EXPIRE_MINUTES` 留空
+- **THEN** 服務使用預設的 1440 分鐘
+
+### Requirement: 錯誤一律回應 JSON
+API 自己產生的錯誤 SHALL 回應 `{"detail": "<錯誤代碼>"}`，可以另外附上說明 `message`。欄位格式不符的 422 MUST 保留 FastAPI 的 `detail` 清單格式，但不回傳被拒絕的輸入值；程式本身出錯時 MUST 回應 500 `{"detail": "internal_error"}`，細節只留在伺服器的紀錄裡。
+
+#### Scenario: 欄位格式不符
+- **WHEN** 請求的欄位格式不符，例如註冊的密碼太短
+- **THEN** 系統回應 422，`detail` 是清單，每項有 `type`、`loc`、`msg`，沒有被拒絕的輸入值
+
+#### Scenario: 程式出錯
+- **WHEN** 處理請求時程式丟出沒有預期的例外，例如模型當掉
+- **THEN** 系統回應 500 `{"detail": "internal_error"}`，回應裡沒有錯誤的細節
+
 ### Requirement: 自動測試不需要模型
 專案的自動測試 SHALL 在沒有顯示卡、沒有下載任何模型檔的環境中全部執行；每次 push 到 GitHub 時 SHALL 自動執行全部測試（包含現有的 Python 和 JS 測試），並建置一次 Docker 映像檔。
 

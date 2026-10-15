@@ -7,24 +7,25 @@
 
 - [x] 1.1 API 規格寫進 `docs/team/overview.md` 第 5 節並定案（2026-10-14），帳號管理的 5.11 在 10/15 補上
 - [x] 1.2 `.gitignore` 擋掉壓縮檔（`*.rar`、`*.zip`、`*.7z`）和 `/runtime/`，`git status` 不再列出 `rawdata.rar`
-- [ ] 1.3 完成第 1 週計畫的 Task 0–1：`requirements.txt`、`.env.example`、`src/ml/fields.py`、`src/ml/fakes.py`；單元測試驗證假分類回傳 10 個加總為 1 的機率、假屬性回傳剛好 23 個欄位
+- [x] 1.3 完成第 1 週計畫的 Task 0–1：`requirements.txt`、`.env.example`、`src/ml/fields.py`、`src/ml/fakes.py`；單元測試驗證假分類回傳 10 個加總為 1 的機率、假屬性回傳剛好 23 個欄位
 
 ## 2. 角色 1：後端與配對
 
-- [ ] 2.1 完成第 1 週計畫的 Task 2–11（設定、模型接口與 GPU 偵測、健康檢查、密碼與 token、註冊登入、品名即時分類、seed、demo 名單與切換、`/web/` 網頁、總覽的啟動說明）；Python 121 個、Node 82 個測試通過，實際啟動後 `/api/health`、`/api/auth/demo-users`、`/docs`、`/web/match.html` 都正常
+- [x] 2.1 完成第 1 週計畫的 Task 2–11（設定、模型接口與 GPU 偵測、健康檢查、密碼與 token、註冊登入、品名即時分類、seed、demo 名單與切換、`/web/` 網頁（`src/web_v2/` 的預留頁）、總覽的啟動說明）；Python 154 個、Node 82 個測試通過，實際啟動後 `/api/health`、`/api/auth/demo-users`、`/docs`、`/web/` 都正常
 - [ ] 2.2 修正發票解析：「作廢」開頭的發票略過、金額低於 10 元或有小數的明細略過、小數數量當成 1、其他不認得的狀態才報錯；用虛構的 CSV 寫測試涵蓋這幾種情況，現有測試照樣通過
-- [ ] 2.3 加入 `jobs`、`items`、`item_cache`、`profiles` 四張表，實作 `POST /api/invoices`（當場解析，400 `invalid_csv`、413 `file_too_large`，成功回 202 和 `job_id`、`month`、`rows`）和 `GET /api/jobs/{job_id}`；測試涵蓋 invoice-ingestion 規格的情境（含重傳取代、別人的工作回 404、原始檔不保留、發票號碼已編碼）
+- [ ] 2.3 加入 `jobs`、`items`、`item_cache`、`profiles` 四張表，實作 `POST /api/invoices`（當場解析，400 `invalid_csv`、413 `file_too_large`，成功回 202 和 `job_id`、`month`、`rows`）和 `GET /api/jobs/{job_id}`；測試涵蓋 invoice-ingestion 規格的情境（含重傳取代、別人的工作回 404、假用戶上傳回 403 `demo_user_read_only`、原始檔不保留、發票號碼已編碼）
 - [ ] 2.4 實作背景任務：分類（最高機率低於 `CATEGORY_MIN_PROB` 存成 10）、查 `item_cache`、無 GPU 時記成待分析、重算 `profiles`；GPU 模式下即時分類遇到新品名要排進背景分析；用假模型測試 item-classification 和 item-attributes 規格的情境，包含分類模型 `unavailable` 時即時分類回 503、背景工作變成 `failed`
 - [ ] 2.5 實作 `GET /api/me/profile`；測試 taste-profile 規格的情境（還沒上傳、`ready` 為 false 時 18 格都是 `null`、兩個月合併、`pending_attributes`、類別 10 不計入）
 - [ ] 2.6 實作 `GET /api/matches`；測試 taste-matching 規格的門檻、排序和同分規則、只取前 5、`eligible` 和 `within`、四種範圍、`no_home_area`、自己資料不足，以及 0.295 這個邊界值
 - [ ] 2.7 實作 `GET /api/matches/{user_id}/explain`；測試固定 18 格、各格貢獻加總等於分數、與 `tests/fixtures/similarity-cases.json` 一致、`not_enough_items` 和 `too_few_shared`、查自己回 400 `self`、不存在回 404，以及 `network` 裡的品名已經去掉地名、沒有店家、日期和金額
-- [ ] 2.8 實作 overview 5.11 的帳號管理（`GET`／`PATCH /api/me`、`POST /api/me/password`、`DELETE /api/me`、`POST /api/auth/logout`），權杖加上 `iat` 並檢查 `tokens_valid_after`；測試涵蓋 user-account 規格的全部情境（改名長度、`wrong_password`、改密碼後舊權杖 401、登出讓所有裝置失效、刪帳號時的快取清理、`demo_user_read_only`）
+- [ ] 2.8 實作 overview 5.11 的帳號管理（`GET`／`PATCH /api/me`、`POST /api/me/password`、`DELETE /api/me`、`POST /api/auth/logout`），改密碼和登出都換掉 `users.token_key`（權杖本來就帶著它，第 1 週已有，不加欄位、不比較簽發時間）；測試涵蓋 user-account 規格的全部情境（改名長度、`wrong_password`、改密碼後舊權杖 401 而新權杖可用、登出讓所有裝置失效、登出後重新登入可用、刪帳號時的快取清理、`demo_user_read_only`）
 - [ ] 2.9 實作 `DELETE /api/me/months/{month}`；測試刪除後品味向量重算、`month_not_found`、`job_in_progress`
 - [ ] 2.10 新增 `start.bat`：檢查 `.env`、執行 seed、啟動 uvicorn、打開 `/web/`；在沒有 GPU 的電腦上手動確認，點兩下就能打開 `/docs` 和 v2 網頁
 - [ ] 2.11 新增 GitHub Actions，用 Python 3.12 和 Node 24 執行 `python -m unittest discover -s tests` 和 `node --test "tests/*.test.cjs"`，模型設定為 fake；確認 PR 上是綠燈，執行紀錄裡也沒有下載任何模型
 - [ ] 2.12 新增 `Dockerfile`、`docker-compose.yml`、`.dockerignore`，並在 CI 加上 `docker build`；確認映像檔裡找不到 `rawdata/`、`data/`、CSV、壓縮檔和 `.env`，CI 上建置成功
 - [ ] 2.13 實作容器的啟動流程：`CATEGORY_MODEL=bert` 而且沒有模型時，從 `CATEGORY_MODEL_REPO` 下載 `CATEGORY_MODEL_REVISION`；`DEMO_MODE=1` 而且資料庫是空的時，自動執行 seed；用無效的模型庫名稱測試下載失敗時服務照樣啟動、健康檢查顯示 `unavailable`
 - [ ] 2.14 README 補上架構圖、啟動步驟（虛擬環境和 Docker 兩種），以及沒有採用 pgvector 的原因；請另一位組員照著文件從零啟動成功
+- [ ] 2.15 角色 2、3 交出真模型後（3.6、4.3），在 `src/api/backends.py` 的 `load_backends` 接上 `CATEGORY_MODEL`、`ATTRIBUTES_MODEL` 的真實作（目前只接受 `fake`）；用 `tests/model_contract.py` 的 `check_classify`、`check_describe` 確認回傳格式，健康檢查顯示實際的模型名稱
 
 ## 3. 角色 2：分類模型
 
@@ -52,12 +53,12 @@
 
 ## 5. 角色 4：前端與展示
 
-- [ ] 5.1 新增 API 客戶端模組：自動附上權杖、收到 401 就導向登入、把錯誤代碼對應成中文；用 `node --test` 測試這三種行為
-- [ ] 5.2 新增 v2 入口 `src/web/index.html`，由服務在 `/web/` 提供；確認根目錄的 `invoice-insights.html` 沒有任何變動（`git diff` 是空的）
+- [ ] 5.1 在 `src/web_v2/` 新增 API 客戶端模組：自動附上權杖、收到 401 就導向登入、把錯誤代碼對應成中文；用 `node --test` 測試這三種行為
+- [ ] 5.2 把 v2 入口做在 `src/web_v2/index.html`（第 1 週放了預留頁），由服務在 `/web/` 提供；要用的頁面和 JS 從 `src/web/` 複製到 `src/web_v2/`，`src/web/` 不改；確認根目錄的 `invoice-insights.html` 和 `src/web/` 都沒有任何變動（`git diff` 是空的）
 - [ ] 5.3 實作登入和註冊畫面，以及 demo 模式下用 `GET /api/auth/demo-users` 產生的切換選單；JS 測試涵蓋「401 就導向登入」和「demo 選單只在 demo 模式出現」
 - [ ] 5.4 實作上傳畫面、進度輪詢和錯誤訊息（`invalid_csv` 附上系統說明、`file_too_large`、工作 `failed`）；用假 API 測試完成和失敗的畫面
 - [ ] 5.5 實作品名即時分類框：先顯示類別和機率，屬性 `pending` 時顯示「分析中」，每 2 秒重查、最多 5 次，之後顯示「稍後再查」；JS 測試涵蓋這幾種狀態
-- [ ] 5.6 把月報、品味關係圖和配對頁改成使用 API 資料（月報沿用 `months` 的現有格式，配對狀態文字用 `eligible` 和 `within`）；現有 82 個 JS 測試照樣通過（必要時改成餵假 API 資料）
+- [ ] 5.6 把月報、品味關係圖和配對頁（從 `src/web/` 複製到 `src/web_v2/` 的版本）改成使用 API 資料（月報沿用 `months` 的現有格式，配對狀態文字用 `eligible` 和 `within`）；`src/web/` 不動，現有 82 個 JS 測試照樣通過；複製過去而有改動的 JS，要有對應的測試（可以餵假 API 資料）
 - [ ] 5.7 實作計算過程面板，並用 `explain` 的 `network` 畫兩人的關係圖；JS 測試確認面板上的百分比和卡片上的一樣，逐格的數字也和 API 回傳的一致
 - [ ] 5.8 撰寫 `docs/team/concepts.md` 的向量化、內積、餘弦和收縮項段落，用兩位假用戶舉例；確認文件裡的數字可以用計算過程 API 重現
 - [ ] 5.9 更新 README：v1 連結標示為原型，放上 v2 的 demo 影片或動圖（在 `.gitignore` 為這些圖檔加上例外），並寫出 `docker compose up` 的使用方式；確認 GitHub 上的圖片和連結都能正常顯示

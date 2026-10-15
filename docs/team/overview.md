@@ -3,6 +3,7 @@
 > 給 4 位組員和各自的 AI 先讀的唯一一份文件。最後更新：2026-10-15。
 > 逐條需求、技術決定和任務清單在 OpenSpec 變更 `openspec/changes/add-matching-system/`。API 的路徑、欄位、錯誤代碼和設定名稱以本文件第 5 節為準，兩邊不一致時改 OpenSpec。
 > 交給 AI 時可以這樣說：「先讀 `docs/team/overview.md`，我是角色 N，今天要做第 N 週的哪一項。」
+> 角色之間要轉告的事寫在第 13 節，開工前先看自己的那一段。
 
 ## 1. 一句話
 
@@ -21,11 +22,12 @@
 | 配對頁 | +30% 以上算相近、−10% 以下算互補，各取前 5；可依同區、同縣市、同地區篩選 | `src/web/match.html`、`match-filter.js`、`src/receipt/places.py`、`configs/regions.json` |
 | 假用戶 | 8 種類型 × 5 人 = 40 人，2026 年 3–4 月的假發票 | `src/receipt/personas.py` |
 | 網頁 | 單一 HTML 檔，JS 全部內嵌，GitHub Pages 公開中 | `scripts/build_report.py` → `invoice-insights.html` |
-| 測試 | Python 77 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
+| 後端骨架 | FastAPI + SQLite：註冊、登入、demo 快速切換、品名即時分類、健康檢查，模型先用假替身；v2 網頁從 `/web/` 提供（10/15 完成角色 1 第 1 週） | `src/api/`、`src/ml/`、`src/web_v2/` |
+| 測試 | Python 154 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
 | 分類實驗 | 品名 → 10 類。A：TF-IDF + 邏輯迴歸，macro-F1 0.62；B：bge-small-zh（512 維）+ 邏輯迴歸，macro-F1 0.66。只有 57 個人工確認品名，只能驗證 4 類 | `experiments/category-models/`、`docs/category-models-brief.md` |
 | 屬性實驗 | Qwen3-4B（Q4_K_M，2.4 GB）判斷 16 個屬性。真實資料上模型單獨 F1 44%，加規則 94%（事後回測，不是獨立驗證） | `experiments/receipt-attributes/` |
 
-**還沒有的：** 後端、資料庫、登入、CI、BERT。
+**還沒有的：** 上傳與背景任務、品味向量和配對的 API、帳號管理、真的分類和屬性模型、CI、BERT。
 
 ### 18 格品味向量
 
@@ -98,7 +100,8 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 |---|---|---|
 | `src/receipt/` | 現有核心邏輯，盡量不改行為 | 全體 |
 | `src/api/` | FastAPI：路由、資料庫、登入、背景任務 | 角色 1 |
-| `src/ml/` | 模型介面與假替身：`category.py`、`attributes.py`、`fakes.py` | 角色 2、3 |
+| `src/ml/` | 模型介面與假替身：`category.py`、`attributes.py`、`fakes.py`、`fields.py`（共用的欄位名） | 角色 2、3 |
+| `src/web_v2/` | v2 網頁，FastAPI 從 `/web/` 提供；`src/web/` 是 v1 報告的建置來源，凍結不動 | 角色 4 |
 | `datasets/synthetic/` | 假品名和假用戶資料（JSONL），可以進 git | 角色 2、3 |
 | `docs/team/` | 這份總覽、概念說明 | 全體 |
 
@@ -112,10 +115,10 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 
 ### 5.1 共通規則
 
-- **路徑**：API 一律以 `/api` 開頭。v2 網頁由同一個 FastAPI 從 `/web/` 提供（`src/web/` 資料夾），同一個網域，所以不用設 CORS。不掛在 `/`，是因為那樣 POST 到不存在的 `/api` 路徑會被靜態檔案接走，回 405 而不是 404
+- **路徑**：API 一律以 `/api` 開頭。v2 網頁放在 `src/web_v2/`，由同一個 FastAPI 從 `/web/` 提供，同一個網域，所以不用設 CORS。`src/web/` 是 v1 報告的建置來源，不提供也不為 v2 修改，要用的頁面由角色 4 複製到 `src/web_v2/`。不掛在 `/`，是因為那樣 POST 到不存在的 `/api` 路徑會被靜態檔案接走，回 405 而不是 404
 - **格式**：JSON（UTF-8），欄位名用 snake_case。唯一例外：`/api/me/profile` 的 `months` 原樣沿用現有月報格式（`invoices.build_month` 的輸出，例如 `monthNumber`），現有網頁才不用改
-- **登入**：除了標「免」的端點，都要帶 `Authorization: Bearer <access_token>`。JWT 用 HS256，`sub` 放 user_id（轉成字串），24 小時過期。帳號管理上線後，JWT 會多帶 `iat`（簽發時間），簽發時間早於這個人 `tokens_valid_after` 的 token 一律當成無效（見 5.11）
-- **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤用 FastAPI 預設的 422。需要登入的端點，沒帶 token 或 token 過期都回 401 `not_authenticated`
+- **登入**：除了標「免」的端點，都要帶 `Authorization: Bearer <access_token>`。JWT 用 HS256，`sub` 放 user_id（轉成字串），`key` 放這個帳號的 `token_key`，24 小時過期。`token_key` 是每個帳號一把隨機字串：換掉它，這個帳號在所有裝置上的 token 就一起失效（登出、改密碼都靠它，見 5.11）；帳號刪掉後 id 被新帳號重用時，新帳號的 `token_key` 不同，舊 token 也不會變成新帳號的
+- **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤回 422，格式同 FastAPI 預設（`detail` 是清單，每項有 `type`、`loc`、`msg`），但不回傳被拒絕的輸入值，因為那可能是密碼。需要登入的端點，沒帶 token、token 過期或已經失效都回 401 `not_authenticated`；這個 401 和登入失敗的 401 `bad_credentials` 都帶 `WWW-Authenticate: Bearer`。框架自己回的錯誤（例如不存在的路徑是 404、方法不對是 405）`detail` 是英文句子而不是代碼，前端遇到不認得的 `detail` 一律顯示通用錯誤訊息。程式本身出錯時回 500 `{"detail": "internal_error"}`，細節只留在伺服器的紀錄裡
 - **數字**：`score` 這類小數不先四捨五入。要顯示的整數百分比另外給 `percent`，算法同 `similarity.percent`
 - **18 格順序**：一律照 `configs/traits.json` 的順序
 - **null**：表示「不知道」或「資料不夠」，不能當成 0 或 `false`
@@ -145,13 +148,14 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 ### 5.3 帳號
 
 **`POST /api/auth/register`**：JSON `{"username": "amy", "password": "…", "display_name": "Amy"}`
-- `username` 3–32 字元，只能用英數字和底線；`password` 8–128 字元；`display_name` 可省略，1–20 字元，預設同 `username`
+- `username` 3–32 字元，只能用英數字和底線，不分大小寫（一律存成小寫，登入時也轉小寫比對）；`password` 8–128 字元，雜湊和比對前都先做 Unicode NFKC 正規化；`display_name` 可省略，1–20 字元，預設同 `username`，不能含控制字元、看不見的字元、私用字元、未指派字元或換行（例如零寬空白、方向控制字元）。`username` 不能以 `demo_` 開頭，那是留給假用戶的
 - 回傳 201：`{"user_id": 301, "username": "amy", "display_name": "Amy"}`
 - 錯誤：409 `username_taken`
 
 **`POST /api/auth/login`**：表單（`application/x-www-form-urlencoded`）`username`、`password`，和 FastAPI 的 OAuth2 表單相同，`/docs` 的 Authorize 按鈕可以直接用
 - 回傳：`{"access_token": "…", "token_type": "bearer", "expires_in": 86400}`
 - 錯誤：401 `bad_credentials`（帳號不存在和密碼錯誤用同一個代碼）
+- 密碼先做 NFKC 正規化再比對；超過 512 字元的一律當作密碼錯誤，不做正規化（註冊最多 128 字元，用分解寫法輸入也放得下）
 
 **`GET /api/auth/demo-users`**：demo 快速切換的名單，只列假用戶
 - 回傳：`[{"user_id": 1, "display_name": "咖啡上班族 A", "persona": "咖啡上班族"}, …]`
@@ -160,6 +164,9 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 **`POST /api/auth/demo-login`**：JSON `{"user_id": 1}`，不用密碼
 - 回傳：同 login
 - 只能切換成假用戶，註冊的真實帳號一定要用密碼登入
+- `user_id` 是 JSON 整數，1 到 2^63−1；`true`、字串 `"2"`、`2.0` 或超出範圍都回 422
+- `DEMO_MODE=1` 時，任何連得到伺服器的人都能用 demo 用戶登入，所以只在自己電腦或 demo 現場開。關掉之後，demo 用戶的 token 立刻失效，真實帳號不受影響
+- 前端用 `GET /api/health` 的 `demo_mode` 決定要不要顯示快速切換，不要靠 404 的內容判斷
 - 錯誤：404（`DEMO_MODE` 沒開，或沒有這個人）、403 `not_demo_user`
 
 ### 5.4 上傳與進度
@@ -167,6 +174,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 **`POST /api/invoices`**：multipart，欄位名 `file`，一次一個財政部電子發票 CSV（一份一個月），上限 2 MB
 - 伺服器先**當場**用 `invoices.build_month` 的規則解析，格式有錯直接回 400；解析成功才建立背景任務
 - 同一個人重新上傳同一個月份，會取代那個月的舊資料
+- demo 用戶不能上傳，回 403 `demo_user_read_only`（和 5.11 同一個代碼）：demo 帳號是大家共用的，上傳會把真實消費掛到公開的假用戶上（第 2 週實作）
 - 「作廢」開頭的發票狀態（例如「作廢已確認」）直接跳過，不算消費；只有「開立已確認」會被計入，其他狀態回 400
 - **金額低於 10 元（含 0 元和負數的折扣）或金額有小數的明細直接略過**，不算消費、不分析。月報總金額因此是折扣前的金額
 - 數量有小數的明細（加油的公升數、秤重商品）保留，**數量當 1**。不然加油次數會消失，30 公升也會被「數量 ≥ 3」誤判成囤貨
@@ -189,7 +197,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 
 ### 5.5 品名即時分類
 
-**`POST /api/items/classify`**：JSON `{"name": "鮮奶茶 微糖"}`，`name` 去掉頭尾空白後 1–100 字元
+**`POST /api/items/classify`**：JSON `{"name": "鮮奶茶 微糖"}`，`name` 去掉頭尾空白後 1–100 字元，不能含控制字元、看不見的字元或換行
 - 回傳：
   ```json
   {"name": "鮮奶茶 微糖",
@@ -199,8 +207,9 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
    "attributes_status": "ready"}
   ```
 - `category` 一律是模型的第一名（0–9），`probs` 是 10 類各自的機率
-- `attributes`：16 個屬性加 7 個基本旗標，欄位名同 `attributes.describe`。每個欄位都可能是 `null`
-- 快取裡有 → `ready`。沒有 → `attributes` 為 `null`、`attributes_status` 為 `pending`；GPU 模式下伺服器會同時把它排進背景分析，前端每 2 秒再問一次，最多 5 次
+- `attributes`：16 個屬性加 7 個基本旗標，欄位名見 `src/ml/fields.py`。每個欄位都可能是 `null`
+- 分類框不會在請求裡等 Qwen，只查快取（`describe_items(names, ask_model=False)`）。快取裡有 → `ready`。沒有 → `attributes` 為 `null`、`attributes_status` 為 `pending`
+- 第 2 週起，GPU 模式下伺服器會把 pending 的品名排進背景分析，前端每 2 秒再問一次，最多 5 次。第 1 週還沒有這個排程，pending 不會自己變成 ready，前端先顯示「待分析」就好
 
 ### 5.6 我的品味向量與月報
 
@@ -264,7 +273,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
               "mine":   {"vector": ["…18 格"], "pushes": ["…"], "signals": ["…46 個訊號"], "items": [[["鮮奶茶", 6], ["美式咖啡", 2]], null]},
               "theirs": {"vector": ["…"], "pushes": ["…"], "signals": ["…"], "items": ["…"]}}
   ```
-  `src/web/trait-network.js` 可以直接拿來畫。資料不夠的人，四個欄位都是 `null`
+  `src/web/trait-network.js`（複製到 `src/web_v2/` 之後）可以直接拿來畫。資料不夠的人，四個欄位都是 `null`
 - `items` 是每個訊號買最多次的 3 個品名和出現的發票張數，品名一律經過 5.8 的處理
 - 錯誤：404（沒有這個人）、400 `self`（查自己）
 
@@ -295,7 +304,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `JWT_SECRET` | 無，一定要設 | 簽 JWT 用的密鑰，至少 32 字元 |
 | `JWT_EXPIRE_MINUTES` | 1440 | token 有效時間 |
 | `DEMO_MODE` | 0 | 1 = 開放 `demo-users` 和 `demo-login` |
-| `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git |
+| `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git。相對路徑一律從 repo 根目錄算起，不管在哪個資料夾啟動 |
 | `LLAMA_SERVER_URL` | `http://127.0.0.1:8080` | Qwen 的 llama-server |
 | `CATEGORY_MODEL` | fake | fake / tfidf / embedding / bert |
 | `ATTRIBUTES_MODEL` | fake | fake / qwen |
@@ -304,9 +313,11 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `CATEGORY_MODEL_REPO` | 空 | Hugging Face 上公開的分類模型庫；資料夾裡沒有模型時從這裡下載。10/15 補上 |
 | `CATEGORY_MODEL_REVISION` | 空 | 要下載的固定版本（commit），和 `CATEGORY_MODEL_REPO` 一起設定。10/15 補上 |
 
+設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。`src/ml/` 有真的模型之前，`CATEGORY_MODEL` 和 `ATTRIBUTES_MODEL` 只有 `fake` 能用，設成別的值同樣會停下來。
+
 ### 5.11 帳號管理（2026-10-15 補上）
 
-格式和錯誤規則同 5.1。假用戶（`is_demo`）不能改名、改密碼、刪帳號或刪月份，一律回 403 `demo_user_read_only`；登出照常可以用。
+格式和錯誤規則同 5.1。假用戶（`is_demo`）不能改名、改密碼、刪帳號或刪月份，一律回 403 `demo_user_read_only`（上傳發票也一樣，見 5.4）；登出照常可以用。
 
 **`GET /api/me`**
 - 回傳：`{"user_id": 301, "username": "amy", "display_name": "Amy", "is_demo": false, "months": ["2026-07", "2026-08"]}`
@@ -316,7 +327,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 - 回傳：同 `GET /api/me`。`username` 不能改
 
 **`POST /api/me/password`**：JSON `{"current_password": "…", "new_password": "…"}`，新密碼 8–128 字元
-- 回傳：同 login（一個新的 token）。改完之後，舊的 token 全部失效
+- 回傳：同 login（一個新的 token）。改完之後，這個帳號的 `token_key` 換成新的，舊的 token 全部失效，回傳的新 token 帶著新的 key
 - 錯誤：403 `wrong_password`
 
 **`DELETE /api/me`**：JSON `{"password": "…"}`
@@ -328,8 +339,8 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 - 錯誤：404 `month_not_found`、409 `job_in_progress`（那個月還有 queued 或 running 的任務）
 
 **`POST /api/auth/logout`**
-- 回傳 204。把這個人的 `tokens_valid_after` 設成現在，這個帳號在**所有裝置**上的 token 都會失效
-- `users` 表因此多一個欄位 `tokens_valid_after`（可以是空的）。SQLModel 不會幫已經存在的資料表加欄位，開發用的 `data/app.db` 刪掉重建，再跑一次 seed 就好
+- 回傳 204。換掉這個人的 `token_key`，這個帳號在**所有裝置**上的 token 都會失效
+- `users.token_key` 第 1 週就有了，不必再加欄位。登出後馬上重新登入，新拿到的 token 可以用
 
 ## 6. 模型介面（角色 2、3 交給角色 1）
 
@@ -339,12 +350,17 @@ def classify(names: list[str]) -> list[dict]:
     """每個品名回傳 {"category": 0–9, "probs": [10 個機率]}。"""
 
 # src/ml/attributes.py
-def describe_items(names: list[str]) -> list[dict | None]:
-    """每個品名回傳 16 個屬性 + 7 個基本旗標（欄位名同 attributes.describe），
-    還沒分析過的回傳 None。null 是不知道，不是 false。"""
+def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None]:
+    """每個品名回傳 16 個屬性 + 7 個基本旗標（欄位名見 src/ml/fields.py），
+    還沒分析過的回傳 None。null 是不知道，不是 false。
+    ask_model=False 時只查快取、不呼叫 Qwen（給即時分類框用）。"""
 ```
 
 `src/ml/fakes.py` 提供同樣介面的假替身，回傳固定結果。後端和 CI 一開始全部用假替身，模型好了再換成真的。
+
+回傳值一律用一般的 Python 型別（numpy 的結果先 `.tolist()`），否則 API 會回 500。在自己的測試裡呼叫 `tests/model_contract.py` 的 `check_classify(self, classify)` 和 `check_describe(self, describe_items)`，就能確認格式對不對。`probs` 不要四捨五入（至少保留 4 位小數），檢查允許的加總誤差是 0.001。
+
+`describe_items` 連不到 llama-server 時回 `None`，不要丟例外；呼叫 Qwen 要設 timeout。兩個函式會被不同的執行緒同時呼叫（FastAPI 用執行緒跑 `def` 路由），PyTorch 模型和 tokenizer 要自己加鎖。
 
 ## 7. 角色分工
 
@@ -395,13 +411,14 @@ def describe_items(names: list[str]) -> list[dict | None]:
   3. 計算過程面板；概念說明文件
   4. README；整合 4 人的發表素材
 - **注意：** 根目錄的 `invoice-insights.html` 就是 GitHub Pages 上的 v1，**不要覆蓋它**。v2 的輸出換別的位置
+- **v2 網頁放在 `src/web_v2/`：** FastAPI 從 `/web/` 提供它（現在只有一個預留的 `index.html`）。`src/web/` 是 v1 報告的建置來源，凍結不動、也不提供；需要的頁面和 JS 從 `src/web/` 複製到 `src/web_v2/` 再改（10/15 團隊決定）
 
 ## 8. 時程與砍功能順序
 
 | 週 | 日期 | 全隊目標 |
 |---|---|---|
 | 1 | 10/14–10/20 | API 規格定案；後端骨架用假替身跑通；假品名；4060 環境與選型 |
-| 2 | 10/21–10/27 | 上傳、背景任務、快取；A/B 重跑與 BERT 第一版；Qwen 介接；300 個假用戶；登入畫面 |
+| 2 | 10/21–10/27 | 上傳、背景任務、快取；分類框 pending 品名的背景分析；A/B 重跑與 BERT 第一版；Qwen 介接；300 個假用戶；登入畫面 |
 | 3 | 10/28–11/03 | **整條管線串通**；評估三項；計算過程面板；CI |
 | 4 | 11/04–11/10 | **11/04 起停止加功能，只修錯誤**；文件、README、發表素材 |
 
@@ -414,7 +431,7 @@ def describe_items(names: list[str]) -> list[dict | None]:
 - 每個角色在自己的分支工作（例如 `role-1/upload-api`），開 PR 合併進 `main`，CI 通過才合併
 - 介面先定好再開發；別人的部分還沒好，就用假替身，不要等
 - 改到別人負責的檔案時，PR 裡要標註那個角色
-- 修改 `src/receipt/` 的行為之前，先確認現有 159 個測試仍然通過
+- 修改 `src/receipt/` 的行為之前，先確認全部測試仍然通過（`.venv/Scripts/python.exe -m unittest discover -s tests` 和 `node --test "tests/*.test.cjs"`）
 - commit 訊息用英文，文件用繁體中文
 
 ## 10. 隱私規則（repo 是公開的）
@@ -458,13 +475,21 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 ### 環境
 
 1. 安裝 Python 3.12、Node.js 24、Git。可以順便裝 GitHub CLI（`gh`），開 PR 比較方便。用 uv 建虛擬環境最快：`uv venv --python 3.12 .venv`
-2. 確認現有測試通過：
+2. 安裝套件，再確認現有測試通過。每個人都要裝 `requirements.txt`，API 的測試需要它；之後一律用 `.venv` 裡的 Python。不要用 `uv sync`：`pyproject.toml` 沒有列這些套件，它會把它們移除：
    ```
-   python -m unittest discover -s tests -v
+   uv pip install --python .venv/Scripts/python.exe -r requirements.txt
+   .venv/Scripts/python.exe -m unittest discover -s tests -v
    node --test "tests/*.test.cjs"
    ```
-   預期結果：Python 77 個、JS 82 個全部通過
-3. 4060：
+   預期結果：Python 154 個、JS 82 個全部通過
+3. 後端（角色 1 的第一週成果）：
+   - 複製 `.env.example` 成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼：`.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"`
+   - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人；名單只能往後加，資料庫裡的帳號和名單對不上時會停下來並說明，這時刪掉 `data/app.db` 再重來）
+   - 啟動：`.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload`，打開 `http://127.0.0.1:8000/docs`。v2 網頁在 `http://127.0.0.1:8000/web/`，角色 4 做好之前只有一個預留頁
+   - 改了 `.env` 要手動重啟伺服器（`--reload` 只看 `.py` 檔）
+   - `src/api/tables.py` 的資料表有變動時，刪掉 `data/app.db` 再重新放入 demo 用戶
+   - `DEMO_MODE=1` 時不要加 `--host 0.0.0.0`，啟動時會印出提醒
+4. 4060：
    - 安裝 NVIDIA 驅動，用 `nvidia-smi` 確認看得到顯示卡
    - PyTorch 要裝 CUDA 版：到 pytorch.org 選 Windows + pip + CUDA 12.x 取得安裝指令，然後用 `python -c "import torch; print(torch.cuda.is_available())"` 確認輸出 `True`
    - PyTorch 用 `uv pip install --python .venv/Scripts/python.exe torch==2.8.0 --index-url https://download.pytorch.org/whl/cu128`（和分類實驗 B 同版本）
@@ -474,3 +499,37 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 - 到 GitHub repo 的 Settings → Collaborators，邀請另外 3 位組員
 - Claude 的記憶只存在舊電腦上。在新電腦上開始工作時，先請 Claude 讀這份文件
+
+## 13. 角色之間的交接
+
+要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
+
+### 13.1 同一台電腦用 worktree 分開做（2026-10-15）
+
+4060 電腦上每個角色一個 git worktree、一個自己的分支（例如角色 1 在主資料夾 `C:\Users\User\Desktop\AI_project\receipt`，角色 2 在 `C:\Users\User\.codex\worktrees\receipt-role2\receipt`）。
+
+- **被 git 忽略的東西不會跟著 worktree 走**：`.venv`、`.env`、`data/`、`rawdata/`、根目錄的 CSV、`models/`、`runtime/` 只在主資料夾
+- **Python 共用主資料夾的 `.venv`**：在自己的 worktree 根目錄執行 `C:\Users\User\Desktop\AI_project\receipt\.venv\Scripts\python.exe`。這個環境大家共用，要裝或升級套件之前先在這裡寫一行
+- **私人資料用絕對路徑讀主資料夾的檔案**，不要另外複製到別的地方，更不能放進會被 git 追蹤的位置
+- **連接埠**：角色 1 的 API 伺服器用 8000，角色 3 的 llama-server 用 8080。其他人要自己開 API 伺服器時用 `--port 8001` 之類的別的埠；每個 worktree 有自己的 `.env` 和 `data/app.db`
+- **顯示卡只有一張 4060 8GB**：角色 2 訓練 BERT 和角色 3 跑 Qwen 不要同時進行，開始前先看 `nvidia-smi` 有沒有人在用
+- **合併順序**：角色 1 的骨架（PR #7）先合併進 `main`，其他角色再把最新的 `main` 合併進自己的分支
+
+### 13.2 角色 1 轉告（2026-10-15，PR #7 後端骨架）
+
+**給角色 2**
+- `src/ml/fields.py`（欄位名）和 `src/ml/fakes.py`（假替身）已經有了。`src/ml/category.py` 的 `classify()` 照第 6 節交出：回傳一般的 Python 型別、`probs` 不要四捨五入；在你的測試裡呼叫 `tests/model_contract.py` 的 `check_classify(self, classify)`
+- 57 筆人工確認品名在主資料夾的 `data/private/category-review-20261012/labeled-items.jsonl`（JSONL，`review_status` 全是 `human_confirmed`）。重跑 A/B 實驗時，複製成 `experiments/category-models/data/items.jsonl`（被 git 忽略）
+- 把模型接進後端（`src/api/backends.py`）是角色 1 的工作（OpenSpec tasks 2.15），你交出 `classify()` 就好
+
+**給角色 3**
+- `describe_items(names, ask_model=True)`：`ask_model=False` 時只查快取（即時分類框用）；沒分析過、或連不到 llama-server 時回 `None`，不要丟例外；呼叫 Qwen 要設 timeout、要加鎖。用 `tests/model_contract.py` 的 `check_describe(self, describe_items)` 測
+- llama.cpp 的 CUDA 版（b11557，和實驗同一版）已經放在主資料夾的 `runtime/llama-b11557-cuda/`。後端用 `GET {LLAMA_SERVER_URL}/health` 判斷 GPU 模式，預設 `http://127.0.0.1:8080`
+- 假用戶擴充到約 300 人時：seed 依位置命名（`demo_001` 起），清單只能從尾端加。`build_personas` 的順序或名字一變，seed 會停下來，要刪掉 `data/app.db` 重新 seed，擴充時請一起考慮
+- demo 用戶之後不能上傳或修改資料（403 `demo_user_read_only`）
+
+**給角色 4**
+- v2 網頁放 `src/web_v2/`，伺服器從 `/web/` 提供；需要的頁面從 `src/web/` 複製過去再改，`src/web/` 本身不要改（它是 v1 的建置來源）
+- 本機 API 在 `http://127.0.0.1:8000`，文件在 `/docs`。錯誤一律是 `{"detail": "<代碼>"}`；422 的 `detail` 是清單；程式出錯回 500 `internal_error`；401 時回登入畫面
+- 要不要顯示 demo 快速切換，看 `GET /api/health` 的 `demo_mode`；名單用 `GET /api/auth/demo-users`
+- 即時分類框：第 1 週 `attributes_status` 為 `pending` 時不會自己變成 `ready`，先顯示「待分析」

@@ -75,16 +75,17 @@ def trait_value(trait, measured):
     return trait_parts(trait, measured)[0]
 
 
-def explain(rows, period, context):
+def explain(rows, period, context, attributes=None):
     """One person's taste: the vector, each signal's push on each trait, the measured signals and the
     purchases each signal lists.
 
-    None when the person has too little data at all.
+    None when the person has too little data at all. `attributes` are a model's answers per name (see
+    signals.gather); without them the keyword rules answer.
     """
     if not period:
         return None
     settings = context["traits"]
-    measured = measure(rows, period, context)
+    measured = measure(rows, period, context, attributes)
     if measured["counts"]["items"] < settings["min_items"]:
         return None
     parts = [trait_parts(trait, measured) for trait in settings["traits"]]
@@ -92,9 +93,9 @@ def explain(rows, period, context):
             "signals": measured["signals"], "items": listed(measured["purchases"], rows, context)}
 
 
-def build_vector(rows, period, context):
+def build_vector(rows, period, context, attributes=None):
     """One value per trait (None where data is thin), or None when the person has too little data at all."""
-    explained = explain(rows, period, context)
+    explained = explain(rows, period, context, attributes)
     return None if explained is None else explained["vector"]
 
 

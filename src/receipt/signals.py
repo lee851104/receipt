@@ -3,7 +3,7 @@ from collections import Counter
 from datetime import date, timedelta
 from statistics import mean, median
 
-from .attributes import DAILY, DESSERT, DRINK, MEAL, SPORT, TECH, channel_of, describe, fold, has
+from .attributes import DAILY, DESSERT, DRINK, MEAL, SPORT, TECH, channel_of, describe, fold, from_model, has
 
 CONFIRMED = 10  # category 10 still waits for review
 MEAL_BILL = {MEAL, DRINK, DESSERT}  # what a meal bill may include when estimating cost per person
@@ -48,6 +48,11 @@ def count(pool, test):
     return sum(1 for entry in pool if test(entry))
 
 
+def known(pool, flag):
+    """The items whose answer to this question is known; an unknown answer is not a 'no', so a share leaves it out."""
+    return [item for item in pool if item[flag] is not None]
+
+
 def ranked(counter):
     """Most frequent first; ties fall back to the key so results never depend on input order."""
     return sorted(counter.items(), key=lambda item: (-item[1], item[0]))
@@ -65,15 +70,21 @@ def home_cities(located):
     return {district[:3] for district in home_districts(located)}
 
 
-def gather(rows, context):
-    """Answer the item questions once per line, then group the lines into invoices."""
+def gather(rows, context, attributes=None):
+    """Answer the item questions once per line, then group the lines into invoices.
+
+    The answers come from the keyword rules, or from `attributes` when given: {name: a model's fields, or None while
+    the name waits for the model}.
+    """
     brands, vocabulary = context["brands"], context["vocabulary"]
     channels, lines, invoices = {}, [], {}
     for row in rows:
         merchant = row["merchant"]
         if merchant not in channels:
             channels[merchant] = channel_of(merchant, brands, vocabulary)
-        line = {**row, "channel": channels[merchant], **describe(row, channels[merchant], vocabulary)}
+        answers = (describe(row, channels[merchant], vocabulary) if attributes is None
+                   else from_model(row, channels[merchant], attributes.get(row["name"]), vocabulary))
+        line = {**row, "channel": channels[merchant], **answers}
         lines.append(line)
         invoice = invoices.setdefault(row["invoice"], {
             "date": row["date"], "merchant": merchant, "channel": channels[merchant],
@@ -143,8 +154,9 @@ def quick_habit_meals(meals, off):
 
 
 def weekday_quick_share(meals, off):
-    """Workdays with a quick meal that was bought on at least three different workdays, over workdays with a meal."""
-    workdays = {item["date"] for item in meals if item["date"] not in off}
+    """Workdays with a quick meal that was bought on at least three different workdays, over workdays with a meal
+    whose quick answer is known."""
+    workdays = {item["date"] for item in known(meals, "quick") if item["date"] not in off}
     return share(len({item["date"] for item in quick_habit_meals(meals, off)}), len(workdays))
 
 
@@ -169,12 +181,15 @@ def pet_signals(items, paid, months):
             for species in ("cat", "dog") for kind, key in (("food", "pet_food"), ("supply", "pet_supply"), ("visits", "visits"))}
 
 
-def measure(rows, period, context):
+def measure(rows, period, context, attributes=None):
     """Raw signals (None when they cannot be measured), the counts traits require, calendar constants, and the
-    purchases each signal counted."""
+    purchases each signal counted.
+
+    A share over items answered by a model leaves out the items whose answer is unknown (see gather for `attributes`).
+    """
     days, off, long_weekend = calendar_days(period, context["calendar"])
     months = len(period)
-    lines, invoices = gather(rows, context)
+    lines, invoices = gather(rows, context, attributes)
     items = valid_items(lines)
     paid = [invoice for invoice in invoices.values() if invoice["total"] > 0]
     paid_bills = {key for key, invoice in invoices.items() if invoice["total"] > 0}
@@ -253,13 +268,13 @@ def measure(rows, period, context):
 
     signals = {
         "meal_cost": median(costs) if len(costs) >= 3 else None,
-        "clearance_share": share(len(behind["clearance_share"]), len(food)),
+        "clearance_share": share(len(behind["clearance_share"]), len(known(food, "clearance"))),
         "premium_drink_share": share(len(behind["premium_drink_share"]), len(drinks)),
         "store_meal_share": share(len(behind["store_meal_share"]), len(meals)),
         "weekday_quick_share": weekday_quick_share(meals, off),
-        "store_clearance_share": share(len(behind["store_clearance_share"]), len(store_food)),
+        "store_clearance_share": share(len(behind["store_clearance_share"]), len(known(store_food, "clearance"))),
         "shop_meal_share": share(len(behind["shop_meal_share"]), len(meals)),
-        "fresh_share": share(len(behind["fresh_share"]), len(food)),
+        "fresh_share": share(len(behind["fresh_share"]), len(known(food, "cooking"))),
         "ready_meal_share": share(len(meals), len(food)),
         "kitchen_per_month": len(behind["kitchen_per_month"]) / months,
         "sugar_mean": mean(item["sugar"] for item in behind["sugar_mean"]) if behind["sugar_mean"] else None,
@@ -273,7 +288,7 @@ def measure(rows, period, context):
         "away_share": share(len(away), len(located)) if home else None,
         "stays": visits("住宿"), "long_trips": visits("長途交通"),
         "convenience_share": share(len(bills("convenience_share")), len(store_bills)) if len(store_bills) >= 2 else None,
-        "bulk_share": share(len(behind["bulk_share"]), len(daily)),
+        "bulk_share": share(len(behind["bulk_share"]), len(known(daily, "bulk"))),
         "small_daily_visits": len(bills("small_daily_visits")) / months,
         "home_items": len(behind["home_items"]) / months,
         "stationery_items": len(behind["stationery_items"]) / months,

@@ -8,6 +8,8 @@ MEAL, DRINK, DESSERT, FRESH, SPORT, DAILY, TECH = 0, 1, 2, 3, 4, 8, 9
 FOOD = {MEAL, DRINK, DESSERT, FRESH}
 GOODS = {4, 5, 6, 7, 8, 9}  # confirmed categories that are not food
 GENERAL = "一般店家"
+# The model's kinds of fun, written the way the vocabulary and the pages write them.
+FUN_WORDS = {"movie": "電影", "singing": "唱歌", "show": "展演", "game": "遊樂"}
 
 
 def fold(text):
@@ -77,4 +79,44 @@ def describe(row, channel, vocabulary):
         "pet_supply": has(name, vocabulary["pet_supply"]),
         "species": species_of(name, vocabulary),
         "alcohol": has(name, vocabulary["alcohol"]) and not has(name, vocabulary["not_alcohol"]),
+    }
+
+
+def from_model(row, channel, fields, vocabulary):
+    """The answers of describe(), from a model's attributes for the name. None means unknown, never no.
+
+    A name still waiting for the model (fields is None) answers like a model that knows nothing. The category comes
+    from the classifier, so a question outside its categories is a known no (False), inside them it is the model's
+    answer, and the model's None stays None.
+    """
+    fields = fields or {}
+    name, category = row["name"], row["category"]
+    food, goods = category in FOOD, category in GOODS
+
+    def asked(key, applies):
+        return fields.get(key) if applies else False
+
+    sugar = fields.get("sugar")
+    species = fields.get("species")
+    return {
+        "food": food,
+        "clearance": asked("clearance", food),
+        # Without the model's answer a drink is as sweet as its name or its shop suggests.
+        "sugar": (sugar_of(name, channel, vocabulary) if sugar is None else sugar) if category == DRINK else None,
+        "quick": asked("quick", category == MEAL),
+        "cooking": asked("cooking", category == FRESH),
+        "kitchen": asked("kitchen", category in (FRESH, DAILY)),
+        "sport_supply": fields.get("sport_supply"),
+        "sport_gear": asked("sport_gear", goods),
+        "car_care": asked("car_care", goods),
+        # Three of a kind are bulk: the quantity is on the invoice, where the model cannot see it.
+        "bulk": True if row["quantity"] >= 3 else fields.get("bulk"),
+        "home": asked("home", goods),
+        "stationery": asked("stationery", goods),
+        # No kind of fun from the model: the shop's own words decide, never the name (an empty name has none).
+        "fun": FUN_WORDS.get(fields.get("fun")) or fun_of("", row["merchant"], vocabulary),
+        "pet_food": fields.get("pet_food"),
+        "pet_supply": fields.get("pet_supply"),
+        "species": species if species in ("cat", "dog") else None,
+        "alcohol": fields.get("alcohol"),
     }

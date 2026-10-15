@@ -23,7 +23,7 @@
 | 假用戶 | 8 種類型 × 5 人 = 40 人，2026 年 3–4 月的假發票 | `src/receipt/personas.py` |
 | 網頁 | 單一 HTML 檔，JS 全部內嵌，GitHub Pages 公開中 | `scripts/build_report.py` → `invoice-insights.html` |
 | 後端骨架 | FastAPI + SQLite：註冊、登入、demo 快速切換、品名即時分類、健康檢查，模型先用假替身；v2 網頁從 `/web/` 提供（10/15 完成角色 1 第 1 週） | `src/api/`、`src/ml/`、`src/web_v2/` |
-| 測試 | Python 154 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
+| 測試 | Python 219 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
 | 分類實驗 | 品名 → 10 類。A：TF-IDF + 邏輯迴歸，macro-F1 0.62；B：bge-small-zh（512 維）+ 邏輯迴歸，macro-F1 0.66。只有 57 個人工確認品名，只能驗證 4 類 | `experiments/category-models/`、`docs/category-models-brief.md` |
 | 屬性實驗 | Qwen3-4B（Q4_K_M，2.4 GB）判斷 16 個屬性。真實資料上模型單獨 F1 44%，加規則 94%（事後回測，不是獨立驗證） | `experiments/receipt-attributes/` |
 
@@ -172,27 +172,31 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 ### 5.4 上傳與進度
 
 **`POST /api/invoices`**：multipart，欄位名 `file`，一次一個財政部電子發票 CSV（一份一個月），上限 2 MB
-- 伺服器先**當場**用 `invoices.build_month` 的規則解析，格式有錯直接回 400；解析成功才建立背景任務
-- 同一個人重新上傳同一個月份，會取代那個月的舊資料
+- 伺服器先**當場**用 `invoices.build_month(..., for_upload=True)` 的規則解析，格式有錯直接回 400，既有資料不變；解析成功才建立背景任務
+- 整個請求超過 2 MB 加 64 KB 時，伺服器在讀取內容之前（甚至在檢查登入之前）就回 413；沒有 `Content-Length` 的請求（分段傳送）回 411 `length_required`。瀏覽器用 `fetch` 加 `FormData` 一定會帶 `Content-Length`，前端不必處理 411（10/15 補上）
+- 一個月最多 2000 筆留下來的明細，超過回 400 `invalid_csv`（真實的月份大約 50 筆；這樣一次上傳的背景任務不會跑超過大約一小時）（10/15 補上）
+- 同一個人重新上傳同一個月份，會取代那個月的舊資料：舊的品項和已經結束的任務刪掉；還在排隊或執行中的舊任務照樣跑完
 - demo 用戶不能上傳，回 403 `demo_user_read_only`（和 5.11 同一個代碼）：demo 帳號是大家共用的，上傳會把真實消費掛到公開的假用戶上（第 2 週實作）
 - 「作廢」開頭的發票狀態（例如「作廢已確認」）直接跳過，不算消費；只有「開立已確認」會被計入，其他狀態回 400
 - **金額低於 10 元（含 0 元和負數的折扣）或金額有小數的明細直接略過**，不算消費、不分析。月報總金額因此是折扣前的金額
 - 數量有小數的明細（加油的公升數、秤重商品）保留，**數量當 1**。不然加油次數會消失，30 公升也會被「數量 ≥ 3」誤判成囤貨
-- 現有 `build_month` 遇到作廢或小數都會直接報錯，5–8 月的真實發票就有這兩種情況，第二週接上傳前要先修。3–8 月真實發票共 336 列：作廢 2 列、金額規則略過 61 列，留下 273 列
+- 這些規則只在 `for_upload=True` 時套用，v1 報表的建置照舊（原本遇到作廢或小數會直接報錯）。3–8 月真實發票共 336 列：作廢 2 列、金額規則略過 56 列，留下 278 列（10/14 的 273 是決定保留小數數量之前算的，差的 5 列就是小數數量）
 - 回傳 202：`{"job_id": 12, "month": "2026-05", "rows": 35}`
-- 錯誤：400 `invalid_csv`（`message` 寫原因，例如一份 CSV 有兩個月份）、413 `file_too_large`
+- 錯誤：400 `invalid_csv`（`message` 寫原因，例如一份 CSV 有兩個月份；某一列的數字、日期或發票狀態不對時寫第幾行、哪一欄，例如 `Line 3: 消費明細_金額 is not a number`，不重複儲存格的內容，因為欄位錯位時那一格可能是品名的一部分（10/15 補上））、401、403 `demo_user_read_only`、411 `length_required`、413 `file_too_large`
 
 **`GET /api/jobs/{job_id}`**
 - 回傳：`{"job_id": 12, "month": "2026-05", "status": "running", "done": 10, "total": 25, "message": "判斷品項屬性"}`
 - `status`：queued / running / done / failed
 - `total` 是這份 CSV 不重複的品名數，`done` 是已經分類並判斷完屬性的品名數。無 GPU 模式下，快取裡沒有的品名直接標「待分析」，也算進 `done`
-- `message`：目前步驟的中文說明；failed 時寫失敗原因
-- 錯誤：404（任務不存在，或不是你的任務）
+- `message`：目前步驟的中文說明；failed 時寫失敗原因：「分類模型無法使用，請稍後重新上傳」「處理失敗，請重新上傳」「服務重新啟動，請重新上傳」
+- 伺服器一次只跑一個任務（只有一個 llama-server，SQLite 也只有一個寫入者）：所有任務交給同一條背景執行緒，依上傳順序（先進先出）一個一個跑，不佔用回應請求的執行緒，所以排隊的任務再多，其他 API 照常回應。別人的任務在跑時，新任務的 `status` 停在 `queued`，前端照常每 2 秒問一次就好。停止伺服器時不會等任務跑完，還沒跑完的任務在下次啟動時標成 failed（10/15 補上）
+- `job_id` 不會重複使用，任務刪掉之後也不會（10/15 補上）
+- 錯誤：404 `not_found`（任務不存在，或不是你的任務，兩種回應完全一樣）、422（`job_id` 不是 1 到 2^63−1 的整數）
 
 **背景任務的步驟：**
 1. 列出不重複品名，呼叫 `classify()`。最高機率低於 `CATEGORY_MIN_PROB`（預設 0.5）的品名存成 10 待確認，不算進品味向量
 2. 呼叫 `describe_items()`：先查 `item_cache`，沒有才問 Qwen。無 GPU 模式下沒有快取的回 `None`，算進 `pending_attributes`
-3. 用這個人所有月份的資料重算 18 格，存進 `profiles`
+3. 用這個人所有月份的資料重算 18 格，存進 `profiles`（第 2 週第二批實作；在那之前任務做完第 2 步就是 done）
 4. `status` 改成 done。GPU 恢復之後，重新上傳同一個月份就能補算待分析的品名
 
 ### 5.5 品名即時分類
@@ -209,7 +213,8 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 - `category` 一律是模型的第一名（0–9），`probs` 是 10 類各自的機率
 - `attributes`：16 個屬性加 7 個基本旗標，欄位名見 `src/ml/fields.py`。每個欄位都可能是 `null`
 - 分類框不會在請求裡等 Qwen，只查快取（`describe_items(names, ask_model=False)`）。快取裡有 → `ready`。沒有 → `attributes` 為 `null`、`attributes_status` 為 `pending`
-- 第 2 週起，GPU 模式下伺服器會把 pending 的品名排進背景分析，前端每 2 秒再問一次，最多 5 次。第 1 週還沒有這個排程，pending 不會自己變成 ready，前端先顯示「待分析」就好
+- 屬性先查後端的 `item_cache`，沒有才問 `describe_items(..., ask_model=False)`。GPU 模式下（假模型也算），pending 的品名在回應送出之後排進背景分析，結果寫進 `item_cache`，下次查詢就是 `ready`；前端每 2 秒再問一次，最多 5 次。同一個品名還在分析時再問，不會再排一次（10/15 補上）。無 GPU 模式下不排程，pending 不會自己變成 ready，顯示「待分析」就好（10/15 實作）
+- 錯誤：401、422、503 `model_unavailable`（分類模型沒有載入，見 5.9）
 
 ### 5.6 我的品味向量與月報
 
@@ -304,7 +309,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `JWT_SECRET` | 無，一定要設 | 簽 JWT 用的密鑰，至少 32 字元 |
 | `JWT_EXPIRE_MINUTES` | 1440 | token 有效時間 |
 | `DEMO_MODE` | 0 | 1 = 開放 `demo-users` 和 `demo-login` |
-| `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git。相對路徑一律從 repo 根目錄算起，不管在哪個資料夾啟動 |
+| `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git。相對路徑一律從 repo 根目錄算起，不管在哪個資料夾啟動。只接受 `sqlite:///…`（檔案）和 `sqlite://`（記憶體，測試用），錯誤訊息不會印出設定的值 |
 | `LLAMA_SERVER_URL` | `http://127.0.0.1:8080` | Qwen 的 llama-server |
 | `CATEGORY_MODEL` | fake | fake / tfidf / embedding / bert |
 | `ATTRIBUTES_MODEL` | fake | fake / qwen |
@@ -313,7 +318,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `CATEGORY_MODEL_REPO` | 空 | Hugging Face 上公開的分類模型庫；資料夾裡沒有模型時從這裡下載。10/15 補上 |
 | `CATEGORY_MODEL_REVISION` | 空 | 要下載的固定版本（commit），和 `CATEGORY_MODEL_REPO` 一起設定。10/15 補上 |
 
-設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。`src/ml/` 有真的模型之前，`CATEGORY_MODEL` 和 `ATTRIBUTES_MODEL` 只有 `fake` 能用，設成別的值同樣會停下來。
+設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。伺服器只能開**一個行程**：不要加 `--workers`，也不要兩個伺服器共用同一個資料庫，因為啟動時會把還沒做完的任務標成 failed，「一次只跑一個任務」的背景執行緒也只管得到同一個行程裡的任務。`src/ml/` 有真的模型之前，`CATEGORY_MODEL` 和 `ATTRIBUTES_MODEL` 只有 `fake` 能用，設成別的值同樣會停下來。
 
 ### 5.11 帳號管理（2026-10-15 補上）
 
@@ -332,7 +337,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 
 **`DELETE /api/me`**：JSON `{"password": "…"}`
 - 回傳 204。依序刪掉這個人的 `items`、`jobs`、`profiles`、`users`，再刪掉 `item_cache` 裡已經沒有任何 `items` 用到的品名
-- 錯誤：403 `wrong_password`
+- 錯誤：403 `wrong_password`、409 `job_in_progress`（還有 queued 或 running 的上傳任務，等它做完再刪；不然那個任務會在刪除之後又把品名寫進快取）（10/15 補上）
 
 **`DELETE /api/me/months/{month}`**：`month` 是 `YYYY-MM`
 - 回傳 204。刪掉那個月的 `items` 和 `jobs`，重算 18 格；`item_cache` 的清理方式同上
@@ -481,13 +486,13 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
    .venv/Scripts/python.exe -m unittest discover -s tests -v
    node --test "tests/*.test.cjs"
    ```
-   預期結果：Python 154 個、JS 82 個全部通過
+   預期結果：Python 219 個、JS 82 個全部通過
 3. 後端（角色 1 的第一週成果）：
    - 複製 `.env.example` 成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼：`.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"`
-   - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人；名單只能往後加，資料庫裡的帳號和名單對不上時會停下來並說明，這時刪掉 `data/app.db` 再重來）
+   - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人；名單只能往後加，資料庫裡的帳號和名單對不上時會停下來並說明，這時刪掉 `data/app.db*` 再重來）
    - 啟動：`.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload`，打開 `http://127.0.0.1:8000/docs`。v2 網頁在 `http://127.0.0.1:8000/web/`，角色 4 做好之前只有一個預留頁
    - 改了 `.env` 要手動重啟伺服器（`--reload` 只看 `.py` 檔）
-   - `src/api/tables.py` 的資料表有變動時，刪掉 `data/app.db` 再重新放入 demo 用戶
+   - `src/api/tables.py` 多了新的資料表時不用動，伺服器或 seed 啟動時會自動建立；已經存在的資料表改了欄位或索引時，才要刪掉 `data/app.db*`（資料庫和它的 `-wal`、`-shm` 檔）再重新放入 demo 用戶
    - `DEMO_MODE=1` 時不要加 `--host 0.0.0.0`，啟動時會印出提醒
 4. 4060：
    - 安裝 NVIDIA 驅動，用 `nvidia-smi` 確認看得到顯示卡
@@ -503,6 +508,29 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 ## 13. 角色之間的交接
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
+
+### 13.3 角色 1 轉告（2026-10-15，第 2 週上傳管線，分支 `role-1/uploads`）
+
+上傳（5.4）、任務進度和即時分類的屬性快取（5.5）都接好了，規格的增補都標了「10/15」。品味向量的重算（5.4 第 3 步）、`GET /api/me/profile` 和帳號管理在下一批。
+
+**給所有人**
+- 資料表變了（多了 `jobs`、`items`、`item_cache`、`profiles`，外鍵會檢查）。第 1 週的資料庫（只有 `users`）不用刪：啟動時會自動補上新的資料表。只有用這個分支較早的 commit 建出來的資料庫要刪掉 `data/app.db*`（資料庫和它的 `-wal`、`-shm` 檔）再跑一次 seed，因為那時的 `items` 等資料表和現在的欄位、索引不同，啟動時不會被改過來
+- 伺服器只能開一個行程（不要 `--workers`），見 5.10
+- 程式的錯誤訊息和 log 都不能帶品名：資料庫的錯誤已經設定成不印參數，自己寫的例外訊息也不要把品名放進去（第 10 節）
+
+**給角色 2**
+- 上傳的背景任務對一個月份的所有不重複品名**呼叫一次** `classify(names)`（最多 2000 個）。回傳的筆數一定要等於 `len(names)`、順序相同；少一筆或丟出例外，整個任務就變成 failed
+- 即時分類框每次呼叫 `classify([name])`，在請求裡同步執行，所以單筆最好在 CPU 上 1 秒內回來
+
+**給角色 3**
+- 後端自己管 `item_cache`（品名加模型名稱一筆，`ON CONFLICT DO NOTHING`）。只有快取裡沒有的品名才會交給 `describe_items`：上傳時每批最多 20 個，模型可用時 `ask_model=True`；即時分類框先用 `ask_model=False`，GPU 模式下再在背景用 `ask_model=True` 問一次。回傳的筆數一定要等於 `len(names)`
+- 模型是否可用看 `gpu_probe()`（`GET {LLAMA_SERVER_URL}/health`）。上傳任務一次只跑一個，但即時分類框的背景分析可能同時呼叫，所以 `describe_items` 裡呼叫 llama-server 的地方還是要加鎖
+- 上傳任務裡 `describe_items` 丟出例外會讓任務變成 failed；即時分類框的背景分析失敗只記 log，品名維持待分析。連不到 llama-server 時照第 6 節回 `None`，不要丟例外
+
+**給角色 4**
+- 上傳：`POST /api/invoices`（multipart，欄位名 `file`）回 202 的 `job_id` 之後，每 2 秒問 `GET /api/jobs/{job_id}`，直到 `done` 或 `failed`；進度條用 `done / total`，文字用 `message`。別人的任務在跑時會停在 `queued` 一陣子，是正常的
+- 錯誤：400 `invalid_csv` 顯示 `message`（英文，例如缺哪個欄位，或 `Line 3: 消費明細_金額 is not a number` 這樣的第幾行、哪一欄）；413「檔案超過 2 MB」；403 `demo_user_read_only`「示範帳號不能上傳」
+- 即時分類框：`pending` 現在會自己變成 `ready`（GPU 模式，或假模型），照 5.5 每 2 秒再問、最多 5 次；503 `model_unavailable` 顯示「分類模型暫時無法使用」
 
 ### 13.1 同一台電腦用 worktree 分開做（2026-10-15）
 
@@ -525,7 +553,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 **給角色 3**
 - `describe_items(names, ask_model=True)`：`ask_model=False` 時只查快取（即時分類框用）；沒分析過、或連不到 llama-server 時回 `None`，不要丟例外；呼叫 Qwen 要設 timeout、要加鎖。用 `tests/model_contract.py` 的 `check_describe(self, describe_items)` 測
 - llama.cpp 的 CUDA 版（b11557，和實驗同一版）已經放在主資料夾的 `runtime/llama-b11557-cuda/`。後端用 `GET {LLAMA_SERVER_URL}/health` 判斷 GPU 模式，預設 `http://127.0.0.1:8080`
-- 假用戶擴充到約 300 人時：seed 依位置命名（`demo_001` 起），清單只能從尾端加。`build_personas` 的順序或名字一變，seed 會停下來，要刪掉 `data/app.db` 重新 seed，擴充時請一起考慮
+- 假用戶擴充到約 300 人時：seed 依位置命名（`demo_001` 起），清單只能從尾端加。`build_personas` 的順序或名字一變，seed 會停下來，要刪掉 `data/app.db*` 重新 seed，擴充時請一起考慮
 - demo 用戶之後不能上傳或修改資料（403 `demo_user_read_only`）
 
 **給角色 4**

@@ -1,23 +1,23 @@
 {
-  "status": "pending_human_review",
+  "status": "ready",
   "items": 100,
-  "human_confirmed": 0,
+  "human_confirmed": 100,
   "review_groups": [
     {
       "items": 25,
-      "confirmed": 0
+      "confirmed": 25
     },
     {
       "items": 25,
-      "confirmed": 0
+      "confirmed": 25
     },
     {
       "items": 25,
-      "confirmed": 0
+      "confirmed": 25
     },
     {
       "items": 25,
-      "confirmed": 0
+      "confirmed": 25
     }
   ],
   "predicted_items": 100,

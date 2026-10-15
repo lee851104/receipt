@@ -514,10 +514,10 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 - 介面只有 names，merchant 固定空字串、quantity=1；品項數量的 bulk 補位只在計算副本。新版採單筆推論、輸入只去開頭「示範」、保留原名快取鍵；prompt hash 與 input-v2:batch1 已進 model_version。換版本須重算舊屬性，不能沿用舊版本 cache。
 - `build_personas(calendar, total=300)` 尾端擴充、保留原 40 人順序；v1 未指定 total 仍是 40 人。先前 seed 入口改為 300 的變更請在角色 1 合併時確認，本次不再修改該檔案。
 - 107 筆假品名逐筆對照見 `docs/results/synthetic-cache-review.md`，舊／新模型輸出分存 `datasets/synthetic/attribute-cache.model-v1.jsonl`、`attribute-cache.model-v2.jsonl`；有效快取保留每欄 corrections。2026-10-15 使用者檢查並確認全部 107 筆：46 筆為 `human_corrected`、61 筆為 `human_confirmed`，保留助理準備與使用者確認的來源，並用屬性雜湊避免重建或後續修改誤用核准；此確認僅涵蓋公開假品名。配對數字見 `docs/results/matching.md`，僅核心公式，尚未驗證分類/API/DB 端到端。
-- 4.8（10/15 使用者續作要求）：100 筆真實品名已用新版模型全部重跑，舊 `predictions.jsonl` 與四份空白盲標檔保留。使用者改採「先由本機模型預標，再由本人審核」，所以新增稿標示 `review_method=model_assisted`，不宣稱獨立盲標。私人根目錄為主資料夾 `C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-review-20261015\`；新版預測為 `predictions-01cd0f32b598.jsonl`，待審稿與中文檢查表在 `assisted-01cd0f32b598\`。目前 100/100 已預測、0/100 人工確認；品名只准本機腳本處理，畫面只印彙總。
-- `scripts/predict_private_attributes.py` 可依目前版本產生私有預測，加 `--assisted` 產生四份各 25 筆待審稿；不覆寫既有預測或人工稿。`scripts/attribute_review.py` 檢查 ID/品名一致、23 欄型別、模型版本與全部 100 筆人工狀態，未完成就拒絕正式評分。布林以 true 為正例，三個列舉欄位用非 null 類別 micro 指標；gold=null 排除、模型 null 對已知正例計漏判，分母為零顯示 —。完整指標只能在人工確認後產生；進度彙總見 `docs/results/attribute-review-status.json`。
+- 4.8（10/15 使用者續作要求）：100 筆真實品名已用新版模型全部重跑，舊 `predictions.jsonl` 與四份空白盲標檔保留。使用者改採「先由本機模型預標，再由本人審核」，所以新增稿標示 `review_method=model_assisted`，不宣稱獨立盲標。私人根目錄為主資料夾 `C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-review-20261015\`；新版預測為 `predictions-01cd0f32b598.jsonl`，待審稿與中文檢查表在 `assisted-01cd0f32b598\`。2026-10-15 使用者已確認 100/100 筆，保留 1 筆／1 欄人工修正；4.8 已完成，23 欄彙總見 `docs/results/attributes.md` 與 `attributes.json`。這批為使用者審核模型預標，並非四人獨立盲標；品名只准本機腳本處理，畫面只印彙總。
+- `scripts/predict_private_attributes.py` 可依目前版本產生私有預測，加 `--assisted` 產生四份各 25 筆待審稿；不覆寫既有預測或人工稿。`scripts/attribute_review.py` 檢查 ID/品名一致、23 欄型別、模型版本與全部 100 筆人工狀態，未完成就拒絕正式評分。布林以 true 為正例，三個列舉欄位用非 null 類別 micro 指標；gold=null 排除、模型 null 對已知正例計漏判，分母為零顯示 —。本批已通過人工確認門檻並產生完整指標；進度彙總見 `docs/results/attribute-review-status.json`。
 - 4.7 相依更新（來源：角色 1 分支 `role-1/uploads`，`873f46c`）：2.3 已完成，2.4 的分類／快取／背景分析已完成，但 `profiles` 重算仍在下一批；因此完整 seed 尚不能驗收，本角色未另建替代的資料庫管線。
-- 人工確認後，在角色 3 worktree 執行下列命令產生 `docs/results/attributes.md` 與 JSON（未完成會回傳 exit 2，不寫正式報告）：
+- 已確認資料可在角色 3 worktree 執行下列命令重現 `docs/results/attributes.md` 與 JSON（未完成會回傳 exit 2，不寫正式報告）：
 
 ```powershell
 $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-review-20261015'

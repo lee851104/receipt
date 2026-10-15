@@ -21,11 +21,12 @@
 | 配對頁 | +30% 以上算相近、−10% 以下算互補，各取前 5；可依同區、同縣市、同地區篩選 | `src/web/match.html`、`match-filter.js`、`src/receipt/places.py`、`configs/regions.json` |
 | 假用戶 | 8 種類型 × 5 人 = 40 人，2026 年 3–4 月的假發票 | `src/receipt/personas.py` |
 | 網頁 | 單一 HTML 檔，JS 全部內嵌，GitHub Pages 公開中 | `scripts/build_report.py` → `invoice-insights.html` |
-| 測試 | Python 77 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
+| 後端骨架 | FastAPI + SQLite：註冊、登入、demo 快速切換、品名即時分類、健康檢查，模型先用假替身；v2 網頁從 `/web/` 提供（10/15 完成角色 1 第 1 週） | `src/api/`、`src/ml/`、`src/web_v2/` |
+| 測試 | Python 154 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
 | 分類實驗 | 品名 → 10 類。A：TF-IDF + 邏輯迴歸，macro-F1 0.62；B：bge-small-zh（512 維）+ 邏輯迴歸，macro-F1 0.66。只有 57 個人工確認品名，只能驗證 4 類 | `experiments/category-models/`、`docs/category-models-brief.md` |
 | 屬性實驗 | Qwen3-4B（Q4_K_M，2.4 GB）判斷 16 個屬性。真實資料上模型單獨 F1 44%，加規則 94%（事後回測，不是獨立驗證） | `experiments/receipt-attributes/` |
 
-**還沒有的：** 後端、資料庫、登入、CI、BERT。
+**還沒有的：** 上傳與背景任務、品味向量和配對的 API、帳號管理、真的分類和屬性模型、CI、BERT。
 
 ### 18 格品味向量
 

@@ -25,6 +25,7 @@
 - [ ] 2.12 新增 `Dockerfile`、`docker-compose.yml`、`.dockerignore`，並在 CI 加上 `docker build`；確認映像檔裡找不到 `rawdata/`、`data/`、CSV、壓縮檔和 `.env`，CI 上建置成功
 - [ ] 2.13 實作容器的啟動流程：`CATEGORY_MODEL=bert` 而且沒有模型時，從 `CATEGORY_MODEL_REPO` 下載 `CATEGORY_MODEL_REVISION`；`DEMO_MODE=1` 而且資料庫是空的時，自動執行 seed；用無效的模型庫名稱測試下載失敗時服務照樣啟動、健康檢查顯示 `unavailable`
 - [ ] 2.14 README 補上架構圖、啟動步驟（虛擬環境和 Docker 兩種），以及沒有採用 pgvector 的原因；請另一位組員照著文件從零啟動成功
+- [ ] 2.15 角色 2、3 交出真模型後（3.6、4.3），在 `src/api/backends.py` 的 `load_backends` 接上 `CATEGORY_MODEL`、`ATTRIBUTES_MODEL` 的真實作（目前只接受 `fake`）；用 `tests/model_contract.py` 的 `check_classify`、`check_describe` 確認回傳格式，健康檢查顯示實際的模型名稱
 
 ## 3. 角色 2：分類模型
 

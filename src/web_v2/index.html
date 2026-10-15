@@ -10,6 +10,7 @@
 <script defer src="./flow.js"></script>
 <script defer src="./view-adapters.js"></script>
 <script defer src="./workspace-flow.js"></script>
+<script defer src="./explanation.js"></script>
 <script defer src="./workspace-ui.js"></script>
 <script defer src="./app.js"></script>
 </head>
@@ -92,7 +93,7 @@
 </section>
 <section id="matches-panel" hidden aria-labelledby="matches-title"><div class="section-header"><div><p class="eyebrow">04 / 找到同好</p><h1 id="matches-title" tabindex="-1">從消費習慣，<em>找到合拍的人。</em></h1></div><button id="refresh-matches" class="quiet" type="button">重新查詢</button></div>
 <div class="match-controls"><div role="group" aria-label="配對類型"><button type="button" data-match-kind="similar" aria-pressed="true">相近</button><button type="button" data-match-kind="opposite" aria-pressed="false">互補</button></div><label for="match-scope">範圍 <select id="match-scope"><option value="all">不限</option><option value="district">同一區</option><option value="city">同縣市</option><option value="region">同地區</option></select></label></div>
-<p id="match-areas" class="small"></p><p id="match-status" role="status" aria-live="polite"></p><div id="match-list" class="match-list"></div><p id="network-status" role="status"></p><iframe id="network-frame" title="你與配對對象的品味關係圖" referrerpolicy="no-referrer" hidden></iframe>
+<p id="match-areas" class="small"></p><p id="match-status" role="status" aria-live="polite"></p><div id="match-list" class="match-list"></div><p id="network-status" role="status"></p><section id="explain-panel" class="explain-panel" aria-labelledby="explain-title" hidden></section><iframe id="network-frame" title="你與配對對象的品味關係圖" referrerpolicy="no-referrer" hidden></iframe>
 </section>
   </section>
   <noscript><p class="message error">請開啟 JavaScript，才能使用登入與分類功能。</p></noscript>

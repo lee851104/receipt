@@ -3,7 +3,7 @@
  'use strict';
  function createWorkspaceUI({api,session}){
   const $=id=>document.getElementById(id);
-  let enabled=false,current='classify',lastProfile=null,lastNetwork=null,sessionVersion=-1;
+  let enabled=false,current='classify',lastProfile=null,lastNetwork=null,networkRenderError='',sessionVersion=-1;
   const work=ReceiptWorkspace.createWorkspace({api,session,onChange:render});
   const make=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
   function clearFrame(id){const frame=$(id);frame.hidden=true;frame.removeAttribute('src');}
@@ -57,18 +57,22 @@
    for(const person of matches.data?.people||[]){
     const card=make('button',undefined,'match-card');card.type='button';card.setAttribute('aria-label','查看 '+person.display_name+' 的品味關係圖');
     const head=make('div',undefined,'match-card-head');head.append(make('h3',person.display_name),make('strong',ReceiptViewData.signedPercent(person.percent),state.kind==='opposite'?'opposite-score':'similar-score'));
-    card.append(head,make('p',person.area||'生活圈未知','small'),make('span','查看雙方關係圖 →','small'));
+    card.append(head,make('p',person.area||'生活圈未知','small'),make('span','查看計算與關係圖 →','small'));
     card.addEventListener('click',()=>work.loadNetwork(person));$('match-list').append(card);
    }
    for(const button of document.querySelectorAll('[data-match-kind]'))button.setAttribute('aria-pressed',String(button.dataset.matchKind===state.kind));
    $('match-scope').value=state.scope;
    const network=state.network;
-   $('network-status').textContent=network.status==='loading'?'載入雙方品味關係圖…':network.message||(network.data&&!network.data.comparable?'雙方資料不足，暫時無法顯示可比較的關係圖。':'');
    if(network.data!==lastNetwork){
+    networkRenderError='';
     clearFrame('network-frame');
-    if(network.data?.comparable){$('network-frame').src='network.html';$('network-frame').hidden=false;}
+    try{
+     ReceiptExplanation.render($('explain-panel'),network.data);
+     if(network.data?.comparable){$('network-frame').src='network.html';$('network-frame').hidden=false;}
+    }catch(error){networkRenderError=error.message;}
     lastNetwork=network.data;
    }
+   $('network-status').textContent=network.status==='loading'?'載入計算過程與品味關係圖…':network.message||networkRenderError;
   }
   // Same-origin child frames receive only current data, never credentials.
   root.ReceiptV2Host={

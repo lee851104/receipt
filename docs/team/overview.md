@@ -3,6 +3,7 @@
 > 給 4 位組員和各自的 AI 先讀的唯一一份文件。最後更新：2026-10-15。
 > 逐條需求、技術決定和任務清單在 OpenSpec 變更 `openspec/changes/add-matching-system/`。API 的路徑、欄位、錯誤代碼和設定名稱以本文件第 5 節為準，兩邊不一致時改 OpenSpec。
 > 交給 AI 時可以這樣說：「先讀 `docs/team/overview.md`，我是角色 N，今天要做第 N 週的哪一項。」
+> 角色之間要轉告的事寫在第 13 節，開工前先看自己的那一段。
 
 ## 1. 一句話
 
@@ -498,3 +499,37 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 - 到 GitHub repo 的 Settings → Collaborators，邀請另外 3 位組員
 - Claude 的記憶只存在舊電腦上。在新電腦上開始工作時，先請 Claude 讀這份文件
+
+## 13. 角色之間的交接
+
+要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
+
+### 13.1 同一台電腦用 worktree 分開做（2026-10-15）
+
+4060 電腦上每個角色一個 git worktree、一個自己的分支（例如角色 1 在主資料夾 `C:\Users\User\Desktop\AI_project\receipt`，角色 2 在 `C:\Users\User\.codex\worktrees\receipt-role2\receipt`）。
+
+- **被 git 忽略的東西不會跟著 worktree 走**：`.venv`、`.env`、`data/`、`rawdata/`、根目錄的 CSV、`models/`、`runtime/` 只在主資料夾
+- **Python 共用主資料夾的 `.venv`**：在自己的 worktree 根目錄執行 `C:\Users\User\Desktop\AI_project\receipt\.venv\Scripts\python.exe`。這個環境大家共用，要裝或升級套件之前先在這裡寫一行
+- **私人資料用絕對路徑讀主資料夾的檔案**，不要另外複製到別的地方，更不能放進會被 git 追蹤的位置
+- **連接埠**：角色 1 的 API 伺服器用 8000，角色 3 的 llama-server 用 8080。其他人要自己開 API 伺服器時用 `--port 8001` 之類的別的埠；每個 worktree 有自己的 `.env` 和 `data/app.db`
+- **顯示卡只有一張 4060 8GB**：角色 2 訓練 BERT 和角色 3 跑 Qwen 不要同時進行，開始前先看 `nvidia-smi` 有沒有人在用
+- **合併順序**：角色 1 的骨架（PR #7）先合併進 `main`，其他角色再把最新的 `main` 合併進自己的分支
+
+### 13.2 角色 1 轉告（2026-10-15，PR #7 後端骨架）
+
+**給角色 2**
+- `src/ml/fields.py`（欄位名）和 `src/ml/fakes.py`（假替身）已經有了。`src/ml/category.py` 的 `classify()` 照第 6 節交出：回傳一般的 Python 型別、`probs` 不要四捨五入；在你的測試裡呼叫 `tests/model_contract.py` 的 `check_classify(self, classify)`
+- 57 筆人工確認品名在主資料夾的 `data/private/category-review-20261012/labeled-items.jsonl`（JSONL，`review_status` 全是 `human_confirmed`）。重跑 A/B 實驗時，複製成 `experiments/category-models/data/items.jsonl`（被 git 忽略）
+- 把模型接進後端（`src/api/backends.py`）是角色 1 的工作（OpenSpec tasks 2.15），你交出 `classify()` 就好
+
+**給角色 3**
+- `describe_items(names, ask_model=True)`：`ask_model=False` 時只查快取（即時分類框用）；沒分析過、或連不到 llama-server 時回 `None`，不要丟例外；呼叫 Qwen 要設 timeout、要加鎖。用 `tests/model_contract.py` 的 `check_describe(self, describe_items)` 測
+- llama.cpp 的 CUDA 版（b11557，和實驗同一版）已經放在主資料夾的 `runtime/llama-b11557-cuda/`。後端用 `GET {LLAMA_SERVER_URL}/health` 判斷 GPU 模式，預設 `http://127.0.0.1:8080`
+- 假用戶擴充到約 300 人時：seed 依位置命名（`demo_001` 起），清單只能從尾端加。`build_personas` 的順序或名字一變，seed 會停下來，要刪掉 `data/app.db` 重新 seed，擴充時請一起考慮
+- demo 用戶之後不能上傳或修改資料（403 `demo_user_read_only`）
+
+**給角色 4**
+- v2 網頁放 `src/web_v2/`，伺服器從 `/web/` 提供；需要的頁面從 `src/web/` 複製過去再改，`src/web/` 本身不要改（它是 v1 的建置來源）
+- 本機 API 在 `http://127.0.0.1:8000`，文件在 `/docs`。錯誤一律是 `{"detail": "<代碼>"}`；422 的 `detail` 是清單；程式出錯回 500 `internal_error`；401 時回登入畫面
+- 要不要顯示 demo 快速切換，看 `GET /api/health` 的 `demo_mode`；名單用 `GET /api/auth/demo-users`
+- 即時分類框：第 1 週 `attributes_status` 為 `pending` 時不會自己變成 `ready`，先顯示「待分析」

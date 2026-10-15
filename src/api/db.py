@@ -1,7 +1,9 @@
 """The SQLite engine, and one session per request."""
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import Request
+from fastapi import Depends, Request
+from sqlalchemy import event
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -17,6 +19,15 @@ def file_url(url):
     return "sqlite:///" + (ROOT / url.removeprefix("sqlite:///")).as_posix()
 
 
+def write_ahead(connection, record):
+    """Readers no longer wait for a background upload's writes, and a busy database is waited on for 5 seconds
+    instead of failing at once."""
+    cursor = connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=5000")
+    cursor.close()
+
+
 def make_engine(url):
     """An engine for url. An in-memory database (for tests only) keeps one shared connection, or each request
     would see an empty one; that single connection cannot serve requests running at the same time."""
@@ -25,7 +36,9 @@ def make_engine(url):
     if url.startswith("sqlite:///"):
         url = file_url(url)
         Path(url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
-    return create_engine(url, connect_args={"check_same_thread": False})
+    engine = create_engine(url, connect_args={"check_same_thread": False})
+    event.listen(engine, "connect", write_ahead)
+    return engine
 
 
 def init_db(engine):
@@ -37,3 +50,6 @@ def init_db(engine):
 def get_session(request: Request):
     with Session(request.app.state.engine) as session:
         yield session
+
+
+SessionDep = Annotated[Session, Depends(get_session)]

@@ -37,6 +37,17 @@ class DatabaseTests(unittest.TestCase):
                 engine.dispose()  # Windows cannot delete a file that is still open, even after a failed check
             self.assertTrue(path.is_file())
 
+    def test_a_file_database_writes_ahead_and_waits_when_busy(self):
+        with tempfile.TemporaryDirectory() as folder:
+            engine = make_engine("sqlite:///" + (Path(folder) / "app.db").as_posix())
+            try:
+                with engine.connect() as connection:
+                    mode = connection.exec_driver_sql("PRAGMA journal_mode").scalar()
+                    timeout = connection.exec_driver_sql("PRAGMA busy_timeout").scalar()
+            finally:
+                engine.dispose()  # Windows cannot delete a file that is still open, even after a failed check
+        self.assertEqual((mode, timeout), ("wal", 5000))
+
     def test_both_in_memory_spellings_share_one_database_across_threads(self):
         for url in ("sqlite://", "sqlite:///:memory:"):
             with self.subTest(url=url):

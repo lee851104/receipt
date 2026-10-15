@@ -533,3 +533,14 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 - 本機 API 在 `http://127.0.0.1:8000`，文件在 `/docs`。錯誤一律是 `{"detail": "<代碼>"}`；422 的 `detail` 是清單；程式出錯回 500 `internal_error`；401 時回登入畫面
 - 要不要顯示 demo 快速切換，看 `GET /api/health` 的 `demo_mode`；名單用 `GET /api/auth/demo-users`
 - 即時分類框：第 1 週 `attributes_status` 為 `pending` 時不會自己變成 `ready`，先顯示「待分析」
+
+### 13.3 角色 4 第一批交付（2026-10-15）
+
+- 分支 `codex/role4-web-foundation`，worktree：`C:\Users\User\.codex\worktrees\receipt-role4\receipt`。由角色 1 骨架 `cfbdd35` 起步；尚未合併回角色 1 或 main。
+- 已完成 5.1–5.3：`src/web_v2/` 的 API 客戶端、入口、登入／註冊、demo 切換。共用客戶端自動帶 bearer、401 清空身分與分類結果並回登入，422 與固定錯誤碼顯示中文。sessionStorage 只保留分頁 token、到期時間與顯示文字，不保存密碼。
+- 即時分類已完成第 1 週版本：類別、機率與 23 個屬性；`null` 顯示「未知」，和 `false`／0 分開。依 5.5、13.2 交接，pending 顯示「待分析」、不自動重查，因此 OpenSpec 5.5 保持未勾選；後端 2.4 完成後再補每 2 秒、最多 5 次的輪詢。
+- 給角色 1：這批沒有修改後端。後續需要上傳／工作、profile、matches、explain、帳號管理 API。「切換帳號」目前只清除本分頁身分；全裝置登出要等 `/api/auth/logout`，屬於 5.10。畫面會讀 health 的模型名稱並標示示範模型。
+- 本機啟動（在角色 4 worktree 執行）：`C:\Users\User\Desktop\AI_project\receipt\.venv\Scripts\python.exe -m uvicorn src.api.main:app --host 127.0.0.1 --port 8001`，入口 `http://127.0.0.1:8001/web/`。本 worktree 已獨立建立被忽略的 `.env` 和 `data/app.db`，放入 40 位虛構 demo 用戶；共享 Python 環境未新增套件。第一次在其他 checkout 啟動，仍照第 12 節設定環境與 seed。
+- 驗證：Python 154、JS 109（原有 82 + 新增 27）。真實本機 API／Chromium：註冊、錯誤密碼、登入、demo 切換、即時分類、無效 token 的 401、清除畫面；另以假 API 驗證 pending。桌機 1440px、手機 390px 無橫向溢出或 JavaScript 例外。模型仍是假替身，未驗證真實模型推論。
+- 審查修正：公開 health/demo 名單不因同時登入而遺失；取消登入時不讓舊 401 把註冊頁切回登入。都有失敗後通過的回歸測試，獨立審查覆核通過。
+- v1 的 `invoice-insights.html`、`src/web/` 皆無差異。未完成範圍：上傳／進度、月報與配對、計算過程、帳號設定、影片與概念文件。

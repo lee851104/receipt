@@ -53,9 +53,9 @@
 
 ## 5. 角色 4：前端與展示
 
-- [ ] 5.1 在 `src/web_v2/` 新增 API 客戶端模組：自動附上權杖、收到 401 就導向登入、把錯誤代碼對應成中文；用 `node --test` 測試這三種行為
-- [ ] 5.2 把 v2 入口做在 `src/web_v2/index.html`（第 1 週放了預留頁），由服務在 `/web/` 提供；要用的頁面和 JS 從 `src/web/` 複製到 `src/web_v2/`，`src/web/` 不改；確認根目錄的 `invoice-insights.html` 和 `src/web/` 都沒有任何變動（`git diff` 是空的）
-- [ ] 5.3 實作登入和註冊畫面，以及 demo 模式下用 `GET /api/auth/demo-users` 產生的切換選單；JS 測試涵蓋「401 就導向登入」和「demo 選單只在 demo 模式出現」
+- [x] 5.1 在 `src/web_v2/` 新增 API 客戶端模組：自動附上權杖、收到 401 就導向登入、把錯誤代碼對應成中文；用 `node --test` 測試這三種行為
+- [x] 5.2 把 v2 入口做在 `src/web_v2/index.html`（第 1 週放了預留頁），由服務在 `/web/` 提供；要用的頁面和 JS 從 `src/web/` 複製到 `src/web_v2/`，`src/web/` 不改；確認根目錄的 `invoice-insights.html` 和 `src/web/` 都沒有任何變動（`git diff` 是空的）
+- [x] 5.3 實作登入和註冊畫面，以及 demo 模式下用 `GET /api/auth/demo-users` 產生的切換選單；JS 測試涵蓋「401 就導向登入」和「demo 選單只在 demo 模式出現」
 - [ ] 5.4 實作上傳畫面、進度輪詢和錯誤訊息（`invalid_csv` 附上系統說明、`file_too_large`、工作 `failed`）；用假 API 測試完成和失敗的畫面
 - [ ] 5.5 實作品名即時分類框：先顯示類別和機率，屬性 `pending` 時顯示「分析中」，每 2 秒重查、最多 5 次，之後顯示「稍後再查」；JS 測試涵蓋這幾種狀態
 - [ ] 5.6 把月報、品味關係圖和配對頁（從 `src/web/` 複製到 `src/web_v2/` 的版本）改成使用 API 資料（月報沿用 `months` 的現有格式，配對狀態文字用 `eligible` 和 `within`）；`src/web/` 不動，現有 82 個 JS 測試照樣通過；複製過去而有改動的 JS，要有對應的測試（可以餵假 API 資料）

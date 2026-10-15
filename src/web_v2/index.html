@@ -3,10 +3,82 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>消費配對系統 v2</title>
+<meta name="color-scheme" content="dark">
+<title>消費配對系統 v2｜從日常，看見品味</title>
+<link rel="stylesheet" href="./styles.css">
+<script defer src="./api.js"></script>
+<script defer src="./flow.js"></script>
+<script defer src="./app.js"></script>
 </head>
 <body>
-<h1>消費配對系統 v2</h1>
-<p>網頁還在建置中（角色 4）。API 文件在 <a href="/docs">/docs</a>，健康檢查在 <a href="/api/health">/api/health</a>。</p>
+<a class="skip-link" href="#main">跳到主要內容</a>
+<header>
+  <a class="brand" href="/web/" aria-label="消費配對系統首頁"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>消費配對<span class="edition">TASTE LINK / V2</span></a>
+  <div class="header-actions"><span id="service-status" class="service-status" role="status">連線中</span><button id="switch-account" class="quiet" type="button" hidden>切換帳號</button></div>
+</header>
+<main id="main">
+  <div id="service-alert" class="service-alert" hidden><span id="service-error"></span><button id="retry-service" class="quiet" type="button">重新連線</button></div>
+  <section id="auth-view" class="auth-layout" aria-label="帳號登入與註冊">
+    <div class="intro">
+      <p class="eyebrow">EVERYDAY CHOICES, SHARED TASTES.</p>
+      <h1>你的日常，<br>藏著你的<em>品味。</em></h1>
+      <p class="subtitle">從一杯飲料、一頓午餐開始，<br>認識自己的消費習慣，也發現與他人的連結。</p>
+      <div class="receipt-preview" aria-label="品名分類示意，非你的消費資料">
+        <div class="receipt-top"><span>一筆日常的小線索</span><span class="muted">示意</span></div>
+        <div class="receipt-item"><span>鮮奶茶 微糖</span><span class="category-pill">飲品</span></div>
+        <div class="receipt-rule"></div>
+        <div class="receipt-bottom"><span>品名</span><span aria-hidden="true">→</span><span>類別與屬性</span><span aria-hidden="true">→</span><span>品味輪廓</span></div>
+      </div>
+      <p class="intro-note">先登入，試試一個品名會被分到哪一類。</p>
+    </div>
+    <div class="auth-card">
+      <div class="auth-tabs" aria-label="選擇登入或註冊"><button id="login-tab" type="button" aria-pressed="true">登入</button><button id="register-tab" type="button" aria-pressed="false">建立帳號</button></div>
+      <h2 id="auth-title" tabindex="-1">歡迎回來</h2><p id="auth-subtitle" class="muted">登入後，開始探索你的日常選擇。</p>
+      <p id="auth-error" class="message error" role="alert" hidden></p><p id="auth-notice" class="message success" role="status" hidden></p>
+      <form id="login-form">
+        <label for="login-username">帳號</label><input id="login-username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="輸入帳號">
+        <label for="login-password">密碼</label><input id="login-password" name="password" type="password" autocomplete="current-password" required maxlength="512" placeholder="輸入密碼">
+        <button class="primary" type="submit">登入並開始</button>
+      </form>
+      <form id="register-form" hidden>
+        <label for="register-username">帳號</label><input id="register-username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="32" pattern="[A-Za-z0-9_]{3,32}" aria-describedby="username-help" placeholder="例如 taste_amy"><small id="username-help">3–32 個英數字或底線；不能以 demo_ 開頭。</small>
+        <label for="register-display">顯示名稱 <span class="optional">選填</span></label><input id="register-display" name="display_name" autocomplete="nickname" maxlength="20" placeholder="你希望大家怎麼稱呼你">
+        <label for="register-password">密碼</label><input id="register-password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" aria-describedby="password-help" placeholder="設定密碼"><small id="password-help">8–128 個字元。</small>
+        <button class="primary" type="submit">建立帳號</button>
+      </form>
+      <section id="demo-panel" class="demo-panel" aria-labelledby="demo-title" hidden>
+        <div class="divider"><span>或先體驗看看</span></div>
+        <label id="demo-title" for="demo-user">示範帳號 <span class="optional">虛構資料</span></label>
+        <form id="demo-form"><select id="demo-user" required aria-label="選擇示範帳號"><option value="">選擇一位示範使用者</option></select><button id="demo-submit" class="secondary" type="submit">進入體驗</button></form>
+        <p id="demo-note" class="small">不用密碼，先試試品名分類。</p>
+      </section>
+    </div>
+  </section>
+  <section id="workspace-view" hidden aria-labelledby="workspace-title">
+    <div class="workspace-heading"><div><p class="eyebrow">01 / 從一個品名開始</p><h1 id="workspace-title" tabindex="-1">日常買什麼，<em>看出一點線索。</em></h1><p class="subtitle">輸入品名，查看它的類別、模型信心與消費屬性。</p></div><span id="identity-label" class="identity"></span></div>
+    <p id="model-note" class="model-note" role="status" hidden></p>
+    <div class="classify-layout">
+      <section class="input-card" aria-labelledby="classify-title"><p class="eyebrow">ITEM / 品名</p><h2 id="classify-title">這次買了什麼？</h2>
+        <form id="classify-form"><label for="item-name">商品品名</label><input id="item-name" name="name" required maxlength="100" placeholder="例如：鮮奶茶 微糖" aria-describedby="item-help" autocomplete="off"><small id="item-help">輸入 1–100 個字元，每次查看一個品項。</small><button class="primary" type="submit">查看分類</button></form>
+        <div class="examples"><span>試試虛構品名</span><button type="button" data-example="鮮奶茶 微糖">鮮奶茶 微糖</button><button type="button" data-example="運動毛巾">運動毛巾</button></div>
+        <p class="input-note">每個品名都是一個線索。完整品味輪廓會在後續的發票分析中呈現。</p>
+      </section>
+      <section class="result-card" aria-labelledby="result-title" aria-busy="false" id="result-card"><div class="result-heading"><p class="eyebrow" id="result-title">RESULT / 分類結果</p><span id="classification-status" role="status"></span></div>
+        <div id="result-empty" class="empty-state"><span class="empty-lines" aria-hidden="true"><i></i><i></i><i></i></span><h3>從你的第一個品名開始</h3><p>分類結果與屬性會顯示在這裡。</p></div>
+        <p id="classify-error" class="message error" role="alert" hidden></p>
+        <div id="classification-result" hidden>
+          <p id="result-name" class="result-name"></p><div class="category-result"><h2 id="category-name"></h2><div class="probability"><strong id="category-probability"></strong><span>模型信心</span></div></div><div class="confidence-track" aria-hidden="true"><div id="confidence-fill"></div></div>
+          <p class="small confidence-note">模型信心是這次分類的機率分數，不代表整體準確率。</p>
+          <div class="attributes-heading"><h3>品項屬性</h3><span class="small">未知不等於否</span></div>
+          <p id="pending-note" class="pending-note" hidden>待分析：目前沒有這個品名的屬性結果，暫不自動重查。</p>
+          <dl id="attribute-list" class="attribute-list"></dl>
+        </div>
+      </section>
+    </div>
+    <p class="workspace-footnote">發票上傳、我的品味與配對頁將於後續階段開放。</p>
+  </section>
+  <noscript><p class="message error">請開啟 JavaScript，才能使用登入與分類功能。</p></noscript>
+</main>
+<footer><span>消費配對系統 v2</span><span>從消費，認識日常。</span></footer>
 </body>
 </html>

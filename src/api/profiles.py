@@ -3,11 +3,12 @@ import calendar
 import json
 
 from sqlalchemy.dialects.sqlite import insert
-from sqlmodel import col, select
+from sqlmodel import select
 
 from ..receipt import places, traits
 from ..receipt.signals import measure
-from .tables import Item, ItemCache, Profile, now
+from . import cache
+from .tables import Item, Profile, now
 
 
 def months_of(items):
@@ -30,9 +31,7 @@ def months_of(items):
 def attributes_of(session, backends, names):
     """{name: the 23 attribute fields, or None} from the cache of the current attribute model alone. It never asks
     the model and never writes: a name nobody has judged yet is None, which the pipeline treats as pending."""
-    rows = session.exec(select(ItemCache).where(ItemCache.model == backends.attributes,
-                                                col(ItemCache.name).in_(list(names)))).all()
-    known = {row.name: json.loads(row.fields) for row in rows}
+    known = cache.cached(session, backends, names)
     return {name: known.get(name) for name in names}
 
 

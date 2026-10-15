@@ -2,6 +2,7 @@
 import json
 import math
 import unittest
+from datetime import datetime, timezone
 from unittest import mock
 
 from sqlmodel import Session, select
@@ -86,11 +87,15 @@ class UploadProfileTests(unittest.TestCase):
     def test_uploading_a_month_again_works_the_profile_out_again(self):
         client, headers = self.client()
         upload(client, headers, invoice_csv(THREE))
-        first = self.profile(client)
+        # Set back by hand: two recomputes a few milliseconds apart can fall in one tick of the system clock.
+        long_ago = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        with Session(client.app.state.engine) as session:
+            session.get(Profile, 1).updated_at = long_ago
+            session.commit()
         upload(client, headers, invoice_csv(THREE + tea_month(5, 2)))
         second = self.profile(client)
         self.assertEqual(second["item_count"], 5)  # the month is replaced, not added to
-        self.assertGreater(second["updated_at"], first["updated_at"])
+        self.assertGreater(second["updated_at"], long_ago)
         with Session(client.app.state.engine) as session:
             self.assertEqual(len(session.exec(select(Profile)).all()), 1)
 
@@ -138,13 +143,20 @@ class UploadProfileTests(unittest.TestCase):
         self.assertEqual(self.jobs(client), [("2026-05", "done", "完成")])
         self.assertEqual(self.profile(client)["item_count"], 3)
 
+    def assert_log_has_no_names(self, logs, *months):
+        """No product name of these uploads is in the log (overview section 10: logs never carry product names)."""
+        output = "\n".join(logs.output)
+        for row in (row for month in months for row in month):
+            self.assertNotIn(row[5], output)
+
     def test_a_failing_recompute_fails_the_job_and_keeps_the_old_profile(self):
         client, headers = self.client()
         upload(client, headers, invoice_csv(THREE))
         before = self.profile(client)
         with mock.patch.object(profiles.places, "areas_of", side_effect=RuntimeError("boom")), \
-                self.assertLogs("src.api.jobs", level="ERROR"):
+                self.assertLogs("src.api.jobs", level="ERROR") as logs:
             upload(client, headers, invoice_csv(tea_month(6, 2)))
+        self.assert_log_has_no_names(logs, THREE, tea_month(6, 2))
         self.assertEqual(self.jobs(client), [("2026-05", "done", "完成"), ("2026-06", "failed", "處理失敗，請重新上傳")])
         self.assertEqual(self.profile(client), before)
 
@@ -153,8 +165,9 @@ class UploadProfileTests(unittest.TestCase):
         upload(client, headers, invoice_csv(THREE))
         before = self.profile(client)
         with mock.patch.object(profiles.traits, "build_vector", return_value=[math.nan] * 18), \
-                self.assertLogs("src.api.jobs", level="ERROR"):
+                self.assertLogs("src.api.jobs", level="ERROR") as logs:
             upload(client, headers, invoice_csv(tea_month(6, 2)))
+        self.assert_log_has_no_names(logs, THREE, tea_month(6, 2))
         self.assertEqual([status for _, status, _ in self.jobs(client)], ["done", "failed"])
         self.assertEqual(self.profile(client), before)
 

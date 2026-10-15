@@ -16,12 +16,18 @@ def model_ready(backends):
     return backends.attributes == "fake" or backends.gpu_probe()
 
 
+def cached(session, backends, names):
+    """{name: its 23 attribute fields} for the names the current attribute model has already answered; the others are
+    left out. Reads only item_cache: no model is asked and nothing is written."""
+    rows = session.exec(select(ItemCache).where(ItemCache.model == backends.attributes,
+                                                col(ItemCache.name).in_(list(names)))).all()
+    return {row.name: json.loads(row.fields) for row in rows}
+
+
 def describe(session, backends, names, ask_model):
     """Each name's 23 attribute fields, or None while it is not analysed yet. The cache answers first; for the rest
     the model is asked (only its own cache unless ask_model and the model is ready), and new answers are stored."""
-    rows = session.exec(select(ItemCache).where(ItemCache.model == backends.attributes,
-                                                col(ItemCache.name).in_(names))).all()
-    known = {row.name: json.loads(row.fields) for row in rows}
+    known = cached(session, backends, names)
     # End the read here: its open transaction would keep a connection checked out through the slow model call below.
     session.commit()
     missing = [name for name in dict.fromkeys(names) if name not in known]

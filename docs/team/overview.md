@@ -504,7 +504,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
-### 13.3 角色 3 接入與審查修正（2026-10-15，來源：角色 3 worktree、原 role3-handoff 與本次審查）
+### 13.4 角色 3 接入與審查修正（2026-10-15，來源：角色 3 worktree、原 role3-handoff 與本次審查）
 
 **給角色 1**
 - 2.15：以 `AttributeDescriber(server_url=settings.llama_server_url)` 提供 `backends.describe_items`；`ATTRIBUTES_MODEL=qwen` 的正式啟用由角色 1 接入 `src/api/backends.py`。本次審查修正沒有修改角色 1 的 API 檔案。
@@ -514,8 +514,40 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 - 介面只有 names，merchant 固定空字串、quantity=1；品項數量的 bulk 補位只在計算副本。新版採單筆推論、輸入只去開頭「示範」、保留原名快取鍵；prompt hash 與 input-v2:batch1 已進 model_version。換版本須重算舊屬性，不能沿用舊版本 cache。
 - `build_personas(calendar, total=300)` 尾端擴充、保留原 40 人順序；v1 未指定 total 仍是 40 人。先前 seed 入口改為 300 的變更請在角色 1 合併時確認，本次不再修改該檔案。
 - 107 筆假品名逐筆對照見 `docs/results/synthetic-cache-review.md`，舊／新模型輸出分存 `datasets/synthetic/attribute-cache.model-v1.jsonl`、`attribute-cache.model-v2.jsonl`；有效快取保留每欄 corrections。2026-10-15 使用者檢查並確認全部 107 筆：46 筆為 `human_corrected`、61 筆為 `human_confirmed`，保留助理準備與使用者確認的來源，並用屬性雜湊避免重建或後續修改誤用核准；此確認僅涵蓋公開假品名。配對數字見 `docs/results/matching.md`，僅核心公式，尚未驗證分類/API/DB 端到端。
-- 真人盲標檔在主資料夾 `C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-review-20261015\`：4 份各 25 筆，另有獨立預測；品名只准本機腳本處理、畫面只印彙總。4.8 仍待真人複核；舊版私人預測不能當新版品質證據。
+- 4.8（10/15 使用者續作要求）：100 筆真實品名已用新版模型全部重跑，舊 `predictions.jsonl` 與四份空白盲標檔保留。使用者改採「先由本機模型預標，再由本人審核」，所以新增稿標示 `review_method=model_assisted`，不宣稱獨立盲標。私人根目錄為主資料夾 `C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-review-20261015\`；新版預測為 `predictions-01cd0f32b598.jsonl`，待審稿與中文檢查表在 `assisted-01cd0f32b598\`。目前 100/100 已預測、0/100 人工確認；品名只准本機腳本處理，畫面只印彙總。
+- `scripts/predict_private_attributes.py` 可依目前版本產生私有預測，加 `--assisted` 產生四份各 25 筆待審稿；不覆寫既有預測或人工稿。`scripts/attribute_review.py` 檢查 ID/品名一致、23 欄型別、模型版本與全部 100 筆人工狀態，未完成就拒絕正式評分。布林以 true 為正例，三個列舉欄位用非 null 類別 micro 指標；gold=null 排除、模型 null 對已知正例計漏判，分母為零顯示 —。完整指標只能在人工確認後產生；進度彙總見 `docs/results/attribute-review-status.json`。
+- 4.7 相依更新（來源：角色 1 分支 `role-1/uploads`，`873f46c`）：2.3 已完成，2.4 的分類／快取／背景分析已完成，但 `profiles` 重算仍在下一批；因此完整 seed 尚不能驗收，本角色未另建替代的資料庫管線。
+- 人工確認後，在角色 3 worktree 執行下列命令產生 `docs/results/attributes.md` 與 JSON（未完成會回傳 exit 2，不寫正式報告）：
+
+```powershell
+$reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-review-20261015'
+& 'C:\Users\User\Desktop\AI_project\receipt\.venv\Scripts\python.exe' -m scripts.attribute_review --review-dir "$reviewRoot\assisted-01cd0f32b598" --predictions "$reviewRoot\predictions-01cd0f32b598.jsonl"
+```
+
 - 工作區為 `codex/role-3/attributes` worktree；共用主資料夾 Python 與 llama.cpp，不升級共用套件。本角色此次只修改自身檔案與 `src/receipt/` 新增的外部屬性邏輯。
+
+### 13.3 角色 1 轉告（2026-10-15，第 2 週上傳管線，分支 `role-1/uploads`）
+
+上傳（5.4）、任務進度和即時分類的屬性快取（5.5）都接好了，規格的增補都標了「10/15」。品味向量的重算（5.4 第 3 步）、`GET /api/me/profile` 和帳號管理在下一批。
+
+**給所有人**
+- 資料表變了（多了 `jobs`、`items`、`item_cache`、`profiles`，外鍵會檢查）。合併這個分支之後，在自己的 worktree 刪掉 `data/app.db*`（資料庫和它的 `-wal`、`-shm` 檔），再跑一次 seed
+- 伺服器只能開一個行程（不要 `--workers`），見 5.10
+- 程式的錯誤訊息和 log 都不能帶品名：資料庫的錯誤已經設定成不印參數，自己寫的例外訊息也不要把品名放進去（第 10 節）
+
+**給角色 2**
+- 上傳的背景任務對一個月份的所有不重複品名**呼叫一次** `classify(names)`（最多 2000 個）。回傳的筆數一定要等於 `len(names)`、順序相同；少一筆或丟出例外，整個任務就變成 failed
+- 即時分類框每次呼叫 `classify([name])`，在請求裡同步執行，所以單筆最好在 CPU 上 1 秒內回來
+
+**給角色 3**
+- 後端自己管 `item_cache`（品名加模型名稱一筆，`ON CONFLICT DO NOTHING`）。只有快取裡沒有的品名才會交給 `describe_items`：上傳時每批最多 20 個，模型可用時 `ask_model=True`；即時分類框先用 `ask_model=False`，GPU 模式下再在背景用 `ask_model=True` 問一次。回傳的筆數一定要等於 `len(names)`
+- 模型是否可用看 `gpu_probe()`（`GET {LLAMA_SERVER_URL}/health`）。上傳任務一次只跑一個，但即時分類框的背景分析可能同時呼叫，所以 `describe_items` 裡呼叫 llama-server 的地方還是要加鎖
+- 上傳任務裡 `describe_items` 丟出例外會讓任務變成 failed；即時分類框的背景分析失敗只記 log，品名維持待分析。連不到 llama-server 時照第 6 節回 `None`，不要丟例外
+
+**給角色 4**
+- 上傳：`POST /api/invoices`（multipart，欄位名 `file`）回 202 的 `job_id` 之後，每 2 秒問 `GET /api/jobs/{job_id}`，直到 `done` 或 `failed`；進度條用 `done / total`，文字用 `message`。別人的任務在跑時會停在 `queued` 一陣子，是正常的
+- 錯誤：400 `invalid_csv` 顯示 `message`（英文，例如缺哪個欄位）；413「檔案超過 2 MB」；403 `demo_user_read_only`「示範帳號不能上傳」
+- 即時分類框：`pending` 現在會自己變成 `ready`（GPU 模式，或假模型），照 5.5 每 2 秒再問、最多 5 次；503 `model_unavailable` 顯示「分類模型暫時無法使用」
 
 ### 13.1 同一台電腦用 worktree 分開做（2026-10-15）
 

@@ -3,12 +3,12 @@
     "users": 300,
     "same_type_hits": 1500,
     "similar_slots": 1500,
-    "opposite_type_hits": 114,
-    "opposite_slots": 524,
+    "opposite_type_hits": 160,
+    "opposite_slots": 684,
     "same_type_precision_at_5": 1.0,
-    "opposite_type_precision_at_5": 0.076,
+    "opposite_type_precision_at_5": 0.10666666666666667,
     "same_type_user_hit_rate": 1.0,
-    "same_type_mutual_user_hit_rate": 0.9233333333333333,
+    "same_type_mutual_user_hit_rate": 0.91,
     "opposite_type_user_hit_rate": 0.12666666666666668
   },
   "by_type": {
@@ -17,23 +17,23 @@
       "same_type_hits": 190,
       "similar_slots": 190,
       "opposite_type_hits": 0,
-      "opposite_slots": 43,
+      "opposite_slots": 70,
       "same_type_precision_at_5": 1.0,
       "opposite_type_precision_at_5": 0.0,
       "same_type_user_hit_rate": 1.0,
-      "same_type_mutual_user_hit_rate": 0.8421052631578947,
+      "same_type_mutual_user_hit_rate": 0.9210526315789473,
       "opposite_type_user_hit_rate": 0.0
     },
     "忙碌工程師": {
       "users": 38,
       "same_type_hits": 190,
       "similar_slots": 190,
-      "opposite_type_hits": 114,
-      "opposite_slots": 114,
+      "opposite_type_hits": 160,
+      "opposite_slots": 160,
       "same_type_precision_at_5": 1.0,
-      "opposite_type_precision_at_5": 0.6,
+      "opposite_type_precision_at_5": 0.8421052631578947,
       "same_type_user_hit_rate": 1.0,
-      "same_type_mutual_user_hit_rate": 0.7894736842105263,
+      "same_type_mutual_user_hit_rate": 0.8157894736842105,
       "opposite_type_user_hit_rate": 1.0
     },
     "咖啡上班族": {
@@ -41,11 +41,11 @@
       "same_type_hits": 190,
       "similar_slots": 190,
       "opposite_type_hits": 0,
-      "opposite_slots": 0,
+      "opposite_slots": 52,
       "same_type_precision_at_5": 1.0,
       "opposite_type_precision_at_5": 0.0,
       "same_type_user_hit_rate": 1.0,
-      "same_type_mutual_user_hit_rate": 1.0,
+      "same_type_mutual_user_hit_rate": 0.8157894736842105,
       "opposite_type_user_hit_rate": 0.0
     },
     "手搖學生": {
@@ -53,7 +53,7 @@
       "same_type_hits": 190,
       "similar_slots": 190,
       "opposite_type_hits": 0,
-      "opposite_slots": 111,
+      "opposite_slots": 130,
       "same_type_precision_at_5": 1.0,
       "opposite_type_precision_at_5": 0.0,
       "same_type_user_hit_rate": 1.0,
@@ -69,7 +69,7 @@
       "same_type_precision_at_5": 1.0,
       "opposite_type_precision_at_5": 0.0,
       "same_type_user_hit_rate": 1.0,
-      "same_type_mutual_user_hit_rate": 0.9459459459459459,
+      "same_type_mutual_user_hit_rate": 0.972972972972973,
       "opposite_type_user_hit_rate": 0.0
     },
     "家庭下廚": {
@@ -89,7 +89,7 @@
       "same_type_hits": 185,
       "similar_slots": 185,
       "opposite_type_hits": 0,
-      "opposite_slots": 71,
+      "opposite_slots": 86,
       "same_type_precision_at_5": 1.0,
       "opposite_type_precision_at_5": 0.0,
       "same_type_user_hit_rate": 1.0,
@@ -101,11 +101,11 @@
       "same_type_hits": 185,
       "similar_slots": 185,
       "opposite_type_hits": 0,
-      "opposite_slots": 0,
+      "opposite_slots": 1,
       "same_type_precision_at_5": 1.0,
       "opposite_type_precision_at_5": 0.0,
       "same_type_user_hit_rate": 1.0,
-      "same_type_mutual_user_hit_rate": 1.0,
+      "same_type_mutual_user_hit_rate": 0.9459459459459459,
       "opposite_type_user_hit_rate": 0.0
     }
   },
@@ -113,8 +113,21 @@
   "population": 300,
   "unique_items": 107,
   "model_versions": [
-    "qwen3-4b:2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e:bfd5cb4b4538bed1829aea92504babca587ac8746dde820f39004523cff93a88:guards-v1"
+    "qwen3-4b:2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e:5e86775fba0e8c8a2fe31adc0c3fc420cd37b5daa3a1538b214c3866c97511a9:guards-v1:input-v2:batch1"
   ],
-  "scope": "core formula with known synthetic categories and Qwen cache; API/DB ingestion not verified",
+  "cache_review": {
+    "reviewed_items": 107,
+    "corrected_items": 46,
+    "corrected_fields": 70,
+    "human_confirmed_items": 0,
+    "statuses": [
+      "assistant_corrected",
+      "assistant_reviewed"
+    ]
+  },
+  "cache_revisions": [
+    "synthetic-review-20261015-v2"
+  ],
+  "scope": "core formula with known synthetic categories and reviewed Qwen cache; not raw model accuracy; API/DB ingestion not verified",
   "comparable_profiles": 300
 }

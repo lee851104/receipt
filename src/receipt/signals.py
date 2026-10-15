@@ -3,13 +3,14 @@ from collections import Counter
 from datetime import date, timedelta
 from statistics import mean, median
 
-from .attributes import DAILY, DESSERT, DRINK, MEAL, SPORT, TECH, channel_of, describe, fold, has, sugar_of
+from .attributes import DAILY, DESSERT, DRINK, FOOD, MEAL, SPORT, TECH, channel_of, describe, fold, has, sugar_of
 
 CONFIRMED = 10  # category 10 still waits for review
 MEAL_BILL = {MEAL, DRINK, DESSERT}  # what a meal bill may include when estimating cost per person
 NOT_SHOP_MEALS = {"超商", "量販", "超市"}
 STORES = {"超商", "量販"}
-SPLIT = {"cat": (("cat", 1.0),), "dog": (("dog", 1.0),), None: (("cat", 0.5), ("dog", 0.5))}
+PENDING_SPECIES = object()  # unlike analysed-but-unspecified species, this supplies no visit evidence
+SPLIT = {PENDING_SPECIES: (), "cat": (("cat", 1.0),), "dog": (("dog", 1.0),), None: (("cat", 0.5), ("dog", 0.5))}
 
 
 def calendar_days(period, calendar):
@@ -78,7 +79,9 @@ def gather(rows, context):
         # A purchase quantity belongs to the row, never the name-only model cache.
         if row.get("attributes") is not None and row["quantity"] >= 3:
             values["bulk"] = True
-        line = {**row, "channel": channels[merchant], **values}
+        # Basic model flags remain in row["attributes"] for the API only.
+        # The existing signal definitions use confirmed categories, including food.
+        line = {**row, "channel": channels[merchant], **values, "food": row["category"] in FOOD}
         lines.append(line)
         invoice = invoices.setdefault(row["invoice"], {
             "date": row["date"], "merchant": merchant, "channel": channels[merchant],
@@ -155,8 +158,10 @@ def weekday_quick_share(meals, off):
 
 
 def bill_species(invoice):
-    """The one species a pet-shop bill's pet items name, or None when they name neither or both."""
+    """Known species; None means analysed/unspecified, PENDING_SPECIES means no visit evidence."""
     known = {line["species"] for line in invoice["lines"] if line["species"] and (line["pet_food"] or line["pet_supply"])}
+    if not known and any("attributes" in line and line["attributes"] is None for line in invoice["lines"]):
+        return PENDING_SPECIES
     return known.pop() if len(known) == 1 else None
 
 
@@ -232,7 +237,7 @@ def measure(rows, period, context):
         "store_clearance_share": [item for item in store_food if item["clearance"]],
         "shop_meal_share": [item for item in meals if item["channel"] not in NOT_SHOP_MEALS],
         "fresh_share": [item for item in food if item["cooking"]],
-        "ready_meal_share": [item for item in meals if item["food"]],
+        "ready_meal_share": meals,
         "kitchen_per_month": flagged("kitchen"),
         "sugar_mean": [item for item in drinks if item["sugar"] is not None],
         "dessert_share": [item for item in food if item["category"] == DESSERT],
@@ -254,6 +259,7 @@ def measure(rows, period, context):
         **{f"pet_{kind}_{species}": [item for item in items if item[f"pet_{kind}"] and item["species"] != other[species]]
            for species in ("cat", "dog") for kind in ("food", "supply")},
         **{f"pet_visits_{species}": [item for item in items if item["invoice"] in pet_bills
+                                     and pet_bills[item["invoice"]] is not PENDING_SPECIES
                                      and pet_bills[item["invoice"]] != other[species]] for species in ("cat", "dog")},
         "alcohol_items": flagged("alcohol"), "bar_visits": at("酒吧"),
     }
@@ -273,7 +279,7 @@ def measure(rows, period, context):
         "store_clearance_share": share(len(behind["store_clearance_share"]), known_count(store_food, "clearance")),
         "shop_meal_share": share(len(behind["shop_meal_share"]), len(meals)),
         "fresh_share": share(len(behind["fresh_share"]), known_count(food, "cooking")),
-        "ready_meal_share": share(len(behind["ready_meal_share"]), len(food)),
+        "ready_meal_share": share(len(meals), len(food)),
         "kitchen_per_month": len(behind["kitchen_per_month"]) / months,
         "sugar_mean": mean(item["sugar"] for item in behind["sugar_mean"]) if behind["sugar_mean"] else None,
         "dessert_share": share(len(behind["dessert_share"]), len(food)),
@@ -308,9 +314,13 @@ def measure(rows, period, context):
         # category/date/channel signals; do not fabricate zero model signals.
         flags = {"kitchen_per_month": "kitchen", "sport_supplies": "sport_supply", "sport_gear": "sport_gear",
                  "car_care": "car_care", "home_items": "home", "stationery_items": "stationery",
-                 "fun_visits": "fun", "fun_kinds": "fun", "alcohol_items": "alcohol",
+                 "alcohol_items": "alcohol",
                  "pet_food_cat": "pet_food", "pet_food_dog": "pet_food",
                  "pet_supply_cat": "pet_supply", "pet_supply_dog": "pet_supply"}
+        # Enum null means no entertainment / species unspecified after analysis.
+        # Only a pending row lacks an answer; boolean null still means unknown.
+        if not any("attributes" not in item or item["attributes"] is not None for item in items):
+            signals["fun_visits"] = signals["fun_kinds"] = None
         for signal, flag in flags.items():
             if not known_count(items, flag):
                 signals[signal] = None

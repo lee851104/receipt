@@ -61,7 +61,7 @@ class ExternalTests(unittest.TestCase):
         self.assertIsNone(signals["alcohol_items"])
         self.assertIsNone(signals["weekday_quick_share"])
         self.assertIsNone(signals["pet_food_cat"])
-        self.assertIsNone(signals["fun_visits"])
+        self.assertEqual(signals["fun_visits"], 0)
 
     def test_pending_meals_do_not_increase_known_food_ratio(self):
         attrs = dict.fromkeys(FIELDS)

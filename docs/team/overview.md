@@ -504,11 +504,18 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
-### 角色 3 開工交接（2026-10-15）
+### 13.3 角色 3 接入與審查修正（2026-10-15，來源：角色 3 worktree、原 role3-handoff 與本次審查）
 
-- 在 `codex/role-3/attributes` worktree 實作第 4 區；共用主資料夾 Python 和 llama.cpp，不升級共用套件。
-- 會擴充 `src/receipt/attributes.py`、`signals.py` 的外部屬性入口，以及 `personas.py` 的 v2 人口；保留 v1 預設 40 人與既有結果。`src/api/seed.py` 只改用 v2 人口入口，角色 1 合併時請留意。
-- `src/api/backends.py` 的正式模型啟用與資料庫 `item_cache` 管線仍由角色 1 的 2.15、2.4 接入。
+**給角色 1**
+- 2.15：以 `AttributeDescriber(server_url=settings.llama_server_url)` 提供 `backends.describe_items`；`ATTRIBUTES_MODEL=qwen` 的正式啟用由角色 1 接入 `src/api/backends.py`。本次審查修正沒有修改角色 1 的 API 檔案。
+- 每列明放 `attributes`（23 欄字典或 `None`）；省略欄位仍走 v1，`None` 才是待分析。7 個基本旗標只供儲存/API 回傳；現有訊號依舊使用類別，包含 `food = category in FOOD`。已分析的 `fun=null` 是非娛樂、`species=null` 是未寫物種；布林 null 才是未知。待分析的寵物店發票若沒有已知物種，不拆給貓狗。
+- `ask_model=True` 會等同一實例的前一筆推論完成，不再因等鎖超過 60 秒而偽裝成待分析；60 秒僅限制單次 HTTP。角色 1 請由上傳背景工作呼叫，兩份上傳會排隊；即時查詢用 `ask_model=False`，不等推論鎖。預設函式的 `LLAMA_SERVER_URL` 僅在首次非空呼叫建立時檢查；無效會記錄一次不含網址／品名的錯誤並回全 `None`，修正設定後須重啟程序。直接建構實例仍會立即檢查設定。
+- `(model_version, name)` mapping 是程序內快取，不是資料庫；持久化 `item_cache` 與版本清理由 2.3/2.4 負責。4.7 必須等 2.3/2.4 完成，再把假發票、屬性與 profiles 接入一般管線；不要把目前核心驗證當成完整 seed 已完成。
+- 介面只有 names，merchant 固定空字串、quantity=1；品項數量的 bulk 補位只在計算副本。新版採單筆推論、輸入只去開頭「示範」、保留原名快取鍵；prompt hash 與 input-v2:batch1 已進 model_version。換版本須重算舊屬性，不能沿用舊版本 cache。
+- `build_personas(calendar, total=300)` 尾端擴充、保留原 40 人順序；v1 未指定 total 仍是 40 人。先前 seed 入口改為 300 的變更請在角色 1 合併時確認，本次不再修改該檔案。
+- 107 筆假品名逐筆對照見 `docs/results/synthetic-cache-review.md`，舊／新模型輸出分存 `datasets/synthetic/attribute-cache.model-v1.jsonl`、`attribute-cache.model-v2.jsonl`；有效快取保留每欄 corrections。目前是助理複核、待真人確認，不能當 human gold。配對數字見 `docs/results/matching.md`，僅核心公式，尚未驗證分類/API/DB 端到端。
+- 真人盲標檔在主資料夾 `C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-review-20261015\`：4 份各 25 筆，另有獨立預測；品名只准本機腳本處理、畫面只印彙總。4.8 仍待真人複核；舊版私人預測不能當新版品質證據。
+- 工作區為 `codex/role-3/attributes` worktree；共用主資料夾 Python 與 llama.cpp，不升級共用套件。本角色此次只修改自身檔案與 `src/receipt/` 新增的外部屬性邏輯。
 
 ### 13.1 同一台電腦用 worktree 分開做（2026-10-15）
 

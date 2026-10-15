@@ -1,4 +1,4 @@
-"""Evaluate 300 fictional users with recorded Qwen attributes, without a database or GPU.
+"""Evaluate 300 fictional users with reviewed, recorded Qwen attributes, without a database or GPU.
 
 Run from the repository root: python -m scripts.evaluate_matching
 """
@@ -43,12 +43,18 @@ def main():
     opposites = json.loads((ROOT / "configs/persona-opposites.json").read_text(encoding="utf-8"))["pairs"]
     summary = summarize_matches(people, matches, opposites)
     summary.update(source="synthetic", population=300, unique_items=len(cache), model_versions=sorted({r["model_version"] for r in records}),
-                   scope="core formula with known synthetic categories and Qwen cache; API/DB ingestion not verified",
+                   cache_review={"reviewed_items": len(records), "corrected_items": sum(bool(r.get("corrections")) for r in records),
+                                 "corrected_fields": sum(len(r.get("corrections", {})) for r in records),
+                                 "human_confirmed_items": sum(r.get("human_confirmed", False) for r in records),
+                                 "statuses": sorted({r["review_status"] for r in records})},
+                   cache_revisions=sorted({r.get("cache_revision", "original") for r in records}),
+                   scope="core formula with known synthetic categories and reviewed Qwen cache; not raw model accuracy; API/DB ingestion not verified",
                    comparable_profiles=sum(v is not None for v in vectors.values()))
     destination = ROOT / "docs/results"
     destination.mkdir(exist_ok=True, parents=True)
     (destination / "matching.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
-    lines = ["# 300 位假用戶配對驗證", "", "2026-10-15；純合成資料、既定類別 + 本機 Qwen 屬性快取，再用現有核心計算向量與配對。", "",
+    lines = ["# 300 位假用戶配對驗證", "", "2026-10-15；純合成資料、既定類別 + 經助理逐筆修正的本機 Qwen 屬性快取，再用現有核心計算向量與配對。", "",
+             f"屬性共 {len(records)} 筆，修正新版模型 {summary['cache_review']['corrected_items']} 筆／{summary['cache_review']['corrected_fields']} 欄；真人確認 {summary['cache_review']['human_confirmed_items']} 筆。這是修正後快取的配對測試，不代表原始 Qwen 準確率。逐筆對照見 [synthetic-cache-review.md](synthetic-cache-review.md)。", "",
              "這次驗證涵蓋核心公式與向量重算；資料庫匯入、分類模型與 API 端到端尚待角色 1 的管線完成。", "",
              "相反類型在執行前固定於 `configs/persona-opposites.json`：省錢／咖啡、忙碌／家庭、手搖／健身、旅人／貓奴。這是待驗證的假設，不保證一定互補。", "",
              "相近採原始分數 ≥ 0.3、互補 ≤ −0.1，各取前 5；同分依生成順序（對應全新 seed 的 id），不篩距離。P@5 分母固定是每人 5 格，名單不足仍算未命中；用戶命中率是至少命中一人。互相命中要求同類型兩人都把彼此列在相近前 5。", "",

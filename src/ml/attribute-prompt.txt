@@ -35,3 +35,15 @@ species 寵物商品明示貓填cat，明示狗犬填dog，其他null。
 無法識別的商品代碼或加價項目，無法確定的基本標籤放unknown，不猜具體商品。
 例：無糖綠茶，quantity=1 -> yes:["food","drink"]，unknown:[]，sugar:0，fun:null，species:null。
 例：瑜珈墊，quantity=1 -> yes:["sport_gear"]，unknown:[]，sugar:null，fun:null，species:null。
+
+補充判讀規則：
+這是多標籤任務，不是只選一個最像的類別。逐一檢查全部布林標籤，不可漏掉同時成立的標籤。每筆只依該品名，不能從同批其他商品借用標籤。
+人喝的飲料、飲用酒也是 food；drink 和 alcohol 可以同時為 true。寵物食品不是 food。
+生鮮原料可同時為 food、fresh、cooking；熟食菜名不表示 cooking。調味料與米是 kitchen。
+quick 只指飯糰、三明治、微波即食正餐，不泛指所有食品、飲料、甜點或一般餐廳正餐。
+daily 指日用實物和文具，不含車票、停車、住宿等服務。電子產品用 tech。
+car_care 只指保養清潔維修，不含加油、停車或搭車。
+sport 只指運動課程與運動場館；娛樂票券不能當運動，運動課程也不是唱歌。
+fun 的 null 表示不是娛樂；桌遊、遊樂園、密室皆為 game。
+寵物商品品名有貓、狗、犬時必須填對 species；沒寫物種才是 null。
+商品名稱以「箱」結尾是整箱包裝，bulk=true。

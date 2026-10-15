@@ -48,7 +48,7 @@
 
 | 資料表 | 內容 |
 |---|---|
-| `users` | `id`、`username`、`password_hash`（假用戶是空的）、`display_name`、`is_demo`、`persona`（假用戶的類型），以及帳號管理時加上的 `tokens_valid_after` |
+| `users` | `id`、`username`（一律小寫）、`password_hash`（假用戶是空的）、`display_name`、`is_demo`、`persona`（假用戶的類型）、`token_key`（每個帳號一把隨機字串，權杖帶著它，見 D8） |
 | `jobs` | 上傳工作：月份、狀態、`done`／`total`、訊息 |
 | `items` | 品項：月份、日、發票代碼、店家、行政區、品名、數量、金額、類別（0–9，或 10 待確認）、屬性狀態 |
 | `item_cache` | 品名、模型版本、23 個欄位的結果 |
@@ -118,29 +118,32 @@ API 路徑一律使用模型屬性；關鍵字規則只留給 v1 靜態建置和
 
 採用 OAuth2 password flow，登入用表單，`/docs` 的 Authorize 按鈕可以直接用：
 
-- 權杖用 PyJWT 的 HS256 簽發，`sub` 是 user_id，有效期限 `JWT_EXPIRE_MINUTES`（預設 24 小時）
-- 密碼用 pwdlib 的 argon2 雜湊；帳號不存在時也驗一次假雜湊，讓錯帳號和錯密碼花的時間相同
+- 權杖用 PyJWT 的 HS256 簽發，`sub` 是 user_id，`key` 是這個帳號的 `token_key`，有效期限 `JWT_EXPIRE_MINUTES`（預設 24 小時）
+- 密碼先做 Unicode NFKC 正規化，再用 pwdlib 的 argon2 雜湊；帳號不存在時也驗一次假雜湊，讓錯帳號和錯密碼花的時間相同。登入時的密碼超過 512 字元就直接當作錯誤，不把整串拿去正規化（NFKC 處理很長的文字很慢）
 - 密鑰是 `.env` 的 `JWT_SECRET`（至少 32 字元）；git 裡只放 `.env.example`
-- 錯誤一律是 `{"detail": "<代碼>"}`，由 `ApiError` 統一產生
-- `DEMO_MODE=1` 時才有 demo 名單和快速切換，而且只能切換成假用戶
-- 帳號管理上線時，權杖多帶 `iat`，驗證時還要檢查簽發時間不早於這位使用者的 `tokens_valid_after`。登出和改密碼都把 `tokens_valid_after` 設成現在（取到秒），所以這個帳號所有裝置上的舊權杖都會一起失效。改密碼時，新權杖要在更新這個欄位之後才簽發
+- 錯誤一律是 `{"detail": "<代碼>"}`，由 `ApiError` 統一產生；422 保留 FastAPI 的格式但不回傳被拒絕的輸入（可能是密碼），程式出錯回 500 `internal_error`，細節只留在伺服器的紀錄
+- `DEMO_MODE=1` 時才有 demo 名單和快速切換，而且只能切換成假用戶；`user_id` 只接受 1 到 2^63−1 的 JSON 整數；`DEMO_MODE` 關掉之後，假用戶的權杖立刻失效
+- `token_key` 在建立帳號時產生。驗證權杖時，帳號必須存在，權杖裡的 `key` 必須等於帳號現在的 `token_key`。第 1 週就為了一件事用到它：帳號刪除後 SQLite 會把同一個 id 給新帳號，但新帳號的 `token_key` 不同，舊帳號的權杖不會變成新帳號的
+- 帳號管理上線時，登出和改密碼都只做一件事：換掉這個帳號的 `token_key`，所以這個帳號所有裝置上的舊權杖都會一起失效。改密碼的回應附上用新 key 簽發的權杖
 
 - 替代方案：用 session cookie 或第三方登入。否決，因為前者要另外處理 CSRF，後者要在外部服務設定帳號。
-- 登出的替代方案：只讓前端丟掉權杖（舊權杖在 1 天內仍然有效），或另開一張表記錄撤銷的權杖（多一張表，也要定期清理）。都否決，改用 `tokens_valid_after`：不加表，就能真正從伺服器端登出，代價是會登出所有裝置。
+- 登出的替代方案：只讓前端丟掉權杖（舊權杖在 1 天內仍然有效），或另開一張表記錄撤銷的權杖（多一張表，也要定期清理），或權杖帶 `iat`、`users` 加 `tokens_valid_after` 欄位再比較簽發時間（多一個欄位，而且 `iat` 只到秒，同一秒內簽發的新舊權杖分不出來）。都否決，改用 `token_key`：它已經存在，不加表也不加欄位，就能真正從伺服器端登出，代價是會登出所有裝置。
 
 ### D8a. 設定項目
 
-名稱和預設值見 overview 5.10：`JWT_SECRET`、`JWT_EXPIRE_MINUTES`、`DEMO_MODE`、`DATABASE_URL`、`LLAMA_SERVER_URL`、`CATEGORY_MODEL`、`ATTRIBUTES_MODEL`、`CATEGORY_MIN_PROB`，以及 10/15 為 Docker 補上的 `CATEGORY_MODEL_DIR`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`。由 `src/api/settings.py` 的 `Settings.from_env()` 讀取並檢查。
+名稱和預設值見 overview 5.10：`JWT_SECRET`、`JWT_EXPIRE_MINUTES`、`DEMO_MODE`、`DATABASE_URL`、`LLAMA_SERVER_URL`、`CATEGORY_MODEL`、`ATTRIBUTES_MODEL`、`CATEGORY_MIN_PROB`，以及 10/15 為 Docker 補上的 `CATEGORY_MODEL_DIR`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`。由 `src/api/settings.py` 的 `Settings.from_env()` 讀取並檢查：留空等於預設值；密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不認得時，服務啟動時停下來，用一行訊息指出變數名稱。`src/ml/` 還沒有真的模型之前，`CATEGORY_MODEL` 和 `ATTRIBUTES_MODEL` 只有 `fake` 能用（`backends.load_backends` 會擋下其他值），接上真的模型時它要一起改。
 
 ### D9. 前端
 
-保留 `src/web/` 現有的 JS，新增一個 API 客戶端模組，把原本讀內嵌資料的地方改成呼叫 API。
+沿用 `src/web/` 現有的頁面和 JS（複製到 `src/web_v2/` 再改），新增一個 API 客戶端模組，把原本讀內嵌資料的地方改成呼叫 API。
 
-- 整個 `src/web/` 由同一個 FastAPI 以靜態檔案掛在 `/web/`，和 API 同網域，不用設 CORS；v2 的入口是新的 `src/web/index.html`；不使用打包工具
+- v2 網頁放在 `src/web_v2/`，由同一個 FastAPI 以靜態檔案掛在 `/web/`，和 API 同網域，不用設 CORS；入口是 `src/web_v2/index.html`（第 1 週先放一個預留頁）；不使用打包工具
+- `src/web/` 是 v1 報告的建置輸入，凍結：不提供，也不為 v2 修改；角色 4 把需要的頁面和 JS 從 `src/web/` 複製到 `src/web_v2/`（2026-10-15 團隊決定）。v1 的建置和它的 82 個 JS 測試因此不受 v2 影響
 - 前端把 API 的錯誤代碼對應成中文
 - 根目錄的 `invoice-insights.html` 不動
 
 - 替代方案：把網頁掛在 `/`。否決，因為 POST 到不存在的 `/api` 路徑會被靜態檔案接走，回 405 而不是 404（第 1 週試做時發現的）。
+- 替代方案：直接改 `src/web/` 並整個提供。否決，因為它是 v1 報告的建置輸入，要凍結不動。
 - 替代方案：用 Streamlit 或 React 重做（規劃會議第 10 題已經否決）。
 
 ### D10. 假用戶與假資料
@@ -148,7 +151,7 @@ API 路徑一律使用模型屬性；關鍵字規則只留給 v1 靜態建置和
 把 `personas.py` 擴充到約 300 人，每種類型 37–38 人，用固定的種子。
 
 - 假品名詞庫、假用戶、假品名的 Qwen 屬性結果都存成 JSONL，放在 `datasets/synthetic/` 並進 git，這樣沒有 GPU 的電腦也有完整的假用戶
-- `src/api/seed.py`（第 1 週先放入 40 人，帳號是 `demo_001` 起算、沒有密碼）之後擴充成：把假發票寫進 `items`、把屬性結果載入 `item_cache`，再走一般的管線算出品味向量；重複執行不會重複加人
+- `src/api/seed.py`（第 1 週先放入 40 人，帳號是 `demo_001` 起算、沒有密碼；名單只能往後加，資料庫裡的帳號和名單對不上時停下來，不默默略過）之後擴充成：把假發票寫進 `items`、把屬性結果載入 `item_cache`，再走一般的管線算出品味向量；重複執行不會重複加人
 
 ### D11. 測試與 CI
 
@@ -167,11 +170,11 @@ API 路徑一律使用模型屬性；關鍵字規則只留給 v1 靜態建置和
 
 ### D13. 帳號管理
 
-端點和錯誤代碼見 overview 5.11（`/api/me`、`/api/me/password`、`/api/me/months/{month}`、`/api/auth/logout`）。資料表不增加，只在 `users` 加 `tokens_valid_after`。
+端點和錯誤代碼見 overview 5.11（`/api/me`、`/api/me/password`、`/api/me/months/{month}`、`/api/auth/logout`）。資料表和欄位都不增加：`users.token_key` 第 1 週就有了，登出和改密碼靠它（見 D8）。
 
 - **刪除帳號**在一個交易裡依序刪除：`items` → `jobs` → `profiles` → `users`，最後刪掉 `item_cache` 裡已經沒有任何 `items` 用到的品名。帳號刪除後，權杖查不到使用者，自然回應 401 `not_authenticated`
 - **刪除月份**：先確認那個月份沒有 `queued` 或 `running` 的工作，再刪除那個月的 `items` 和 `jobs`，然後重算品味向量；快取的清理方式和刪除帳號相同
-- **假用戶**（`is_demo`）的修改和刪除一律回 403 `demo_user_read_only`，而且這個檢查要在比對密碼之前；登出照常可用
+- **假用戶**（`is_demo`）的修改、刪除和上傳發票一律回 403 `demo_user_read_only`，而且這個檢查要在比對密碼之前；登出照常可用
 
 - 替代方案：資料表加 `deleted_at`，只做「軟刪除」。否決，因為使用者要求刪除時就應該真的刪掉，軟刪除還得另外處理「刪除後的資料不能出現」的所有查詢。
 

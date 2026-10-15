@@ -99,6 +99,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 | `src/receipt/` | 現有核心邏輯，盡量不改行為 | 全體 |
 | `src/api/` | FastAPI：路由、資料庫、登入、背景任務 | 角色 1 |
 | `src/ml/` | 模型介面與假替身：`category.py`、`attributes.py`、`fakes.py`、`fields.py`（共用的欄位名） | 角色 2、3 |
+| `src/web_v2/` | v2 網頁，FastAPI 從 `/web/` 提供；`src/web/` 是 v1 報告的建置來源，凍結不動 | 角色 4 |
 | `datasets/synthetic/` | 假品名和假用戶資料（JSONL），可以進 git | 角色 2、3 |
 | `docs/team/` | 這份總覽、概念說明 | 全體 |
 
@@ -112,10 +113,10 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 
 ### 5.1 共通規則
 
-- **路徑**：API 一律以 `/api` 開頭。v2 網頁由同一個 FastAPI 從 `/web/` 提供（`src/web/` 資料夾），同一個網域，所以不用設 CORS。不掛在 `/`，是因為那樣 POST 到不存在的 `/api` 路徑會被靜態檔案接走，回 405 而不是 404
+- **路徑**：API 一律以 `/api` 開頭。v2 網頁放在 `src/web_v2/`，由同一個 FastAPI 從 `/web/` 提供，同一個網域，所以不用設 CORS。`src/web/` 是 v1 報告的建置來源，不提供也不為 v2 修改，要用的頁面由角色 4 複製到 `src/web_v2/`。不掛在 `/`，是因為那樣 POST 到不存在的 `/api` 路徑會被靜態檔案接走，回 405 而不是 404
 - **格式**：JSON（UTF-8），欄位名用 snake_case。唯一例外：`/api/me/profile` 的 `months` 原樣沿用現有月報格式（`invoices.build_month` 的輸出，例如 `monthNumber`），現有網頁才不用改
 - **登入**：除了標「免」的端點，都要帶 `Authorization: Bearer <access_token>`。JWT 用 HS256，`sub` 放 user_id（轉成字串），`key` 放這個帳號的 `token_key`，24 小時過期。`token_key` 是每個帳號一把隨機字串：換掉它，這個帳號在所有裝置上的 token 就一起失效（登出、改密碼都靠它，見 5.11）；帳號刪掉後 id 被新帳號重用時，新帳號的 `token_key` 不同，舊 token 也不會變成新帳號的
-- **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤回 422，格式同 FastAPI 預設（`detail` 是清單，每項有 `type`、`loc`、`msg`），但不回傳被拒絕的輸入值，因為那可能是密碼。需要登入的端點，沒帶 token 或 token 過期都回 401 `not_authenticated`。框架自己回的錯誤（例如不存在的路徑是 404、方法不對是 405）`detail` 是英文句子而不是代碼，前端遇到不認得的 `detail` 一律顯示通用錯誤訊息。程式本身出錯時回 500 `{"detail": "internal_error"}`，細節只留在伺服器的紀錄裡
+- **錯誤**：HTTP 狀態碼加 `{"detail": "<錯誤代碼>", "message": "<說明，可省略>"}`。錯誤代碼是固定的英文 snake_case，前端自己對應成中文。欄位格式錯誤回 422，格式同 FastAPI 預設（`detail` 是清單，每項有 `type`、`loc`、`msg`），但不回傳被拒絕的輸入值，因為那可能是密碼。需要登入的端點，沒帶 token、token 過期或已經失效都回 401 `not_authenticated`；這個 401 和登入失敗的 401 `bad_credentials` 都帶 `WWW-Authenticate: Bearer`。框架自己回的錯誤（例如不存在的路徑是 404、方法不對是 405）`detail` 是英文句子而不是代碼，前端遇到不認得的 `detail` 一律顯示通用錯誤訊息。程式本身出錯時回 500 `{"detail": "internal_error"}`，細節只留在伺服器的紀錄裡
 - **數字**：`score` 這類小數不先四捨五入。要顯示的整數百分比另外給 `percent`，算法同 `similarity.percent`
 - **18 格順序**：一律照 `configs/traits.json` 的順序
 - **null**：表示「不知道」或「資料不夠」，不能當成 0 或 `false`
@@ -145,13 +146,14 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 ### 5.3 帳號
 
 **`POST /api/auth/register`**：JSON `{"username": "amy", "password": "…", "display_name": "Amy"}`
-- `username` 3–32 字元，只能用英數字和底線，不分大小寫（一律存成小寫，登入時也轉小寫比對）；`password` 8–128 字元，雜湊和比對前都先做 Unicode NFKC 正規化；`display_name` 可省略，1–20 字元，預設同 `username`，不能含控制字元或看不見的格式字元（例如零寬空白、方向控制字元）。`username` 不能以 `demo_` 開頭，那是留給假用戶的
+- `username` 3–32 字元，只能用英數字和底線，不分大小寫（一律存成小寫，登入時也轉小寫比對）；`password` 8–128 字元，雜湊和比對前都先做 Unicode NFKC 正規化；`display_name` 可省略，1–20 字元，預設同 `username`，不能含控制字元、看不見的字元、私用字元、未指派字元或換行（例如零寬空白、方向控制字元）。`username` 不能以 `demo_` 開頭，那是留給假用戶的
 - 回傳 201：`{"user_id": 301, "username": "amy", "display_name": "Amy"}`
 - 錯誤：409 `username_taken`
 
 **`POST /api/auth/login`**：表單（`application/x-www-form-urlencoded`）`username`、`password`，和 FastAPI 的 OAuth2 表單相同，`/docs` 的 Authorize 按鈕可以直接用
 - 回傳：`{"access_token": "…", "token_type": "bearer", "expires_in": 86400}`
 - 錯誤：401 `bad_credentials`（帳號不存在和密碼錯誤用同一個代碼）
+- 密碼先做 NFKC 正規化再比對；超過 512 字元的一律當作密碼錯誤，不做正規化（註冊最多 128 字元，用分解寫法輸入也放得下）
 
 **`GET /api/auth/demo-users`**：demo 快速切換的名單，只列假用戶
 - 回傳：`[{"user_id": 1, "display_name": "咖啡上班族 A", "persona": "咖啡上班族"}, …]`
@@ -170,7 +172,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 **`POST /api/invoices`**：multipart，欄位名 `file`，一次一個財政部電子發票 CSV（一份一個月），上限 2 MB
 - 伺服器先**當場**用 `invoices.build_month` 的規則解析，格式有錯直接回 400；解析成功才建立背景任務
 - 同一個人重新上傳同一個月份，會取代那個月的舊資料
-- demo 用戶不能上傳，回 403 `demo_read_only`：demo 帳號是大家共用的，上傳會把真實消費掛到公開的假用戶上（第 2 週實作）
+- demo 用戶不能上傳，回 403 `demo_user_read_only`（和 5.11 同一個代碼）：demo 帳號是大家共用的，上傳會把真實消費掛到公開的假用戶上（第 2 週實作）
 - 「作廢」開頭的發票狀態（例如「作廢已確認」）直接跳過，不算消費；只有「開立已確認」會被計入，其他狀態回 400
 - **金額低於 10 元（含 0 元和負數的折扣）或金額有小數的明細直接略過**，不算消費、不分析。月報總金額因此是折扣前的金額
 - 數量有小數的明細（加油的公升數、秤重商品）保留，**數量當 1**。不然加油次數會消失，30 公升也會被「數量 ≥ 3」誤判成囤貨
@@ -269,7 +271,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
               "mine":   {"vector": ["…18 格"], "pushes": ["…"], "signals": ["…46 個訊號"], "items": [[["鮮奶茶", 6], ["美式咖啡", 2]], null]},
               "theirs": {"vector": ["…"], "pushes": ["…"], "signals": ["…"], "items": ["…"]}}
   ```
-  `src/web/trait-network.js` 可以直接拿來畫。資料不夠的人，四個欄位都是 `null`
+  `src/web/trait-network.js`（複製到 `src/web_v2/` 之後）可以直接拿來畫。資料不夠的人，四個欄位都是 `null`
 - `items` 是每個訊號買最多次的 3 個品名和出現的發票張數，品名一律經過 5.8 的處理
 - 錯誤：404（沒有這個人）、400 `self`（查自己）
 
@@ -309,9 +311,11 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `CATEGORY_MODEL_REPO` | 空 | Hugging Face 上公開的分類模型庫；資料夾裡沒有模型時從這裡下載。10/15 補上 |
 | `CATEGORY_MODEL_REVISION` | 空 | 要下載的固定版本（commit），和 `CATEGORY_MODEL_REPO` 一起設定。10/15 補上 |
 
+設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。`src/ml/` 有真的模型之前，`CATEGORY_MODEL` 和 `ATTRIBUTES_MODEL` 只有 `fake` 能用，設成別的值同樣會停下來。
+
 ### 5.11 帳號管理（2026-10-15 補上）
 
-格式和錯誤規則同 5.1。假用戶（`is_demo`）不能改名、改密碼、刪帳號或刪月份，一律回 403 `demo_user_read_only`；登出照常可以用。
+格式和錯誤規則同 5.1。假用戶（`is_demo`）不能改名、改密碼、刪帳號或刪月份，一律回 403 `demo_user_read_only`（上傳發票也一樣，見 5.4）；登出照常可以用。
 
 **`GET /api/me`**
 - 回傳：`{"user_id": 301, "username": "amy", "display_name": "Amy", "is_demo": false, "months": ["2026-07", "2026-08"]}`
@@ -321,7 +325,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 - 回傳：同 `GET /api/me`。`username` 不能改
 
 **`POST /api/me/password`**：JSON `{"current_password": "…", "new_password": "…"}`，新密碼 8–128 字元
-- 回傳：同 login（一個新的 token）。改完之後，舊的 token 全部失效
+- 回傳：同 login（一個新的 token）。改完之後，這個帳號的 `token_key` 換成新的，舊的 token 全部失效，回傳的新 token 帶著新的 key
 - 錯誤：403 `wrong_password`
 
 **`DELETE /api/me`**：JSON `{"password": "…"}`
@@ -333,8 +337,8 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 - 錯誤：404 `month_not_found`、409 `job_in_progress`（那個月還有 queued 或 running 的任務）
 
 **`POST /api/auth/logout`**
-- 回傳 204。把這個人的 `tokens_valid_after` 設成現在，這個帳號在**所有裝置**上的 token 都會失效
-- `users` 表因此多一個欄位 `tokens_valid_after`（可以是空的）。SQLModel 不會幫已經存在的資料表加欄位，開發用的 `data/app.db` 刪掉重建，再跑一次 seed 就好
+- 回傳 204。換掉這個人的 `token_key`，這個帳號在**所有裝置**上的 token 都會失效
+- `users.token_key` 第 1 週就有了，不必再加欄位。登出後馬上重新登入，新拿到的 token 可以用
 
 ## 6. 模型介面（角色 2、3 交給角色 1）
 
@@ -405,6 +409,7 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
   3. 計算過程面板；概念說明文件
   4. README；整合 4 人的發表素材
 - **注意：** 根目錄的 `invoice-insights.html` 就是 GitHub Pages 上的 v1，**不要覆蓋它**。v2 的輸出換別的位置
+- **v2 網頁放在 `src/web_v2/`：** FastAPI 從 `/web/` 提供它（現在只有一個預留的 `index.html`）。`src/web/` 是 v1 報告的建置來源，凍結不動、也不提供；需要的頁面和 JS 從 `src/web/` 複製到 `src/web_v2/` 再改（10/15 團隊決定）
 
 ## 8. 時程與砍功能順序
 
@@ -474,11 +479,11 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
    .venv/Scripts/python.exe -m unittest discover -s tests -v
    node --test "tests/*.test.cjs"
    ```
-   預期結果：Python 153 個、JS 82 個全部通過
+   預期結果：Python 154 個、JS 82 個全部通過
 3. 後端（角色 1 的第一週成果）：
    - 複製 `.env.example` 成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼：`.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"`
-   - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人）
-   - 啟動：`.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload`，打開 `http://127.0.0.1:8000/docs`。網頁在 `http://127.0.0.1:8000/web/match.html` 這類網址，角色 4 接上 API 之前畫面是空的
+   - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人；名單只能往後加，資料庫裡的帳號和名單對不上時會停下來並說明，這時刪掉 `data/app.db` 再重來）
+   - 啟動：`.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload`，打開 `http://127.0.0.1:8000/docs`。v2 網頁在 `http://127.0.0.1:8000/web/`，角色 4 做好之前只有一個預留頁
    - 改了 `.env` 要手動重啟伺服器（`--reload` 只看 `.py` 檔）
    - `src/api/tables.py` 的資料表有變動時，刪掉 `data/app.db` 再重新放入 demo 用戶
    - `DEMO_MODE=1` 時不要加 `--host 0.0.0.0`，啟動時會印出提醒

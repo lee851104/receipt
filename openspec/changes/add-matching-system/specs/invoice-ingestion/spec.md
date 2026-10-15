@@ -17,6 +17,13 @@
 - **WHEN** 上傳的檔案超過 2 MB
 - **THEN** 系統回應 413 `file_too_large`，不建立工作
 
+### Requirement: 假用戶不能上傳
+系統 MUST 拒絕假用戶（用 demo 快速切換進來的帳號）上傳發票，回應 403 `demo_user_read_only`，不建立工作。假用戶是大家共用的，上傳會把真實消費掛到公開的假用戶身上。
+
+#### Scenario: 以假用戶身分上傳
+- **WHEN** 透過 demo 快速切換成假用戶後，上傳一份格式正確的 CSV
+- **THEN** 系統回應 403 `demo_user_read_only`，不建立工作，這位假用戶的資料不變
+
 ### Requirement: 上傳時當場檢查格式
 系統 SHALL 在建立背景工作之前就解析整份 CSV。讀不到必要欄位、內容有多個月份，或含有不被接受的發票狀態時，系統 MUST 回應 400 `invalid_csv` 並在 `message` 寫明原因，不建立工作，也不改動既有資料。CSV 結尾的說明列（沒有發票日期的列）SHALL 被略過。
 

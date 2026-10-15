@@ -46,7 +46,7 @@
 
 ## 實作時的變更（2026-10-15）
 
-每個任務都經過規格審查和程式品質審查，修正後的程式碼和下面各任務的程式碼區塊有出入，**以 repo 裡的程式碼為準**。最後 Python 測試 153 個（原本預期 121）。主要差異：
+每個任務都經過規格審查和程式品質審查，修正後的程式碼和下面各任務的程式碼區塊有出入，**以 repo 裡的程式碼為準**。最後 Python 測試 154 個（原本預期 121）。主要差異：
 
 - `src/ml/`：`describe_items(names, ask_model=True)`；新增 `tests/model_contract.py`，角色 2、3 可以拿來檢查真模型的回傳格式（一般 Python 型別、機率加總為 1 等）
 - `settings.py`：留空等於預設值；數字錯誤或超出範圍時錯誤訊息會指出變數名稱；`repr` 不印密鑰
@@ -58,7 +58,8 @@
 - `errors.py`：422 不回傳被拒絕的輸入值；程式出錯時回 500 JSON `internal_error`
 - `seed.py`：資料庫裡的 demo 用戶跟假用戶清單對不上時停下來，不會默默略過
 - `main.py`：DEMO_MODE 開啟時印提醒；設定錯誤或模型還沒有時只印一行（新增 `tests/test_api_main.py`）
-- `.gitignore`：擋住 `/src/web/*-data.js`
+- `app.py`、`src/web_v2/`：v2 網頁從 `src/web_v2/` 提供（10/15 團隊決定），`src/web/` 不再被提供，它是 v1 報告的建置來源
+- `.gitignore`：擋住 `/src/web/*-data.js` 和 `/src/web_v2/*-data.js`
 
 ## 檔案
 

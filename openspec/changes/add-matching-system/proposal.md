@@ -18,7 +18,7 @@
 - 新增無 GPU 模式和一鍵啟動，沒有顯示卡的組員也能跑完整 demo
 - 新增 Docker：`docker compose up` 一個指令就能用無 GPU 模式啟動；分類模型公開在 Hugging Face，第一次啟動時自動下載
 - 新增 GitHub Actions，每次 push 都跑全部測試，模型用假替身
-- 現有網頁改成向 API 要資料，由同一個服務在 `/web/` 提供；GitHub Pages 上的 v1（根目錄 `invoice-insights.html`）凍結不動
+- v2 網頁放在 `src/web_v2/`，從現有網頁複製過去再改成向 API 要資料，由同一個服務在 `/web/` 提供；GitHub Pages 上的 v1（根目錄 `invoice-insights.html`）和它的建置來源 `src/web/` 凍結不動
 
 ## Capabilities
 
@@ -42,15 +42,14 @@
 
 ## Impact
 
-- **新程式：** `src/api/`（FastAPI、資料庫、登入、背景任務）、`src/ml/`（模型介面與假替身）、`datasets/synthetic/`（假品名、假用戶資料，可進 git）、`.github/workflows/`、`Dockerfile`、`docker-compose.yml`、`.dockerignore`
+- **新程式：** `src/api/`（FastAPI、資料庫、登入、背景任務）、`src/ml/`（模型介面與假替身）、`src/web_v2/`（v2 網頁：從 `src/web/` 複製要用的頁面改成向 API 要資料，並新增登入、上傳和計算過程畫面）、`datasets/synthetic/`（假品名、假用戶資料，可進 git）、`.github/workflows/`、`Dockerfile`、`docker-compose.yml`、`.dockerignore`
 - **外部服務：** 分類模型公開在 Hugging Face 的模型庫，以固定版本下載
 - **修改現有程式：**
   - `src/receipt/invoices.py` 的解析改成略過作廢發票、低於 10 元或有小數金額的明細，小數數量當成 1（現在遇到這些會直接報錯）
   - `src/receipt/attributes.py` 的屬性來源改由模型提供，`channel_of` 保留
   - `src/receipt/personas.py` 擴充到約 300 人
-  - `src/web/` 改成向 API 要資料，並新增登入、上傳和計算過程畫面
   - `src/receipt/similarity.py` 的公式與 `configs/traits.json` 的門檻**不變**
-- **不能變動：** 根目錄 `invoice-insights.html`（GitHub Pages v1）、現有 159 個測試的行為
+- **不能變動：** 根目錄 `invoice-insights.html`（GitHub Pages v1）、`src/web/`（v1 報告的建置來源，不提供也不為 v2 修改）、現有 159 個測試的行為
 - **新套件：** `fastapi`、`uvicorn`、`sqlmodel`、`python-multipart`、`pyjwt`、`pwdlib[argon2]`、`python-dotenv`，測試用 `httpx2`；BERT 上線時再加 CPU 版 `torch`、`transformers`。另外需要 llama.cpp 的 `llama-server` 執行檔（放在 `runtime/`，不進 git）
 - **硬體：** 選型和訓練用 RTX 4060 8G；其他組員的電腦用無 GPU 模式
 - **隱私：** 真實發票、真實品名與標註、模型檔都不進 git；真實品名只用本機模型處理。分類模型的權重會公開在 Hugging Face，但訓練資料不公開

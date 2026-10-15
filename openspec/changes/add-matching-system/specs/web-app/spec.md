@@ -72,9 +72,17 @@
 - **WHEN** 錄影者以假用戶身分打開設定頁
 - **THEN** 頁面上的修改和刪除按鈕都無法使用，登出仍然可以使用
 
-### Requirement: v1 線上版不變
-GitHub Pages 上的 v1（根目錄的 `invoice-insights.html`）MUST 維持現在的內容；v2 網頁 SHALL 由同一個本機服務在 `/web/` 底下提供，不覆蓋 v1。
+### Requirement: v1 線上版和原始檔不變
+GitHub Pages 上的 v1（根目錄的 `invoice-insights.html`）MUST 維持現在的內容；v2 網頁 SHALL 放在 `src/web_v2/`，由同一個本機服務在 `/web/` 底下提供，不覆蓋 v1。`src/web/` 是 v1 報告的建置來源，MUST NOT 被提供，也不為 v2 修改；v2 需要的頁面和 JS 從 `src/web/` 複製到 `src/web_v2/`。
 
 #### Scenario: 建置 v2
 - **WHEN** 建置或啟動 v2 網頁
-- **THEN** 根目錄的 `invoice-insights.html` 沒有任何變動
+- **THEN** 根目錄的 `invoice-insights.html` 和 `src/web/` 底下的檔案都沒有任何變動
+
+#### Scenario: v2 入口
+- **WHEN** 服務啟動後打開 `/web/`
+- **THEN** 顯示 `src/web_v2/index.html`，也就是 v2 的入口頁
+
+#### Scenario: v1 的原始檔不被提供
+- **WHEN** 要求 `/web/` 底下一個只存在於 `src/web/`、還沒有複製進 `src/web_v2/` 的檔案
+- **THEN** 系統回應 404

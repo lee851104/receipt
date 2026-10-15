@@ -509,6 +509,17 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
+### 13.5 角色 4 第二批交付（2026-10-15）
+
+- 在 `codex/role4-web-foundation`／角色 4 worktree 接續第一批，合併角色 1 已提交的 `role-1/uploads`（8510bc1）後完成前端 5.4、5.5、5.6。尚未合併回 main。
+- 上傳 CSV 採 multipart，成功後每 2 秒讀工作進度，呈現 queued／running／done／failed、錯誤說明與完成入口；查詢中斷可重查同一 job，不自動重傳檔案。demo 禁止上傳。上傳完成會取消舊月報／配對／關係圖請求，避免晚回資料覆蓋。
+- 分類先顯示類別和機率，pending 每 2 秒額外重查最多 5 次；ready 顯示屬性，耗盡則顯示「稍後再查」，符合 OpenSpec 無 GPU 情境。第一批「不自動重查」的暫行行為已更新。
+- 月報、18 格品味、相近／互補、距離篩選及雙方關係圖已接 API 契約。月報與關係圖從 v1 複製並在 iframe 顯示，以目前身分的資料快照供給；切換身分／401 清空。配對百分比、排序、eligible／within、關係圖貢獻使用後端值。
+- 給角色 1：`/me/profile`、`/matches`、`/matches/{id}/explain` 尚未在此分支實作。前端不內嵌測試資料，404 顯示「服務尚未就緒」。這部分以虛構 API fixture 驗證，請後續做真實端到端整合。profile 目前契約只有 18 格，雙方完整圖使用 explain.network；5.7 逐格計算面板仍未完成。
+- 本機預覽仍是 `http://127.0.0.1:8001/web/`，啟動命令同第一批。因資料表變動，角色 4 `.env` 改指向被忽略的 `data/app-role4-week2.db`；保留第一批資料庫，重新 seed 40 位假用戶。使用 fake 模型，不需要 GPU，未改共享套件。
+- 驗證：Python 212、JS 127 全過；OpenSpec strict 通過；v1 原始碼與 HTML 無差異。真實本機 API 已走註冊、上傳完成、分類 pending→ready；假 API 已走上傳失敗、兩月月報、配對及關係圖；桌機／手機與 iframe 無溢出或 JS 例外。審查修正與測試詳見 `docs/superpowers/plans/2026-10-15-role4-upload-profile-matches.md`。
+- 下一批：5.7 計算過程、5.8 概念文件、5.9 README／錄影、5.10 帳號設定。全流程真模型／GPU、Docker、正式後端整合仍未驗證。
+
 ### 13.3 角色 1 轉告（2026-10-15，第 2 週上傳管線，分支 `role-1/uploads`）
 
 上傳（5.4）、任務進度和即時分類的屬性快取（5.5）都接好了，規格的增補都標了「10/15」。品味向量的重算（5.4 第 3 步）、`GET /api/me/profile` 和帳號管理在下一批。
@@ -562,7 +573,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 - 要不要顯示 demo 快速切換，看 `GET /api/health` 的 `demo_mode`；名單用 `GET /api/auth/demo-users`
 - 即時分類框：第 1 週 `attributes_status` 為 `pending` 時不會自己變成 `ready`，先顯示「待分析」
 
-### 13.3 角色 4 第一批交付（2026-10-15）
+### 13.4 角色 4 第一批交付（2026-10-15）
 
 - 分支 `codex/role4-web-foundation`，worktree：`C:\Users\User\.codex\worktrees\receipt-role4\receipt`。由角色 1 骨架 `cfbdd35` 起步；尚未合併回角色 1 或 main。
 - 已完成 5.1–5.3：`src/web_v2/` 的 API 客戶端、入口、登入／註冊、demo 切換。共用客戶端自動帶 bearer、401 清空身分與分類結果並回登入，422 與固定錯誤碼顯示中文。sessionStorage 只保留分頁 token、到期時間與顯示文字，不保存密碼。

@@ -7,7 +7,7 @@ function setup(handler) {
   const calls=[];
   const api={request: async (path,options) => {calls.push([path,options]); return handler(path,options);}};
   const session=createSession(null);
-  const flow=createFlow({api,session});
+  const flow=createFlow({api,session,sleep:async()=>{}});
   return {flow,session,calls};
 }
 test('demo list is fetched and visible only when health explicitly enables demo mode', async () => {
@@ -69,11 +69,11 @@ test('classification renders ready data and preserves unknown, false and zero', 
   assert.equal(rows.find(r=>r.key==='fun').value,'未知');
   assert.equal(rows.length,23);
 });
-test('week-one pending answers show 待分析 and do not poll', async () => {
+test('pending answers exhaust bounded retries and show 稍後再查', async () => {
   const x=setup(()=>({name:'虛構新品',category:{name:'飲品',prob:0.6},attributes:null,attributes_status:'pending'}));
   x.session.set(token,'Amy'); await x.flow.classify('虛構新品');
   assert.equal(x.flow.state().classification.status,'pending');
-  assert.equal(x.flow.state().classification.message,'待分析'); assert.equal(x.calls.length,1);
+  assert.equal(x.flow.state().classification.message,'稍後再查'); assert.equal(x.calls.length,6);
 });
 test('empty, overlong, or invisible names never reach the API', async () => {
   const x=setup(()=>({})); x.session.set(token,'Amy');
@@ -89,7 +89,7 @@ test('unauthorized or switch account removes results and returns to login', asyn
 test('a slow old classification cannot overwrite the new result or return after switching accounts', async () => {
   const resolvers=[]; const x=setup(()=>new Promise(r=>resolvers.push(r))); x.session.set(token,'Amy');
   const a=x.flow.classify('第一杯'); const b=x.flow.classify('第二杯');
-  resolvers[1]({name:'第二杯',attributes_status:'pending'}); await b;
+  resolvers[1]({name:'第二杯',attributes_status:'ready'}); await b;
   resolvers[0]({name:'第一杯',attributes_status:'pending'}); await a;
   assert.equal(x.flow.state().classification.result.name,'第二杯');
   const c=x.flow.classify('第三杯'); x.flow.switchAccount();

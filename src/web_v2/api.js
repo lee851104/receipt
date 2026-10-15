@@ -40,9 +40,9 @@
       return current;
     }
     return {get, clear, version: () => revision,
-      set(data, label) {
+      set(data, label, {isDemo=false} = {}) {
         if (typeof data?.access_token !== 'string' || !data.access_token || !Number.isFinite(data.expires_in) || data.expires_in <= 0) throw new ApiError('伺服器回應格式有誤，請稍後再試。');
-        current = {token:data.access_token, expiresAt:now()+data.expires_in*1000, label:String(label || '已登入')};
+        current = {token:data.access_token, expiresAt:now()+data.expires_in*1000, label:String(label || '已登入'), isDemo:isDemo===true};
         revision++; persist();
       }
     };

@@ -8,6 +8,9 @@
 <link rel="stylesheet" href="./styles.css">
 <script defer src="./api.js"></script>
 <script defer src="./flow.js"></script>
+<script defer src="./view-adapters.js"></script>
+<script defer src="./workspace-flow.js"></script>
+<script defer src="./workspace-ui.js"></script>
 <script defer src="./app.js"></script>
 </head>
 <body>
@@ -55,7 +58,10 @@
     </div>
   </section>
   <section id="workspace-view" hidden aria-labelledby="workspace-title">
-    <div class="workspace-heading"><div><p class="eyebrow">01 / 從一個品名開始</p><h1 id="workspace-title" tabindex="-1">日常買什麼，<em>看出一點線索。</em></h1><p class="subtitle">輸入品名，查看它的類別、模型信心與消費屬性。</p></div><span id="identity-label" class="identity"></span></div>
+    <nav class="workspace-nav" aria-label="功能導覽">
+<button type="button" data-workspace="classify" aria-current="page">品名分類</button><button type="button" data-workspace="upload">上傳發票</button><button type="button" data-workspace="profile">我的品味與月報</button><button type="button" data-workspace="matches">找到同好</button>
+</nav>
+<div id="classify-panel"><div class="workspace-heading"><div><p class="eyebrow">01 / 從一個品名開始</p><h1 id="workspace-title" tabindex="-1">日常買什麼，<em>看出一點線索。</em></h1><p class="subtitle">輸入品名，查看它的類別、模型信心與消費屬性。</p></div><span id="identity-label" class="identity"></span></div>
     <p id="model-note" class="model-note" role="status" hidden></p>
     <div class="classify-layout">
       <section class="input-card" aria-labelledby="classify-title"><p class="eyebrow">ITEM / 品名</p><h2 id="classify-title">這次買了什麼？</h2>
@@ -70,12 +76,24 @@
           <p id="result-name" class="result-name"></p><div class="category-result"><h2 id="category-name"></h2><div class="probability"><strong id="category-probability"></strong><span>模型信心</span></div></div><div class="confidence-track" aria-hidden="true"><div id="confidence-fill"></div></div>
           <p class="small confidence-note">模型信心是這次分類的機率分數，不代表整體準確率。</p>
           <div class="attributes-heading"><h3>品項屬性</h3><span class="small">未知不等於否</span></div>
-          <p id="pending-note" class="pending-note" hidden>待分析：目前沒有這個品名的屬性結果，暫不自動重查。</p>
+          <p id="pending-note" class="pending-note" hidden>屬性分析中，每 2 秒重新查詢，最多 5 次。</p>
           <dl id="attribute-list" class="attribute-list"></dl>
         </div>
       </section>
     </div>
-    <p class="workspace-footnote">發票上傳、我的品味與配對頁將於後續階段開放。</p>
+    </div>
+<section id="upload-panel" hidden aria-labelledby="upload-title">
+<p class="eyebrow">02 / 發票變成線索</p><h1 id="upload-title" tabindex="-1">匯入一個月，<em>看見日常。</em></h1><p class="subtitle">選擇財政部電子發票 CSV，每份檔案只放一個月，最大 2 MB。</p>
+<div class="upload-layout"><section class="input-card"><form id="upload-form"><label for="invoice-file">發票 CSV</label><input id="invoice-file" type="file" accept=".csv,text/csv" required aria-describedby="upload-help"><p id="upload-help" class="small">重新上傳相同月份會取代該月舊資料。作廢、折扣、低於 10 元或小數金額明細不計入分析。</p><p id="upload-demo-note" class="message" hidden>示範帳號不能上傳；請切換成自己的帳號。</p><button id="upload-submit" class="primary" type="submit">上傳並分析</button></form></section>
+<section class="result-card" aria-label="上傳處理進度"><p class="eyebrow">PROGRESS / 處理進度</p><h2 id="upload-state">等待上傳</h2><p id="upload-message" role="status" aria-live="polite">選擇 CSV 後開始分析。</p><progress id="upload-progress" max="1" value="0" hidden aria-label="發票分析進度"></progress><p id="upload-count" class="small"></p><button id="retry-job" class="secondary" type="button" hidden>重新查詢進度</button><button id="open-profile" class="primary" type="button" hidden>查看我的品味</button></section></div>
+</section>
+<section id="profile-panel" hidden aria-labelledby="profile-title"><div class="section-header"><div><p class="eyebrow">03 / 我的品味</p><h1 id="profile-title" tabindex="-1">每一筆選擇，<em>都是你的樣子。</em></h1></div><button id="refresh-profile" class="quiet" type="button">重新載入</button></div>
+<p id="profile-message" role="status" aria-live="polite"></p><div id="profile-content" hidden><p id="profile-overview" class="model-note"></p><p id="profile-areas" class="small"></p><div id="trait-values" class="trait-values" aria-label="18 格品味向量"></div><p class="small">數值為目前消費資料的特徵；「未知」表示資料不足。到配對頁選一位對象，可查看雙方的品味關係圖。</p><h2 class="report-heading">我的月報</h2><p id="report-empty" class="small" hidden>尚未上傳任何月份，先到「上傳發票」匯入一份 CSV。</p><iframe id="report-frame" title="我的消費月報" referrerpolicy="no-referrer" hidden></iframe></div>
+</section>
+<section id="matches-panel" hidden aria-labelledby="matches-title"><div class="section-header"><div><p class="eyebrow">04 / 找到同好</p><h1 id="matches-title" tabindex="-1">從消費習慣，<em>找到合拍的人。</em></h1></div><button id="refresh-matches" class="quiet" type="button">重新查詢</button></div>
+<div class="match-controls"><div role="group" aria-label="配對類型"><button type="button" data-match-kind="similar" aria-pressed="true">相近</button><button type="button" data-match-kind="opposite" aria-pressed="false">互補</button></div><label for="match-scope">範圍 <select id="match-scope"><option value="all">不限</option><option value="district">同一區</option><option value="city">同縣市</option><option value="region">同地區</option></select></label></div>
+<p id="match-areas" class="small"></p><p id="match-status" role="status" aria-live="polite"></p><div id="match-list" class="match-list"></div><p id="network-status" role="status"></p><iframe id="network-frame" title="你與配對對象的品味關係圖" referrerpolicy="no-referrer" hidden></iframe>
+</section>
   </section>
   <noscript><p class="message error">請開啟 JavaScript，才能使用登入與分類功能。</p></noscript>
 </main>

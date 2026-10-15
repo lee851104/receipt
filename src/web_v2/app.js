@@ -5,7 +5,7 @@
   let storage;
   try{storage=globalThis.sessionStorage;}catch(_){/* Private mode may disable storage. */}
   const session=ReceiptAPI.createSession(storage);
-  let flow,lastView,lastUsers,lastResult;
+  let flow,lastView,lastUsers,lastResult,workspaceUI;
   const api=ReceiptAPI.createClient({session,onUnauthorized:message=>flow.unauthorized(message)});
   function message(id,text){$(id).textContent=text||'';$(id).hidden=!text;}
   function render(state){
@@ -61,15 +61,18 @@
       }
       lastResult=result;
     }
+    $('pending-note').textContent=classification.message==='稍後再查'?'屬性尚未完成分析，請稍後再查。':'屬性分析中，每 2 秒重新查詢，最多 5 次。';
     if(lastView!==state.view){
-      history.replaceState(null,'',workspace?'#classify':'#'+state.view);
+      history.replaceState(null,'',workspace?(['#upload','#profile','#matches'].includes(location.hash)?location.hash:'#classify'):'#'+state.view);
       $('login-password').value='';$('register-password').value='';
       if(!workspace)$('item-name').value='';
       if(lastView!==undefined)$(workspace?'workspace-title':'auth-title').focus();
       lastView=state.view;
     }
+    workspaceUI?.sync(state);
   }
   flow=ReceiptFlow.createFlow({api,session,onChange:render});
+  workspaceUI=ReceiptWorkspaceUI.createWorkspaceUI({api,session});
   $('login-tab').addEventListener('click',()=>flow.showAuth('login'));
   $('register-tab').addEventListener('click',()=>flow.showAuth('register'));
   $('switch-account').addEventListener('click',()=>flow.switchAccount());

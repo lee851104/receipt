@@ -9,7 +9,16 @@
     return {key,label,value:value==null?'未知':value===true?'是':value===false?'否':String(value),unknown:value==null};
   });
   const emptyClassification=()=>({status:'idle',result:null,message:''});
-  function createFlow({api,session,onChange=()=>{}}){
+  function wait(ms, signal){
+    return new Promise((resolve,reject)=>{
+      let timer;
+      const abort=()=>{clearTimeout(timer);signal?.removeEventListener('abort',abort);reject(new DOMException('Cancelled','AbortError'));};
+      if(signal?.aborted){abort();return;}
+      signal?.addEventListener('abort',abort,{once:true});
+      timer=setTimeout(()=>{signal?.removeEventListener('abort',abort);resolve();},ms);
+    });
+  }
+  function createFlow({api,session,onChange=()=>{},sleep=wait}){
     let data={view:session.get()?'workspace':'login',busy:false,error:'',notice:'',health:null,serviceError:'',demoVisible:false,demoUsers:[],classification:emptyClassification()};
     let operation=0, classificationId=0, healthId=0, authController, classificationController;
     const emit=()=>onChange(data);
@@ -17,13 +26,13 @@
     function reset(view,message=''){
       cancel(); data={...data,view,busy:false,error:message,notice:'',classification:emptyClassification()}; emit();
     }
-    async function authenticate(path, options, label){
+    async function authenticate(path, options, label, isDemo=false){
       const id=++operation; authController?.abort(); authController=new AbortController();
       data={...data,busy:true,error:'',notice:''}; emit();
       try{
         const answer=await api.request(path,{...options,auth:false,signal:authController.signal});
         if(id!==operation)return;
-        session.set(answer,label); data={...data,view:'workspace',classification:emptyClassification()};
+        session.set(answer,label,{isDemo}); data={...data,view:'workspace',classification:emptyClassification()};
       }catch(error){if(id===operation && error.name!=='AbortError')data={...data,error:error.message};}
       finally{if(id===operation){data={...data,busy:false};emit();}}
     }
@@ -64,7 +73,7 @@
       async demoLogin(value){
         const user=data.demoVisible && data.demoUsers.find(x=>String(x.user_id)===value && Number.isSafeInteger(x.user_id));
         if(!user){data={...data,error:'請先選擇可用的示範帳號。'};emit();return;}
-        return authenticate('/auth/demo-login',{method:'POST',json:{user_id:user.user_id}},user.display_name);
+        return authenticate('/auth/demo-login',{method:'POST',json:{user_id:user.user_id}},user.display_name,true);
       },
       async classify(rawName){
         const id=++classificationId;classificationController?.abort();classificationController=new AbortController();
@@ -75,14 +84,21 @@
         }
         data={...data,classification:{status:'loading',result:null,message:'分類中…'}};emit();
         try{
-          const result=await api.request('/items/classify',{method:'POST',json:{name},signal:classificationController.signal});
-          if(id!==classificationId)return;
-          const pending=result.attributes_status==='pending';
-          data={...data,classification:{status:pending?'pending':'ready',result,message:pending?'待分析':'分析完成'}};
+          const controller=classificationController;
+          for(let retry=0;retry<=5;retry++){
+            if(retry)await sleep(2000,controller.signal);
+            if(id!==classificationId)return;
+            const result=await api.request('/items/classify',{method:'POST',json:{name},signal:controller.signal});
+            if(id!==classificationId)return;
+            const pending=result.attributes_status==='pending';
+            data={...data,classification:{status:pending?'pending':'ready',result,
+              message:pending?(retry===5?'稍後再查':'分析中（重查 '+retry+'/5）'):'分析完成'}};emit();
+            if(!pending)break;
+          }
         }catch(error){if(id===classificationId && error.name!=='AbortError')data={...data,classification:{status:'error',result:null,message:error.message}};}
         if(id===classificationId)emit();
       }
     };
   }
-  return {createFlow,attributeRows};
+  return {createFlow,attributeRows,wait};
 });

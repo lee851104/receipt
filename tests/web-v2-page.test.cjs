@@ -5,7 +5,7 @@ const dir=path.join(__dirname,'../src/web_v2');
 function page(responder){
   class Element{
     constructor(){this.hidden=false;this.value='';this.textContent='';this.children=[];this.listeners={};this.style={};}
-    setAttribute(k,v){this[k]=v;} replaceChildren(...nodes){this.children=nodes;} append(...nodes){this.children.push(...nodes);}
+    setAttribute(k,v){this[k]=v;} removeAttribute(k){delete this[k];} replaceChildren(...nodes){this.children=nodes;} append(...nodes){this.children.push(...nodes);}
     addEventListener(k,v){this.listeners[k]=v;} focus(){this.focused=true;}
     async fire(type){return this.listeners[type]?.({preventDefault(){},currentTarget:this});}
   }
@@ -15,7 +15,7 @@ function page(responder){
   const store=new Map(), events={}, calls=[];const location={hash:'#classify'};
   const context=vm.createContext({document:doc,location,history:{replaceState(_,__,hash){location.hash=hash;}},sessionStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},addEventListener:(k,v)=>events[k]=v,Headers,URLSearchParams,AbortController,DOMException,setTimeout,clearTimeout,
     fetch:async(p,o)=>{calls.push([p,o]);const [status,body]=await responder(p,o);return new Response(JSON.stringify(body),{status});}});
-  for(const file of ['api.js','flow.js','app.js'])vm.runInContext(fs.readFileSync(path.join(dir,file),'utf8'),context);
+  for(const file of [...html.matchAll(/<script defer src="([^"]+)"/g)].map(m=>m[1]))vm.runInContext(fs.readFileSync(path.join(dir,file),'utf8'),context);
   return {nodes,store,location,calls,events};
 }
 const tick=()=>new Promise(r=>setImmediate(r));

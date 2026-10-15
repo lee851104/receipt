@@ -1,5 +1,6 @@
 """The half of an upload that runs after the answer: categories, then attributes, then the job is done."""
 import logging
+import queue
 import threading
 
 from sqlmodel import Session, col, select
@@ -10,9 +11,6 @@ from .tables import Item, Job
 PENDING = 10   # 待確認: the model was not sure enough, so the item stays out of the taste vector
 BATCH = 20     # names judged between two progress updates
 UNFINISHED = ("queued", "running")
-# One job runs at a time: there is a single llama-server, SQLite has a single writer, and the next batch updates a
-# profile at the end of a job. A waiting job holds no connection and honestly stays "queued".
-WORK = threading.Lock()
 log = logging.getLogger(__name__)
 
 
@@ -71,9 +69,9 @@ def mark_failed(session, job_id):
 
 
 def run_job(engine, backends, settings, job_id):
-    """Background task for one upload. Any crash marks the job failed instead of leaving it running. A job whose
-    account was deleted meanwhile has nothing left to do."""
-    with WORK, Session(engine) as session:
+    """One upload's job, run by the Worker. Any crash marks the job failed instead of leaving it running. A job
+    whose account was deleted meanwhile has nothing left to do."""
+    with Session(engine) as session:
         try:
             job = session.get(Job, job_id)
             if job is None:
@@ -82,6 +80,34 @@ def run_job(engine, backends, settings, job_id):
         except Exception:
             log.exception("upload job %s failed", job_id)
             mark_failed(session, job_id)
+
+
+class Worker:
+    """The app's one thread for upload jobs, which runs them one at a time in the order they were queued: there is a
+    single llama-server, SQLite has a single writer, and the next batch updates a profile at the end of a job. A
+    waiting job is only an id in the queue, so it holds no connection or request thread and honestly stays "queued".
+    A daemon thread, so stopping the server never waits for a running job; the next start-up fails it instead."""
+
+    def __init__(self, run):
+        self.run = run  # run(job_id) does one job
+        self.queue = queue.Queue()
+        self.thread = threading.Thread(target=self.loop, name="upload-jobs", daemon=True)
+        self.thread.start()
+
+    def add(self, job_id):
+        self.queue.put(job_id)
+
+    def loop(self):
+        while True:
+            job_id = self.queue.get()
+            try:
+                self.run(job_id)
+            # run_job already fails a job that crashes; this keeps anything else from ending the loop, which would
+            # leave every later job queued until a restart.
+            except Exception:
+                log.exception("upload job %s failed", job_id)
+            finally:
+                self.queue.task_done()
 
 
 def fail_unfinished(engine):

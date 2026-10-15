@@ -16,11 +16,12 @@ from src.api.settings import Settings
 from src.api.tables import Item, ItemCache, Job, User
 from src.ml import fakes
 from src.ml.fields import FIELDS
-from tests.api_support import (MAY, SECRET, fake_backends, invoice_csv, login, make_client, register,
+from tests.api_support import (MAY, SECRET, drain, fake_backends, invoice_csv, login, make_client, register,
                                upload)
 
 JUNE = [["20260601", "開立已確認", "TEST-INV-9", "測試飲料店", "臺北市大安區測試路1號", name, 1, 50]
         for name in ("鮮奶茶", "測試新品")]
+JULY = [["20260701", "開立已確認", "TEST-INV-10", "測試飲料店", "臺北市大安區測試路1號", "測試七月品", 1, 50]]
 SETTINGS = Settings(jwt_secret=SECRET, database_url="sqlite://")
 
 
@@ -143,20 +144,67 @@ class ConnectionTests(unittest.TestCase):
         self.assertEqual(held, [0])
 
 
-class OneJobAtATimeTests(unittest.TestCase):
-    def test_a_job_waits_for_the_running_one_and_stays_queued(self):
-        engine = make_engine(MEMORY)
-        init_db(engine)
-        add_queued_job(engine)
-        thread = threading.Thread(target=run_job, args=(engine, fake_backends(), SETTINGS, 1))
-        with jobs.WORK:
-            thread.start()
-            thread.join(timeout=0.2)
-            self.assertTrue(thread.is_alive())
-            self.assertEqual([job.status for job in table(engine, Job)], ["queued"])
-        thread.join(timeout=10)
-        self.assertFalse(thread.is_alive())
-        self.assertEqual([job.status for job in table(engine, Job)], ["done"])
+class WorkerTests(unittest.TestCase):
+    """Jobs run on the app's one worker thread: one at a time, in upload order, and never on a request's thread."""
+
+    def setUp(self):
+        self.started, self.release, self.asked, self.threads = threading.Event(), threading.Event(), [], []
+        self.client = make_client(classify=self.held_classify)
+        register(self.client)
+        self.headers = login(self.client)
+        self.addCleanup(self.release.set)  # never leave the worker held, whatever a test does
+
+    def held_classify(self, names):
+        """The fake classifier, held on its first call until the test releases it."""
+        self.asked.append(set(names))
+        self.threads.append(threading.current_thread())
+        if len(self.asked) == 1:
+            self.started.set()
+            self.release.wait(timeout=5)
+        return fakes.classify(names)
+
+    def statuses(self, *job_ids):
+        return [self.client.get(f"/api/jobs/{job_id}", headers=self.headers).json()["status"] for job_id in job_ids]
+
+    def test_an_upload_answers_while_its_job_runs_on_the_worker_thread(self):
+        self.assertEqual(upload(self.client, self.headers, invoice_csv(MAY), wait=False).status_code, 202)
+        self.assertTrue(self.started.wait(timeout=5))
+        # The job is held inside the model, and requests still answer.
+        self.assertEqual(self.client.get("/api/health").status_code, 200)
+        self.assertEqual(self.statuses(1), ["running"])
+        self.release.set()
+        drain(self.client)
+        self.assertEqual(self.statuses(1), ["done"])
+        self.assertEqual(self.threads, [self.client.app.state.worker.thread])
+
+    def test_jobs_run_one_at_a_time_in_upload_order(self):
+        upload(self.client, self.headers, invoice_csv(MAY), wait=False)
+        self.assertTrue(self.started.wait(timeout=5))
+        for month in (JUNE, JULY):
+            self.assertEqual(upload(self.client, self.headers, invoice_csv(month), wait=False).status_code, 202)
+        self.assertEqual(self.statuses(1, 2, 3), ["running", "queued", "queued"])
+        self.release.set()
+        drain(self.client)
+        self.assertEqual(self.statuses(1, 2, 3), ["done", "done", "done"])
+        self.assertEqual(self.asked, [{"鮮奶茶", "滷肉飯", "衛生紙"}, {"鮮奶茶", "測試新品"}, {"測試七月品"}])
+
+
+class WorkerLoopTests(unittest.TestCase):
+    def test_a_job_that_breaks_the_runner_is_logged_and_the_next_one_still_runs(self):
+        ran = []
+
+        def run(job_id):
+            if job_id == 1:
+                raise RuntimeError("the database went away")
+            ran.append(job_id)
+        worker = jobs.Worker(run)
+        with self.assertLogs("src.api.jobs", level="ERROR") as logs:
+            worker.add(1)
+            worker.add(2)
+            worker.queue.join()
+        self.assertEqual(ran, [2])
+        self.assertIn("upload job 1 failed", "\n".join(logs.output))
+        self.assertTrue(worker.thread.daemon)  # a stop never waits for a running job
 
 
 class RunJobTests(unittest.TestCase):

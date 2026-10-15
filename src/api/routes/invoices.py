@@ -1,4 +1,4 @@
-"""Uploads: POST /api/invoices parses a month's CSV at once, then a background job classifies it;
+"""Uploads: POST /api/invoices parses a month's CSV at once, then a job on the app's worker thread classifies it;
 GET /api/jobs/{job_id} tells how far that job is."""
 import csv
 import os
@@ -6,13 +6,13 @@ import tempfile
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request, UploadFile
+from fastapi import APIRouter, Depends, Request, UploadFile
 from sqlmodel import col, delete
 
 from ...receipt.invoices import build_month
 from ..db import SessionDep
 from ..errors import ApiError
-from ..jobs import UNFINISHED, run_job
+from ..jobs import UNFINISHED
 from ..security import current_user
 from ..tables import Item, Job, User
 from ..validation import PathId
@@ -39,7 +39,7 @@ def parse(data):
 
 
 @router.post("/invoices", status_code=202)
-def upload(file: UploadFile, user: UserDep, request: Request, background: BackgroundTasks, session: SessionDep):
+def upload(file: UploadFile, user: UserDep, request: Request, session: SessionDep):
     # Demo users are shared by everyone: an upload would hang one person's purchases on a public persona.
     if user.is_demo:
         raise ApiError(403, "demo_user_read_only")
@@ -63,10 +63,14 @@ def upload(file: UploadFile, user: UserDep, request: Request, background: Backgr
                          quantity=row["quantity"], amount=row["amount"]))
     job = Job(user_id=user.id, month=month_key, total=len({row["name"] for row in month["rows"]}))
     session.add(job)
+    # The id before the commit: read after it, the id costs a new query whose connection stays checked out until the
+    # route returns, next to the worker's (the in-memory test database has only one connection for both).
+    session.flush()
+    job_id = job.id
     session.commit()
-    state = request.app.state
-    background.add_task(run_job, state.engine, state.backends, state.settings, job.id)
-    return {"job_id": job.id, "month": month_key, "rows": len(month["rows"])}
+    # Only now, so the worker finds the job and its items. The request does not wait for it.
+    request.app.state.worker.add(job_id)
+    return {"job_id": job_id, "month": month_key, "rows": len(month["rows"])}
 
 
 @router.get("/jobs/{job_id}")

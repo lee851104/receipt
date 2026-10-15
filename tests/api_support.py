@@ -54,5 +54,15 @@ def invoice_csv(rows, columns=COLUMNS):
     return (chr(0xFEFF) + stream.getvalue()).encode("utf-8")
 
 
-def upload(client, headers, data):
-    return client.post("/api/invoices", files={"file": ("month.csv", data, "text/csv")}, headers=headers)
+def drain(client):
+    """Wait until the app's worker has run every job queued so far."""
+    client.app.state.worker.queue.join()
+
+
+def upload(client, headers, data, wait=True):
+    """POST a file to /api/invoices. The job runs on the app's worker thread, so unless wait is False this also
+    waits for it, and the test reads the finished result."""
+    response = client.post("/api/invoices", files={"file": ("month.csv", data, "text/csv")}, headers=headers)
+    if wait:
+        drain(client)
+    return response

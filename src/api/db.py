@@ -62,6 +62,6 @@ def get_session(request: Request):
         yield session
 
 
-# scope="function": the session closes when the route returns, not after the response and its background task, which
-# would keep a connection checked out for a whole upload job.
+# scope="function": the session closes when the route returns, not after the response and its background task (the
+# classify box's judgement), which would keep a connection checked out through a model call.
 SessionDep = Annotated[Session, Depends(get_session, scope="function")]

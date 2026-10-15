@@ -82,6 +82,12 @@ def describe(row, channel, vocabulary):
     }
 
 
+def fun_of_model(kind):
+    """The kind of fun a model's answer names, in Chinese, or None when it names none of the four. Both spellings are
+    taken: describe_items hands over the Chinese words (task 4.3), the experiment's own answers are the English ones."""
+    return FUN_WORDS.get(kind, kind if kind in FUN_WORDS.values() else None)
+
+
 def from_model(row, channel, fields, vocabulary):
     """The answers of describe(), from a model's attributes for the name. None means unknown, never no.
 
@@ -114,7 +120,7 @@ def from_model(row, channel, fields, vocabulary):
         "home": asked("home", goods),
         "stationery": asked("stationery", goods),
         # No kind of fun from the model: the shop's own words decide, never the name (an empty name has none).
-        "fun": FUN_WORDS.get(fields.get("fun")) or fun_of("", row["merchant"], vocabulary),
+        "fun": fun_of_model(fields.get("fun")) or fun_of("", row["merchant"], vocabulary),
         "pet_food": fields.get("pet_food"),
         "pet_supply": fields.get("pet_supply"),
         "species": species if species in ("cat", "dog") else None,

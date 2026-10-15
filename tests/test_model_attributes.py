@@ -91,6 +91,19 @@ class ConversionTests(unittest.TestCase):
         for kind, word in FUN_WORDS.items():
             self.assertEqual(answer(5, model(fun=kind))["fun"], word)
 
+    def test_a_kind_of_fun_is_taken_in_chinese_or_in_english(self):
+        for kind, word in FUN_WORDS.items():
+            with self.subTest(kind=kind):
+                self.assertEqual(answer(5, model(fun=word))["fun"], word)
+                self.assertEqual(answer(5, model(fun=kind))["fun"], word)
+                # Either spelling beats the shop's words.
+                self.assertEqual(answer(5, model(fun=word), merchant="測試影城")["fun"], word)
+        # Anything else is not given: the shop's words decide, or nothing does.
+        for stray in ("karaoke", "KTV", "電玩", "Movie", "", 1, True):
+            with self.subTest(stray=stray):
+                self.assertEqual(answer(5, model(fun=stray), merchant="測試KTV")["fun"], "唱歌")
+                self.assertIsNone(answer(5, model(fun=stray), merchant="測試小店")["fun"])
+
     def test_without_a_kind_of_fun_the_shop_decides_but_the_name_does_not(self):
         self.assertEqual(answer(5, model(), merchant="測試影城")["fun"], "電影")
         self.assertEqual(answer(5, model(), merchant="測試KTV")["fun"], "唱歌")

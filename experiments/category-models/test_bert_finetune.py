@@ -92,6 +92,38 @@ class BertTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.train.run(rare,base,self.root/'empty',device='cpu')
         self.assertFalse((self.root/'empty').exists())
 
+    def test_warm_start_keeps_head_and_epoch_zero_without_test_predictions(self):
+        import torch
+        from bert_continuation import prepare, load
+        from test_fixed_split_train import write_rows
+        folder,base=self.setup_inputs()
+        parent=self.root/'parent-run'
+        self.train.run(folder,base,parent,device='cpu',epochs=1,benchmark_count=2)
+        original=self.model.Classifier.load(parent/'model')
+        head=original.model.classifier.weight.detach().clone()
+        probe=original.predict(['測試茶'])
+        rows=[dict(id=f'new-{c}-{i}',name=f'虛構續訓類{c}號{i}',category=c,source='real',review_status='human_confirmed') for c in range(10) for i in range(10)]
+        gold=self.root/'confirmed.jsonl';write_rows(gold,rows)
+        draft=self.root/'draft';draft.mkdir();write_rows(draft/'draft-items.jsonl',rows)
+        new=self.root/'continuation';prepare(gold,draft,folder,parent/'model',new,parent_source=self.root/'real.jsonl')
+        parts,_,_=load(new)
+        fits=[];predicted=[]
+        original_predict=self.model.Classifier.predict
+        def fake_fit(model,tokenizer,training,*args,**kwargs):
+            self.assertTrue(torch.equal(head,model.classifier.weight.detach()))
+            fits.extend(r['name'] for r in training)
+            with torch.no_grad():model.classifier.weight.add_(1)
+            return .5
+        def predict(model,names):
+            predicted.extend(names);return original_predict(model,names)
+        with patch.object(self.train,'train_epoch',fake_fit),patch.object(self.train,'validation_loss',side_effect=[.1,.2]),patch.object(self.model.Classifier,'predict',predict):
+            result=self.train.run(new,parent/'model',self.root/'child',device='cpu',epochs=1,benchmark_count=2,warm_start=True)
+        self.assertEqual(result['best_epoch'],0)
+        self.assertEqual(set(fits),{r['name'] for r in parts['train']})
+        self.assertFalse(set(predicted)&{r['name'] for r in parts['test']})
+        self.assertEqual(self.model.Classifier.load(self.root/'child/model').predict(['測試茶']),probe)
+        self.assertEqual(result['settings']['initialization'],'verified_classifier_warm_start')
+
     def test_cli_failure_does_not_echo_private_input(self):
         folder,base=self.setup_inputs()
         (folder/'train.jsonl').write_text('PRIVATE_BERT_MARKER',encoding='utf-8')

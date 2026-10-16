@@ -1,18 +1,16 @@
 """GET /api/me/profile: the logged-in user's taste profile and uploaded months, for the profile and report pages."""
 import json
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Request
 from sqlmodel import select
 
 from ...receipt.build import trait_words
 from .. import profiles
 from ..db import SessionDep
-from ..security import current_user
-from ..tables import Item, Profile, User
+from ..security import UserDep
+from ..tables import Item, Profile
 
 router = APIRouter(prefix="/api/me")
-UserDep = Annotated[User, Depends(current_user)]
 
 
 # A plain def, not async: the reads block, so FastAPI runs this in a worker thread.
@@ -22,7 +20,7 @@ def my_profile(user: UserDep, request: Request, session: SessionDep):
     settings = state.context["traits"]
     # The profile as the last upload job stored it: a request never works it out again, and never asks a model.
     profile = session.get(Profile, user.id)
-    vector = None if profile is None or profile.vector is None else json.loads(profile.vector)
+    vector = profiles.stored_vector(profile, len(settings["traits"]))
     words = trait_words(settings)
     # No vector, no values: every cell is null, but the 18 traits are always there for the page to draw.
     cells = [None] * len(words) if vector is None else vector

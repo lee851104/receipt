@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from scripts import evaluate_matching
+from src.api import matching
 from src.ml.fields import FIELDS, FLAGS
 from src.receipt.attributes import from_model
 from src.receipt.personas import PERIOD, build_personas
@@ -99,15 +100,19 @@ class MatchingCallerTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
-            for relative in ("datasets/synthetic/attribute-cache.jsonl", "configs/persona-opposites.json"):
+            for relative in ("datasets/synthetic/attribute-cache.jsonl", "configs/persona-opposites.json", "configs/regions.json"):
                 target = root / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / relative, target)
             with patch.object(evaluate_matching, "ROOT", root), \
                  patch.object(evaluate_matching, "load_context", return_value=CONTEXT), \
                  patch.object(evaluate_matching, "build_personas", return_value=people), \
-                 patch.object(evaluate_matching, "build_vector", side_effect=calculate), redirect_stdout(io.StringIO()):
+                 patch.object(evaluate_matching, "build_vector", side_effect=calculate), \
+                 patch.object(matching, "entries", wraps=matching.entries) as entries, \
+                 patch.object(matching, "pick", wraps=matching.pick) as pick, redirect_stdout(io.StringIO()):
                 evaluate_matching.main()
+                self.assertEqual(entries.call_count, len(people))
+                self.assertEqual(pick.call_count, len(people) * 2)
             self.assertTrue((root / "docs/results/matching.json").is_file())
         self.assertEqual(len(calls), len(people) * 2)
         self.assertTrue(all(cache is calls[0] for cache in calls))

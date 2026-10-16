@@ -167,7 +167,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 - 回傳：同 login
 - 只能切換成假用戶，註冊的真實帳號一定要用密碼登入
 - `user_id` 是 JSON 整數，1 到 2^63−1；`true`、字串 `"2"`、`2.0` 或超出範圍都回 422
-- `DEMO_MODE=1` 時，任何連得到伺服器的人都能用 demo 用戶登入，所以只在自己電腦或 demo 現場開。關掉之後，demo 用戶的 token 立刻失效，真實帳號不受影響
+- `DEMO_MODE=1` 時，任何連得到伺服器的人都能用 demo 用戶登入，所以只在自己電腦或 demo 現場開。關掉之後，demo 用戶的 token 立刻失效，真實帳號不受影響。也因為這樣，demo 用戶查配對時只會看到假用戶，看不到任何真實使用者（見 5.7）（10/16 補上）
 - 前端用 `GET /api/health` 的 `demo_mode` 決定要不要顯示快速切換，不要靠 404 的內容判斷
 - 錯誤：404（`DEMO_MODE` 沒開，或沒有這個人）、403 `not_demo_user`
 
@@ -250,9 +250,10 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 ### 5.7 配對
 
 **`GET /api/matches?kind=similar&scope=all`**
-- `kind`：similar（相近，`percent` ≥ +30）或 opposite（互補，`percent` ≤ −10），預設 similar。門檻來自 `configs/traits.json` 的 `match`
-- `scope`：all / district / city / region，也就是不限、同區、同縣市、同地區，對應 `places.distance` ≤ 0、1、2。預設 all
-- 對象：自己以外、算得出品味向量的所有使用者（包含假用戶）
+- `kind`：similar（相近，`percent` ≥ +30）或 opposite（互補，`percent` ≤ −10），預設 similar。門檻來自 `configs/traits.json` 的 `match`；不是這兩個值（含大小寫不同）回 422（10/16 補上）
+- `scope`：all / district / city / region，也就是不限、同區、同縣市、同地區，對應 `places.distance` ≤ 0、1、2。預設 all；不是這四個值（含大小寫不同）回 422（10/16 補上）
+- 對象：自己以外、存起來的 profile 有品味向量的所有使用者（包含假用戶）；和我不可比較的人（共同的雙向格少於 5 格，見 `explain` 的 `too_few_shared`）不算進任何人數；假用戶不管 `DEMO_MODE` 有沒有開都算（`DEMO_MODE` 只管 demo 名單和快速切換，見 5.10）；但查詢的人如果是 demo 用戶（用快速切換登入，不用密碼），清單只有假用戶，真實使用者一個都不會出現，`eligible` 和 `within` 也只算假用戶（10/16 補上）
+- 門檻：看整數百分比，和 v1 的 `match-filter.js` 一樣：相近是 `percent` ≥ `similarity.percent(min_score)`（+30），互補是 `percent` ≤ `similarity.percent(−opposite_score)`（−10）。所以 0.295 是 +30%、列入，−0.095 是 −9%（四捨五入往上）、不列入；分數剛好 0 兩邊都不列（10/16 補上）
 - 排序：similar 分數由高到低，opposite 由低到高；同分時依 `display_name` 的字碼順序，再依 `user_id`；取前 5 名
 - 回傳：
   ```json
@@ -262,11 +263,14 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
                "area": "臺北市中山區", "distance": 1}]}
   ```
 - `eligible`：過門檻的人數，不看距離；`within`：過門檻又在範圍內的人數。前端用這兩個數字照 v1 的方式寫狀態文字
-- `area`：對方離我最近的生活圈（`places.closest_area`），可能是 `null`
-- 我自己資料不夠時：`ready` 為 false，`people` 為空陣列，`eligible` 和 `within` 都是 0
-- 錯誤：400 `no_home_area`（看不出我的生活圈，`scope` 卻不是 all）
+- `area`：對方離我最近的生活圈（`places.closest_area`）；我看不出生活圈時是對方的第一個。對方看不出生活圈時是 `null`（10/16 補上）
+- `distance`：0 同區、1 同縣市、2 同地區、3 更遠；我或對方看不出生活圈時是 `null`（不知道），這樣的人只會出現在 `scope=all`（10/16 補上）
+- `my_areas`：我存起來的 profile 的生活圈，同 `/api/me/profile` 的 `areas`，資料不夠時也照實給（10/16 補上）
+- 我自己資料不夠時（沒有存起來的品味向量）：不管 `scope` 是什麼，`ready` 為 false，`people` 為空陣列，`eligible` 和 `within` 都是 0，不回 `no_home_area`（10/16 補上）
+- 錯誤：400 `no_home_area`（我的資料夠，但看不出我的生活圈，`scope` 卻不是 all）、422（`kind`、`scope` 不是列出的值）（10/16 補上）
+- 分數每次查詢當場算，不存（design D3，`src/api/matching.py`）。任何一個人存著舊長度的向量（改了 `configs/traits.json` 的 trait 卻沒重算），配對清單回 500，不拿錯位的格子算分數；改 trait 之後要把每個人的 profile 重算（同 5.6）（10/16 補上）
 
-**`GET /api/matches/{user_id}/explain`**：任何一個使用者都能看，不限前 5 名
+**`GET /api/matches/{user_id}/explain`**：任何一個使用者都能看，不限前 5 名（demo 用戶查真實使用者除外，見最後一點）（10/16 補上）
 - 回傳：
   ```json
   {"user_id": 7, "display_name": "咖啡上班族 C", "comparable": true, "reason": null,
@@ -292,6 +296,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
   `src/web/trait-network.js`（複製到 `src/web_v2/` 之後）可以直接拿來畫。資料不夠的人，四個欄位都是 `null`
 - `items` 是每個訊號買最多次的 3 個品名和出現的發票張數，品名一律經過 5.8 的處理
 - 錯誤：404（沒有這個人）、400 `self`（查自己）
+- demo 用戶查真實使用者的計算過程，回 404，當作沒有這個人，和清單同一條規則（任務 2.7 要照這樣做）（10/16 補上）
 
 ### 5.8 品名隱私
 
@@ -520,19 +525,23 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
-### 13.6 角色 3 接入與審查修正（2026-10-16 更新，來源：角色 3 worktree、原 role3-handoff 與使用者合併指示）
+### 13.7 角色 3 接入與審查修正（2026-10-16 更新，來源：角色 3 worktree、原 role3-handoff 與使用者合併指示）
 
 **給角色 1**
+- 2026-10-16 完成 4.7／4.9（來源：角色 3；合併 `role-1/matches` 的 `ee7f055`）：擴充 `src/api/seed.py`（非端點）。`seed_demo_population` 把合成 CSV 送進 `build_month(for_upload=True)`，重播假品名的既定類別，透過原有 `jobs.process` → `cache` → `profiles.recompute` 產生資料；不問 GPU，也不宣稱驗證真實分類模型。記憶體資料庫實測 300 人、21,316 筆品項、107 筆快取、600 個已完成月份工作與 300 份 profile，逐人重算及與核心向量比較一致。
+- seed 用目前後端的屬性模式作 `item_cache.model`（預設 `fake`，也可 `qwen`），只載入公開、人工確認的 107 個「示範」品名，並核對確認者、日期、來源與屬性 SHA256；核准後改過欄位會拒絕。這是無 GPU 展示用的錄製答案；完整 Qwen `model_version` 和人工修正仍以 JSONL 為準，不能把 `fake` 這個資料庫鍵解讀成 Qwen 模型版本。**給角色 1 的 2.15：目前資料庫以 `backends.attributes` 的模式名稱選快取；日後改成模型版本鍵時，seed 的 `attribute_model` 也要傳同一個鍵，換版本需清理或遷移舊快取，不可默默混用。**
+- 執行 seed 前先停止 API 服務。`python -m src.api.seed` 現在補齊完整假用戶，會保留原帳號 id／token，只重建指定假用戶的品項與工作；重跑不增加重複品項，不改其他帳號及其他模型鍵。帳號衝突、相同模型鍵的既有答案不同、或假用戶有未完成工作時會停止，不覆寫這些資料。舊版本只有 demo 帳號的資料庫可直接補齊。執行中若發生可捕捉錯誤，沿用 `jobs.mark_failed` 記錄失敗後重拋，下次 seed 可重建；硬中斷留下的未完成工作仍需先處理，不會自動抹除。此次驗證僅用暫存／記憶體資料庫，未讀或寫既有私人資料庫，未讀 data、rawdata、根目錄 CSV 或 .env。
+- 4.9 現在直接用 `matching.entries`／`pick`，以整數百分比判門檻，同分按顯示名稱再按 id；不篩距離。本次同類 P@5 100%、互相命中 91%；相反 P@5 由 10.67% 變 11.40%（160 → 171），互補名額 684 → 707，其他整體指標不變。API 測試確認 demo 的非空清單與計數只包含假用戶，一般帳號仍可看到假用戶；所有測試帳號及品項均為虛構。
 - 2.15：以 `AttributeDescriber(server_url=settings.llama_server_url)` 提供 `backends.describe_items`；`ATTRIBUTES_MODEL=qwen` 的正式啟用由角色 1 接入 `src/api/backends.py`。本次審查修正沒有修改角色 1 的 API 檔案。
 - 2026-10-15 使用者決定：接入以角色 1 的 `from_model` 為準；呼叫 `measure/explain/build_vector(rows, period, context, attributes={品名: 23 欄 dict 或 None})`，字典裡沒有的品名也算待分析；不傳 `attributes` 參數才走 v1。每列不再放屬性，也不再使用舊的 external 介面。7 個基本旗標只供儲存/API 回傳，現有訊號仍由類別決定；類別閘門、待分析飲品甜度預設、娛樂店家與未知寵物造訪依 13.5。
 - `ask_model=True` 會等同一實例的前一筆推論完成，不再因等鎖超過 60 秒而偽裝成待分析；60 秒僅限制單次 HTTP。角色 1 請由上傳背景工作呼叫，兩份上傳會排隊；即時查詢用 `ask_model=False`，不等推論鎖。預設函式的 `LLAMA_SERVER_URL` 僅在首次非空呼叫建立時檢查；無效會記錄一次不含網址／品名的錯誤並回全 `None`，修正設定後須重啟程序。直接建構實例仍會立即檢查設定。
-- `(model_version, name)` mapping 是程序內快取，不是資料庫；持久化 `item_cache` 與版本清理由 2.3/2.4 負責。4.7 需把假發票、屬性與 profiles 接入已完成的後端管線；目前核心驗證不代表完整 seed 已完成。
+- `(model_version, name)` mapping 是程序內快取，不是資料庫；持久化 `item_cache` 與版本清理由 2.3/2.4 負責。4.7 已接入既有後端管線，詳見本節上方的 seed 驗證紀錄。
 - 介面只有 names，merchant 固定空字串、quantity=1；品項數量的 bulk 補位只在計算副本。新版採單筆推論、輸入只去開頭「示範」、保留原名快取鍵；prompt hash 與 input-v2:batch1 已進 model_version。換版本須重算舊屬性，不能沿用舊版本 cache。
 - `build_personas(calendar, total=300)` 尾端擴充、保留原 40 人順序；v1 未指定 total 仍是 40 人。本次合併已確認 seed 入口仍為 `total=300`。
-- 107 筆假品名逐筆對照見 `docs/results/synthetic-cache-review.md`，舊／新模型輸出分存 `datasets/synthetic/attribute-cache.model-v1.jsonl`、`attribute-cache.model-v2.jsonl`；有效快取保留每欄 corrections。2026-10-15 使用者檢查並確認全部 107 筆：46 筆為 `human_corrected`、61 筆為 `human_confirmed`，保留助理準備與使用者確認的來源，並用屬性雜湊避免重建或後續修改誤用核准；此確認僅涵蓋公開假品名。配對數字見 `docs/results/matching.md`，僅核心公式，尚未驗證分類/API/DB 端到端。
+- 107 筆假品名逐筆對照見 `docs/results/synthetic-cache-review.md`，舊／新模型輸出分存 `datasets/synthetic/attribute-cache.model-v1.jsonl`、`attribute-cache.model-v2.jsonl`；有效快取保留每欄 corrections。2026-10-15 使用者檢查並確認全部 107 筆：46 筆為 `human_corrected`、61 筆為 `human_confirmed`，保留助理準備與使用者確認的來源，並用屬性雜湊避免重建或後續修改誤用核准；此確認僅涵蓋公開假品名。配對數字見 `docs/results/matching.md`；seed 另驗證合成資料的解析／錄製分類答案／API／DB 管線，並不代表真實模型準確率。
 - 4.8（10/15 使用者續作要求）：100 筆真實品名已用新版模型全部重跑，舊 `predictions.jsonl` 與四份空白盲標檔保留。使用者改採「先由本機模型預標，再由本人審核」，所以新增稿標示 `review_method=model_assisted`，不宣稱獨立盲標。私人根目錄為主資料夾 `C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-review-20261015\`；新版預測為 `predictions-01cd0f32b598.jsonl`，待審稿與中文檢查表在 `assisted-01cd0f32b598\`。2026-10-15 使用者已確認 100/100 筆，保留 1 筆／1 欄人工修正；4.8 已完成，23 欄彙總見 `docs/results/attributes.md` 與 `attributes.json`。這批為使用者審核模型預標，並非四人獨立盲標；品名只准本機腳本處理，畫面只印彙總。
 - `scripts/predict_private_attributes.py` 可依目前版本產生私有預測，加 `--assisted` 產生四份各 25 筆待審稿；不覆寫既有預測或人工稿。`scripts/attribute_review.py` 檢查 ID/品名一致、23 欄型別、模型版本與全部 100 筆人工狀態，未完成就拒絕正式評分。布林以 true 為正例，三個列舉欄位用非 null 類別 micro 指標；gold=null 排除、模型 null 對已知正例計漏判，分母為零顯示 —。本批已通過人工確認門檻並產生完整指標；進度彙總見 `docs/results/attribute-review-status.json`。
-- 4.7 相依更新（2026-10-16，來源：已合併角色 1 `role-1/profiles` 的 `828bad1`）：2.3/2.4 與 profiles 重算已完成，完整 seed 可接續開發；本次只整合屬性介面與核心配對驗證，4.7 尚未驗收。`src/api/seed.py` 的 `total=300` 已確認保留。
+- 4.7 相依已解除：角色 1 的 2.3/2.4、profiles 與 matching 管線已合併，本節上方記錄 2026-10-16 完成的 seed 驗證。`total=300` 保留。
 - 已確認資料可在角色 3 worktree 執行下列命令重現 `docs/results/attributes.md` 與 JSON（未完成會回傳 exit 2，不寫正式報告）：
 
 ```powershell
@@ -541,6 +550,26 @@ $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-r
 ```
 
 - 工作區為 `codex/role-3/attributes` worktree；共用主資料夾 Python 與 llama.cpp，不升級共用套件。本角色此次只修改自身檔案與 `src/receipt/` 新增的外部屬性邏輯。
+
+### 13.6 角色 1 轉告（2026-10-16，第 2–3 週第三批，分支 `role-1/matches`）
+
+`GET /api/matches`（5.7）可以用了；計算過程 `GET /api/matches/{user_id}/explain` 還沒做（任務 2.7）。分數由後端當場算，前端不再自己算（design D3）。
+
+**給角色 4**
+- 參數：`kind` 是 `similar`／`opposite`，`scope` 是 `all`／`district`／`city`／`region`（不限、同一區、同縣市、同地區），都要小寫；其他值回 422
+- 先看 `ready`：false 時不管選哪個範圍都是 200、清單空的，畫面照 v1 顯示「資料還不夠」（還差幾個品項用 `/api/me/profile` 的 `item_count` 和 `min_items`）
+- `ready` 為 true 而且 `my_areas` 是空陣列時，只能選「不限」：其他範圍請在畫面上停用，選了會回 400 `no_home_area`
+- 狀態文字照 v1 `match-filter.js` 的 `status`：`eligible` 是 0 →「目前沒有品味夠相似的人」（互補是「目前沒有和你明顯相反的人」）；`eligible` 大於 0、`within` 是 0 →「這個距離內沒有…，試試放寬距離」；`within` 大於 5 → 加「顯示前 5 位」
+- 門檻（+30%、−10%）和前 5 名的 5，來自 `configs/traits.json` 的 `match`（`min_score`、`opposite_score`、`top`），回應裡沒有這幾個數字，所以畫面要把它們寫成固定的數字，改了那個檔就要一起改畫面
+- 用假用戶快速切換登入時，配對清單只有假用戶，真實使用者不會出現，`eligible` 和 `within` 也只算假用戶；真實帳號則看得到假用戶
+- `people` 已經排好序、最多 5 人，不要再排。`score` 沒有四捨五入，卡片上的數字用 `percent`
+- `area` 可能是 `null`（對方看不出生活圈）；`distance` 是 0–3，我或對方看不出生活圈時是 `null`，這時不要顯示距離
+- 不要在畫面上自己依距離篩選或重新排序：`people`、`eligible`、`within` 已經照選的 `scope` 算好。v1 的 `src/web/match-filter.js` 用 `distance <= range` 篩選，JavaScript 裡 `null <= 0` 是 true，照搬到 API 資料上，看不出生活圈（`distance` 是 `null`）的人會跑進每一種範圍
+- 清單只有對方的編號、顯示名稱、生活圈、距離和分數；畫連線圖的資料要等 `explain`
+
+**給角色 3**
+- 假用戶要等 seed 擴充（任務 4.7）讓他們在 `profiles` 有向量之後，才會出現在別人的配對清單裡
+- 配對驗證（任務 4.9）請用 `src/api/matching.py` 的 `entries` 和 `pick`，門檻、排序和同分規則才會和 API 一樣
 
 ### 13.5 屬性接入以 `from_model` 為準（2026-10-16，使用者決定，角色 1 轉告，分支 `role-1/profiles`）
 

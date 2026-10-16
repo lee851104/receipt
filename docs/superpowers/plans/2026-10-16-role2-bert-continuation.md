@@ -17,8 +17,8 @@
 - [x] 新版續訓切分與本機 check；保存版本、指紋、曝光排除數。
 - [x] BERT warm-start 與 epoch0 候選測試；訓練不預測 test。
 - [x] 三種子續訓與模型重載檢查，只看 validation。
-- [ ] 凍結候選、一次性 test 比較與圖表；結果不回饋本輪調參。
-- [ ] 公開程式審查、完整測試、彙總報告、階段 commit。
+- [x] 凍結候選、一次性 test 比較與圖表；結果不回饋本輪調參。
+- [x] 公開程式審查、完整測試、彙總報告、階段 commit。
 
 ## 執行紀錄
 
@@ -30,3 +30,9 @@
 - 本機只印彙總的來源稽核確認舊資料檔符合 parent manifest 指紋，舊與新皆沒有非 name 顯式群組。`group-audit.json` 已保存並綁入最終評估 plan，因此本輪已完成切分及權重不受此修正影響。仍不保證未標記語義近似名稱的完全隔離。
 - 虛構端到端測試證明：暖啟動保留分類 head、epoch0可還原、test 不送入梯度或訓練期預測、最後僅比較 parent 與 validation 贏家，改輸出路徑不能繞過資料夾上的單次 test claim。
 - 已完成審查修正的聚焦複查，無新增重要缺陷。使用者已授權本輪工作，不需要外部人工程式審查批准；只在本機保留模型與私人輸出。
+
+- 2026-10-16 最終評估已完成，test50：原模型40/50（80%），seed44 epoch1為41/50（82%）。改善3、退步2、兩者皆對38、兩者皆錯7。Macro-F1（有樣本8類）68.60%→71.03%；只計每類至少5筆的3類則82.14%→83.86%。未依test再訓練或挑選候選。
+- 最終 `report.json`、`comparison.md`（兩張數值混淆矩陣）、凍結 `evaluation-plan.json` 與私人逐筆預測皆保存在主目錄 `data/role2/runs/bert-continuation-comparison-20261016-v1`；測試claim保留。50筆每一筆影響2個百分點，不宣稱統計顯著或穩定提升。
+- 完整分類實驗單元測試：81項，80通過、1項因CPU模型環境沒有Matplotlib而skip，35.046秒。真實模型評估成功，所有指紋前後核對一致。最後GPU為731MiB／0%，本次訓練程序已釋放。
+- 階段提交 `ece24da` 已保存程式與測試；後續文件提交記錄結果。新建立的共用AGENTS.md／CLAUDE.md不納入角色2提交。交接狀態為待Claude審核、未整合，內部程式複查不等於Claude通過。- 補充驗證：獨立 plot-runtime 執行 `-m unittest discover -s experiments/category-models -p test_plot_reviewed.py`，1/1通過（3.192秒），因此分類實驗81項已分環境全部覆蓋；主專案Python執行 `-m unittest discover -s tests`，154/154通過（9.100秒）。
+- 續訓資料check通過；audit_synthetic.py 對兩份人工標註共419個去重名稱比對，600筆合成名稱精確撞名0，README與本計畫公開文字命中0。稽核只輸出彙總。

@@ -337,3 +337,28 @@ C:/Users/User/Desktop/AI_project/receipt/data/role2/plot-runtime/.venv/Scripts/p
 ```
 
 輸出三組 PNG／PDF：全部、訓練未見、排除所有舊切分已見名稱。格內是計數，色階是同一真實類別內比例；列為人工答案、欄為模型預測。繪圖腳本只讀彙總報告；預設字型為 Windows 微軟正黑體，可用 `--font` 指定本機字型。
+
+## 已確認資料續訓 BERT（2026-10-16）
+
+續訓沿用完整分類權重與 head，舊 train 作 replay；未確認項目排除。`bert_continuation.py` 依正規化名稱與明確群組排除舊 train/validation/test 曝光，再切分新資料。必須提供與舊 manifest 指紋一致的 `--parent-source`；若舊來源有非名稱群組而沒有跨版本映射，直接拒絕，不能假裝已完成隔離。
+
+下列為本次已執行的重現指令。輸出已存在時會拒絕；不得刪除 test claim 或複製同一測試集來挑選結果。未來實驗應使用新版本與另收集的測試資料。
+
+```powershell
+$role2Data = 'C:/Users/User/Desktop/AI_project/receipt/data/role2'
+$role2CpuPython = './experiments/category-models/.venv/Scripts/python.exe'
+$role2CudaPython = './experiments/category-models/bert-runtime/.venv/Scripts/python.exe'
+& $role2CpuPython experiments/category-models/bert_continuation.py prepare --reviewed 'C:/Users/User/Downloads/labeled-items-5092c3e897c490e4041e (1).jsonl' --draft-dir "$role2Data/category-review-20261016-v1" --parent-dataset "$role2Data/split-20261015-v2" --parent-model "$role2Data/runs/bert-v2-20261015-seed42/model" --parent-source 'C:/Users/User/Desktop/AI_project/receipt/data/private/category-review-20261012/labeled-items.jsonl' --private-root $role2Data --out "$role2Data/bert-continuation-20261016-v1"
+& $role2CpuPython experiments/category-models/bert_continuation.py check --dataset "$role2Data/bert-continuation-20261016-v1"
+foreach ($role2Seed in 42,43,44) {
+    & $role2CudaPython experiments/category-models/bert_finetune.py --warm-start --lr 0.00001 --device cuda --seed $role2Seed --dataset "$role2Data/bert-continuation-20261016-v1" --pretrained "$role2Data/runs/bert-v2-20261015-seed42/model" --out "$role2Data/runs/bert-continuation-20261016-seed$role2Seed"
+    if ($LASTEXITCODE -ne 0) { break }
+}
+& $role2CpuPython experiments/category-models/bert_continuation_eval.py --dataset "$role2Data/bert-continuation-20261016-v1" --parent-run "$role2Data/runs/bert-v2-20261015-seed42" --candidate "$role2Data/runs/bert-continuation-20261016-seed42" --candidate "$role2Data/runs/bert-continuation-20261016-seed43" --candidate "$role2Data/runs/bert-continuation-20261016-seed44" --private-root $role2Data --out "$role2Data/runs/bert-continuation-comparison-20261016-v1"
+```
+
+固定 lr1e-5、batch16、max_length32、FP32、最多10輪、patience2。epoch0 保留原模型；只依 validation loss 保存及選擇種子，最後才執行一次 parent 與勝出候選的相同 test 比較。模型與資料指紋凍結於 `evaluation-plan.json`，單次標記留在資料集資料夾；含名稱的預測只留本機。
+
+本輪 train905（305真實、600合成）／validation50／test50。選出 seed44 epoch1，validation 94%→96%，test 80%→82%（40/50→41/50），3筆改善、2筆退步。測試結果未回饋調參；只屬小幅描述性改善。這批來源曾參與上一輪模型比較，且人工審核看過模型建議，不能稱為全新盲測；運動、住宿沒有 test 樣本。
+
+完整彙總與前後混淆矩陣：`C:/Users/User/Desktop/AI_project/receipt/data/role2/runs/bert-continuation-comparison-20261016-v1/comparison.md`。權重：`C:/Users/User/Desktop/AI_project/receipt/data/role2/runs/bert-continuation-20261016-seed44/model`。本輪未部署或公開模型。

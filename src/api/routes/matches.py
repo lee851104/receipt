@@ -1,4 +1,5 @@
-"""GET /api/matches: the people whose taste is closest to mine, or most opposite, within a distance of me."""
+"""GET /api/matches: the people whose taste is closest to mine, or most opposite, within a distance of me; and
+GET /api/matches/{user_id}/explain: how my score with one person is made up, with the network graph of the two of us."""
 import json
 from typing import Literal
 

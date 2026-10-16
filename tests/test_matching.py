@@ -239,6 +239,30 @@ class NetworkTests(unittest.TestCase):
             with self.subTest(vector=side[0] is not None, explained=side[1] is not None):
                 self.assertEqual(matching.network(settings, {"mine": side, "theirs": side})["theirs"], empty)
 
+    def test_the_other_persons_money_is_null_in_the_signals_and_the_pushes_but_mine_keeps_its_own(self):
+        settings = CONTEXT["traits"]
+        order = signal_ids(settings)
+        money = {signal["id"] for trait in settings["traits"] for signal in trait["signals"]
+                 if signal["unit"] in ("money", "money_month")}
+        self.assertTrue(money)
+        # Every signal and every push has a value of its own, so a null in the wrong place shows.
+        explained = self.explained()
+        explained["signals"] = {key: float(number) for number, key in enumerate(order, 1)}
+        count = iter(range(1, 1000))
+        explained["pushes"] = [[next(count) / 1000 for _ in trait["signals"]] for trait in settings["traits"]]
+        data = matching.network(settings, {"mine": (ME, explained), "theirs": (ME, explained)})
+        kept = drawing_of(explained, order)
+        self.assertEqual(data["mine"], {"vector": ME, **kept})
+        self.assertEqual(data["theirs"]["vector"], ME)
+        self.assertEqual(data["theirs"]["items"], kept["items"])
+        self.assertEqual(data["theirs"]["signals"], [None if key in money else value for key, value in zip(order, kept["signals"])])
+        self.assertEqual(data["theirs"]["pushes"], [[None if signal["id"] in money else value
+                                                      for signal, value in zip(trait["signals"], pushes)]
+                                                     for trait, pushes in zip(settings["traits"], kept["pushes"])])
+        self.assertTrue(any(value is None for value in data["theirs"]["signals"]))
+        self.assertFalse(any(value is None for value in data["mine"]["signals"]))
+        self.assertFalse(any(value is None for pushes in data["mine"]["pushes"] for value in pushes))
+
 
 if __name__ == "__main__":
     unittest.main()

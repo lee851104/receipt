@@ -1,11 +1,13 @@
 """GET /api/matches/{user_id}/explain: one score taken apart cell by cell, and the network graph of the two people."""
 import json
+import re
 import unittest
 
 from sqlmodel import Session, select
 
 from src.api.db import ROOT
 from src.api.tables import ItemCache, Profile, User
+from src.ml import fakes
 from src.ml.fields import FIELDS
 from src.receipt.traits import load_context
 from tests.api_support import invoice_csv, login, make_client, register, upload
@@ -17,15 +19,31 @@ TOTALS = ("dot", "norm_mine", "norm_theirs", "shrink", "denominator", "score", "
 NOTHING = {"vector": None, "pushes": None, "signals": None, "items": None}
 
 
-def month(names, merchant="測試秘密商行", address="臺北市大安區測試路1號"):
-    """A fictional May: 40 bills of 4321 dollars, one name each, cycling through names. A name loses the districts
-    of its own buyer only (overview 5.8), so both people here shop in 大安."""
-    return [[f"202605{number % 28 + 1:02}", "開立已確認", f"TEST-05-{number}", merchant, address,
+def month(names, merchant="測試秘密商行", address="臺北市大安區測試路1號", stamp="202605"):
+    """A fictional month (May unless stamp, as YYYYMM, says another): 40 bills of 4321 dollars, one name each, cycling
+    through names. A name loses the districts of its own buyer only (overview 5.8), so both people here shop in 大安."""
+    return [[f"{stamp}{number % 28 + 1:02}", "開立已確認", f"TEST-{stamp[4:]}-{number}", merchant, address,
              f"{names[number % len(names)]}{number % 3}", 1, 4321] for number in range(40)]
 
 
 # Names the fake classifier files under drinks, snacks and daily goods; two carry a place name.
 SHOPPING = ["大安測試奶茶", "測試便當", "臺中測試餅乾", "測試衛生紙", "測試咖啡", "測試啤酒", "測試貓飼料", "測試青菜"]
+
+
+def classify_with_3c(names):
+    """The fake classifier, except that a lunch box is a sure meal (the fake is unsure of it) and a pair of
+    headphones is 3C (the fake files nothing there), so the two money signals both get measured."""
+    answers = fakes.classify(names)
+    for answer, name in zip(answers, names):
+        for word, category in (("便當", 0), ("藍牙耳機", 9)):
+            if word in name:
+                answer.update(category=category, probs=fakes.spread(category, fakes.SURE))
+    return answers
+
+
+def headphones(stamp, price):
+    """One fictional 3C purchase on its own bill, in the month stamp (YYYYMM)."""
+    return [f"{stamp}15", "開立已確認", f"TEST-3C-{stamp}", "測試3C行", "臺北市大安區測試路3號", "測試藍牙耳機", 1, price]
 
 
 class ExplainTests(unittest.TestCase):
@@ -161,11 +179,51 @@ class ExplainTests(unittest.TestCase):
         ben = login(self.client, username="ben")
         upload(self.client, self.headers, invoice_csv(month(SHOPPING)))
         upload(self.client, ben, invoice_csv(month(SHOPPING, merchant="測試另一間", address="臺北市大安區測試路2號")))
-        text = self.client.get("/api/matches/2/explain", headers=self.headers).text
-        # Amounts cannot be searched for as text: the signals carry averages such as the mean bill. Every purchase
-        # entry is [name, number of bills], and the names below are the ones that must not show.
+        response = self.client.get("/api/matches/2/explain", headers=self.headers)
+        self.assertEqual(response.status_code, 200, response.text)
+        text = response.text
+        # Positive control: the stripped name is there, so the answer is not just empty. Amounts are kept out too: the
+        # other person's money signals are null, which the next test checks with a price of its own (here every bill
+        # is 4321, a number my own signals may carry). Every purchase entry is [name, number of bills], and the names
+        # below are the ones that must not show.
+        self.assertIn("測試奶茶", text)
         for secret in ("測試秘密商行", "測試另一間", "測試路", "TEST-05", "2026-05-R", "大安", "臺中", "20260501"):
             self.assertNotIn(secret, text)
+
+    def test_the_other_persons_spending_never_reaches_the_answer_but_mine_does(self):
+        client = make_client(classify=classify_with_3c)
+        register(client, display_name="Amy")
+        register(client, username="ben", display_name="Ben")
+        amy, ben = login(client), login(client, username="ben")
+        for stamp in ("202605", "202606"):
+            # Each of us buys one pair of headphones, in May only: the 3C spending of a month is its price over the
+            # two months, and a push on the 3C trait is linear in that, so either would give the price back.
+            for headers, price, merchant in ((ben, 2490, "測試另一間"), (amy, 1990, "測試秘密商行")):
+                bought = [headphones(stamp, price)] if stamp == "202605" else []
+                upload(client, headers, invoice_csv(month(SHOPPING, merchant=merchant, stamp=stamp) + bought))
+        response = client.get("/api/matches/2/explain", headers=amy)
+        self.assertEqual(response.status_code, 200, response.text)
+        # The price and the price over two months, as whole numbers: 1245 is also a run of digits inside a score's decimals.
+        for amount in ("2490", "1245"):
+            self.assertIsNone(re.search(rf"(?<![\d.]){amount}(?:\.0+)?(?!\d)", response.text), amount)
+        network = response.json()["network"]
+        ids = [signal["id"] for signal in network["signals"]]
+        money = [ids.index("meal_cost"), ids.index("tech_spend")]
+        self.assertEqual([signal["unit"] for signal in network["signals"] if signal["id"] in ("meal_cost", "tech_spend")],
+                         ["money", "money_month"])
+        for index in money:
+            self.assertIsNone(network["theirs"]["signals"][index])
+            self.assertIsNotNone(network["mine"]["signals"][index])
+        # Mine keeps its own spending: one pair of headphones at 1990 over two months.
+        self.assertEqual(network["mine"]["signals"][ids.index("tech_spend")], 995.0)
+        # The pushes of those two signals are null on his side and drawn on mine; his other signals are still measured.
+        for side, drawn in (("theirs", False), ("mine", True)):
+            money_pushes = [push for trait, pushes in zip(network["traits"], network[side]["pushes"], strict=True)
+                            for signal_id, push in zip(trait["signals"], pushes, strict=True)
+                            if signal_id in ("meal_cost", "tech_spend")]
+            self.assertEqual(len(money_pushes), 2)
+            self.assertEqual([push is not None for push in money_pushes], [drawn, drawn], side)
+        self.assertTrue(any(value is not None for value in network["theirs"]["signals"]))
 
     def test_the_location_signals_list_no_purchases(self):
         upload(self.client, self.headers, invoice_csv(month(SHOPPING)))

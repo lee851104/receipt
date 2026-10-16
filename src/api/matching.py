@@ -81,16 +81,35 @@ def breakdown(mine, theirs, model):
     return answer
 
 
+MONEY_UNITS = ("money", "money_month")
+
+
+def without_money(settings, drawing, order):
+    """drawing_of's answer with every signal measured in money, and every push of one, null. Those signals are a person's
+    spending in dollars: a month's 3C spending is one purchase's price when that was the only one, and a push is
+    linear in its signal inside the scale, so either would give the amount back."""
+    if drawing["signals"] is None:
+        return drawing
+    money = {signal["id"] for trait in settings["traits"] for signal in trait["signals"] if signal["unit"] in MONEY_UNITS}
+    return {**drawing,
+            "signals": [None if key in money else value for key, value in zip(order, drawing["signals"], strict=True)],
+            "pushes": [[None if signal["id"] in money else push for signal, push in zip(trait["signals"], pushes, strict=True)]
+                       for trait, pushes in zip(settings["traits"], drawing["pushes"], strict=True)]}
+
+
 def network(settings, sides):
     """The network graph's data in v1's traitNetworkData shape (build.trait_network_data), with the two people as
     mine and theirs instead of the demo friends. sides maps "mine" and "theirs" to (stored vector, traits.explain's
     answer worked out now): the graph shows the stored vector, so its dots are the explain cells' values, and a side
-    with no stored vector, or no taste worked out now, is all null."""
+    with no stored vector, or no taste worked out now, is all null. On the theirs side the signals measured in money
+    and their pushes are null too, so no amount of the other person is ever sent (the stored vector and the cells
+    keep their values); mine shows my own."""
     order = signal_ids(settings)
     data = {key: value for key, value in trait_network_data(settings, {}, []).items() if key != "friends"}
     for side, (vector, explained) in sides.items():
         if vector is None or explained is None:
             data[side] = {"vector": None, **drawing_of(None, order)}
         else:
-            data[side] = {"vector": vector, **drawing_of(explained, order)}
+            drawing = drawing_of(explained, order)
+            data[side] = {"vector": vector, **(without_money(settings, drawing, order) if side == "theirs" else drawing)}
     return data

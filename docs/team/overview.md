@@ -27,7 +27,7 @@
 | 分類實驗 | 品名 → 10 類。A：TF-IDF + 邏輯迴歸，macro-F1 0.62；B：bge-small-zh（512 維）+ 邏輯迴歸，macro-F1 0.66。只有 57 個人工確認品名，只能驗證 4 類 | `experiments/category-models/`、`docs/category-models-brief.md` |
 | 屬性實驗 | Qwen3-4B（Q4_K_M，2.4 GB）判斷 16 個屬性。真實資料上模型單獨 F1 44%，加規則 94%（事後回測，不是獨立驗證） | `experiments/receipt-attributes/` |
 
-**還沒有的：** 真的分類和屬性模型（BERT 和 Qwen 還沒接上，任務 2.15、3.6）。上傳與背景任務（5.4）已經有了（10/15 完成角色 1 第 2 週第一批，分支 `role-1/uploads`，PR #8）；任務最後的品味向量重算和 `GET /api/me/profile`（5.6）也有了（第 2 週第二批，分支 `role-1/profiles`）；配對的 API（5.7）、帳號管理（5.11）和 CI（`.github/workflows/ci.yml`）也都有了（10/16 更新）。
+**還沒有的：** 真的分類和屬性模型（BERT 還沒接上，任務 2.15、3.6；Qwen 在後端這邊已經接好，`ATTRIBUTES_MODEL=qwen` 要等角色 3 的 `src/ml/attributes.py`（任務 4.3）合併才能用，10/16 更新）。上傳與背景任務（5.4）已經有了（10/15 完成角色 1 第 2 週第一批，分支 `role-1/uploads`，PR #8）；任務最後的品味向量重算和 `GET /api/me/profile`（5.6）也有了（第 2 週第二批，分支 `role-1/profiles`）；配對的 API（5.7）、帳號管理（5.11）和 CI（`.github/workflows/ci.yml`）也都有了（10/16 更新）。
 
 ### 18 格品味向量
 
@@ -109,7 +109,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 
 預設套件：`fastapi`、`uvicorn`、`sqlmodel`、`python-multipart`、`pyjwt`、`pwdlib[argon2]`（密碼雜湊）、`scikit-learn`、`torch`、`transformers`。Qwen 用 llama.cpp 的 `llama-server`，後端用 HTTP 呼叫它。Python 統一用 3.12。
 
-**Docker（10/15 補上）：** 根目錄的 `Dockerfile` 和 `docker-compose.yml` 用無 GPU 模式包起整個服務。執行 `docker compose up` 後：`CATEGORY_MODEL=bert` 又設了 repo 和 revision 時，第一次啟動會從 Hugging Face 下載固定版本的分類模型（compose 預設是 `fake`，不下載；而且真的 BERT 還沒接上，下載了 `bert` 也是 `unavailable`，10/16 改寫）；`DEMO_MODE=1` 而且資料庫是空的時，會自動匯入假用戶。資料庫和模型放在 volume 裡，重建容器也不會不見。容器裡不跑 Qwen；容器預設連到主機上的 llama-server（`http://host.docker.internal:8080`），要連別的位址設 `DOCKER_LLAMA_SERVER_URL`（10/16 改寫：容器不用 `.env` 的 `LLAMA_SERVER_URL`），但 compose 還沒把 `ATTRIBUTES_MODEL` 傳進容器（任務 2.15），所以容器目前一律用假屬性模型，這個位址只改變 `/api/health` 的 `gpu_mode`（10/16 補上）。組員開發時仍以虛擬環境為主，Docker 是給面試官和乾淨環境驗證用的。（10/16 補上）埠只開在主機的 `127.0.0.1`（`DEMO_MODE=1` 時任何連得到伺服器的人都能用假用戶登入）；`JWT_SECRET` 沒設時，用資料 volume 裡的 `/data/jwt-secret`，第一次啟動時產生；映像檔只 COPY `configs/` 和 `src/`，不含 `data/`、`rawdata/`、CSV 和 `.env`。下載分類模型只發生在 `CATEGORY_MODEL=bert`、模型資料夾沒有 `config.json`，而且設了 `CATEGORY_MODEL_REPO` 和 `CATEGORY_MODEL_REVISION` 的時候，而且只在容器裡（`python -m src.api.container`）；`start.bat` 和直接跑 `uvicorn` 都不下載，`huggingface_hub` 只裝在 `requirements-docker.txt`。`docker-compose.yml` 會讀專案根目錄的 `.env` 來填 `CATEGORY_MODEL`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`（也可以從執行 `docker compose` 的環境變數給），但 `LLAMA_SERVER_URL` 不用 `.env` 的，因為 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己。
+**Docker（10/15 補上）：** 根目錄的 `Dockerfile` 和 `docker-compose.yml` 用無 GPU 模式包起整個服務。執行 `docker compose up` 後：`CATEGORY_MODEL=bert` 又設了 repo 和 revision 時，第一次啟動會從 Hugging Face 下載固定版本的分類模型（compose 預設是 `fake`，不下載；而且真的 BERT 還沒接上，下載了 `bert` 也是 `unavailable`，10/16 改寫）；`DEMO_MODE=1` 而且資料庫是空的時，會自動匯入假用戶。資料庫和模型放在 volume 裡，重建容器也不會不見。容器裡不跑 Qwen；容器預設連到主機上的 llama-server（`http://host.docker.internal:8080`），要連別的位址設 `DOCKER_LLAMA_SERVER_URL`（10/16 改寫：容器不用 `.env` 的 `LLAMA_SERVER_URL`）。compose 會把 `ATTRIBUTES_MODEL` 傳進容器（預設 `fake`，10/16 改寫）：預設用假屬性模型，這時那個位址只改變 `/api/health` 的 `gpu_mode`；設成 `qwen` 要等角色 3 的 `src/ml/attributes.py` 合併（沒有時容器用一行訊息停下來），之後容器透過那個位址向主機的 llama-server 問新品名，連不到時 `models.attributes` 顯示 `cache_only`（10/16 補上）。組員開發時仍以虛擬環境為主，Docker 是給面試官和乾淨環境驗證用的。（10/16 補上）埠只開在主機的 `127.0.0.1`（`DEMO_MODE=1` 時任何連得到伺服器的人都能用假用戶登入）；`JWT_SECRET` 沒設時，用資料 volume 裡的 `/data/jwt-secret`，第一次啟動時產生；映像檔只 COPY `configs/` 和 `src/`，不含 `data/`、`rawdata/`、CSV 和 `.env`。下載分類模型只發生在 `CATEGORY_MODEL=bert`、模型資料夾沒有 `config.json`，而且設了 `CATEGORY_MODEL_REPO` 和 `CATEGORY_MODEL_REVISION` 的時候，而且只在容器裡（`python -m src.api.container`）；`start.bat` 和直接跑 `uvicorn` 都不下載，`huggingface_hub` 只裝在 `requirements-docker.txt`。`docker-compose.yml` 會讀專案根目錄的 `.env` 來填 `CATEGORY_MODEL`、`ATTRIBUTES_MODEL`（10/16 補上）、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`（也可以從執行 `docker compose` 的環境變數給），但 `LLAMA_SERVER_URL` 不用 `.env` 的，因為 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己。
 
 ## 5. API 規格（2026-10-14 定案）
 
@@ -218,7 +218,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 - `attributes`：16 個屬性加 7 個基本旗標，欄位名見 `src/ml/fields.py`。每個欄位都可能是 `null`
 - 分類框不會在請求裡等 Qwen，只查快取（`describe_items(names, ask_model=False)`）。快取裡有 → `ready`。沒有 → `attributes` 為 `null`、`attributes_status` 為 `pending`
 - 屬性先查後端的 `item_cache`，沒有才問 `describe_items(..., ask_model=False)`。GPU 模式下（假模型也算），pending 的品名在回應送出之後排進背景分析，結果寫進 `item_cache`，下次查詢就是 `ready`；前端每 2 秒再問一次，最多 5 次。同一個品名還在分析時再問，不會再排一次（10/15 補上）。無 GPU 模式下不排程，pending 不會自己變成 ready，顯示「待分析」就好（10/15 實作）
-- 現在用的假屬性模型一次就答完每個品名，所以分類框從來不會是 `pending`；`ATTRIBUTES_MODEL=qwen` 要等角色 3 的模型接上（任務 2.15）才能用，在那之前看不到 pending 變成 ready（10/16 補上）
+- 現在用的假屬性模型一次就答完每個品名，所以分類框從來不會是 `pending`；`ATTRIBUTES_MODEL=qwen` 後端已經接好，要等角色 3 的 `src/ml/attributes.py` 合併才能用，在那之前看不到 pending 變成 ready（10/16 補上）
 - 錯誤：401、422、503 `model_unavailable`（分類模型沒有載入，見 5.9）
 
 ### 5.6 我的品味向量與月報
@@ -319,7 +319,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 **`GET /api/health`**
 - 回傳：`{"status": "ok", "gpu_mode": false, "demo_mode": true, "models": {"category": "fake", "attributes": "cache_only"}}`
 - `gpu_mode`：連得到 `LLAMA_SERVER_URL` 的 llama-server 就是 true
-- `models.category`：fake / tfidf / embedding / bert，設定的模型檔不存在或下載失敗時是 `unavailable`（10/15 補上，這時即時分類回 503 `model_unavailable`，上傳的背景任務變成 failed）；`CATEGORY_MODEL=bert` 而模型資料夾沒有 `config.json`，或 `src/ml/category.py` 還沒合併時，也是 `unavailable`（10/16 補上）；`models.attributes`：fake / qwen / cache_only（無 GPU 模式）
+- `models.category`：fake / tfidf / embedding / bert，設定的模型檔不存在或下載失敗時是 `unavailable`（10/15 補上，這時即時分類回 503 `model_unavailable`，上傳的背景任務變成 failed）；`CATEGORY_MODEL=bert` 而模型資料夾沒有 `config.json`，或 `src/ml/category.py` 還沒合併時，也是 `unavailable`（10/16 補上）；`models.attributes`：fake / qwen / cache_only（無 GPU 模式）；`qwen` 或 `cache_only` 時，答案來自角色 3 的 `describe_items`（`cache_only` 是設了 `ATTRIBUTES_MODEL=qwen` 但連不到 llama-server，只用快取裡的答案，10/16 補上）
 
 ### 5.10 設定（`.env`，repo 只放 `.env.example`）
 
@@ -331,13 +331,13 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git。相對路徑一律從 repo 根目錄算起，不管在哪個資料夾啟動。只接受 `sqlite:///…`（檔案）和 `sqlite://`（記憶體，測試用），錯誤訊息不會印出設定的值 |
 | `LLAMA_SERVER_URL` | `http://127.0.0.1:8080` | Qwen 的 llama-server |
 | `CATEGORY_MODEL` | fake | `fake` 和 `bert` 可以設；`bert` 在真模型接上（任務 2.15）之前一律是 `unavailable`，模型資料夾裡已經有模型也一樣（10/16 補上） |
-| `ATTRIBUTES_MODEL` | fake | fake / qwen |
+| `ATTRIBUTES_MODEL` | fake | fake / qwen。`qwen` 要有角色 3 的 `src/ml/attributes.py`（合併它的分支之後）；沒有時伺服器用一行訊息停下來。`CATEGORY_MODEL=bert` 照舊一律是 `unavailable`，等任務 3.6（10/16 補上） |
 | `CATEGORY_MIN_PROB` | 0.5 | 低於這個機率的品名歸到 10 待確認 |
 | `CATEGORY_MODEL_DIR` | `models/category` | `CATEGORY_MODEL=bert` 時讀模型的資料夾（`/models/` 不進 git）；`start.bat` 和 `uvicorn` 只讀這個資料夾，不下載。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`（10/16 補上） |
 | `CATEGORY_MODEL_REPO` | 空 | Hugging Face 上公開的分類模型庫；只有 Docker 容器（`python -m src.api.container`）會在 `CATEGORY_MODEL=bert`、資料夾裡沒有模型時從這裡下載，`start.bat`／`launch` 和直接跑 `uvicorn` 都不下載（`huggingface_hub` 只裝在 `requirements-docker.txt`）。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`，沒設的話伺服器啟動時停下來（10/16 補上） |
 | `CATEGORY_MODEL_REVISION` | 空 | 要下載的固定版本（commit），和 `CATEGORY_MODEL_REPO` 一起設定；同樣只有容器會用它下載。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`（10/16 補上） |
 
-設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。伺服器只能開**一個行程**：不要加 `--workers`，也不要兩個伺服器共用同一個資料庫，因為啟動時會把還沒做完的任務標成 failed，「一次只跑一個任務」的背景執行緒也只管得到同一個行程裡的任務。`src/ml/` 有真的模型之前，`CATEGORY_MODEL` 和 `ATTRIBUTES_MODEL` 只有 `fake` 能用，設成別的值同樣會停下來；唯一的例外是 `CATEGORY_MODEL=bert`，它能啟動，但模型一律是 `unavailable`（10/16 補上）。
+設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。伺服器只能開**一個行程**：不要加 `--workers`，也不要兩個伺服器共用同一個資料庫，因為啟動時會把還沒做完的任務標成 failed，「一次只跑一個任務」的背景執行緒也只管得到同一個行程裡的任務。能啟動的值：`CATEGORY_MODEL` 是 `fake` 或 `bert`，`ATTRIBUTES_MODEL` 是 `fake` 或 `qwen`；設成別的值（包括還沒接上的 `tfidf`、`embedding`）同樣會停下來。`CATEGORY_MODEL=bert` 能啟動，但模型一律是 `unavailable`；`ATTRIBUTES_MODEL=qwen` 要有角色 3 的 `src/ml/attributes.py`，沒有時伺服器用一行訊息停下來（10/16 改寫）。
 
 ### 5.11 帳號管理（2026-10-15 補上）
 
@@ -389,6 +389,8 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
 `src/ml/fakes.py` 提供同樣介面的假替身，回傳固定結果。後端和 CI 一開始全部用假替身，模型好了再換成真的。
 
 回傳值一律用一般的 Python 型別（numpy 的結果先 `.tolist()`），否則 API 會回 500。在自己的測試裡呼叫 `tests/model_contract.py` 的 `check_classify(self, classify)` 和 `check_describe(self, describe_items)`，就能確認格式對不對。`probs` 不要四捨五入（至少保留 4 位小數），檢查允許的加總誤差是 0.001。
+
+`src/ml/attributes.py` 也要有 `MODEL_VERSION`（字串；換模型或 prompt 就要變）。後端用它當屬性快取（`item_cache.model`）的鍵，換了版本，舊版本的答案就不再使用；fake 模式的鍵照舊是 `"fake"`（10/16 補上）。`src/ml/category.py` 建議提供 `load(model_dir) -> classify`，`classify` 的格式同上，後端在啟動時用 `CATEGORY_MODEL_DIR` 載入一次（角色 1 的提議，等角色 2 回覆，10/16 補上）。
 
 `describe_items` 連不到 llama-server 時回 `None`，不要丟例外；呼叫 Qwen 要設 timeout。兩個函式會被不同的執行緒同時呼叫（FastAPI 用執行緒跑 `def` 路由），PyTorch 模型和 tokenizer 要自己加鎖。
 
@@ -535,13 +537,32 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
+### 13.10 角色 1 轉告（2026-10-16，第 3 週第七批，分支 `role-1/models`）
+
+任務 2.15 能做的部分做完了：`ATTRIBUTES_MODEL=qwen` 接上角色 3 的 `describe_items`，`CATEGORY_MODEL=bert` 還在等角色 2。
+
+**給角色 3**
+- 後端用 `src/ml/attributes.MODEL_VERSION` 當屬性快取（`item_cache.model`）的鍵，fake 模式照舊是 `"fake"`。你的 seed（任務 4.7）寫入 `item_cache` 時，`model` 欄位請用同一個值：`load_backends(settings).attributes_version`，不要用設定名稱 `qwen`，否則後端讀不到
+- 要在容器或 `start.bat` 用 qwen：你的分支合併進來之後，設 `ATTRIBUTES_MODEL=qwen`（容器另外設 `DOCKER_LLAMA_SERVER_URL`）。沒有 GPU 時健康檢查顯示 `cache_only`，只用快取裡的答案
+- 合併之後角色 1 會用 `tests/model_contract.check_describe` 對真的模組再驗一次
+
+**給角色 2**
+- 後端還沒接 BERT：`CATEGORY_MODEL=bert` 一律 `unavailable`。建議 `src/ml/category.py` 提供 `load(model_dir) -> classify`（`classify(names) -> [{"category", "probs"}]`，同第 6 節），後端在啟動時用 `CATEGORY_MODEL_DIR` 載入一次；如果你想用別的形式，在這裡回覆
+- 交出時請附 `tests/model_contract.check_classify` 的測試，並把 CPU 版 `torch`、`transformers` 加進 `requirements-docker.txt`（見 13.9）
+
+**給合併角色 3 分支的人（角色 1）**
+- 合併之後，`tests/test_api_main.py` 裡「`ATTRIBUTES_MODEL=qwen` 要讓伺服器停下來」的子行程測試會變成啟動成功（模組已經存在了）：要換掉它的觸發方式，例如讓子行程在匯入 app 之前，先把 `None` 放進 `sys.modules["src.ml.attributes"]`。同時用 `tests/model_contract.check_describe` 對真的 `describe_items` 再驗一次
+
+**目前的前提**
+- `docker-compose.yml` 現在會傳 `ATTRIBUTES_MODEL`（預設 `fake`），第六批（13.9）寫的「容器一律用假屬性模型」已經改掉。但 service-runtime 規格的「連到主機的模型服務」情境（容器以 GPU 模式運作、新品名的屬性可以被判斷）和 proposal 第 19 行（分類模型第一次啟動自動下載）要等角色 3 的分支合併、設成 `ATTRIBUTES_MODEL=qwen`，以及角色 2 的 BERT 接上之後才成立；在那之前容器預設是 `fake`，設成 `qwen` 會用一行訊息停下來。這兩處規格不用改，合併之後就成立。用替身驗證過，還沒有用真的模組驗過
+
 ### 13.9 角色 1 轉告（2026-10-16，第 3 週第六批，分支 `role-1/deploy`）
 
 `start.bat`、GitHub Actions、`Dockerfile`／`docker-compose.yml` 都有了。這台電腦沒有 Docker，映像檔要等 push 之後在 CI 上建置才算驗證過。
 
 **給所有人**
 - 雙擊 `start.bat` 就能啟動：沒有 `.env` 會自動建立（含新的 `JWT_SECRET`），會放入假用戶並打開 `http://127.0.0.1:8000/web/`。已經有 `.env` 的人不受影響
-- 用 Docker 時，容器連主機上 llama-server 的位址從 `DOCKER_LLAMA_SERVER_URL` 來（預設 `http://host.docker.internal:8080`），不看 `.env` 的 `LLAMA_SERVER_URL`；Qwen 還沒接上（任務 2.15，compose 還沒傳 `ATTRIBUTES_MODEL`），所以容器目前一律用假屬性模型，這個位址只改變 `gpu_mode`；`CATEGORY_MODEL`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION` 從 shell 的環境變數或根目錄的 `.env` 來（compose 會讀它）
+- 用 Docker 時，容器連主機上 llama-server 的位址從 `DOCKER_LLAMA_SERVER_URL` 來（預設 `http://host.docker.internal:8080`），不看 `.env` 的 `LLAMA_SERVER_URL`；compose 會傳 `ATTRIBUTES_MODEL`（預設 `fake`，10/16 改寫：第七批接上），預設時這個位址只改變 `gpu_mode`，設成 `qwen` 要等角色 3 的程式合併（見 13.10）；`CATEGORY_MODEL`、`ATTRIBUTES_MODEL`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION` 從 shell 的環境變數或根目錄的 `.env` 來（compose 會讀它）
 - CI 在每次 push 和 PR 跑兩套測試（模型一律 fake），再建一次映像檔、檢查裡面沒有私人檔案，並用 `docker compose up` 啟動一次，確認健康檢查回報 demo 模式、假用戶名單不是空的。測試不要依賴 Windows 才有的行為
 
 **給角色 2**
@@ -660,7 +681,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 **給角色 4**
 - 上傳：`POST /api/invoices`（multipart，欄位名 `file`）回 202 的 `job_id` 之後，每 2 秒問 `GET /api/jobs/{job_id}`，直到 `done` 或 `failed`；進度條用 `done / total`，文字用 `message`。別人的任務在跑時會停在 `queued` 一陣子，是正常的
 - 錯誤：400 `invalid_csv` 顯示 `message`（英文，例如缺哪個欄位，或 `Line 3: 消費明細_金額 is not a number` 這樣的第幾行、哪一欄）；413「檔案超過 2 MB」；403 `demo_user_read_only`「示範帳號不能上傳」
-- 即時分類框：GPU 模式下 `pending` 會自己變成 `ready`，照 5.5 每 2 秒再問、最多 5 次；503 `model_unavailable` 顯示「分類模型暫時無法使用」。現在的假屬性模型一次就答完每個品名，分類框從來不會是 `pending`；`ATTRIBUTES_MODEL=qwen` 要等角色 3 的模型接上（任務 2.15）才能用，所以目前還看不到 pending 變成 ready，這段先照 5.5 寫好（10/16 補上）
+- 即時分類框：GPU 模式下 `pending` 會自己變成 `ready`，照 5.5 每 2 秒再問、最多 5 次；503 `model_unavailable` 顯示「分類模型暫時無法使用」。現在的假屬性模型一次就答完每個品名，分類框從來不會是 `pending`；`ATTRIBUTES_MODEL=qwen` 後端已經接好，要等角色 3 的 `src/ml/attributes.py` 合併才能用，所以目前還看不到 pending 變成 ready，這段先照 5.5 寫好（10/16 補上）
 
 ### 13.1 同一台電腦用 worktree 分開做（2026-10-15）
 

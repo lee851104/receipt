@@ -93,7 +93,7 @@
 
 ### D6. 屬性來源的接法
 
-`src/ml/attributes.describe_items(names)` 回傳 23 個欄位，或 `None`（待分析）。屬性接入以角色 1 的 `attributes.from_model` 為準（10/16 使用者決定；角色 3 分支上的 `attributes.describe(external=...)` 會移除）。品味計算（`signals.gather`／`measure`、`traits.explain`）多一個 `attributes` 參數，內容是 `{品名: 23 個欄位或 None}`；給了就用 `attributes.from_model(row, channel, fields, vocabulary)` 把它換成 `describe` 同樣的 17 個答案，不給就照舊用 `describe`。重算 profile 時屬性只讀 `item_cache`（目前的屬性模型），不問模型，快取裡沒有的品名就是待分析。換算規則（10/15 決定）：
+`src/ml/attributes.describe_items(names)` 回傳 23 個欄位，或 `None`（待分析）。屬性接入以角色 1 的 `attributes.from_model` 為準（10/16 使用者決定；角色 3 分支上的 `attributes.describe(external=...)` 會移除）。品味計算（`signals.gather`／`measure`、`traits.explain`）多一個 `attributes` 參數，內容是 `{品名: 23 個欄位或 None}`；給了就用 `attributes.from_model(row, channel, fields, vocabulary)` 把它換成 `describe` 同樣的 17 個答案，不給就照舊用 `describe`。重算 profile 時屬性只讀 `item_cache`（目前的屬性模型），不問模型，快取裡沒有的品名就是待分析。快取的鍵是屬性模型的版本（`src/ml/attributes.MODEL_VERSION`；fake 模式是 `"fake"`），換版本後舊答案不再使用（10/16 補上）。換算規則（10/15 決定）：
 
 - 店家通路 `channel_of` 照舊用規則，不交給 LLM；7 個基本旗標先不用，類別仍然來自分類模型
 - **類別是已知的事實**：問題只在自己的類別門檻內才用模型的值，門檻外一律是 `False`（不適用），模型的 `null` 在門檻內保持 `null`。門檻照舊：`clearance` 只看食物、`quick` 只看正餐、`cooking` 只看生鮮、`kitchen` 只看生鮮和日用品、`sport_gear`／`car_care`／`home`／`stationery` 只看非食物（已確認的類別 4–9）
@@ -149,7 +149,7 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 
 ### D8a. 設定項目
 
-名稱和預設值見 overview 5.10：`JWT_SECRET`、`JWT_EXPIRE_MINUTES`、`DEMO_MODE`、`DATABASE_URL`、`LLAMA_SERVER_URL`、`CATEGORY_MODEL`、`ATTRIBUTES_MODEL`、`CATEGORY_MIN_PROB`，以及 10/15 為 Docker 補上的 `CATEGORY_MODEL_DIR`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`。由 `src/api/settings.py` 的 `Settings.from_env()` 讀取並檢查：留空等於預設值；密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不認得時，服務啟動時停下來，用一行訊息指出變數名稱。`src/ml/` 還沒有真的模型之前，`CATEGORY_MODEL` 和 `ATTRIBUTES_MODEL` 只有 `fake` 能用（`backends.load_backends` 會擋下其他值），接上真的模型時它要一起改。
+名稱和預設值見 overview 5.10：`JWT_SECRET`、`JWT_EXPIRE_MINUTES`、`DEMO_MODE`、`DATABASE_URL`、`LLAMA_SERVER_URL`、`CATEGORY_MODEL`、`ATTRIBUTES_MODEL`、`CATEGORY_MIN_PROB`，以及 10/15 為 Docker 補上的 `CATEGORY_MODEL_DIR`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`。由 `src/api/settings.py` 的 `Settings.from_env()` 讀取並檢查：留空等於預設值；密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不認得時，服務啟動時停下來，用一行訊息指出變數名稱。能啟動的值：`CATEGORY_MODEL` 是 `fake` 或 `bert`（`bert` 還沒接上，模型一律是 `unavailable`），`ATTRIBUTES_MODEL` 是 `fake` 或 `qwen`（`qwen` 要有角色 3 的 `src/ml/attributes.py`，沒有時用一行訊息停下來）；`backends.load_backends` 會擋下其他值（10/16 改寫）。
 
 ### D9. 前端
 
@@ -206,7 +206,7 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
   2. `CATEGORY_MODEL=bert` 而且 `CATEGORY_MODEL_DIR`（在模型 volume 裡）沒有模型時，用 `huggingface_hub` 下載 `CATEGORY_MODEL_REPO` 在 `CATEGORY_MODEL_REVISION` 的版本（只有容器下載；`start.bat` 和直接跑 `uvicorn` 都不下載）（下載到暫存資料夾，完整之後才改名；失敗時服務照樣啟動，健康檢查顯示 `unavailable`）（10/16 補上）
   3. 資料庫是空的且 `DEMO_MODE=1` 時，執行和 `python -m src.api.seed` 相同的匯入
   4. 用 uvicorn 啟動 `src.api.main:app`
-- 容器預設是無 GPU 模式；容器的 `LLAMA_SERVER_URL` 預設是 `http://host.docker.internal:8080`，主機上有開 `llama-server` 時就連得到，要連別的位址設 `DOCKER_LLAMA_SERVER_URL`；但 compose 還沒把 `ATTRIBUTES_MODEL` 傳進容器（要等任務 2.15），所以容器目前一律用假屬性模型，這個位址只改變 `gpu_mode`。不直接用 `.env` 的 `LLAMA_SERVER_URL`：compose 會讀根目錄的 `.env`，而 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己（10/16 補上）
+- 容器預設是無 GPU 模式；容器的 `LLAMA_SERVER_URL` 預設是 `http://host.docker.internal:8080`，主機上有開 `llama-server` 時就連得到，要連別的位址設 `DOCKER_LLAMA_SERVER_URL`；compose 會把 `ATTRIBUTES_MODEL` 傳進容器（預設 `fake`，10/16 改寫），預設時這個位址只改變 `gpu_mode`；設成 `qwen` 要等角色 3 的 `src/ml/attributes.py`（任務 4.3）合併，沒有時容器用一行訊息停下來，有了之後容器就透過這個位址向主機的 llama-server 問新品名。不直接用 `.env` 的 `LLAMA_SERVER_URL`：compose 會讀根目錄的 `.env`，而 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己（10/16 補上）
 - `.dockerignore` 排除 `.git/`、`.venv/`、`rawdata/`、`data/`、`models/`、`runtime/`、`experiments/`、`prototypes/`、`*.csv`／`*.tsv`／`*.xls`／`*.xlsx`、壓縮檔（`rar`、`zip`、`7z`）、資料庫檔 `*.db`、任何資料夾裡的 `.env` 和 `.env.*`、`results/`、`outputs/`、`src/web/`、`*-data.js`、`invoice-insights-private.html`、`__pycache__/`；映像檔只 COPY `configs/` 和 `src/`，所以即使 `.dockerignore` 漏了什麼，根目錄的私人檔案也進不去（10/16 補上）
 - 組員開發時仍以 `start.bat` 為主；Docker 是給面試官和「乾淨環境驗證」用的
 

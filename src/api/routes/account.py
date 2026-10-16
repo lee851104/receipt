@@ -97,7 +97,9 @@ def delete_month(month: Month, user: UserDep, request: Request, session: Session
     session.commit()
     state = request.app.state
     # Not here on the request's thread: an upload job of this user may be writing the profile right now. Queued behind
-    # it on the worker, the recompute reads the items as they are when it runs.
+    # it on the worker, the recompute reads the items as they are when it runs. Until it has, /api/me/profile says
+    # recomputing.
     state.worker.call(f"recompute for user {user_id}",
-                      partial(jobs.run_recompute, state.engine, state.backends, state.context, user_id))
+                      partial(jobs.run_recompute, state.engine, state.backends, state.context, user_id),
+                      user_id=user_id)
     return Response(status_code=204)

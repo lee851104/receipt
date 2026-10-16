@@ -29,6 +29,9 @@ def my_profile(user: UserDep, request: Request, session: SessionDep):
     return {
         "user_id": user.id, "display_name": user.display_name, "is_demo": user.is_demo,
         "ready": vector is not None,
+        # True while a recompute of this profile waits or runs on the worker (after a month was deleted, or at
+        # start-up): until it is false, ready, item_count, areas and traits may be the old ones.
+        "recomputing": state.worker.recomputing(user.id),
         "item_count": 0 if profile is None else profile.item_count,
         "min_items": settings["min_items"],
         # Names the current attribute model has not judged yet, so the page can say they are still being analysed.

@@ -63,6 +63,19 @@ class DeleteMonthTests(unittest.TestCase):
         drain(self.client)
         self.assertEqual(self.profile()["item_count"], 15)
 
+    def test_the_profile_says_a_recompute_is_pending_until_it_has_run(self):
+        upload(self.client, self.headers, invoice_csv(teas(5, 15)))
+        upload(self.client, self.headers, invoice_csv(teas(6, 15, "測試六月茶")))
+        self.assertFalse(self.profile()["recomputing"])
+        release = self.hold_worker()
+        self.assertEqual(self.delete("2026-06").status_code, 204)
+        body = self.profile()
+        self.assertEqual((body["recomputing"], body["item_count"], list(body["months"])), (True, 30, ["2026-05"]))
+        release.set()
+        drain(self.client)
+        body = self.profile()
+        self.assertEqual((body["recomputing"], body["item_count"]), (False, 15))
+
     def test_deleting_the_last_month_leaves_an_empty_profile(self):
         upload(self.client, self.headers, invoice_csv(teas(5, 25)))
         self.delete("2026-05")

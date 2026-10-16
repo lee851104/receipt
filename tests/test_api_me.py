@@ -50,9 +50,10 @@ class MyProfileTests(unittest.TestCase):
     def test_someone_who_has_not_uploaded_yet_is_not_ready(self):
         body = self.profile()
         self.assertEqual({key: body[key] for key in ("user_id", "display_name", "is_demo", "ready", "item_count",
-                                                     "min_items", "pending_attributes", "areas", "months")},
+                                                     "min_items", "pending_attributes", "areas", "months",
+                                                     "recomputing")},
                          {"user_id": 1, "display_name": "Amy", "is_demo": False, "ready": False, "item_count": 0,
-                          "min_items": 20, "pending_attributes": 0, "areas": [], "months": {}})
+                          "min_items": 20, "pending_attributes": 0, "areas": [], "months": {}, "recomputing": False})
         self.assertEqual([trait["value"] for trait in body["traits"]], [None] * 18)
 
     def test_the_traits_are_the_18_of_the_match_page_in_order_each_with_a_value(self):

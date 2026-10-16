@@ -14,9 +14,15 @@ prototypes/
 **/*.rar
 **/*.zip
 **/*.7z
+**/*.db
 .env
 .env.*
+**/.env
+**/.env.*
 # v1's build input is never served, and a developer's copy may hold generated report data
 src/web/
 **/*-data.js
+invoice-insights-private.html
+**/results/
+**/outputs/
 **/__pycache__/

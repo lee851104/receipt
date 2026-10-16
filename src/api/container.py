@@ -8,6 +8,7 @@ import logging
 import os
 import secrets
 import shutil
+import sys
 from pathlib import Path
 
 from sqlmodel import Session, select
@@ -21,12 +22,13 @@ DATA = Path("/data")  # the database volume
 log = logging.getLogger(__name__)
 
 
-def jwt_secret(env, data_dir=DATA):
-    """JWT_SECRET from the environment, or the one kept in the data volume, made on the first start, so tokens keep
-    working when the container is rebuilt."""
+def jwt_secret(env, data_dir=None):
+    """JWT_SECRET from the environment, or the one kept in the data volume (DATA unless data_dir says otherwise),
+    made on the first start, so tokens keep working when the container is rebuilt."""
     given = env.get("JWT_SECRET", "").strip()
     if given:
         return given
+    data_dir = DATA if data_dir is None else data_dir  # looked up now, not when the module loaded
     kept = data_dir / "jwt-secret"
     if not kept.exists():
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -104,7 +106,10 @@ def seed_if_empty(engine, demo_mode):
 def main():
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     os.environ["JWT_SECRET"] = jwt_secret(os.environ)
-    settings = Settings.from_env(os.environ)
+    try:
+        settings = Settings.from_env(os.environ)
+    except ValueError as error:  # a weak secret or a bad setting: one line, not a traceback, as src/api/main.py
+        sys.exit(f"error: {error}")
     ensure_category_model(settings)
     engine = make_engine(settings.database_url)
     init_db(engine)

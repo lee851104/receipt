@@ -19,7 +19,8 @@ class DockerFileTests(unittest.TestCase):
         patterns = {line.strip() for line in IGNORED.read_text(encoding="utf-8").splitlines()
                     if line.strip() and not line.startswith("#")}
         for pattern in ("rawdata/", "data/", "**/*.csv", "**/*.rar", "**/*.zip", "**/*.7z", ".env", ".env.*",
-                        "models/", "runtime/", "experiments/", "src/web/", "**/*-data.js", ".git/"):
+                        "**/.env", "**/.env.*", "**/*.db", "invoice-insights-private.html", "**/results/",
+                        "**/outputs/", "models/", "runtime/", "experiments/", "src/web/", "**/*-data.js", ".git/"):
             with self.subTest(pattern=pattern):
                 self.assertIn(pattern, patterns)
 
@@ -46,6 +47,21 @@ class WorkflowTests(unittest.TestCase):
                        "docker build", "/api/health"):
             with self.subTest(needed=needed):
                 self.assertIn(needed, text)
+
+    def test_ci_starts_the_compose_demo_and_checks_its_demo_users(self):
+        # What a person runs (docker compose up: DEMO_MODE=1, the volumes, 127.0.0.1:8000) is what CI starts.
+        text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        for needed in ("docker compose up", '"demo_mode":true', "/api/auth/demo-users", "docker compose logs",
+                       "docker compose down -v"):
+            with self.subTest(needed=needed):
+                self.assertIn(needed, text)
+        self.assertNotIn("docker run -d", text)
+
+    def test_ci_always_tears_the_demo_down_and_cannot_hang_or_write(self):
+        text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        self.assertRegex(text, r"if: always\(\)\s+run: docker compose down -v")
+        self.assertEqual(text.count("timeout-minutes: 15"), 2)  # the tests job and the docker job
+        self.assertIn("permissions:\n  contents: read", text)
 
 
 if __name__ == "__main__":

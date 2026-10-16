@@ -411,3 +411,24 @@ $role2CudaPython = './experiments/category-models/bert-runtime/.venv/Scripts/pyt
 - v1/v2/v3最終safetensors SHA256相同；v3每次保存逐tensor完全相同；重載validation50分類全同，max差2.3283064365386963e-09，train probe10差0。CPU1000筆27.31秒；訓練26.54秒；程序退出後GPU背景821MiB／0%。
 - 完整產物runs/bert-next25-20261016-v3；資料bert-next25-data-20261016-v1；execution-evidence綁定63db6b0及CV設定／report指紋。v1/v2失敗證據保留。私人輸出git check-ignore通過。
 - 內部複查BERT專用容差6/6通過，無阻擋；結果文件classification-bert-next25.md列出生鮮食材3筆均錯、少樣本類別及validation非盲測限制。下一步追加共用交接送Claude，狀態待Claude審核／未整合。
+
+## 固定分組切分的共同多種子比較
+
+`bert_multiseed_cv.py` 重用已凍結的5折、inner分割與合成子集，固定seed42/43/44，各跑25%與目前約66.3%兩組，共30run。每個seed均跨同一批5折；報告每seed的完整OOF、同fold跨seed的SD、成對差異。355筆反覆評分不代表新增成1065筆獨立樣本。
+
+```powershell
+$role2Data = 'C:/Users/User/Desktop/AI_project/receipt/data/role2'
+$role2Cv = "$role2Data/bert-multiseed-cv-20261016-v1"
+& ./experiments/category-models/.venv/Scripts/python.exe experiments/category-models/bert_multiseed_cv.py prepare --parent "$role2Data/bert-ratio-cv-20261016-v1" --out $role2Cv --private-root $role2Data
+foreach ($role2Seed in 42,43,44) {
+  foreach ($role2Fold in 0..4) {
+    foreach ($role2Regime in 'synthetic_25','synthetic_current') {
+      & ./experiments/category-models/bert-runtime/.venv/Scripts/python.exe experiments/category-models/bert_multiseed_cv.py train --experiment $role2Cv --pretrained "$role2Data/models/bert-base-chinese" --fold $role2Fold --seed $role2Seed --regime $role2Regime --private-root $role2Data
+      if ($LASTEXITCODE -ne 0) { throw 'Preserve failed run; do not overwrite or select retries' }
+    }
+  }
+}
+& ./experiments/category-models/.venv/Scripts/python.exe experiments/category-models/bert_multiseed_cv.py summarize --experiment $role2Cv --private-root $role2Data
+```
+
+新資料夾不覆寫既有實驗。相同公開encoder、lr2e-5、batch16、maxlen32、FP32、最多10輪、inner loss早停；外折不選epoch。本輪保留各組實際梯度步數，不宣稱等計算量因果比較。原test不開啟。現有355筆355群，沒有多筆商品家族／消費者分組；只能聲明正規化同名與明確group隔離。逐筆OOF與模型均留本機忽略目錄，不發布。

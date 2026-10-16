@@ -179,8 +179,15 @@ def load_fold(root, fold, regime):
     return parts, plan
 
 
-def train_fold(root, pretrained, fold, regime, device='cuda', epochs=10, progress=None):
+def train_fold(root, pretrained, fold, regime, device='cuda', epochs=10, progress=None, seed=None, output_root=None):
     root, pretrained = Path(root).resolve(), Path(pretrained).resolve()
+    seed_override=seed
+    if (seed is None)!=(output_root is None):raise ValueError('seed_override_requires_separate_output')
+    if seed is not None and (type(seed) is not int or not 0<=seed<2**32):raise ValueError('invalid_seed')
+    destination=root if output_root is None else Path(output_root).resolve()
+    if output_root is not None and (destination.is_relative_to(root) or root.is_relative_to(destination)):
+        raise ValueError('unsafe_override_output')
+    if destination.is_relative_to(pretrained) or pretrained.is_relative_to(destination):raise ValueError('unsafe_model_output')
     parts, plan = load_fold(root, fold, regime)
     plan_hash = fingerprint(root/'plan.json')
     if (pretrained/'classifier-manifest.json').exists():
@@ -195,7 +202,9 @@ def train_fold(root, pretrained, fold, regime, device='cuda', epochs=10, progres
     settings = dict(epochs=epochs,lr=2e-5,batch_size=16,max_length=32,weight_decay=.01,
                     patience=2,min_delta=1e-4,device=device,initialization='public_encoder',
                     encoder=encoder,plan_sha256=plan_hash)
-    common_path=root/'training-config.json'
+    if seed_override is not None:settings['initialization_seed']=seed_override
+    destination.mkdir(parents=True,exist_ok=True)
+    common_path=destination/'training-config.json'
     if common_path.exists():
         if json.loads(common_path.read_text(encoding='utf-8')) != settings:
             raise ValueError('inconsistent_run_settings')
@@ -203,9 +212,9 @@ def train_fold(root, pretrained, fold, regime, device='cuda', epochs=10, progres
         with common_path.open('x',encoding='utf-8') as stream:
             json.dump(settings,stream,ensure_ascii=False,sort_keys=True)
     config_hash=fingerprint(common_path)
-    run=root/'runs'/f'{regime}-fold-{fold}'
+    run=destination/'runs'/f'{regime}-fold-{fold}'
     run.mkdir(parents=True,exist_ok=False)  # Failed attempts remain claimed.
-    seed=42+fold
+    seed=42+fold if seed_override is None else seed_override
     random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
     torch.set_num_threads(1); torch.use_deterministic_algorithms(True)
     if device=='cuda':

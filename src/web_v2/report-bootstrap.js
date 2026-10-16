@@ -9,6 +9,11 @@
   for(const source of ['legacy-flow-nav.js','report-insights.js','legacy-monthly.js','report-comparison.js']){
    await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=source;script.onload=resolve;script.onerror=()=>reject(Error('月報載入失敗，請重新載入。'));document.body.append(script);});
   }
+  const requested=new URLSearchParams(location.search).get('month');
+  const select=document.getElementById('insights-month');
+  if(requested&&Object.hasOwn(expenseReportData.months,requested)){
+   select.value=requested;select.dispatchEvent(new Event('change',{bubbles:true}));
+  }
   document.getElementById('frame-status').hidden=true;
  }catch(error){const note=document.createElement('p');note.textContent=error.message;document.body.replaceChildren(note);}
 })();

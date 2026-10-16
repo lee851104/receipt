@@ -1,4 +1,4 @@
-const {go:navigate,openCalculation}=require('./web-v2-navigation.cjs');
+const {go:navigate,openCalculation,openReport}=require('./web-v2-navigation.cjs');
 /* Optional browser integration: run with Playwright available; API server on 127.0.0.1:8001. All data is fictional. */
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');const fs=require('node:fs');
@@ -21,9 +21,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   await page.getByRole('heading',{name:'處理完成',exact:true}).waitFor();assert.match(await page.locator('#upload-count').textContent(),/2 \/ 2/);
   await page.screenshot({path:'runtime/role4-upload-desktop.png',fullPage:true});
   await page.locator('#open-profile').click();await page.locator('#profile-content').waitFor();assert.equal(await page.locator('.trait-value').count(),18);
-  await go('classify');await page.locator('#item-name').fill('虛構新品 '+Date.now());await page.locator('#classify-form button').click();
-  await page.getByText('分析完成',{exact:true}).waitFor();assert.equal(await page.locator('#attribute-list .attribute-row').count(),23);
-  console.log('LIVE PASS: registration, upload -> done, real profile, classification ready with fake backend.');
+  console.log('LIVE PASS: registration, upload -> done, real profile with fake backend.');
   // Error screens use controlled API responses, never private invoice data.
   await go('upload');
   for(const failure of [
@@ -49,6 +47,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   await page.route('**/api/matches/7/explain',r=>r.fulfill({json:fixture.explanation}));
   await go('profile');await page.locator('#refresh-profile').click();
   await page.locator('#profile-content').waitFor({state:'visible'});assert.equal(await page.locator('.trait-value').count(),18);
+  await openReport(page);
   const report=page.frameLocator('#report-frame');await report.locator('#total').filter({hasText:'80'}).waitFor();
   await report.locator('#insights-month').selectOption('2026-05');await report.locator('#total').filter({hasText:'160'}).waitFor();
   assert.equal(await report.locator('#audit-rows img').count(),0);assert.equal(await page.evaluate(()=>window.__xss),undefined);
@@ -63,8 +62,9 @@ const fixture=require('./web-v2-fixtures.cjs');
   await page.screenshot({path:'runtime/role4-matches-desktop.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:'runtime/role4-matches-mobile.png',fullPage:true});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-  await go('profile');assert.equal(await report.locator('body').evaluate(el=>el.scrollWidth>innerWidth),false);
+  await go('profile');await openReport(page);assert.equal(await report.locator('body').evaluate(el=>el.scrollWidth>innerWidth),false);
   await page.screenshot({path:'runtime/role4-profile-mobile.png',fullPage:true});
+  await page.locator('#close-report').click();
   profile={...profile,ready:false,item_count:0,months:{},traits:profile.traits.map(t=>({...t,value:null}))};
   await page.locator('#refresh-profile').click();await page.locator('#report-empty').waitFor({state:'visible'});assert(await page.locator('#report-frame').isHidden());
   await page.locator('#settings-toggle').click();await page.locator('#switch-account').click();assert.equal(await page.locator('#report-frame').getAttribute('src'),null);assert.equal(await page.locator('#network-frame').getAttribute('src'),null);

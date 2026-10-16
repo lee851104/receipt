@@ -5,7 +5,7 @@
   let storage;
   try{storage=globalThis.sessionStorage;}catch(_){/* Private mode may disable storage. */}
   const session=ReceiptAPI.createSession(storage);
-  let flow,lastView,lastUsers,lastResult,workspaceUI;
+  let flow,lastView,lastUsers,workspaceUI;
   const api=ReceiptAPI.createClient({session,onUnauthorized:message=>flow.unauthorized(message)});
   function message(id,text){$(id).textContent=text||'';$(id).hidden=!text;}
   function render(state){
@@ -36,37 +36,11 @@
     $('service-alert').hidden=!state.serviceError;$('service-error').textContent=state.serviceError;
     $('identity-label').textContent=workspace?(session.get()?.label||'已登入'):'';
     const fake=state.health?.models?.category==='fake'||state.health?.models?.attributes==='fake';
-    message('model-note',fake?'目前使用示範模型，分類與屬性僅供流程體驗。':'');
-    const classification=state.classification,result=classification.result;
-    $('result-card').setAttribute('aria-busy',String(classification.status==='loading'));
-    $('classification-status').textContent=classification.status==='error'?'':classification.message;
-    message('classify-error',classification.status==='error'?classification.message:'');
-    $('result-empty').hidden=!!result||classification.status==='error';
-    $('classification-result').hidden=!result;
-    if(lastResult!==result){
-      $('attribute-list').replaceChildren();
-      $('result-name').textContent=result?.name||'';$('category-name').textContent=result?.category?.name||'';
-      const prob=result?.category?.prob;
-      const valid=typeof prob==='number' && Number.isFinite(prob) && prob>=0 && prob<=1;
-      $('category-probability').textContent=valid?new Intl.NumberFormat('zh-TW',{style:'percent',maximumFractionDigits:1}).format(prob):'—';
-      $('confidence-fill').style.width=valid?(prob*100)+'%':'0%';
-      $('pending-note').hidden=classification.status!=='pending';
-      if(result && classification.status==='ready'){
-        for(const row of ReceiptFlow.attributeRows(result.attributes)){
-          const pair=document.createElement('div');pair.className='attribute-row';
-          const key=document.createElement('dt');key.textContent=row.label;
-          const value=document.createElement('dd');value.textContent=row.value;if(row.unknown)value.className='unknown';
-          pair.append(key,value);$('attribute-list').append(pair);
-        }
-      }
-      lastResult=result;
-    }
-    $('pending-note').textContent=classification.message==='稍後再查'?'屬性尚未完成分析，請稍後再查。':'屬性分析中，每 2 秒重新查詢，最多 5 次。';
+    message('model-note',fake?'目前為示範模型，品味僅供流程體驗。':'');
     const viewChanged=lastView!==state.view;
     if(viewChanged){
-      history.replaceState(null,'',workspace?(['#classify','#upload','#profile','#matches','#settings'].includes(location.hash)?location.hash:'#profile'):'#'+state.view);
+      history.replaceState(null,'',workspace?(['#upload','#profile','#matches','#settings'].includes(location.hash)?location.hash:'#profile'):'#'+state.view);
       $('login-password').value='';$('register-password').value='';
-      if(!workspace)$('item-name').value='';
       if(lastView!==undefined&&!workspace)$('auth-title').focus();
       lastView=state.view;
     }
@@ -85,8 +59,6 @@
     try{await flow.register($('register-username').value,$('register-password').value,$('register-display').value);}finally{$('register-password').value='';}
   });
   $('demo-form').addEventListener('submit',event=>{event.preventDefault();return flow.demoLogin($('demo-user').value);});
-  $('classify-form').addEventListener('submit',event=>{event.preventDefault();if(workspaceUI.busyCredentials())return;return flow.classify($('item-name').value);});
-  for(const button of document.querySelectorAll('[data-example]'))button.addEventListener('click',()=>{$('item-name').value=button.dataset.example;$('item-name').focus();});
   function restore(){
     if(!session.get())flow.showAuth(location.hash==='#register'?'register':'login');
     else if(location.hash==='#login'||location.hash==='#register')flow.switchAccount();

@@ -32,3 +32,78 @@ header{max-width:1328px;margin:auto;padding:25px 40px;display:flex;justify-conte
 summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
 .explain-details .explain-panel{margin-top:0}
 @media(max-width:600px){.header-actions{gap:10px}.explain-details>summary .small{display:block;margin:4px 0 0 16px}}
+
+/* Authenticated workspace: one viewport, with native paged scrolling inside home. */
+body:has(#workspace-view:not([hidden])){height:100dvh;overflow:hidden}
+body:has(#workspace-view:not([hidden]))>header{height:58px;padding:10px 24px;max-width:1328px;width:100%}
+body:has(#workspace-view:not([hidden]))>main{height:calc(100dvh - 58px);min-height:0;padding:0 24px;max-width:1328px}
+body:has(#workspace-view:not([hidden]))>footer{display:none}
+#workspace-view{height:100%;min-height:0}
+.workspace-nav{height:44px;margin:0;gap:26px;flex-shrink:0}
+.workspace-nav button{padding:10px 0}
+#workspace-view>[id$="-panel"]{height:calc(100% - 44px);overflow:auto;padding:18px 0}
+#workspace-view>#profile-panel{display:flex;flex-direction:column;overflow:hidden;padding:0}
+.profile-header{min-height:54px;flex-shrink:0;padding:10px 0;gap:12px}
+.profile-header h1{font-size:23px;line-height:1.2;margin:0}.profile-header h1 em{margin-left:8px}
+#profile-message:empty{display:none}#profile-message{margin:0;padding:6px 0}
+#profile-content{flex:1;min-height:0}
+#profile-pages{height:100%;overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:thin;overscroll-behavior-y:contain}
+.profile-page{box-sizing:border-box;min-height:100%;height:auto;scroll-snap-align:start;scroll-snap-stop:always;padding:4px 8px 12px 0;display:flex;flex-direction:column;gap:12px}
+.taste-intro{display:flex;flex-wrap:wrap;gap:3px 20px;color:var(--muted);font-size:12px}
+.taste-intro p{margin:0}#profile-overview{color:var(--ink)}
+#model-note{flex-basis:100%;color:#c4a19e;font-size:11px}
+#profile-pages .trait-values{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;flex:1}
+#profile-pages .trait-value{padding:10px 12px;font-size:12px;gap:5px 8px;align-content:center;min-height:44px;border-radius:7px}
+#profile-pages .trait-value meter{height:6px}
+.page-turn{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:auto;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+.page-note{margin-left:16px}.page-turn button{font-size:12px}
+#taste-empty{margin:0}
+.month-heading{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.month-heading h2{font-size:25px;margin:0}.month-heading .eyebrow{margin:0 0 3px;font-size:10px}
+.month-heading label{margin:0;font-size:11px}.month-heading select{padding:5px 10px;min-height:34px;font-size:13px}
+#month-summary{display:flex;flex-direction:column;gap:12px;flex:1}
+.month-stats{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:14px;padding:20px 0;border-bottom:1px solid var(--line)}
+.month-stats span{display:block;font-size:11px;color:var(--muted)}.month-stats strong{font-size:clamp(21px,3vw,38px);font-weight:500;line-height:1.4}
+.month-stats>div:first-child strong{color:var(--accent)}
+.month-breakdown-title{font-size:13px;margin:0}
+#month-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px}
+.month-category{display:grid;grid-template-columns:1fr auto;font-size:12px;gap:4px 8px}
+.month-category strong{font-weight:500}.month-category meter{grid-column:span 2;width:100%;height:6px}
+.month-source{margin:0;font-size:11px}#open-report{align-self:flex-start;margin-top:auto}
+#report-dialog{width:calc(100vw - 32px);max-width:1400px;height:calc(100dvh - 32px);max-height:none;padding:0;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:12px}
+#report-dialog::backdrop{background:#000b}
+.report-dialog-bar{height:54px;display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--line)}
+.report-dialog-bar h2{font-size:16px;margin:0}
+#report-dialog #report-frame{height:calc(100% - 54px);margin:0;border:0;border-radius:0;width:100%}
+#matches-panel .section-header h1{font-size:26px}.match-controls{margin:14px 0}.match-list{gap:10px}.match-card{padding:13px 16px}.match-card p{margin:4px 0}
+@media(min-height:650px){.profile-page{height:100%;min-height:fit-content}}
+@media(max-width:640px){
+ body:has(#workspace-view:not([hidden]))>header{padding:8px 16px;height:52px}
+ body:has(#workspace-view:not([hidden]))>main{padding:0 16px;height:calc(100dvh - 52px)}
+ .profile-header{min-height:46px;padding:8px 0}.profile-header h1{font-size:19px}
+ #profile-pages .trait-values{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+ #profile-pages .trait-value{font-size:11px;padding:7px 9px;min-height:36px}
+ .profile-page{gap:8px;padding-right:4px;padding-bottom:8px}
+ .taste-intro{font-size:11px;gap:2px}.taste-intro p{flex-basis:100%}
+ .month-heading{gap:10px}.month-heading h2{font-size:19px}.month-heading label{flex-shrink:0}
+ .month-heading select{font-size:12px;max-width:130px}
+ .month-stats{gap:10px;padding:12px 0}.month-stats strong{font-size:22px}
+ #month-summary{gap:10px}#month-categories{gap:8px 15px}
+ .month-category{font-size:11px}.page-note{margin-left:8px}
+ #report-dialog{width:100vw;height:100dvh;border-radius:0}
+}
+@media(max-height:650px) and (min-width:480px){
+ .profile-header{min-height:42px;padding:6px 0}.profile-header h1{font-size:20px}
+ .profile-page{gap:6px}
+ #profile-pages .trait-values{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+ #profile-pages .trait-value{padding:5px 8px;min-height:31px;font-size:10px;gap:2px 5px}
+ .taste-intro{font-size:10px;gap:0 12px}.taste-intro p{flex-basis:auto}
+ #model-note{font-size:10px}.page-turn{padding-top:5px}
+ .month-heading h2{font-size:19px}.month-stats{padding:6px 0}.month-stats strong{font-size:23px}
+ #month-summary{gap:6px}#month-categories{gap:4px 16px}
+}
+@media(prefers-reduced-motion:reduce){#profile-pages{scroll-behavior:auto}}
+
+body:has(#workspace-view:not([hidden]))>main{display:flex;flex-direction:column}
+#workspace-view{flex:1;min-height:0}
+body:has(#workspace-view:not([hidden])) .service-alert{flex-shrink:0;margin:6px 0}

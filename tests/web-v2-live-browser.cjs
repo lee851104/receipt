@@ -1,4 +1,4 @@
-const {go:navigate,openCalculation}=require('./web-v2-navigation.cjs');
+const {go:navigate,openCalculation,openReport}=require('./web-v2-navigation.cjs');
 /* 真 HTTP + 正式 API／SQLite／worker；無 route.fulfill，只有合成 CSV 與 fake 模型。 */
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
@@ -71,12 +71,11 @@ async function poll(read,check){
   assert.match(await page.locator('#report-empty').textContent(),/設定 → 上傳檔案/);
   await page.reload();await page.locator('#profile-content').waitFor();
   assert.equal(new URL(page.url()).hash,'#profile');
-  await go('classify');await page.locator('#item-name').fill('虛構奶茶');await page.locator('#classify-form button').click();
-  await page.getByText('分析完成',{exact:true}).waitFor();assert.equal(await page.locator('#attribute-list .attribute-row').count(),23);
   await upload('2026-05');await upload('2026-06');
   await go('profile');await page.locator('#profile-content').waitFor();
   assert.match(await page.locator('#profile-overview').textContent(),/80 個有效品項/);
   assert.equal(await page.locator('.trait-value').count(),18);
+  await openReport(page);
   const report=page.frameLocator('#report-frame');await report.locator('#total').waitFor();
   await report.locator('#insights-month').selectOption('2026-05');
   assert(!(await report.locator('body').textContent()).includes('月報資料格式不正確'));

@@ -1,4 +1,4 @@
-const {go:navigate,openCalculation}=require('./web-v2-navigation.cjs');
+const {go:navigate,openCalculation,openReport}=require('./web-v2-navigation.cjs');
 /* Contract-only browser check. All API data is fictional; no user records are created. */
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');const fs=require('node:fs');
@@ -13,7 +13,6 @@ const fixture=require('./web-v2-fixtures.cjs');
   let body=path.endsWith('/health')?{demo_mode:true,models:{category:'fake',attributes:'fake'}}:
    path.endsWith('/demo-users')?[{user_id:1,display_name:'虛構測試'}]:
    path.endsWith('/demo-login')?{access_token:'fictional-browser-token',expires_in:3600}:
-   path.endsWith('/items/classify')?{name:'虛構茶',category:{name:'飲品',prob:.9},attributes_status:'ready',attributes:{}}:
    path.endsWith('/me/profile')?fixture.profile:path.endsWith('/explain')?explanation:matches;
   return route.fulfill({status:path.endsWith('/explain')?status:200,json:body});
  });
@@ -52,8 +51,7 @@ const fixture=require('./web-v2-fixtures.cjs');
    await select();await openCalculation(page);assert.equal(await page.locator('#explain-percent').count(),0);assert(await page.locator('#network-frame').isVisible());
   }
   matches=structuredClone(fixture.matches);explanation={...structuredClone(fixture.explanation),cells:[]};await select();await page.locator('#network-status').filter({hasText:'格式不正確'}).waitFor();assert(await page.locator('#explain-panel').isHidden());
-  await navigate(page,'classify');await page.locator('#item-name').fill('虛構茶');await page.locator('#classify-form button').click();
-  await page.getByText('分析完成',{exact:true}).waitFor();await navigate(page,'matches');
+  await navigate(page,'profile');await navigate(page,'matches');
   assert.match(await page.locator('#network-status').textContent(),/格式不正確/);
   explanation=structuredClone(fixture.explanation);matches=structuredClone(fixture.matches);await select();await openCalculation(page);
   // Changing a filter clears all detail before the next selection.

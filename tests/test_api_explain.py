@@ -2,10 +2,10 @@
 import json
 import unittest
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from src.api.db import ROOT
-from src.api.tables import Profile, User
+from src.api.tables import ItemCache, Profile, User
 from src.ml.fields import FIELDS
 from src.receipt.traits import load_context
 from tests.api_support import invoice_csv, login, make_client, register, upload
@@ -188,6 +188,15 @@ class ExplainTests(unittest.TestCase):
         register(client, username="ben", display_name="Ben")
         upload(client, login(client), invoice_csv(month(SHOPPING)))
         upload(client, login(client, username="ben"), invoice_csv(month(SHOPPING)))
+        # The uploads have the names judged and cached, which would hide a model asked for what is missing: leave
+        # every name uncached, so that an explain which asked the model would have to.
+        with Session(client.app.state.engine) as session:
+            judged = session.exec(select(ItemCache)).all()
+            self.assertTrue(judged)
+            for row in judged:
+                session.delete(row)
+            session.commit()
+            self.assertEqual(session.exec(select(ItemCache)).all(), [])
         asked.clear()
         self.assertEqual(client.get("/api/matches/2/explain", headers=login(client)).status_code, 200)
         self.assertEqual(asked, [])

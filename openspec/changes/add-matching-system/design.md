@@ -70,7 +70,7 @@
 
 第二段交給背景的工作執行緒執行：
 1. 列出不重複品名，呼叫 `classify()`；最高機率低於 `CATEGORY_MIN_PROB` 的存成 10 待確認
-2. 呼叫 `describe_items()`：先查 `item_cache`，GPU 模式下沒有快取的才問 Qwen；無 GPU 模式下沒有快取的回 `None`，記成待分析
+2. 後端先查自己的 `item_cache`，沒有的品名才呼叫 `describe_items()`，答案由後端存進 `item_cache`：GPU 模式下問 Qwen；無 GPU 模式下回 `None`，記成待分析（10/16 改寫：快取歸後端，見 overview 第 4 節）
 3. 用這個人所有月份的資料重算 18 格，存進 `profiles`
 4. 工作改成 `done`
 

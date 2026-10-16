@@ -316,3 +316,24 @@ experiments/category-models/.venv/Scripts/python.exe experiments/category-models
 experiments/category-models/.venv/Scripts/python.exe -m unittest discover -s experiments/category-models -p "test_prelabel_review.py"
 node --test experiments/category-models/test_review_core.cjs
 ```
+
+## 人工審核後的三模型比較
+
+`evaluate_reviewed.py` 只評估人工已確認的 0–9 類，排除未確認及類別 10。人工答案先驗證去重及標籤衝突；按照 ID 與模型實際使用的 NFKC／頭尾空白正規化品名，精確對齊預標草稿。TF-IDF 與 BERT 使用審核前保存的分類，Embedding 用既有模型補跑；不 fit、不改權重、不重跑舊切分的最終測試。
+
+```powershell
+experiments/category-models/.venv/Scripts/python.exe experiments/category-models/evaluate_reviewed.py --reviewed "C:/Users/User/Downloads/labeled-items-5092c3e897c490e4041e (1).jsonl" --draft-dir C:/Users/User/Desktop/AI_project/receipt/data/role2/category-review-20261016-v1 --dataset C:/Users/User/Desktop/AI_project/receipt/data/role2/split-20261015-v2 --a C:/Users/User/Desktop/AI_project/receipt/data/role2/runs/tfidf-v2-20261015 --b C:/Users/User/Desktop/AI_project/receipt/data/role2/runs/embedding-v2-20261015 --c C:/Users/User/Desktop/AI_project/receipt/data/role2/runs/bert-v2-20261015-seed42 --private-root C:/Users/User/Desktop/AI_project/receipt/data/role2 --out C:/Users/User/Desktop/AI_project/receipt/data/role2/runs/reviewed-comparison-20261016-v1
+```
+
+每次使用不存在的輸出資料夾。程式先保存 `evaluation-plan.json` 的輸入／模型指紋，再補跑 Embedding；完成時再次核對來源與模型未變。`reviewed-source.jsonl`、`confirmed-items.jsonl`、`private-predictions.jsonl` 含真實品名，僅留在本機忽略資料夾，不能貼給雲端或提交 Git。`report.json` 與 `comparison.md` 僅含彙總指標。
+
+報告分成全部已確認、與訓練重疊、訓練未見、訓練／驗證／測試皆未見四個子集。重疊比對包含正規化同名及明確連結的群組；不代表已排除所有語義近似品項或證明來源獨立。Macro-F1 平均該子集中有真實樣本的類別，另列每類至少 5 筆的平均；低樣本類別仍有描述性指標，但明確警示不穩定。審核時已展示模型建議，故這不是盲測；排除無法辨識項目亦須揭露。
+
+繪圖使用獨立環境，避免改動模型依賴版本：建立 `data/role2/plot-runtime/.venv`，依 `requirements-plots.txt` 安裝 Matplotlib，再執行：
+
+```powershell
+C:/Users/User/Desktop/AI_project/receipt/data/role2/plot-runtime/.venv/Scripts/python.exe experiments/category-models/plot_reviewed_comparison.py --report C:/Users/User/Desktop/AI_project/receipt/data/role2/runs/reviewed-comparison-20261016-v1/report.json --out C:/Users/User/Desktop/AI_project/receipt/data/role2/runs/reviewed-comparison-20261016-v1
+C:/Users/User/Desktop/AI_project/receipt/data/role2/plot-runtime/.venv/Scripts/python.exe -m unittest discover -s experiments/category-models -p "test_plot_reviewed.py"
+```
+
+輸出三組 PNG／PDF：全部、訓練未見、排除所有舊切分已見名稱。格內是計數，色階是同一真實類別內比例；列為人工答案、欄為模型預測。繪圖腳本只讀彙總報告；預設字型為 Windows 微軟正黑體，可用 `--font` 指定本機字型。

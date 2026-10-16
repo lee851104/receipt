@@ -110,9 +110,9 @@ def run_recompute(engine, backends, context, user_id):
 class Worker:
     """The app's one thread for upload jobs, which runs them one at a time in the order they were queued: there is a
     single llama-server, SQLite has a single writer, and the next batch updates a profile at the end of a job. A
-    waiting job is only an id in the queue, so it holds no connection or request thread and honestly stays "queued".
-    A daemon thread, so stopping the server never waits for a running job; the next start-up fails it instead.
-    Besides uploads, the profile recompute after a month is deleted is queued here too."""
+    waiting job is only a label and a callable in the queue, holding no connection or request thread, so it honestly
+    stays "queued". A daemon thread, so stopping the server never waits for a running job; the next start-up fails it
+    instead. Besides uploads, profile recomputes are queued here too: after a month is deleted, and at start-up."""
 
     def __init__(self, run):
         self.run = run  # run(job_id) does one job

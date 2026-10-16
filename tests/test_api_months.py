@@ -1,11 +1,13 @@
 """DELETE /api/me/months/{month}: one month's items and jobs go, and the taste profile is worked out again."""
 import threading
 import unittest
+from unittest import mock
 
 from sqlmodel import Session, select
 
+from src.api import accounts
 from src.api.tables import Item, ItemCache, Job, Profile, User
-from tests.api_support import drain, invoice_csv, login, make_client, register, upload
+from tests.api_support import commit_a_job, drain, file_client, invoice_csv, login, make_client, register, upload
 
 
 def teas(month, count, prefix="測試茶"):
@@ -38,7 +40,7 @@ class DeleteMonthTests(unittest.TestCase):
         """Keep the worker busy until the returned event is set, so whatever is queued after waits."""
         release = threading.Event()
         self.addCleanup(release.set)
-        self.client.app.state.worker.call("held by the test", lambda: release.wait(timeout=5))
+        self.client.app.state.worker.call("held by the test", lambda: release.wait(timeout=30))
         return release
 
     def test_deleting_a_month_removes_it_and_works_the_profile_out_again(self):
@@ -116,6 +118,23 @@ class DeleteMonthTests(unittest.TestCase):
             session.add(Job(user_id=1, month="2026-07", status="running"))
             session.commit()
         self.assertEqual(self.delete("2026-06").status_code, 204)
+
+    def test_an_upload_of_the_month_cannot_commit_its_job_between_the_check_and_the_delete(self):
+        client, path = file_client(self)
+        register(client)
+        headers = login(client)
+        upload(client, headers, invoice_csv(teas(5, 3)))
+        busy, gap = accounts.busy, []
+
+        def upload_in_the_gap(session, user_id, month=None):
+            answer = busy(session, user_id, month)
+            gap.append(commit_a_job(path, user_id, month))
+            return answer
+        with mock.patch.object(accounts, "busy", side_effect=upload_in_the_gap):
+            response = client.delete("/api/me/months/2026-05", headers=headers)
+        drain(client)
+        # The delete holds SQLite's write lock from before the check, so the upload waits for it to be done.
+        self.assertEqual((response.status_code, gap), (204, ["locked"]))
 
     def test_only_the_answers_nothing_else_uses_are_dropped_and_other_users_keep_their_month(self):
         register(self.client, username="ben", display_name="Ben")

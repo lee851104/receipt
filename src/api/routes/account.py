@@ -42,7 +42,7 @@ def confirm(user, password):
 
 def account(session, user):
     return {"user_id": user.id, "username": user.username, "display_name": user.display_name,
-            "is_demo": user.is_demo, "months": accounts.months_of(session, user.id)}
+            "is_demo": user.is_demo, "months": accounts.uploaded_months(session, user.id)}
 
 
 @router.get("")
@@ -74,10 +74,17 @@ def change_password(body: PasswordChange, user: UserDep, request: Request, sessi
 def delete_account(body: Confirmation, user: UserDep, session: SessionDep):
     writable(user)
     confirm(user, body.password)
+    user_id = user.id
+    # The new key's UPDATE takes SQLite's write lock before the check, so no upload can commit a job between the check
+    # and the deletes; a refused delete rolls it back and keeps the old key.
+    end_sessions(user)
+    session.add(user)
+    session.flush()
     # A job still to run would write the user's names into the cache again after they are gone.
-    if accounts.busy(session, user.id):
+    if accounts.busy(session, user_id):
+        session.rollback()
         raise ApiError(409, "job_in_progress")
-    accounts.delete_account(session, user.id)
+    accounts.delete_account(session, user_id)
     session.commit()
     return Response(status_code=204)
 
@@ -89,11 +96,12 @@ def delete_month(month: Month, user: UserDep, request: Request, session: Session
     # stays checked out until the route returns, next to the worker's (the in-memory test database has only one
     # connection for both, and closing this session would roll the recompute's write back).
     user_id = user.id
-    if month not in accounts.months_of(session, user_id):
+    if month not in accounts.uploaded_months(session, user_id):
         raise ApiError(404, "month_not_found")
-    if accounts.busy(session, user_id, month):
+    # It checks for an upload job of the month only once it holds SQLite's write lock (see accounts.delete_month).
+    if not accounts.delete_month(session, user_id, month):
+        session.rollback()
         raise ApiError(409, "job_in_progress")
-    accounts.delete_month(session, user_id, month)
     session.commit()
     state = request.app.state
     # Not here on the request's thread: an upload job of this user may be writing the profile right now. Queued behind

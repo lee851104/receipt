@@ -1,11 +1,13 @@
 """Account management (overview 5.11): see and rename the account, change the password, log out, delete it."""
 import json
 import unittest
+from unittest import mock
 
 from sqlmodel import Session, select
 
+from src.api import accounts
 from src.api.tables import Item, ItemCache, Job, Profile, User
-from tests.api_support import invoice_csv, login, make_client, register, upload
+from tests.api_support import commit_a_job, file_client, invoice_csv, login, make_client, register, upload
 from tests.test_matching import ME, scoring
 
 ACCOUNT_KEYS = {"user_id", "username", "display_name", "is_demo", "months"}
@@ -136,6 +138,31 @@ class AccountTests(unittest.TestCase):
         self.assertEqual((response.status_code, response.json()), (403, {"detail": "wrong_password"}))
         self.assertEqual(self.me().status_code, 200)
 
+    def test_a_refused_delete_keeps_every_token_working(self):
+        other_device = login(self.client)
+        with Session(self.engine) as session:
+            session.add(Job(user_id=1, month="2026-09", status="queued"))
+            session.commit()
+        response = self.client.request("DELETE", "/api/me", json={"password": "password123"}, headers=self.headers)
+        self.assertEqual((response.status_code, response.json()), (409, {"detail": "job_in_progress"}))
+        for headers in (self.headers, other_device):
+            self.assertEqual(self.me(headers).status_code, 200)
+
+    def test_an_upload_cannot_commit_its_job_between_the_check_and_the_delete(self):
+        client, path = file_client(self)
+        register(client)
+        headers = login(client)
+        busy, gap = accounts.busy, []
+
+        def upload_in_the_gap(session, user_id, month=None):
+            answer = busy(session, user_id, month)
+            gap.append(commit_a_job(path, user_id, "2026-05"))
+            return answer
+        with mock.patch.object(accounts, "busy", side_effect=upload_in_the_gap):
+            response = client.request("DELETE", "/api/me", json={"password": "password123"}, headers=headers)
+        # The delete holds SQLite's write lock from before the check, so the upload waits for it to be done.
+        self.assertEqual((response.status_code, gap), (204, ["locked"]))
+
     def test_an_upload_job_still_queued_or_running_is_409_and_deletes_nothing(self):
         for status in ("queued", "running"):
             with self.subTest(status=status):
@@ -175,6 +202,20 @@ class AccountTests(unittest.TestCase):
                 self.assertEqual((response.status_code, response.json()), (403, {"detail": "demo_user_read_only"}))
         self.assertEqual(client.get("/api/me", headers=demo).json()["display_name"], "Mia")
         self.assertEqual(client.post("/api/auth/logout", headers=demo).status_code, 204)
+
+    def test_a_demo_logout_leaves_the_personas_other_visitors_logged_in(self):
+        """A demo persona is shared, so its logout only ends this browser's session: the page drops its token."""
+        client = make_client(demo_mode=True)
+        with Session(client.app.state.engine) as session:
+            session.add(User(username="demo_001", display_name="Mia", is_demo=True, persona="咖啡上班族"))
+            session.commit()
+        def demo_login():
+            token = client.post("/api/auth/demo-login", json={"user_id": 1}).json()["access_token"]
+            return {"Authorization": "Bearer " + token}
+        mine, theirs = demo_login(), demo_login()
+        response = client.post("/api/auth/logout", headers=mine)
+        self.assertEqual((response.status_code, response.content), (204, b""))
+        self.assertEqual(client.get("/api/me", headers=theirs).status_code, 200)
 
 
 if __name__ == "__main__":

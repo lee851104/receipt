@@ -49,6 +49,17 @@ class DatabaseTests(unittest.TestCase):
                 engine.dispose()  # Windows cannot delete a file that is still open, even after a failed check
         self.assertEqual((mode, keys), ("wal", 1))
 
+    def test_every_connection_overwrites_what_it_deletes(self):
+        """D13: deleting really deletes, so a deleted row's bytes do not stay behind in the file."""
+        with tempfile.TemporaryDirectory() as folder:
+            for url in (MEMORY, "sqlite:///" + (Path(folder) / "app.db").as_posix()):
+                engine = make_engine(url)
+                try:
+                    with self.subTest(url=url.rpartition("/")[2]), engine.connect() as connection:
+                        self.assertEqual(connection.exec_driver_sql("PRAGMA secure_delete").scalar(), 1)
+                finally:
+                    engine.dispose()  # Windows cannot delete a file that is still open
+
     def test_every_engine_hides_statement_parameters(self):
         with tempfile.TemporaryDirectory() as folder:
             for url in (MEMORY, "sqlite:///:memory:", "sqlite:///" + (Path(folder) / "app.db").as_posix()):

@@ -1,4 +1,4 @@
-"""Accounts: register and log in, and the demo quick switch that exists only when DEMO_MODE=1."""
+"""Accounts: register, log in and log out, and the demo quick switch that exists only when DEMO_MODE=1."""
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -60,10 +60,12 @@ def login(form: Annotated[OAuth2PasswordRequestForm, Depends()], request: Reques
 
 @router.post("/logout", status_code=204)
 def logout(user: UserDep, session: SessionDep):
-    # Demo users too. A demo persona is shared, so this logs out everyone using it.
-    end_sessions(user)
-    session.add(user)
-    session.commit()
+    # A demo persona is shared by everyone who switches to it, so its key stays: the browser that logs out drops its
+    # token, and the persona's other visitors stay logged in.
+    if not user.is_demo:
+        end_sessions(user)
+        session.add(user)
+        session.commit()
     return Response(status_code=204)
 
 

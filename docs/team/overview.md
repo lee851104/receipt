@@ -27,7 +27,7 @@
 | 分類實驗 | 品名 → 10 類。A：TF-IDF + 邏輯迴歸，macro-F1 0.62；B：bge-small-zh（512 維）+ 邏輯迴歸，macro-F1 0.66。只有 57 個人工確認品名，只能驗證 4 類 | `experiments/category-models/`、`docs/category-models-brief.md` |
 | 屬性實驗 | Qwen3-4B（Q4_K_M，2.4 GB）判斷 16 個屬性。真實資料上模型單獨 F1 44%，加規則 94%（事後回測，不是獨立驗證） | `experiments/receipt-attributes/` |
 
-**還沒有的：** 配對的 API、帳號管理、真的分類和屬性模型、CI、BERT。上傳與背景任務（5.4）已經有了（10/15 完成角色 1 第 2 週第一批，分支 `role-1/uploads`，PR #8）；任務最後的品味向量重算和 `GET /api/me/profile`（5.6）也有了（第 2 週第二批，分支 `role-1/profiles`）。
+**還沒有的：** 真的分類和屬性模型（BERT 和 Qwen 還沒接上，任務 2.15、3.6）。上傳與背景任務（5.4）已經有了（10/15 完成角色 1 第 2 週第一批，分支 `role-1/uploads`，PR #8）；任務最後的品味向量重算和 `GET /api/me/profile`（5.6）也有了（第 2 週第二批，分支 `role-1/profiles`）；配對的 API（5.7）、帳號管理（5.11）和 CI（`.github/workflows/ci.yml`）也都有了（10/16 更新）。
 
 ### 18 格品味向量
 
@@ -109,7 +109,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 
 預設套件：`fastapi`、`uvicorn`、`sqlmodel`、`python-multipart`、`pyjwt`、`pwdlib[argon2]`（密碼雜湊）、`scikit-learn`、`torch`、`transformers`。Qwen 用 llama.cpp 的 `llama-server`，後端用 HTTP 呼叫它。Python 統一用 3.12。
 
-**Docker（10/15 補上）：** 根目錄的 `Dockerfile` 和 `docker-compose.yml` 用無 GPU 模式包起整個服務。執行 `docker compose up` 後：第一次啟動會從 Hugging Face 下載固定版本的分類模型；`DEMO_MODE=1` 而且資料庫是空的時，會自動匯入假用戶。資料庫和模型放在 volume 裡，重建容器也不會不見。容器裡不跑 Qwen；預設連到主機上的 llama-server（`http://host.docker.internal:8080`），要連別的位址設 `DOCKER_LLAMA_SERVER_URL`（10/16 改寫：容器不用 `.env` 的 `LLAMA_SERVER_URL`）。組員開發時仍以虛擬環境為主，Docker 是給面試官和乾淨環境驗證用的。（10/16 補上）埠只開在主機的 `127.0.0.1`（`DEMO_MODE=1` 時任何連得到伺服器的人都能用假用戶登入）；`JWT_SECRET` 沒設時，用資料 volume 裡的 `/data/jwt-secret`，第一次啟動時產生；映像檔只 COPY `configs/` 和 `src/`，不含 `data/`、`rawdata/`、CSV 和 `.env`。下載分類模型只發生在 `CATEGORY_MODEL=bert`、模型資料夾沒有 `config.json`，而且設了 `CATEGORY_MODEL_REPO` 和 `CATEGORY_MODEL_REVISION` 的時候。`docker-compose.yml` 會讀專案根目錄的 `.env` 來填 `CATEGORY_MODEL`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`（也可以從執行 `docker compose` 的環境變數給），但 `LLAMA_SERVER_URL` 不用 `.env` 的，因為 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己。
+**Docker（10/15 補上）：** 根目錄的 `Dockerfile` 和 `docker-compose.yml` 用無 GPU 模式包起整個服務。執行 `docker compose up` 後：`CATEGORY_MODEL=bert` 又設了 repo 和 revision 時，第一次啟動會從 Hugging Face 下載固定版本的分類模型（compose 預設是 `fake`，不下載；而且真的 BERT 還沒接上，下載了 `bert` 也是 `unavailable`，10/16 改寫）；`DEMO_MODE=1` 而且資料庫是空的時，會自動匯入假用戶。資料庫和模型放在 volume 裡，重建容器也不會不見。容器裡不跑 Qwen；容器預設連到主機上的 llama-server（`http://host.docker.internal:8080`），要連別的位址設 `DOCKER_LLAMA_SERVER_URL`（10/16 改寫：容器不用 `.env` 的 `LLAMA_SERVER_URL`），但 compose 還沒把 `ATTRIBUTES_MODEL` 傳進容器（任務 2.15），所以容器目前一律用假屬性模型，這個位址只改變 `/api/health` 的 `gpu_mode`（10/16 補上）。組員開發時仍以虛擬環境為主，Docker 是給面試官和乾淨環境驗證用的。（10/16 補上）埠只開在主機的 `127.0.0.1`（`DEMO_MODE=1` 時任何連得到伺服器的人都能用假用戶登入）；`JWT_SECRET` 沒設時，用資料 volume 裡的 `/data/jwt-secret`，第一次啟動時產生；映像檔只 COPY `configs/` 和 `src/`，不含 `data/`、`rawdata/`、CSV 和 `.env`。下載分類模型只發生在 `CATEGORY_MODEL=bert`、模型資料夾沒有 `config.json`，而且設了 `CATEGORY_MODEL_REPO` 和 `CATEGORY_MODEL_REVISION` 的時候，而且只在容器裡（`python -m src.api.container`）；`start.bat` 和直接跑 `uvicorn` 都不下載，`huggingface_hub` 只裝在 `requirements-docker.txt`。`docker-compose.yml` 會讀專案根目錄的 `.env` 來填 `CATEGORY_MODEL`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`（也可以從執行 `docker compose` 的環境變數給），但 `LLAMA_SERVER_URL` 不用 `.env` 的，因為 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己。
 
 ## 5. API 規格（2026-10-14 定案）
 
@@ -330,12 +330,12 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `DEMO_MODE` | 0 | 1 = 開放 `demo-users` 和 `demo-login` |
 | `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git。相對路徑一律從 repo 根目錄算起，不管在哪個資料夾啟動。只接受 `sqlite:///…`（檔案）和 `sqlite://`（記憶體，測試用），錯誤訊息不會印出設定的值 |
 | `LLAMA_SERVER_URL` | `http://127.0.0.1:8080` | Qwen 的 llama-server |
-| `CATEGORY_MODEL` | fake | `fake` 和 `bert` 可以設；`bert` 在真模型接上（任務 2.15）之前一律是 `unavailable`（10/16 補上） |
+| `CATEGORY_MODEL` | fake | `fake` 和 `bert` 可以設；`bert` 在真模型接上（任務 2.15）之前一律是 `unavailable`，模型資料夾裡已經有模型也一樣（10/16 補上） |
 | `ATTRIBUTES_MODEL` | fake | fake / qwen |
 | `CATEGORY_MIN_PROB` | 0.5 | 低於這個機率的品名歸到 10 待確認 |
-| `CATEGORY_MODEL_DIR` | `models/category` | `CATEGORY_MODEL=bert` 時讀模型的資料夾（`/models/` 不進 git）。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`（10/16 補上） |
-| `CATEGORY_MODEL_REPO` | 空 | Hugging Face 上公開的分類模型庫；資料夾裡沒有模型時從這裡下載。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`，沒設的話伺服器啟動時停下來（10/16 補上） |
-| `CATEGORY_MODEL_REVISION` | 空 | 要下載的固定版本（commit），和 `CATEGORY_MODEL_REPO` 一起設定。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`（10/16 補上） |
+| `CATEGORY_MODEL_DIR` | `models/category` | `CATEGORY_MODEL=bert` 時讀模型的資料夾（`/models/` 不進 git）；`start.bat` 和 `uvicorn` 只讀這個資料夾，不下載。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`（10/16 補上） |
+| `CATEGORY_MODEL_REPO` | 空 | Hugging Face 上公開的分類模型庫；只有 Docker 容器（`python -m src.api.container`）會在 `CATEGORY_MODEL=bert`、資料夾裡沒有模型時從這裡下載，`start.bat`／`launch` 和直接跑 `uvicorn` 都不下載（`huggingface_hub` 只裝在 `requirements-docker.txt`）。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`，沒設的話伺服器啟動時停下來（10/16 補上） |
+| `CATEGORY_MODEL_REVISION` | 空 | 要下載的固定版本（commit），和 `CATEGORY_MODEL_REPO` 一起設定；同樣只有容器會用它下載。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`（10/16 補上） |
 
 設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。伺服器只能開**一個行程**：不要加 `--workers`，也不要兩個伺服器共用同一個資料庫，因為啟動時會把還沒做完的任務標成 failed，「一次只跑一個任務」的背景執行緒也只管得到同一個行程裡的任務。`src/ml/` 有真的模型之前，`CATEGORY_MODEL` 和 `ATTRIBUTES_MODEL` 只有 `fake` 能用，設成別的值同樣會停下來；唯一的例外是 `CATEGORY_MODEL=bert`，它能啟動，但模型一律是 `unavailable`（10/16 補上）。
 
@@ -541,8 +541,8 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 **給所有人**
 - 雙擊 `start.bat` 就能啟動：沒有 `.env` 會自動建立（含新的 `JWT_SECRET`），會放入假用戶並打開 `http://127.0.0.1:8000/web/`。已經有 `.env` 的人不受影響
-- 用 Docker 時，容器連主機上 llama-server 的位址從 `DOCKER_LLAMA_SERVER_URL` 來（預設 `http://host.docker.internal:8080`），不看 `.env` 的 `LLAMA_SERVER_URL`；`CATEGORY_MODEL`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION` 從 shell 的環境變數或根目錄的 `.env` 來（compose 會讀它）
-- CI 在每次 push 和 PR 跑兩套測試（模型一律 fake），再建一次映像檔、檢查裡面沒有私人檔案、啟動一次確認健康檢查。測試不要依賴 Windows 才有的行為
+- 用 Docker 時，容器連主機上 llama-server 的位址從 `DOCKER_LLAMA_SERVER_URL` 來（預設 `http://host.docker.internal:8080`），不看 `.env` 的 `LLAMA_SERVER_URL`；Qwen 還沒接上（任務 2.15，compose 還沒傳 `ATTRIBUTES_MODEL`），所以容器目前一律用假屬性模型，這個位址只改變 `gpu_mode`；`CATEGORY_MODEL`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION` 從 shell 的環境變數或根目錄的 `.env` 來（compose 會讀它）
+- CI 在每次 push 和 PR 跑兩套測試（模型一律 fake），再建一次映像檔、檢查裡面沒有私人檔案，並用 `docker compose up` 啟動一次，確認健康檢查回報 demo 模式、假用戶名單不是空的。測試不要依賴 Windows 才有的行為
 
 **給角色 2**
 - 交出 BERT（任務 3.6）時：把 CPU 版的 `torch`、`transformers` 加進 `requirements-docker.txt`（用 PyTorch 的 CPU index），模型存成 `save_pretrained` 的格式（資料夾裡要有 `config.json`）。`CATEGORY_MODEL=bert` 在接上之前一律回報 `unavailable`

@@ -175,7 +175,7 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 
 - Python 測試沿用 unittest（`python -m unittest discover -s tests`），JS 測試用 `node --test "tests/*.test.cjs"`
 - API 測試用 Starlette 的 TestClient（需要 `httpx2`）加上記憶體 SQLite，模型一律用 `src/ml/fakes.py`（`CATEGORY_MODEL=fake`、`ATTRIBUTES_MODEL=fake`），不需要 GPU
-- GitHub Actions 在 push 和 PR 時，用 Python 3.12 和 Node 24 執行全部測試，再執行一次 `docker build`（只建置，不下載模型）
+- GitHub Actions 在 push 和 PR 時，用 Python 3.12 和 Node 24 執行全部測試，再執行一次 `docker build`、檢查映像檔裡沒有私人檔案，並用 `docker compose up` 啟動一次，確認健康檢查回報 demo 模式、假用戶名單不是空的（compose 預設是 `fake`，不下載模型）
 
 - 替代方案：改用 pytest。否決，因為現有 77 個測試和第 1 週計畫都是 unittest，不需要多一套工具。
 
@@ -203,11 +203,11 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 - `docker-compose.yml` 只有一個服務，兩個 volume：一個放 SQLite 資料庫，一個放下載的模型
 - 啟動流程：
   1. 讀設定（`JWT_SECRET` 沒設時用資料 volume 裡的 `/data/jwt-secret`，第一次啟動時產生）（10/16 補上）
-  2. `CATEGORY_MODEL=bert` 而且 `CATEGORY_MODEL_DIR`（在模型 volume 裡）沒有模型時，用 `huggingface_hub` 下載 `CATEGORY_MODEL_REPO` 在 `CATEGORY_MODEL_REVISION` 的版本（下載到暫存資料夾，完整之後才改名；失敗時服務照樣啟動，健康檢查顯示 `unavailable`）（10/16 補上）
+  2. `CATEGORY_MODEL=bert` 而且 `CATEGORY_MODEL_DIR`（在模型 volume 裡）沒有模型時，用 `huggingface_hub` 下載 `CATEGORY_MODEL_REPO` 在 `CATEGORY_MODEL_REVISION` 的版本（只有容器下載；`start.bat` 和直接跑 `uvicorn` 都不下載）（下載到暫存資料夾，完整之後才改名；失敗時服務照樣啟動，健康檢查顯示 `unavailable`）（10/16 補上）
   3. 資料庫是空的且 `DEMO_MODE=1` 時，執行和 `python -m src.api.seed` 相同的匯入
   4. 用 uvicorn 啟動 `src.api.main:app`
-- 容器預設是無 GPU 模式；容器的 `LLAMA_SERVER_URL` 預設是 `http://host.docker.internal:8080`，主機上有開 `llama-server` 時就連得到，要連別的位址設 `DOCKER_LLAMA_SERVER_URL`。不直接用 `.env` 的 `LLAMA_SERVER_URL`：compose 會讀根目錄的 `.env`，而 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己（10/16 補上）
-- `.dockerignore` 排除 `rawdata/`、`data/`、`*.csv`、壓縮檔、`.env`、`models/`、`experiments/*/private`、`results`、`outputs`、`src/web/`、`*-data.js`；映像檔只 COPY `configs/` 和 `src/`，所以即使 `.dockerignore` 漏了什麼，根目錄的私人檔案也進不去（10/16 補上）
+- 容器預設是無 GPU 模式；容器的 `LLAMA_SERVER_URL` 預設是 `http://host.docker.internal:8080`，主機上有開 `llama-server` 時就連得到，要連別的位址設 `DOCKER_LLAMA_SERVER_URL`；但 compose 還沒把 `ATTRIBUTES_MODEL` 傳進容器（要等任務 2.15），所以容器目前一律用假屬性模型，這個位址只改變 `gpu_mode`。不直接用 `.env` 的 `LLAMA_SERVER_URL`：compose 會讀根目錄的 `.env`，而 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己（10/16 補上）
+- `.dockerignore` 排除 `.git/`、`.venv/`、`rawdata/`、`data/`、`models/`、`runtime/`、`experiments/`、`prototypes/`、`*.csv`／`*.tsv`／`*.xls`／`*.xlsx`、壓縮檔（`rar`、`zip`、`7z`）、資料庫檔 `*.db`、任何資料夾裡的 `.env` 和 `.env.*`、`results/`、`outputs/`、`src/web/`、`*-data.js`、`invoice-insights-private.html`、`__pycache__/`；映像檔只 COPY `configs/` 和 `src/`，所以即使 `.dockerignore` 漏了什麼，根目錄的私人檔案也進不去（10/16 補上）
 - 組員開發時仍以 `start.bat` 為主；Docker 是給面試官和「乾淨環境驗證」用的
 
 - 替代方案：不做 Docker。否決，因為面試官用一個指令就能跑起來，是作品集很重要的一環。

@@ -1,6 +1,7 @@
 # docker compose up: the demo at http://127.0.0.1:8000/web/ and the API docs at /docs (design D14).
-# No GPU inside the container. With a llama-server running on this computer, Qwen is reached through
-# host.docker.internal; without one the server runs in no-GPU mode.
+# No GPU inside the container. A llama-server running on this computer is probed through host.docker.internal and
+# shows as gpu_mode on /api/health, but ATTRIBUTES_MODEL is not passed yet (task 2.15): the container always uses the
+# fake attribute model, so Qwen is not reached.
 services:
   app:
     build: .

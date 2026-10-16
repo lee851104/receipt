@@ -34,3 +34,25 @@ CUA 實際查看原 8001 預覽：分類元素 0、品味 18 格，月報摘要�
 測試均用假模型／隔離 DB／臨時埠，結束已釋放。保留原 127.0.0.1:8001／PID30772、三個虛構帳號與獨立預覽 DB，未改 .env、重啟服務或占 GPU。
 
 本次未執行 Python 全套單元測試。真模型、300 人 seed、Docker／CI、GitHub 素材未驗收；本批未合併角色1最新 models。README 舊 GIF 已標明歷史版，尚未重建，本次以實際介面與新版錄製腳本為準。5.5 標註依使用者指示退休，5.9 仍待驗收。
+
+## 章節式捲動調整（2026-10-16）
+
+工作 ID R4-CHAPTER-SCROLL-20261016；比較基準 e6626cb，待 Claude 審核，未合併。
+使用者提供 https://www.apple.com/tw/shop/buy-iphone/iphone-duo 作參考。
+實際觀察固定導覽、大區塊與分段內容；本次取其閱讀節奏，未複製圖片、商標或原站程式。
+
+- 首頁保留品味／月報兩屏，加入固定 01 品味／02 月報章節按鈕，捲動時同步 aria-current。
+- 能放進一屏時，以 680ms 緩入緩出翻頁、輕量淡入淡出與桌機留白強調章節；快速切按鈕最後一次操作優先。
+- PageUp／PageDown／Home／End 在頁面容器焦點下翻頁；選單與輸入不攔截。觸控、超高內容使用原生捲動。
+- 減少動態效果偏好停用轉場與淡化。resize、觸控、切換工作區、資料清理可停止進行中的動畫。
+
+本批驗證：
+- node --test "tests/*.test.cjs"：145/145 通過。首次失敗源於 Node VM 測試替身缺少 ResizeObserver、matchMedia 與動畫排程，補齊後通過；實際操作另外由 Chromium 驗證。
+- python -X utf8 tests/run_web_v2_live.py tests/web-v2-pages-browser.cjs tests/web-v2-browser.cjs tests/web-v2-recompute-browser.cjs：3 組通過。
+- 分頁測試含四尺寸18格完整、120px滾輪翻頁、目前章節、連續按鈕切換、鍵盤、五月報表金額、Escape、舊分類路由、320px超高頁與減少動態效果；既有重算與身分失效流程回歸。
+- 8001 現有 fake 預覽用 CUA 人工確認，頁面固定導航與月報全屏停靠正常。
+- 本批未跑 Python 全套或真模型、未變更後端與 v1，未更新歷史 GIF。測試臨時埠 57228 已釋放，原預覽服務保留。
+
+- 補驗 python -X utf8 tests/run_web_v2_live.py tests/web-v2-pages-browser.cjs：通過；轉場250ms後resize到320×568、離開至配對再回首頁皆可繼續操作，臨時埠62278已釋放。
+- openspec validate add-matching-system --strict、git diff --check、v1差異檢查通過。
+- 獨立 Codex 靜態複查無阻擋問題；子代理獨立 Chromium 啟動受沙箱限制，因此動態證據以主代理上列實跑為準，非 Claude 正式審核。

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>消費配對系統 v2｜從日常，看見品味</title>
-<link rel="stylesheet" href="./styles.css?v=20261016-pages2">
+<link rel="stylesheet" href="./styles.css?v=20261016-chapters">
 <script defer src="./api.js"></script>
 <script defer src="./flow.js"></script>
 <script defer src="./view-adapters.js"></script>
@@ -13,9 +13,9 @@
 <script defer src="./explanation.js"></script>
 <script defer src="./account-flow.js"></script>
 <script defer src="./account-ui.js"></script>
-<script defer src="./pages-ui.js?v=20261016-pages2"></script>
-<script defer src="./workspace-ui.js?v=20261016-pages2"></script>
-<script defer src="./app.js?v=20261016-pages2"></script>
+<script defer src="./pages-ui.js?v=20261016-chapters"></script>
+<script defer src="./workspace-ui.js?v=20261016-chapters"></script>
+<script defer src="./app.js?v=20261016-chapters"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">跳到主要內容</a>
@@ -73,7 +73,7 @@
 <section class="result-card" aria-label="上傳處理進度"><p class="eyebrow">PROGRESS / 處理進度</p><h2 id="upload-state">等待上傳</h2><p id="upload-message" role="status" aria-live="polite">選擇 CSV 後開始分析。</p><progress id="upload-progress" max="1" value="0" hidden aria-label="發票分析進度"></progress><p id="upload-count" class="small"></p><button id="retry-job" class="secondary" type="button" hidden>重新查詢進度</button><button id="open-profile" class="primary" type="button" hidden>查看我的品味</button></section></div>
 </section>
 <section id="profile-panel" hidden aria-labelledby="profile-title">
-<div class="section-header profile-header"><h1 id="profile-title" tabindex="-1">我的品味<em>與月報</em></h1><button id="refresh-profile" class="quiet" type="button">重新載入</button></div>
+<div class="section-header profile-header"><h1 id="profile-title" tabindex="-1">我的品味<em>與月報</em></h1><nav class="chapter-nav" aria-label="首頁章節"><button type="button" data-chapter="taste-page" aria-label="第 1 頁：我的品味" aria-current="step"><b>01</b><span>品味</span></button><button type="button" data-chapter="month-page" aria-label="第 2 頁：消費月報"><b>02</b><span>月報</span></button></nav><button id="refresh-profile" class="quiet" type="button">重新載入</button></div>
 <p id="profile-message" role="status" aria-live="polite"></p>
 <div id="profile-content" hidden>
 <div id="profile-pages" tabindex="0" aria-label="品味與月報分頁，可上下捲動">

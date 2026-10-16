@@ -107,3 +107,30 @@ body:has(#workspace-view:not([hidden]))>footer{display:none}
 body:has(#workspace-view:not([hidden]))>main{display:flex;flex-direction:column}
 #workspace-view{flex:1;min-height:0}
 body:has(#workspace-view:not([hidden])) .service-alert{flex-shrink:0;margin:6px 0}
+
+/* A fixed chapter marker and a quiet crossfade keep each screen a distinct scene. */
+.chapter-nav{display:flex;gap:3px;padding:3px;border:1px solid var(--line);border-radius:30px;margin-left:auto;flex-shrink:0;background:var(--surface)}
+.chapter-nav button{display:flex;align-items:center;gap:7px;padding:5px 12px;border:0;border-radius:24px;background:transparent;color:var(--muted);font-size:11px;transition:background .25s,color .25s}
+.chapter-nav button b{font-weight:500;font-variant-numeric:tabular-nums}
+.chapter-nav button[aria-current]{background:var(--raised);color:var(--ink)}
+.chapter-nav button[aria-current] b{color:var(--accent)}
+#profile-pages.is-turning{scroll-snap-type:none}
+.profile-page>:not(.page-turn){opacity:var(--chapter-opacity,1)}
+#profile-pages .page-turn button{border-radius:24px;padding-left:16px;padding-right:16px}
+@media(min-width:900px) and (min-height:700px){
+ .profile-header{min-height:70px}
+ .profile-header h1{font-size:28px}
+ .profile-page{gap:16px;padding-top:10px;padding-bottom:18px}
+ .month-heading h2{font-size:32px}
+ .month-stats{padding:26px 0}
+ .month-stats strong{font-size:clamp(32px,4vw,52px)}
+}
+@media(max-width:640px){
+ .chapter-nav button{padding:5px 8px}.chapter-nav button span{display:none}
+ .profile-header{gap:8px}.profile-header #refresh-profile{font-size:11px;padding:6px 8px}
+}
+@media(max-width:370px){.profile-header h1{font-size:16px}.profile-header h1 em{margin-left:4px}}
+@media(prefers-reduced-motion:reduce){
+ .chapter-nav button{transition:none}
+ .profile-page>:not(.page-turn){opacity:1}
+}

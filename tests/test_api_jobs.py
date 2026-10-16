@@ -1,4 +1,5 @@
 """The upload job classifies, judges attributes through the cache, and never stays running when something fails."""
+import json
 import tempfile
 import threading
 import unittest
@@ -12,9 +13,9 @@ from sqlmodel import Session, select
 from src.api import cache, jobs
 from src.api.app import create_app
 from src.api.db import MEMORY, ROOT, init_db, make_engine
-from src.api.jobs import classify_items, fail_unfinished, run_job
+from src.api.jobs import classify_items, fail_unfinished, run_job, run_recompute
 from src.api.settings import Settings
-from src.api.tables import Item, ItemCache, Job, User
+from src.api.tables import Item, ItemCache, Job, Profile, User
 from src.ml import fakes
 from src.ml.fields import FIELDS
 from src.receipt.traits import load_context
@@ -225,6 +226,27 @@ class WorkerLoopTests(unittest.TestCase):
         self.assertTrue(worker.thread.daemon)  # a stop never waits for a running job
 
 
+class WorkerCallTests(unittest.TestCase):
+    def test_other_work_waits_behind_the_uploads_queued_before_it(self):
+        ran = []
+        worker = jobs.Worker(ran.append)
+        worker.add(1)
+        worker.call("other work", lambda: ran.append("other"))
+        worker.add(2)
+        worker.queue.join()
+        self.assertEqual(ran, [1, "other", 2])
+
+    def test_failing_work_is_logged_by_its_label_and_the_next_still_runs(self):
+        ran = []
+        worker = jobs.Worker(ran.append)
+        with self.assertLogs("src.api.jobs", level="ERROR") as logs:
+            worker.call("recompute for user 7", lambda: 1 / 0)
+            worker.add(3)
+            worker.queue.join()
+        self.assertEqual(ran, [3])
+        self.assertIn("recompute for user 7 failed", "\n".join(logs.output))
+
+
 class RunJobTests(unittest.TestCase):
     def setUp(self):
         self.engine = make_engine(MEMORY)
@@ -293,6 +315,31 @@ class RunJobTests(unittest.TestCase):
         self.assertEqual(replaced, [True])
         items = table(self.engine, Item)
         self.assertEqual(sorted((item.name, item.category) for item in items), [("測試新品", 10), ("衛生紙", 8)])
+
+
+class RunRecomputeTests(unittest.TestCase):
+    def setUp(self):
+        self.engine = make_engine(MEMORY)
+        init_db(self.engine)
+
+    def test_it_stores_the_profile_worked_out_from_the_items(self):
+        with Session(self.engine) as session:
+            session.add(User(username="amy", display_name="Amy", password_hash="x"))
+            session.commit()  # foreign keys are enforced, so the user must exist before its rows
+            session.add_all([Item(user_id=1, month="2026-05", day=day, invoice=f"2026-05-R{day:02}", merchant="測試飲料店",
+                                  district="臺北市大安區", name=f"測試茶{day}", quantity=1, amount=50, category=1)
+                             for day in range(1, 4)])
+            session.commit()
+        run_recompute(self.engine, fake_backends(), CONTEXT, 1)
+        with Session(self.engine) as session:
+            profile = session.get(Profile, 1)
+        self.assertEqual((profile.item_count, profile.vector, json.loads(profile.areas)), (3, None, ["臺北市大安區"]))
+
+    def test_an_account_deleted_meanwhile_is_skipped_quietly(self):
+        with self.assertNoLogs("src.api.jobs", level="ERROR"):
+            run_recompute(self.engine, fake_backends(), CONTEXT, 42)
+        with Session(self.engine) as session:
+            self.assertEqual(session.exec(select(Profile)).all(), [])
 
 
 class CacheTests(unittest.TestCase):

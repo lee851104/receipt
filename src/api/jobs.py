@@ -3,12 +3,13 @@ job is done."""
 import logging
 import queue
 import threading
+from functools import partial
 
 from sqlmodel import Session, col, select
 from sqlmodel import update as update_rows
 
 from . import cache, profiles
-from .tables import Item, Job
+from .tables import Item, Job, User
 
 PENDING = 10   # 待確認: the model was not sure enough, so the item stays out of the taste vector
 BATCH = 20     # names judged between two progress updates
@@ -86,11 +87,21 @@ def run_job(engine, backends, settings, context, job_id):
             mark_failed(session, job_id)
 
 
+def run_recompute(engine, backends, context, user_id):
+    """Work a user's profile out again on the worker, as after a month of theirs was deleted. An account deleted while
+    this waited has nothing left to recompute."""
+    with Session(engine) as session:
+        if session.get(User, user_id) is None:
+            return
+        profiles.recompute(session, backends, context, user_id)
+
+
 class Worker:
     """The app's one thread for upload jobs, which runs them one at a time in the order they were queued: there is a
     single llama-server, SQLite has a single writer, and the next batch updates a profile at the end of a job. A
     waiting job is only an id in the queue, so it holds no connection or request thread and honestly stays "queued".
-    A daemon thread, so stopping the server never waits for a running job; the next start-up fails it instead."""
+    A daemon thread, so stopping the server never waits for a running job; the next start-up fails it instead.
+    Besides uploads, the profile recompute after a month is deleted is queued here too."""
 
     def __init__(self, run):
         self.run = run  # run(job_id) does one job
@@ -99,17 +110,23 @@ class Worker:
         self.thread.start()
 
     def add(self, job_id):
-        self.queue.put(job_id)
+        """Queue an upload's job."""
+        self.call(f"upload job {job_id}", partial(self.run, job_id))
+
+    def call(self, label, task):
+        """Queue other work that writes profiles, such as the recompute after a month is deleted. It waits behind the
+        uploads queued before it, so two writes of one profile never overlap; label names it in the log."""
+        self.queue.put((label, task))
 
     def loop(self):
         while True:
-            job_id = self.queue.get()
+            label, task = self.queue.get()
             try:
-                self.run(job_id)
+                task()
             # run_job already fails a job that crashes; this keeps anything else from ending the loop, which would
             # leave every later job queued until a restart.
             except Exception:
-                log.exception("upload job %s failed", job_id)
+                log.exception("%s failed", label)
             finally:
                 self.queue.task_done()
 

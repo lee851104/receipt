@@ -1,6 +1,10 @@
 """The match list: everyone comparable with me scored now from the stored vectors, the people past the bar on one
 side, and how far from me they shop. Nothing here reads the database; the route hands it the profiles."""
+import math
+
 from ..receipt import places, similarity
+from ..receipt.build import drawing_of, trait_network_data
+from ..receipt.traits import signal_ids
 
 # The farthest places.distance each scope allows; None is any distance, an unknown one included.
 SCOPES = {"all": None, "district": 0, "city": 1, "region": 2}
@@ -38,3 +42,55 @@ def pick(entries, kind, level, match):
     within.sort(key=lambda entry: (entry["score"] if opposite else -entry["score"],
                                    entry["display_name"], entry["user_id"]))
     return {"eligible": len(eligible), "within": len(within), "people": within[:match["top"]]}
+
+
+TOTALS = ("dot", "norm_mine", "norm_theirs", "shrink", "denominator", "score", "percent")
+
+
+def breakdown(mine, theirs, model):
+    """compare()'s score taken apart for the explain page: each cell's two values, weight, whether both have it, its
+    product and its share of the score, then the dot product, both weighted lengths, the shrink, the denominator, the
+    score and its whole percentage. The shares are compare()'s own parts, so in order they add up to its score
+    exactly. When the two cannot be compared, no product, share or total is worked out at all."""
+    cells = model["cells"]
+    mine_values = [None] * len(cells) if mine is None else mine
+    theirs_values = [None] * len(cells) if theirs is None else theirs
+    shared = [a is not None and b is not None for a, b in zip(mine_values, theirs_values, strict=True)]
+    result = similarity.compare(mine, theirs, model)
+    comparable = result["comparable"]
+    rows = []
+    for index, cell in enumerate(cells):
+        product = cell["weight"] * mine_values[index] * theirs_values[index] if comparable and shared[index] else None
+        rows.append({"id": cell["id"], "kind": cell["kind"], "mine": mine_values[index], "theirs": theirs_values[index],
+                     "weight": cell["weight"], "shared": shared[index], "product": product,
+                     "part": result["parts"][index] if comparable else None})
+    answer = {"comparable": comparable,
+              "reason": None if comparable else "not_enough_items" if mine is None or theirs is None else "too_few_shared",
+              "cells": rows,
+              "shared_two_sided": sum(1 for index, cell in enumerate(cells) if shared[index] and cell["kind"] == "two_sided"),
+              "min_shared_two_sided": model["min_shared_two_sided"], **dict.fromkeys(TOTALS)}
+    if comparable:
+        # The same sums in the same order as compare(), so the denominator here is the one its parts were divided by.
+        def norm(values):
+            return math.sqrt(sum(cells[index]["weight"] * values[index] ** 2 for index in range(len(cells)) if shared[index]))
+        norm_mine, norm_theirs = norm(mine_values), norm(theirs_values)
+        answer.update(dot=sum(row["product"] for row in rows if row["product"] is not None),
+                      norm_mine=norm_mine, norm_theirs=norm_theirs, shrink=model["shrink"],
+                      denominator=norm_mine * norm_theirs + model["shrink"],
+                      score=result["score"], percent=similarity.percent(result["score"]))
+    return answer
+
+
+def network(settings, sides):
+    """The network graph's data in v1's traitNetworkData shape (build.trait_network_data), with the two people as
+    mine and theirs instead of the demo friends. sides maps "mine" and "theirs" to (stored vector, traits.explain's
+    answer worked out now): the graph shows the stored vector, so its dots are the explain cells' values, and a side
+    with no stored vector, or no taste worked out now, is all null."""
+    order = signal_ids(settings)
+    data = {key: value for key, value in trait_network_data(settings, {}, []).items() if key != "friends"}
+    for side, (vector, explained) in sides.items():
+        if vector is None or explained is None:
+            data[side] = {"vector": None, **drawing_of(None, order)}
+        else:
+            data[side] = {"vector": vector, **drawing_of(explained, order)}
+    return data

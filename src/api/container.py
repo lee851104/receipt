@@ -39,10 +39,24 @@ def hub_download(repo_id, revision, local_dir):
     snapshot_download(repo_id=repo_id, revision=revision, local_dir=local_dir)
 
 
+def put_in_place(partial, folder):
+    """Move everything the download made into folder, replacing the entries of the same name and touching nothing
+    else. config.json goes last: it is what makes the folder a model, so a move that stops half way leaves none."""
+    for entry in sorted(partial.iterdir(), key=lambda path: path.name == "config.json"):
+        target = folder / entry.name
+        if target.is_dir() and not target.is_symlink():
+            shutil.rmtree(target)
+        elif target.exists() or target.is_symlink():
+            target.unlink()
+        shutil.move(str(entry), str(target))
+
+
 def ensure_category_model(settings, download=hub_download):
-    """Download the category model when CATEGORY_MODEL=bert and its folder holds none. It goes to a temporary folder
-    renamed only when complete, so a failure leaves no half model and the next start tries again. A failure is one
-    line in the log: the server starts anyway and reports the model unavailable."""
+    """Download the category model when CATEGORY_MODEL=bert and its folder holds none. It goes to a .partial folder
+    inside the model folder (so it is on the same filesystem even when a volume is mounted there) and is moved into
+    place with config.json last, so a failure leaves no half model and the next start tries again. Nothing else in
+    the model folder is ever deleted. A failure is one line in the log: the server starts anyway and reports the
+    model unavailable."""
     if settings.category_model != "bert":
         return "skipped"
     folder = model_dir(settings)
@@ -51,17 +65,26 @@ def ensure_category_model(settings, download=hub_download):
     if not settings.category_model_repo:
         log.warning("CATEGORY_MODEL=bert, no model in %s and no CATEGORY_MODEL_REPO to download it from", folder)
         return "no_repo"
-    partial = folder.with_name(folder.name + ".partial")
-    shutil.rmtree(partial, ignore_errors=True)
+    existed = folder.exists()
+    partial = folder / ".partial"
     try:
+        shutil.rmtree(partial, ignore_errors=True)  # what an earlier crash left
+        partial.mkdir(parents=True)
         download(settings.category_model_repo, settings.category_model_revision, str(partial))
-    except Exception as error:  # no network, a wrong repo or revision: start without the model
+        if not (partial / "config.json").is_file():
+            raise ValueError("the repo holds no model: it has no config.json")
+        put_in_place(partial, folder)
+    except Exception as error:  # no network, a wrong repo or revision, a full disk: start without the model
         shutil.rmtree(partial, ignore_errors=True)
-        log.warning("could not download the category model %s@%s: %s", settings.category_model_repo,
-                    settings.category_model_revision, error)
+        if not existed:
+            try:
+                folder.rmdir()  # only when it is empty again
+            except OSError:
+                pass
+        log.warning("could not get the category model %s@%s: %s", settings.category_model_repo,
+                    settings.category_model_revision, " ".join(str(error).split()))
         return "failed"
-    shutil.rmtree(folder, ignore_errors=True)
-    partial.rename(folder)
+    shutil.rmtree(partial, ignore_errors=True)  # empty now
     return "downloaded"
 
 

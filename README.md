@@ -73,6 +73,68 @@
 
 參考：[雲端發票官方說明：消費分析、自訂日期與編輯商品類別](https://www.ecloudlife.com/w/faq/4)（查閱日期：2026-10-06）。
 
+## v2 系統：啟動與架構
+
+v2 把報告做成一個可以註冊、上傳發票並和朋友配對的服務：一個 FastAPI 行程提供網頁和 API，資料存在一個 SQLite 檔。上方的報告與朋友比較仍是不需要伺服器的單檔網頁（v1），兩者各自獨立。
+
+### 架構
+
+```mermaid
+flowchart LR
+    B["瀏覽器"] -->|"/web/ 網頁、/api JSON"| F["FastAPI（一個行程）"]
+    F --> D[("SQLite：data/app.db")]
+    subgraph T["FastAPI 裡的背景執行緒"]
+        W["上傳任務、重算"]
+    end
+    F --> W
+    W --> M["src/ml：分類（fake／BERT）、屬性（fake／Qwen，經 llama-server）"]
+    M --> R["src/receipt：品味計算、配對、品名隱私"]
+```
+
+- 上傳的發票在背景執行緒裡依序處理：品名分類、品項屬性、再算出 18 格品味向量存進資料庫；一次只跑一個任務，所以伺服器只能開一個行程（不要加 `--workers`）。
+- 模型都放在 `src/ml` 後面，開發時用 `fake` 假模型就能跑完整流程。`llama-server` 沒開時是無 GPU 模式，沒看過的品名標「待分析」。
+
+### 啟動方式一：Windows，雙擊 `start.bat`
+
+1. 先照 [`docs/team/overview.md`](docs/team/overview.md) 第 12 節「環境」裝好 Python 3.12，在專案根目錄建立虛擬環境 `.venv`，再安裝 `requirements.txt`：
+
+   ```
+   uv venv --python 3.12 .venv
+   uv pip install --python .venv/Scripts/python.exe -r requirements.txt
+   ```
+
+2. 雙擊 `start.bat`。它會：
+   - 沒有 `.env` 時，從 `.env.example` 自動建立，並填入新的 `JWT_SECRET`；已經有 `.env` 就照用，不會改它
+   - 放入假用戶（demo 用戶），跑幾次都可以
+   - 把伺服器啟動在 `http://127.0.0.1:8000`（只有這台電腦連得到），準備好之後自動打開 `http://127.0.0.1:8000/web/`；API 文件在 `http://127.0.0.1:8000/docs`
+
+手動的等價指令（要自己先把 `.env.example` 複製成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼）：
+
+```
+.venv\Scripts\python.exe -m src.api.seed
+.venv\Scripts\python.exe -m uvicorn src.api.main:app
+```
+
+### 啟動方式二：Docker
+
+```
+docker compose up
+```
+
+- 打開 `http://127.0.0.1:8000/web/`（網頁）和 `http://127.0.0.1:8000/docs`（API 文件）。埠只開在這台電腦的 `127.0.0.1`，因為 `DEMO_MODE=1` 時，任何連得到伺服器的人都能用假用戶登入。
+- 資料庫和下載的模型放在 Docker 的 volume 裡，重建容器資料還在（`docker compose down` 不會刪 volume）。`JWT_SECRET` 沒設時，會產生一次並存在資料 volume 裡。
+- 容器沒有 GPU。想用 Qwen，在主機上開 `llama-server`，`LLAMA_SERVER_URL` 預設就指向主機的 `http://host.docker.internal:8080`；沒開時是無 GPU 模式。
+- `CATEGORY_MODEL` 預設是 `fake`。設成 `bert`，並同時設 `CATEGORY_MODEL_REPO`（Hugging Face 上公開的模型庫）和 `CATEGORY_MODEL_REVISION`（固定版本）時，第一次啟動會把分類模型下載到 volume；下載失敗時服務照樣啟動，`/api/health` 的 `models.category` 顯示 `unavailable`。目前真的 BERT 還沒接上，`bert` 一律顯示 `unavailable`，所以先用預設的 `fake`。
+- 映像檔只放 `configs/` 和 `src/`，不含 `data/`、`rawdata/`、CSV 和 `.env`。GitHub Actions 在每次 push 都會建置映像檔、檢查裡面沒有私人檔案，並啟動一次確認 `/api/health`。
+
+### 為什麼沒有用 pgvector
+
+pgvector 是 PostgreSQL 的向量搜尋外掛。這個專題沒有用它，理由記在 `openspec/changes/add-matching-system/design.md` 的 D2：
+
+- 品味相似度不是單純的餘弦。`compare` 會略過其中一方沒有資料的格子，還要求至少 5 格雙方都有的雙向格才給分數；pgvector 內建的餘弦做不到這兩件事。
+- 用它就得多跑一個資料庫服務，每台開發電腦都要裝；SQLite 只有一個檔案。
+- 配對在每次查詢時當場算：300 人 × 18 格不到 1 秒，不需要向量索引。
+
 ## 技術規劃
 
 | 工作 | 技術 | 狀態 |

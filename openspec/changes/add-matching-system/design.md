@@ -78,7 +78,7 @@
 
 一次只跑一個工作：每個行程有一條專用的工作執行緒，從佇列依上傳順序（先進先出）一個一個跑，不使用回應請求的執行緒池，所以排隊的工作再多，其他 API 照常回應。上傳的請求在 commit 之後只把工作編號放進佇列；等待中的工作只是佇列裡的編號，保持 `queued`，不佔資料庫連線，也不佔執行緒。這條執行緒是 daemon：停止服務時行程不等它跑完，還在跑的工作在下次啟動時標成 `failed`。只跑一個是因為只有一個 llama-server、SQLite 只有一個寫入者，第 3 步重算品味向量也需要不被打斷；因此伺服器只能開一個行程。請求的資料庫連線在路由結束時就關閉，不會陪著背景工作。為了讓工作的時間有上限，請求本體在讀取之前就依 `Content-Length` 檢查大小（超過回 413，沒有長度回 411），一個月最多 2000 筆明細；工作裡任何例外都把工作標成 `failed`，工作已經被刪掉（帳號刪除）時直接結束。
 
-- 替代方案：服務啟動時自動補算所有待分析品名。否決，因為重新上傳就能做到同樣的事，不必在每次啟動時另外排一批工作。
+- 替代方案：服務啟動時自動問模型，補算所有待分析的品名。否決，因為重新上傳同一個月份就能做到同樣的事，不必在每次啟動時替所有人排一批會呼叫模型的工作。啟動時的重算和這個方案不同：它只讀已存的品項和屬性快取，不問模型（10/16 補上）
 - 替代方案：用 FastAPI 的 `BackgroundTasks` 執行工作，再用一把鎖讓工作一個一個跑。否決，因為等鎖的工作各佔一條回應請求的執行緒（預設共 40 條），排隊的上傳一多，整個 API 就停住；鎖也不保證先上傳的先跑，停止服務時還要等所有排隊的工作。
 
 - 替代方案：Celery + Redis。否決，因為多一個服務要裝，在 Windows 上支援又差。
@@ -191,8 +191,8 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 
 端點和錯誤代碼見 overview 5.11（`/api/me`、`/api/me/password`、`/api/me/months/{month}`、`/api/auth/logout`）。資料表和欄位都不增加：`users.token_key` 第 1 週就有了，登出和改密碼靠它（見 D8）。
 
-- **刪除帳號**在一個交易裡依序刪除：`items` → `jobs` → `profiles` → `users`，最後刪掉 `item_cache` 裡這個人的品項用過、而且已經沒有任何 `items` 用到的品名（只在即時分類框查過的品名沒有記錄是誰查的，不會被刪）。帳號刪除後，權杖查不到使用者，自然回應 401 `not_authenticated`。這個人還有 `queued` 或 `running` 的工作時回 409 `job_in_progress`，和刪除月份一樣，免得執行中的工作在刪除之後又把品名寫進快取。檢查之前先換掉 `token_key` 並寫進資料庫，取得 SQLite 的寫入鎖，上傳就無法在檢查和刪除之間插進來；回 409 時整個交易撤回，舊權杖照常可用。每條資料庫連線都開著 `secure_delete`，刪掉的資料會在檔案裡被覆寫，不只是標成空位（10/16 補上）
-- **刪除月份**：先刪除那個月的 `items`（這一步取得 SQLite 的寫入鎖，上傳就無法在檢查和刪除之間插進來），再確認那個月份沒有 `queued` 或 `running` 的工作（有的話整個交易撤回，回 409），然後刪除那個月的 `jobs`，再重算品味向量；快取的清理方式和刪除帳號相同。重算不在請求裡做，而是用 `jobs.Worker.call` 排進上傳任務的同一條背景執行緒，排在已經排隊的上傳後面，所以同一個人的 profile 不會同時被兩個地方寫；重算還在排隊時帳號被刪掉，重算就什麼都不做。刪除規則集中在 `src/api/accounts.py`。（10/16 補上）重算跑完之前 `/api/me/profile` 的 `recomputing` 是 true；服務在重算跑之前重啟的話，啟動時會再排一次（見 D4）（10/16 補上）。
+- **刪除帳號**在一個交易裡依序刪除：`items` → `jobs` → `profiles` → `users`，最後刪掉 `item_cache` 裡這個人的品項用過、而且已經沒有任何 `items` 用到的品名（只在即時分類框查過的品名沒有記錄是誰查的，不會被刪）。帳號刪除後，權杖查不到使用者，自然回應 401 `not_authenticated`。這個人還有 `queued` 或 `running` 的工作時回 409 `job_in_progress`，和刪除月份一樣，免得執行中的工作在刪除之後又把品名寫進快取。檢查之前先換掉 `token_key` 並寫進資料庫，取得 SQLite 的寫入鎖，上傳就無法在檢查和刪除之間插進來；回 409 時整個交易撤回，舊權杖照常可用。每條資料庫連線都開著 `secure_delete`，刪掉的資料會在檔案裡被覆寫，不只是標成空位。WAL 檔（`app.db-wal`）裡的舊頁要等被覆寫或 checkpoint 之後才消失（10/16 補上）
+- **刪除月份**：先刪除那個月的 `items`（這一步取得 SQLite 的寫入鎖，上傳就無法在檢查和刪除之間插進來），再確認那個月份沒有 `queued` 或 `running` 的工作（有的話整個交易撤回，回 409），然後刪除那個月的 `jobs`，再重算品味向量；快取的清理方式和刪除帳號相同。重算不在請求裡做，而是用 `jobs.Worker.call` 排進上傳任務的同一條背景執行緒，排在已經排隊的上傳後面，所以同一個人的 profile 不會同時被兩個地方寫；重算還在排隊時帳號被刪掉，重算就什麼都不做。刪除規則集中在 `src/api/accounts.py`。重算跑完之前 `/api/me/profile` 的 `recomputing` 是 true；服務在重算跑之前重啟的話，啟動時會再排一次（見 D4）。（10/16 補上）
 - **假用戶**（`is_demo`）的修改、刪除和上傳發票一律回 403 `demo_user_read_only`，而且這個檢查要在比對密碼之前；登出照常可用
 
 - 替代方案：資料表加 `deleted_at`，只做「軟刪除」。否決，因為使用者要求刪除時就應該真的刪掉，軟刪除還得另外處理「刪除後的資料不能出現」的所有查詢。
@@ -202,12 +202,12 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 - 一個映像檔，以 `python:3.12-slim` 為基底，只裝服務需要的套件（含 CPU 版 torch）
 - `docker-compose.yml` 只有一個服務，兩個 volume：一個放 SQLite 資料庫，一個放下載的模型
 - 啟動流程：
-  1. 讀設定
-  2. `CATEGORY_MODEL=bert` 而且 `CATEGORY_MODEL_DIR`（在模型 volume 裡）沒有模型時，用 `huggingface_hub` 下載 `CATEGORY_MODEL_REPO` 在 `CATEGORY_MODEL_REVISION` 的版本
+  1. 讀設定（`JWT_SECRET` 沒設時用資料 volume 裡的 `/data/jwt-secret`，第一次啟動時產生）（10/16 補上）
+  2. `CATEGORY_MODEL=bert` 而且 `CATEGORY_MODEL_DIR`（在模型 volume 裡）沒有模型時，用 `huggingface_hub` 下載 `CATEGORY_MODEL_REPO` 在 `CATEGORY_MODEL_REVISION` 的版本（下載到暫存資料夾，完整之後才改名；失敗時服務照樣啟動，健康檢查顯示 `unavailable`）（10/16 補上）
   3. 資料庫是空的且 `DEMO_MODE=1` 時，執行和 `python -m src.api.seed` 相同的匯入
   4. 用 uvicorn 啟動 `src.api.main:app`
 - 容器預設是無 GPU 模式；`LLAMA_SERVER_URL` 設成 `http://host.docker.internal:8080` 時，就連到主機上的 `llama-server`
-- `.dockerignore` 排除 `rawdata/`、`data/`、`*.csv`、壓縮檔、`.env`、`models/`、`experiments/*/private`、`results`、`outputs`
+- `.dockerignore` 排除 `rawdata/`、`data/`、`*.csv`、壓縮檔、`.env`、`models/`、`experiments/*/private`、`results`、`outputs`、`src/web/`、`*-data.js`；映像檔只 COPY `configs/` 和 `src/`，所以即使 `.dockerignore` 漏了什麼，根目錄的私人檔案也進不去（10/16 補上）
 - 組員開發時仍以 `start.bat` 為主；Docker 是給面試官和「乾淨環境驗證」用的
 
 - 替代方案：不做 Docker。否決，因為面試官用一個指令就能跑起來，是作品集很重要的一環。

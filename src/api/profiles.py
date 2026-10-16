@@ -28,6 +28,17 @@ def months_of(items):
     return months
 
 
+def stored_vector(profile, size):
+    """A profile's taste vector, or None without a profile or with too few items for one. A vector of another length
+    was stored before configs/traits.json changed: fail (a 500) rather than read its values into the wrong traits."""
+    if profile is None or profile.vector is None:
+        return None
+    vector = json.loads(profile.vector)
+    if len(vector) != size:
+        raise ValueError("a stored taste vector has the wrong length; work every profile out again")
+    return vector
+
+
 def attributes_of(session, backends, names):
     """{name: the 23 attribute fields, or None} from the cache of the current attribute model alone. It never asks
     the model and never writes: a name nobody has judged yet is None, which the pipeline treats as pending."""

@@ -76,3 +76,7 @@ def current_user(request: Request, token: Annotated[str | None, Depends(bearer)]
     if user is None or user.token_key != claims[1] or (user.is_demo and not request.app.state.settings.demo_mode):
         raise ApiError(401, "not_authenticated", headers={"WWW-Authenticate": "Bearer"})
     return user
+
+
+# The logged-in user, for any endpoint that needs one.
+UserDep = Annotated[User, Depends(current_user)]

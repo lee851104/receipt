@@ -4,21 +4,19 @@ import csv
 import os
 import tempfile
 from pathlib import Path
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, UploadFile
+from fastapi import APIRouter, Request, UploadFile
 from sqlmodel import col, delete
 
 from ...receipt.invoices import build_month
 from ..db import SessionDep
 from ..errors import ApiError
 from ..jobs import UNFINISHED
-from ..security import current_user
-from ..tables import Item, Job, User
+from ..security import UserDep
+from ..tables import Item, Job
 from ..validation import PathId
 
 router = APIRouter(prefix="/api")
-UserDep = Annotated[User, Depends(current_user)]
 MAX_BYTES = 2 * 1024 * 1024
 # The limit on a whole request body (limits.UploadLimit): room for the multipart boundary and part headers around the
 # file, which the route still checks against MAX_BYTES itself.

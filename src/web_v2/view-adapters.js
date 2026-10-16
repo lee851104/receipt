@@ -20,7 +20,13 @@
   if(!network||!Array.isArray(network.traits)||!Array.isArray(network.signals)||!Array.isArray(explanation.cells))throw Error('品味關係圖資料尚未就緒。');
   const cells=new Map(explanation.cells.map(c=>[c.id,c]));
   if(network.traits.some(t=>!cells.has(t.id)))throw Error('品味關係圖資料格式不正確。');
-  return {network,result:{comparable:explanation.comparable,score:explanation.score,percent:explanation.percent,parts:network.traits.map(t=>cells.get(t.id).part)}};
+  const missing={};
+  for(const side of ['mine','theirs']){
+   const person=network[side];
+   missing[side]=person&&['vector','pushes','signals','items'].every(k=>person[k]===null)
+    ?(explanation.cells.some(c=>c[side]!==null)?'重新計算中':'資料不夠'):null;
+  }
+  return {network,missing,result:{comparable:explanation.comparable,score:explanation.score,percent:explanation.percent,parts:network.traits.map(t=>cells.get(t.id).part)}};
  }
  return {reportData,networkData,signedPercent};
 });

@@ -533,6 +533,14 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
+### 13.9 角色 4 假模型前後端整合（2026-10-16）
+
+- 原角色 4 worktree 合併角色 1 `324874d`，合併提交 `aef2d4c`；產品後端沿用交付版本，v1 未修改。
+- profile 的 `recomputing` 每兩秒輪詢，舊輪廓／月報／配對暫停顯示；完成更新配對。demo 登出文案改為此瀏覽器。圖形的 null 依存起來的 cells 區分重新計算中與資料不夠。
+- 已以 fake 模型與正式 API／worker／SQLite 驗證註冊、兩月上傳、月報、18 格、配對、計算、改名、改密碼、刪月份、登出、刪帳號；舊 token 失效與帳號刪除後移出配對均確認。
+- 5.8 教學數字透過真 explain HTTP 重現，6.3 帳號流程完成；5.9、6.1 的完整乾淨環境驗收仍保留未完成。真模型、300 人完整 seed、Docker／CI、GitHub 發布均未驗收。
+- 完整命令、真假 API 邊界與結果見 `docs/results/role4-integration.md`；產出待 Claude 審核，正式跨角色同步以唯一共用 `CODEX_CLAUDE_HANDOFF.md` 追加紀錄為準。
+
 ### 13.7 角色 4 帳號設定與交付準備（2026-10-15）
 
 - 在原角色 4 worktree／`codex/role4-web-foundation` 完成 5.10 前端：帳號資料、改名、改密碼、刪月份確認、刪帳號密碼確認、所有裝置登出，demo 唯讀。上方「切換帳號」仍只清除本分頁登入；設定頁的「登出所有裝置」才呼叫 `/auth/logout`，服務失敗時不假稱登出成功。

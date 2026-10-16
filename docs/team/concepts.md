@@ -64,4 +64,4 @@
 
 **目前已確認：** 文件數字可由現有計算核心重現，測試固定檢查 1.88、2.29、+82% 與 18 格的 null 行為。
 
-**尚待角色 1 完成：** 以 `GET /api/matches/{user_id}/explain` 對兩位設定相同向量的測試使用者重現。需在隔離測試資料庫建立兩位符合門檻的假用戶，再比較上述欄位與逐格貢獻；真正 HTTP 驗收完成前，OpenSpec 5.8 維持未勾選。
+**實際 HTTP 已驗證（2026-10-16）：** `python -X utf8 tests/run_web_v2_live.py` 建立獨立臨時資料庫，將上述兩個虛構向量寫入教學用 demo profiles，再透過真正登入、配對與 `GET /api/matches/{user_id}/explain` 核對 1.88、2.29、82%、18 格與 13 格 null。這是數學教學 fixture，不是完整假發票 seed；一般使用者的上傳到配對流程另以兩個合成月份驗證。需既有 Playwright／Chromium；詳見 [整合紀錄](../results/role4-integration.md)。

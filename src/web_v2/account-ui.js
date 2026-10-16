@@ -12,6 +12,7 @@
    $('account-error').textContent=state.error;$('account-error').hidden=!state.error;
    $('account-notice').textContent=state.notice;$('account-notice').hidden=!state.notice;
    $('account-content').hidden=!profile;$('account-demo-note').hidden=!demo;
+   $('logout-submit').textContent=demo?'登出此瀏覽器':'登出所有裝置';
    $('account-refresh').disabled=state.busy;$('logout-submit').disabled=state.busy;
    $('account-name').disabled=blocked;$('account-name-submit').disabled=blocked;
    for(const id of ['current-password','new-password','password-submit'])$(id).disabled=blocked||processing;

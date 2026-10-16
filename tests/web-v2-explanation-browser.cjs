@@ -48,7 +48,7 @@ const fixture=require('./web-v2-fixtures.cjs');
    explanation={...structuredClone(fixture.explanation),comparable:false,reason,shared_two_sided:4};
    for(const key of ['dot','norm_mine','norm_theirs','shrink','denominator','score','percent'])explanation[key]=null;
    explanation.cells.forEach(c=>c.part=null);
-   await select();await page.locator('#explain-panel').waitFor({state:'visible'});assert.equal(await page.locator('#explain-percent').count(),0);assert(await page.locator('#network-frame').isHidden());
+   await select();await page.locator('#explain-panel').waitFor({state:'visible'});assert.equal(await page.locator('#explain-percent').count(),0);assert(await page.locator('#network-frame').isVisible());
   }
   matches=structuredClone(fixture.matches);explanation={...structuredClone(fixture.explanation),cells:[]};await select();await page.locator('#network-status').filter({hasText:'格式不正確'}).waitFor();assert(await page.locator('#explain-panel').isHidden());
   await page.locator('[data-workspace="classify"]').click();await page.locator('#item-name').fill('虛構茶');await page.locator('#classify-form button').click();

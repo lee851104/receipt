@@ -4,10 +4,10 @@ try{
 const pageHost=window.parent!==window?window.parent:null;
 const payload=pageHost?.ReceiptV2Host?.network();
 if(!payload)throw Error('請從配對清單開啟關係圖。');
-const {network,result:apiResult}=ReceiptViewData.networkData(payload);
+const {network,missing,result:apiResult}=ReceiptViewData.networkData(payload);
 const $=id=>document.getElementById(id),svgNS='http://www.w3.org/2000/svg';
 let traitGraph=null,leftKey='me',rightKey='match',selected=null;
-const profiles={me:{name:'你',traits:TraitNetwork.validate(network.mine,network)},match:{name:payload.display_name,traits:TraitNetwork.validate(network.theirs,network)}};
+const profiles={me:{name:'你',traits:missing.mine?null:TraitNetwork.validate(network.mine,network)},match:{name:payload.display_name,traits:missing.theirs?null:TraitNetwork.validate(network.theirs,network)}};
 const pair={left:{name:'你'},right:{name:payload.display_name}};
 function chartName(key,mobile){const letters=Array.from(profiles[key].name),limit=mobile?5:10;return letters.slice(0,limit).join('')+(letters.length>limit?'…':'');}
 function profileMonths(key){return [];}
@@ -27,6 +27,8 @@ function pairNames(){return pair?['你','對方']:[profiles[leftKey].name,profil
 function missingReason(){return loadedSides().map(side=>profiles[keyFor(side)].missing).find(Boolean)||'old';}
 // Why there is no taste network: a side is still empty, or a pasted link carries no taste traits.
 function traitNote(){
+ const reasons=['mine','theirs'].filter(side=>missing[side]).map(side=>(side==='mine'?'你':'對方')+'：'+missing[side]);
+ if(reasons.length)return reasons.join('；')+'。';
  if(!network)return '請從報告開啟這一頁，才看得到品味特質圖';
  const loaded=loadedSides().length;
  if(!loaded)return '匯入兩邊的資料後才能看品味特質';
@@ -172,6 +174,7 @@ function draw(){
  const both=traitPair(),result=both?apiResult:null,scored=Boolean(result&&result.comparable);
  $('overall-score').textContent=scored?ReceiptViewData.signedPercent(result.percent).slice(0,-1):'—';$('score-unit').hidden=!scored;$('overall-score').parentElement.classList.toggle('waiting',!scored);
  $('overall-note').textContent=scored?'依 '+TraitNetwork.traitCount(network.traits)+' 項品味特質計算'+(allDemo()?' · 虛構示範':''):!network?'請從報告開啟這一頁，才算得出品味相似度':hasBoth()?(both?'兩人共同的特質太少，無法計算品味相似度':missingReason()==='thin'?'這份連結的資料還不夠，無法計算品味相似度':'舊版連結沒有品味特質，無法計算品味相似度'):loadedSides().length?'等待另一人匯入':'先匯入偏好資料';
+ if(!both&&Object.values(missing).some(Boolean))$('overall-note').textContent=traitNote();
  renderSummary(result,both);
  // Without taste traits on both sides there is no graph; its place says why.
  if(both){svg.removeAttribute('hidden');$('scope').textContent=TraitNetwork.traitCount(network.traits)+' 項品味特質 · '+network.signals.length+' 個訊號';drawTraits(svg,mobile,both);}

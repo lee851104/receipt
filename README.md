@@ -4,7 +4,7 @@
 
 v2 由 FastAPI 提供 `/web/`，包含登入、CSV 上傳與進度、品名分類、品味月報、配對計算及帳號設定。資料保留在本機 SQLite；API 規格與各角色進度見 [團隊總覽](docs/team/overview.md)。
 
-**本分支已驗證的實際串接：** 註冊／登入、上傳／工作進度、假模型分類。**目前前端契約已完成、後端仍待交付：** 月報／配對／計算過程及帳號管理 API。因此這些頁面在目前本機服務會顯示尚未就緒，不會自動載入假資料。
+**本分支已驗證的實際串接（2026-10-16）：** 已整合角色 1 後端，使用 fake 模型與隔離 SQLite，完成註冊／登入、兩個月上傳、月報／品味／配對／計算過程、改名／改密碼／刪月份／登出／刪帳號的實際 HTTP 與瀏覽器驗證。真模型、完整 300 人 seed、Docker 與 CI 尚未驗收。詳見 [整合驗證紀錄](docs/results/role4-integration.md)，產出待 Claude 審核。
 
 ### v2 前端展示
 
@@ -39,9 +39,10 @@ Copy-Item .env.example .env
 
 ### 概念與驗證
 
-- [向量化、內積、餘弦與收縮項](docs/team/concepts.md)：兩位虛構人物的 +82% 範例，附本機重算腳本；真正 explain API 重現仍待後端。
+- [向量化、內積、餘弦與收縮項](docs/team/concepts.md)：兩位虛構人物的 +82% 範例，附本機重算腳本；已用真正 explain API 在隔離資料庫重現。
 - `node --test "tests/*.test.cjs"`：前端與既有 v1 回歸。
 - `.venv/Scripts/python.exe -m unittest discover -s tests`：後端及計算核心回歸。
+- 真 HTTP 瀏覽器整合：`python -X utf8 tests/run_web_v2_live.py` 自動建立臨時 DB、選擇空閒埠並於結束清理；需既有 Playwright／Chromium。
 - 瀏覽器契約驗證：`tests/web-v2-account-browser.cjs`、`tests/web-v2-explanation-browser.cjs`；可設定 `NODE_PATH`、`BROWSER_EXECUTABLE` 指向既有 Playwright／Chromium。
 
 ## v1 靜態原型

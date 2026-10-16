@@ -93,11 +93,41 @@ test('upload completion invalidates all pre-upload reads even if they ignore abo
   if(path==='/jobs/2')return {status:'done',done:1,total:1};
   return new Promise(resolve=>reads[path]={resolve,signal:options.signal});
  });
- const profile=x.work.loadProfile();const matches=x.work.loadMatches();
- const network=x.work.loadNetwork({user_id:9,percent:62});
+ const matches=x.work.loadMatches();const network=x.work.loadNetwork({user_id:9,percent:62});
+ const profile=x.work.loadProfile();
  await x.work.upload(new File(['csv'],'month.csv'));
  for(const key of ['profile','matches','network'])assert.equal(x.work.state()[key].status,'idle');
  for(const read of Object.values(reads)){assert.equal(read.signal.aborted,true);read.resolve({comparable:true,percent:62,months:{old:true}});}
  await Promise.all([profile,matches,network]);
  for(const key of ['profile','matches','network'])assert.equal(x.work.state()[key].data,null);
+});
+
+test('profile recomputation polls every two seconds and clears stale matches until complete',async()=>{
+ let n=0;const seen=[];
+ const x=setup(p=>p==='/me/profile'?{ready:true,recomputing:++n<3,item_count:n,months:{}}:{ready:true,people:[]},{onChange:s=>seen.push(s)});
+ await x.work.loadMatches();await x.work.loadProfile();
+ assert.deepEqual(x.waits,[2000,2000]);assert.equal(n,3);
+ assert(seen.some(s=>s.profile.status==='recomputing'&&s.matches.data===null));
+ assert.equal(x.work.state().profile.status,'ready');assert.equal(x.work.state().profile.data.item_count,3);
+});
+test('reset during recomputation cancels polling and a delayed response cannot restore old data',async()=>{
+ let release,started;const waiting=new Promise(r=>started=r);
+ const x=setup(()=>({ready:true,recomputing:true}),{sleep:(_,signal)=>new Promise(r=>{release=r;started();})});
+ const call=x.work.loadProfile();await waiting;x.work.reset();release();await call;
+ assert.equal(x.calls.length,1);assert.equal(x.work.state().profile.data,null);
+});
+test('recomputation invalidates in-flight matches and failures allow manual retry',async()=>{
+ let finish,fail=false;
+ const x=setup(p=>{if(p.startsWith('/matches'))return new Promise(r=>finish=r);if(fail)throw Error('offline');return {ready:true,recomputing:true};},{sleep:async()=>{fail=true;}});
+ const match=x.work.loadMatches();await x.work.loadProfile();finish({people:[{user_id:2}]});await match;
+ assert.equal(x.work.state().matches.data,null);assert.equal(x.work.state().profile.status,'error');
+});
+
+test('known recomputation blocks stale match and graph queries until the new profile arrives',async()=>{
+ let release,started,n=0;const waiting=new Promise(r=>started=r);
+ const x=setup(()=>({ready:true,recomputing:++n===1}),{sleep:()=>new Promise(r=>{release=r;started();})});
+ const call=x.work.loadProfile();await waiting;
+ await x.work.loadMatches();await x.work.loadNetwork({user_id:7,percent:82});
+ assert.equal(x.calls.length,1);
+ release();await call;await x.work.loadMatches();assert.equal(x.calls.length,3);
 });

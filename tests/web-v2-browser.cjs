@@ -19,10 +19,10 @@ const fixture=require('./web-v2-fixtures.cjs');
   await go('upload');await uploadFile();await page.locator('#upload-submit').click();
   await page.getByRole('heading',{name:'處理完成',exact:true}).waitFor();assert.match(await page.locator('#upload-count').textContent(),/2 \/ 2/);
   await page.screenshot({path:'runtime/role4-upload-desktop.png',fullPage:true});
-  await page.locator('#open-profile').click();await page.getByText('此功能的服務尚未就緒，請稍後再試。',{exact:true}).waitFor();
+  await page.locator('#open-profile').click();await page.locator('#profile-content').waitFor();assert.equal(await page.locator('.trait-value').count(),18);
   await go('classify');await page.locator('#item-name').fill('虛構新品 '+Date.now());await page.locator('#classify-form button').click();
   await page.getByText('分析完成',{exact:true}).waitFor();assert.equal(await page.locator('#attribute-list .attribute-row').count(),23);
-  console.log('LIVE PASS: registration, upload -> done, unavailable profile, pending -> ready with fake backend.');
+  console.log('LIVE PASS: registration, upload -> done, real profile, classification ready with fake backend.');
   // Error screens use controlled API responses, never private invoice data.
   await go('upload');
   for(const failure of [
@@ -41,7 +41,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   assert.equal(await page.locator('#upload-message').textContent(),'模型暫時無法使用');
   await page.unroute('**/api/invoices');await page.unroute('**/api/jobs/999999');
   console.log('ERROR PASS: invalid CSV detail, size rejection and failed job are visible and allow retry.');
-  // Fixtures cover the contract for endpoints that role 1 has not implemented yet.
+  // Fixtures cover deterministic display/error cases; live API coverage is in web-v2-live-browser.cjs.
   let profile=structuredClone(fixture.profile);profile.months['2026-05'].rows[0].invoice='<img src=x onerror="parent.__xss=1">';
   await page.route('**/api/me/profile',r=>r.fulfill({json:profile}));
   await page.route('**/api/matches?*',r=>{const q=new URL(r.request().url()).searchParams;const district=q.get('scope')==='district';return r.fulfill({json:{...fixture.matches,kind:q.get('kind'),scope:q.get('scope'),within:district?0:6,people:district?[]:fixture.matches.people}});});

@@ -21,3 +21,12 @@ test('copied graph accepts authoritative API score and per-cell contribution',()
  assert.equal(graph.scoreMark(layout,false).text,'+30%');assert.equal(layout.result,x.result);
  assert.deepEqual(layout.cells.map(c=>c.part),x.result.parts.filter(p=>p!==null));
 });
+
+test('network distinguishes missing history from recomputing stored vectors',()=>{
+ const x=structuredClone(fixture.explanation);
+ x.network.mine={vector:null,pushes:null,signals:null,items:null};
+ assert.equal(networkData(x).missing.mine,'重新計算中');
+ x.cells=x.cells.map(c=>({...c,mine:null}));
+ assert.equal(networkData(x).missing.mine,'資料不夠');
+ assert.equal(networkData(x).missing.theirs,null);
+});

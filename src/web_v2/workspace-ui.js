@@ -3,7 +3,7 @@
  'use strict';
  function createWorkspaceUI({api,session,onIdentityChange=()=>{},onEnded=()=>{}}){
   const $=id=>document.getElementById(id);
-  let accountUI,credentialChange=false;
+  let accountUI,credentialChange=false,resumeProfileAfterRotation=false;
   let enabled=false,current='classify',lastProfile=null,lastNetwork=null,networkRenderError='',sessionVersion=-1;
   const work=ReceiptWorkspace.createWorkspace({api,session,onChange:render});
   const make=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
@@ -57,7 +57,7 @@
     lastProfile=profile.data;
    }
    const matches=state.matches;
-   $('match-status').textContent=matches.status==='loading'?'尋找符合條件的人…':matches.message||(matches.data?ReceiptWorkspace.matchStatus(matches.data):'');
+   $('match-status').textContent=['loading','recomputing'].includes(profile.status)?'品味重新計算中，完成後會更新配對。':matches.status==='loading'?'尋找符合條件的人…':matches.message||(matches.data?ReceiptWorkspace.matchStatus(matches.data):'');
    $('match-areas').textContent=matches.data?.my_areas?.length?'你的生活圈：'+matches.data.my_areas.join('、'):matches.data?'看不出生活圈時，請選擇「不限」。':'';
    $('match-list').replaceChildren();
    for(const person of matches.data?.people||[]){
@@ -74,11 +74,12 @@
     clearFrame('network-frame');
     try{
      ReceiptExplanation.render($('explain-panel'),network.data);
-     if(network.data?.comparable){$('network-frame').src='network.html';$('network-frame').hidden=false;}
+     if(network.data?.network){$('network-frame').src='network.html';$('network-frame').hidden=false;}
     }catch(error){networkRenderError=error.message;}
     lastNetwork=network.data;
    }
    $('network-status').textContent=network.status==='loading'?'載入計算過程與品味關係圖…':network.message||networkRenderError;
+   if(current==='matches'&&profile.status==='ready'&&matches.status==='idle')work.loadMatches(state.kind,state.scope);
   }
   // Same-origin child frames receive only current data, never credentials.
   root.ReceiptV2Host={
@@ -87,12 +88,19 @@
   };
   accountUI=ReceiptAccountUI.createAccountUI({api,session,onEnded,onRotating(value){
    credentialChange=value;
-   if(value){work.invalidateViews();onIdentityChange();}
+   if(value){
+    resumeProfileAfterRotation=['loading','recomputing'].includes(work.state().profile.status);
+    work.invalidateViews();onIdentityChange();
+   }else if(resumeProfileAfterRotation&&accountUI.state().error){
+    resumeProfileAfterRotation=false;work.loadProfile();
+   }
    render(work.state());
   },onChanged(kind){
    sessionVersion=session.version();
-   if(kind==='password')work.reset();else work.invalidateViews();
+   const keepPolling=kind==='name'&&['loading','recomputing'].includes(work.state().profile.status);
+   if(kind==='password')work.reset();else if(!keepPolling)work.invalidateViews();
    onIdentityChange();
+   if(kind==='month'||(kind==='password'&&resumeProfileAfterRotation)){resumeProfileAfterRotation=false;work.loadProfile();}
   }});
   for(const button of document.querySelectorAll('[data-workspace]'))button.addEventListener('click',()=>navigate(button.dataset.workspace));
   $('upload-form').addEventListener('submit',async event=>{event.preventDefault();if(credentialChange)return;const file=$('invoice-file').files?.[0];await work.upload(file);if(work.state().upload.status==='done')$('invoice-file').value='';});

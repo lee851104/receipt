@@ -22,7 +22,15 @@
   async function resource(key,path,extra={}){
    const controller=begin(key);data={...data,[key]:{status:'loading',data:null,message:'',...extra}};emit();
    try{
-    const result=await api.request(path,{signal:controller.signal});
+    let result;
+    while(active(key,controller)){
+     result=await api.request(path,{signal:controller.signal});
+     if(!active(key,controller))return;
+     if(key!=='profile'||!result.recomputing)break;
+     for(const other of ['matches','network'])channels[other]?.abort();
+     data={...data,profile:{status:'recomputing',data:null,message:'重新計算中，完成後會自動更新。'},matches:empty(),network:empty()};emit();
+     await sleep(2000,controller.signal);
+    }
     if(!active(key,controller))return;
     if(key==='network' && result.comparable && result.percent!==extra.card.percent)throw Error('配對資料已更新，請重新查詢配對清單。');
     data={...data,[key]:{status:'ready',data:result,message:'',...extra}};
@@ -75,11 +83,13 @@
    },
    loadProfile(){return resource('profile','/me/profile');},
    loadMatches(kind='similar',scope='all'){
+    if(['loading','recomputing'].includes(data.profile.status))return;
     if(!['similar','opposite'].includes(kind)||!['all','district','city','region'].includes(scope))return;
     channels.network?.abort();data={...data,kind,scope,network:empty()};
     return resource('matches','/matches?kind='+kind+'&scope='+scope);
    },
    loadNetwork(card){
+    if(['loading','recomputing'].includes(data.profile.status))return;
     if(!Number.isSafeInteger(card.user_id)||card.user_id<1)return;
     return resource('network','/matches/'+card.user_id+'/explain',{card});
    }

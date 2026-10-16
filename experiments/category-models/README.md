@@ -432,3 +432,6 @@ foreach ($role2Seed in 42,43,44) {
 ```
 
 新資料夾不覆寫既有實驗。相同公開encoder、lr2e-5、batch16、maxlen32、FP32、最多10輪、inner loss早停；外折不選epoch。本輪保留各組實際梯度步數，不宣稱等計算量因果比較。原test不開啟。現有355筆355群，沒有多筆商品家族／消費者分組；只能聲明正規化同名與明確group隔離。逐筆OOF與模型均留本機忽略目錄，不發布。
+
+
+30-run results: [classification-multiseed-cv.md](../../docs/results/classification-multiseed-cv.md). 25% mean88.73% (seed SD0.28pp), current mean88.17% (seed SD1.29pp); paired +0.56pp, 7 wins / 3 ties / 5 losses. This is development evidence, not independent test accuracy.

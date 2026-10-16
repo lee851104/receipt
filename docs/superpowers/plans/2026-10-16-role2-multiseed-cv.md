@@ -31,10 +31,10 @@ Spec: 使用者本輪與前輪已授權的分組、共同起點／lr／seed方�
 Interface: wrapper consumes verified parent folds and reports; override config includes initialization_seed, parent plan fingerprint preserved.
 
 ## Task 2: 實驗與交接
-- [ ] prepare新protocol，group彙總與GPU核對。
-- [ ] 30run逐一執行，進度與失敗保留；每個seed內使用同fold／同合成資料。
-- [ ] 彙總：每seed五折OOF、跨seed平均與SD、各fold seedSD、15對差值、類別F1（至少5真實樣本）、步數。
-- [ ] 獨立review依Task1回歸，修重要問題；結果圖／文件、README、commit與共用交接。
+- [x] prepare新protocol，group彙總與GPU核對。
+- [x] 30run逐一執行，進度與失敗保留；每個seed內使用同fold／同合成資料。
+- [x] 彙總：每seed五折OOF、跨seed平均與SD、各fold seedSD、15對差值、類別F1（至少5真實樣本）、步數。
+- [x] 獨立review依Task1回歸，修重要問題；結果圖／文件、README、commit與共用交接。
 Interface: result doc reads aggregate summary only; no raw name printing.
 Validation: 主python -m unittest discover -s tests；模型CPU python -m unittest discover -s experiments/category-models -p test_*.py；繪圖另環境。
 No repeated full-suite runs after docs-only changes.
@@ -48,3 +48,8 @@ No repeated full-suite runs after docs-only changes.
 - 最終獨立複查：無資料洩漏／覆寫／偽增樣本缺陷；發現P2 epochs上限漏驗證。新增11/0/True回歸3個子案例先失敗，修正type=int且1..10後完整94項93pass/1plot skip。只此一項重要問題，無deferred minor。
 - Reviewer未查私人內容/真encoder/結果：由本機prepare核對355單例群、encoder指紋與完整30run驗證補齊，不由雲端讀名稱；這不是Claude正式審核。
 - Task1 commits b9fbb05..6e95c85及本次修正；原CV預設不變，實際parent epochs=10，私人protocol已固定。
+
+- Task2 done: protocol frozen; 30/30 runs, 795.78s, zero test-open attempts, all fingerprints and OOF scores verified. No failed/retried training run.
+- 25% mean88.73% / seedSD0.28pp / within-fold seedSD mean1.54pp; current mean88.17% / seedSD1.29pp / within-fold2.16pp; paired +0.56pp, 7 wins / 3 ties / 5 losses. Steps2646 vs4186.
+- Aggregate report docs/results/classification-multiseed-cv.md and local PNG/PDF rendered and visually checked. All groups singleton; no semantic-family guarantee or independent test claim. Candidate next25-v3 unchanged.
+- Code commits6e95c85/b8a6014; source tests unchanged since verified94/154/plot1. Documentation-only completion does not repeat suites. Claude review pending; branch/worktree retained.

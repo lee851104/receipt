@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>消費配對系統 v2｜從日常，看見品味</title>
-<link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./styles.css?v=20261016-home">
 <script defer src="./api.js"></script>
 <script defer src="./flow.js"></script>
 <script defer src="./view-adapters.js"></script>
@@ -13,14 +13,23 @@
 <script defer src="./explanation.js"></script>
 <script defer src="./account-flow.js"></script>
 <script defer src="./account-ui.js"></script>
-<script defer src="./workspace-ui.js"></script>
-<script defer src="./app.js"></script>
+<script defer src="./workspace-ui.js?v=20261016-home"></script>
+<script defer src="./app.js?v=20261016-home"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">跳到主要內容</a>
 <header>
   <a class="brand" href="/web/" aria-label="消費配對系統首頁"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>消費配對<span class="edition">TASTE LINK / V2</span></a>
-  <div class="header-actions"><span id="service-status" class="service-status" role="status">連線中</span><button id="switch-account" class="quiet" type="button" hidden>切換帳號</button></div>
+  <div class="header-actions"><span id="service-status" class="service-status" role="status">連線中</span><div id="settings-menu" class="settings-menu" hidden>
+    <button id="settings-toggle" class="quiet" type="button" aria-expanded="false" aria-controls="settings-options">設定 <span aria-hidden="true">⌄</span></button>
+    <div id="settings-options" class="settings-options" hidden>
+      <span id="identity-label" class="menu-identity"></span>
+      <button type="button" data-workspace="upload">上傳檔案<span>匯入發票 CSV</span></button>
+      <button type="button" data-workspace="settings">帳號設定<span>帳號、月份與資料管理</span></button>
+      <button type="button" data-workspace="classify">品名分類<span>試看單筆品名的分類與屬性</span></button>
+      <button id="switch-account" type="button" hidden>切換帳號</button>
+    </div>
+  </div></div>
 </header>
 <main id="main">
   <div id="service-alert" class="service-alert" hidden><span id="service-error"></span><button id="retry-service" class="quiet" type="button">重新連線</button></div>
@@ -35,7 +44,7 @@
         <div class="receipt-rule"></div>
         <div class="receipt-bottom"><span>品名</span><span aria-hidden="true">→</span><span>類別與屬性</span><span aria-hidden="true">→</span><span>品味輪廓</span></div>
       </div>
-      <p class="intro-note">先登入，試試一個品名會被分到哪一類。</p>
+      <p class="intro-note">登入查看你的品味與月報，從日常找到同好。</p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" aria-label="選擇登入或註冊"><button id="login-tab" type="button" aria-pressed="true">登入</button><button id="register-tab" type="button" aria-pressed="false">建立帳號</button></div>
@@ -56,15 +65,15 @@
         <div class="divider"><span>或先體驗看看</span></div>
         <label id="demo-title" for="demo-user">示範帳號 <span class="optional">虛構資料</span></label>
         <form id="demo-form"><select id="demo-user" required aria-label="選擇示範帳號"><option value="">選擇一位示範使用者</option></select><button id="demo-submit" class="secondary" type="submit">進入體驗</button></form>
-        <p id="demo-note" class="small">不用密碼，先試試品名分類。</p>
+        <p id="demo-note" class="small">不用密碼，先看看示範品味與月報。</p>
       </section>
     </div>
   </section>
-  <section id="workspace-view" hidden aria-labelledby="workspace-title">
+  <section id="workspace-view" hidden aria-label="我的消費與品味">
     <nav class="workspace-nav" aria-label="功能導覽">
-<button type="button" data-workspace="classify" aria-current="page">品名分類</button><button type="button" data-workspace="upload">上傳發票</button><button type="button" data-workspace="profile">我的品味與月報</button><button type="button" data-workspace="matches">找到同好</button><button type="button" data-workspace="settings">帳號設定</button>
+<button type="button" data-workspace="profile" aria-current="page">我的品味與月報</button><button type="button" data-workspace="matches">找到同好</button>
 </nav>
-<div id="classify-panel"><div class="workspace-heading"><div><p class="eyebrow">01 / 從一個品名開始</p><h1 id="workspace-title" tabindex="-1">日常買什麼，<em>看出一點線索。</em></h1><p class="subtitle">輸入品名，查看它的類別、模型信心與消費屬性。</p></div><span id="identity-label" class="identity"></span></div>
+<div id="classify-panel" hidden><div class="workspace-heading"><div><p class="eyebrow">01 / 從一個品名開始</p><h1 id="workspace-title" tabindex="-1">日常買什麼，<em>看出一點線索。</em></h1><p class="subtitle">輸入品名，查看它的類別、模型信心與消費屬性。</p></div></div>
     <p id="model-note" class="model-note" role="status" hidden></p>
     <div class="classify-layout">
       <section class="input-card" aria-labelledby="classify-title"><p class="eyebrow">ITEM / 品名</p><h2 id="classify-title">這次買了什麼？</h2>
@@ -90,15 +99,15 @@
 <div class="upload-layout"><section class="input-card"><form id="upload-form"><label for="invoice-file">發票 CSV</label><input id="invoice-file" type="file" accept=".csv,text/csv" required aria-describedby="upload-help"><p id="upload-help" class="small">重新上傳相同月份會取代該月舊資料。作廢、折扣、低於 10 元或小數金額明細不計入分析。</p><p id="upload-demo-note" class="message" hidden>示範帳號不能上傳；請切換成自己的帳號。</p><button id="upload-submit" class="primary" type="submit">上傳並分析</button></form></section>
 <section class="result-card" aria-label="上傳處理進度"><p class="eyebrow">PROGRESS / 處理進度</p><h2 id="upload-state">等待上傳</h2><p id="upload-message" role="status" aria-live="polite">選擇 CSV 後開始分析。</p><progress id="upload-progress" max="1" value="0" hidden aria-label="發票分析進度"></progress><p id="upload-count" class="small"></p><button id="retry-job" class="secondary" type="button" hidden>重新查詢進度</button><button id="open-profile" class="primary" type="button" hidden>查看我的品味</button></section></div>
 </section>
-<section id="profile-panel" hidden aria-labelledby="profile-title"><div class="section-header"><div><p class="eyebrow">03 / 我的品味</p><h1 id="profile-title" tabindex="-1">每一筆選擇，<em>都是你的樣子。</em></h1></div><button id="refresh-profile" class="quiet" type="button">重新載入</button></div>
-<p id="profile-message" role="status" aria-live="polite"></p><div id="profile-content" hidden><p id="profile-overview" class="model-note"></p><p id="profile-areas" class="small"></p><div id="trait-values" class="trait-values" aria-label="18 格品味向量"></div><p class="small">數值為目前消費資料的特徵；「未知」表示資料不足。到配對頁選一位對象，可查看雙方的品味關係圖。</p><h2 class="report-heading">我的月報</h2><p id="report-empty" class="small" hidden>尚未上傳任何月份，先到「上傳發票」匯入一份 CSV。</p><iframe id="report-frame" title="我的消費月報" referrerpolicy="no-referrer" hidden></iframe></div>
+<section id="profile-panel" hidden aria-labelledby="profile-title"><div class="section-header"><div><p class="eyebrow">MY TASTE / 我的品味</p><h1 id="profile-title" tabindex="-1">每一筆選擇，<em>都是你的樣子。</em></h1></div><button id="refresh-profile" class="quiet" type="button">重新載入</button></div>
+<p id="profile-message" role="status" aria-live="polite"></p><div id="profile-content" hidden><p id="profile-overview" class="model-note"></p><p id="profile-areas" class="small"></p><div id="trait-values" class="trait-values" aria-label="18 格品味向量"></div><p class="small">數值為目前消費資料的特徵；「未知」表示資料不足。到配對頁選一位對象，可查看雙方的品味關係圖。</p><h2 class="report-heading">我的月報</h2><p id="report-empty" class="small" hidden>尚未上傳任何月份。從右上角「設定 → 上傳檔案」匯入一份 CSV，就能開始建立你的品味與月報。</p><iframe id="report-frame" title="我的消費月報" referrerpolicy="no-referrer" hidden></iframe></div>
 </section>
-<section id="matches-panel" hidden aria-labelledby="matches-title"><div class="section-header"><div><p class="eyebrow">04 / 找到同好</p><h1 id="matches-title" tabindex="-1">從消費習慣，<em>找到合拍的人。</em></h1></div><button id="refresh-matches" class="quiet" type="button">重新查詢</button></div>
+<section id="matches-panel" hidden aria-labelledby="matches-title"><div class="section-header"><div><p class="eyebrow">CONNECTIONS / 找到同好</p><h1 id="matches-title" tabindex="-1">從消費習慣，<em>找到合拍的人。</em></h1></div><button id="refresh-matches" class="quiet" type="button">重新查詢</button></div>
 <div class="match-controls"><div role="group" aria-label="配對類型"><button type="button" data-match-kind="similar" aria-pressed="true">相近</button><button type="button" data-match-kind="opposite" aria-pressed="false">互補</button></div><label for="match-scope">範圍 <select id="match-scope"><option value="all">不限</option><option value="district">同一區</option><option value="city">同縣市</option><option value="region">同地區</option></select></label></div>
-<p id="match-areas" class="small"></p><p id="match-status" role="status" aria-live="polite"></p><div id="match-list" class="match-list"></div><p id="network-status" role="status"></p><section id="explain-panel" class="explain-panel" aria-labelledby="explain-title" hidden></section><iframe id="network-frame" title="你與配對對象的品味關係圖" referrerpolicy="no-referrer" hidden></iframe>
+<p id="match-areas" class="small"></p><p id="match-status" role="status" aria-live="polite"></p><div id="match-list" class="match-list"></div><p id="network-status" role="status"></p><iframe id="network-frame" title="你與配對對象的品味關係圖" referrerpolicy="no-referrer" hidden></iframe><details id="explain-details" class="explain-details" hidden><summary>查看計算過程<span class="small">分數與 18 格計算明細</span></summary><section id="explain-panel" class="explain-panel" aria-labelledby="explain-title" hidden></section></details>
 </section>
 <section id="settings-panel" hidden aria-labelledby="settings-title">
-<div class="section-header"><div><p class="eyebrow">05 / 帳號與資料</p><h1 id="settings-title">你的帳號，<em>由你管理。</em></h1></div><button id="account-refresh" class="quiet" type="button">重新載入</button></div>
+<div class="section-header"><div><p class="eyebrow">05 / 帳號與資料</p><h1 id="settings-title" tabindex="-1">你的帳號，<em>由你管理。</em></h1></div><button id="account-refresh" class="quiet" type="button">重新載入</button></div>
 <p id="account-loading" role="status"></p><p id="account-error" class="message error" role="alert" hidden></p><p id="account-notice" class="message success" role="status" hidden></p><p id="account-demo-note" class="model-note" hidden>示範帳號為唯讀，可以查看資料與登出。</p>
 <div id="account-content" hidden><div class="account-grid">
 <section class="input-card"><h2>顯示名稱</h2><p class="small">帳號：<span id="account-username"></span>（無法修改）</p><form id="account-name-form"><label for="account-name">大家看到的名稱</label><input id="account-name" required maxlength="20" autocomplete="nickname"><button id="account-name-submit" class="primary" type="submit">儲存名稱</button></form></section>

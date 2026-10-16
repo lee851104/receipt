@@ -2,7 +2,7 @@
 
 ## v2 本機應用（開發中）
 
-v2 由 FastAPI 提供 `/web/`，包含登入、CSV 上傳與進度、品名分類、品味月報、配對計算及帳號設定。資料保留在本機 SQLite；API 規格與各角色進度見 [團隊總覽](docs/team/overview.md)。
+v2 由 FastAPI 提供 `/web/`，包含登入、CSV 上傳與進度、品名分類、品味月報、配對計算及帳號設定。登入首頁為「我的品味與月報」；右上角「設定」提供上傳檔案、帳號設定與品名分類。配對點選對象後先顯示關係圖，計算明細需自行展開。資料保留在本機 SQLite；API 規格與各角色進度見 [團隊總覽](docs/team/overview.md)。
 
 **本分支已驗證的實際串接（2026-10-16）：** 已整合角色 1 後端，使用 fake 模型與隔離 SQLite，完成註冊／登入、兩個月上傳、月報／品味／配對／計算過程、改名／改密碼／刪月份／登出／刪帳號的實際 HTTP 與瀏覽器驗證。真模型、完整 300 人 seed、Docker 與 CI 尚未驗收。詳見 [整合驗證紀錄](docs/results/role4-integration.md)，產出待 Claude 審核。
 
@@ -11,6 +11,8 @@ v2 由 FastAPI 提供 `/web/`，包含登入、CSV 上傳與進度、品名分�
 以下是 **虛構資料與模擬 API 的前端契約展示**，不是完整後端或真模型驗收影片。每個畫面下方均標示模擬狀態。
 
 ![v2 前端契約展示：登入、分類、上傳、月報、配對、計算與帳號管理；使用虛構資料與模擬 API](docs/assets/v2-contract-demo.gif)
+
+上方 GIF 為 10/15 舊版導覽的契約展示；10/16 新版首頁與設定選單以實際介面為準，重錄腳本已同步。
 
 可重現錄製方式：在有 Playwright／Chromium 的工具環境啟動本機服務，執行 `node scripts/capture_v2_demo.cjs`，再在有 Pillow 的工具環境執行 `python scripts/build_v2_demo_gif.py`。錄製腳本攔截全部 `/api/` 請求，不建立真實帳號或發票；中間截圖留在被忽略的 `runtime/`。
 

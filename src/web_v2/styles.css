@@ -16,3 +16,19 @@ header{max-width:1328px;margin:auto;padding:25px 40px;display:flex;justify-conte
 @media(max-width:700px){.explain-panel{padding:18px}.explain-heading{align-items:flex-start;gap:12px}.explain-heading h2{font-size:19px}.explain-score{font-size:30px}.explain-summary{grid-template-columns:1fr}.explain-step+.explain-step{border-left:0;border-top:1px solid var(--line)}.explain-controls{align-items:start}.explain-controls label{flex-direction:column;align-items:flex-start;gap:4px}.explain-table,.explain-table tbody{display:block}.explain-table caption{display:block}.explain-table thead{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}.explain-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid var(--line);border-radius:7px;margin-bottom:12px;padding:8px}.explain-table th:first-child{grid-column:1/-1;width:auto;border-bottom:1px solid var(--line)}.explain-table td{display:block;text-align:left;border:0;padding:9px 8px}.explain-table td::before{content:attr(data-label);display:block;color:var(--muted);font-size:10px;margin-bottom:4px}.explain-table td:last-child{grid-column:1/-1}}
 
 .account-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:28px 0}.account-grid h2{font-size:20px;margin-top:0}.account-month{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:13px 0;border-bottom:1px solid var(--line)}.account-danger{border-color:#754144}.account-logout{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 0;border-top:1px solid var(--line)}.account-logout button{width:auto;white-space:nowrap}#account-confirm{width:min(460px,calc(100% - 36px));border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:14px;background:var(--surface);color:var(--ink);padding:26px}#account-confirm::backdrop{background:#000b}.confirm-actions{display:flex;gap:12px;margin-top:24px}.confirm-actions button{flex:1;margin:0}#account-error,#account-notice{overflow-wrap:anywhere}@media(max-width:640px){.account-grid{grid-template-columns:1fr;gap:16px}.account-logout{align-items:flex-start;flex-direction:column}.account-logout button{width:100%}}
+
+/* Keep everyday navigation separate from occasional account/data operations. */
+.settings-menu{position:relative}.settings-options{position:absolute;right:0;top:calc(100% + 10px);width:268px;max-width:calc(100vw - 40px);padding:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 40px #0008;z-index:10}
+.settings-options button{display:block;text-align:left;width:100%;border:0;border-radius:7px;background:transparent;padding:10px 12px}
+.settings-options button:hover,.settings-options button[aria-current=page]{background:var(--raised)}
+.settings-options button span{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.menu-identity{display:block;padding:8px 12px 12px;color:var(--muted);border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+#switch-account{border-top:1px solid var(--line);border-radius:0;margin-top:5px}
+#settings-toggle{white-space:nowrap}#settings-toggle span{margin-left:10px}
+.explain-details{margin-top:24px;border-top:1px solid var(--line)}
+.explain-details>summary{cursor:pointer;padding:18px 0;color:var(--muted)}
+.explain-details>summary .small{margin-left:14px}
+.explain-details[open]>summary{color:var(--ink)}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.explain-details .explain-panel{margin-top:0}
+@media(max-width:600px){.header-actions{gap:10px}.explain-details>summary .small{display:block;margin:4px 0 0 16px}}

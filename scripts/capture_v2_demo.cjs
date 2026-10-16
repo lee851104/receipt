@@ -1,3 +1,4 @@
+const {go:navigate,openCalculation}=require('../tests/web-v2-navigation.cjs');
 /* Capture only the local frontend with fictional contract fixtures. No real API requests. */
 const {chromium}=require('playwright');const fs=require('node:fs');
 const fixture=require('../tests/web-v2-fixtures.cjs');
@@ -27,14 +28,15 @@ const fixture=require('../tests/web-v2-fixtures.cjs');
  try{
   await page.goto((process.env.RECEIPT_TEST_URL||'http://127.0.0.1:8001')+'/web/');await page.locator('#login-form').waitFor();await capture('登入');
   await page.locator('#login-username').fill('fictional_demo');await page.locator('#login-password').fill('fake-password');await page.locator('#login-form button').click();
+  await page.locator('#profile-content').waitFor();await capture('首頁：我的品味與月報');await navigate(page,'classify');
   await page.locator('#item-name').fill('鮮奶茶 微糖');await page.locator('#classify-form button').click();await page.getByText('分析完成',{exact:true}).waitFor();await capture('品名分類與屬性');
-  await page.locator('[data-workspace="upload"]').click();await page.locator('#invoice-file').setInputFiles({name:'fictional.csv',mimeType:'text/csv',buffer:Buffer.from('fictional demo only')});await page.locator('#upload-submit').click();await page.getByRole('heading',{name:'處理完成',exact:true}).waitFor();await capture('上傳完成');
-  await page.locator('[data-workspace="profile"]').click();await page.locator('.trait-value').first().waitFor();await capture('18 格品味');
+  await navigate(page,'upload');await page.locator('#invoice-file').setInputFiles({name:'fictional.csv',mimeType:'text/csv',buffer:Buffer.from('fictional demo only')});await page.locator('#upload-submit').click();await page.getByRole('heading',{name:'處理完成',exact:true}).waitFor();await capture('上傳完成');
+  await navigate(page,'profile');await page.locator('.trait-value').first().waitFor();await capture('18 格品味');
   await page.frameLocator('#report-frame').locator('#total').waitFor();await capture('每月消費回顧','#report-frame');
-  await page.locator('[data-workspace="matches"]').click();await page.locator('.match-card').first().waitFor();await capture('配對與距離篩選');
-  await page.locator('.match-card').first().click();await page.locator('#explain-panel').waitFor();await capture('計算過程','#explain-panel');
+  await navigate(page,'matches');await page.locator('.match-card').first().waitFor();await capture('配對與距離篩選');
+  await page.locator('.match-card').first().click();await openCalculation(page);await capture('計算過程','#explain-panel');
   await page.frameLocator('#network-frame').locator('#overall-score').waitFor();await capture('雙方品味關係圖','#network-frame');
-  await page.locator('[data-workspace="settings"]').click();await page.locator('#account-content').waitFor();await capture('帳號與資料管理');
+  await navigate(page,'settings');await page.locator('#account-content').waitFor();await capture('帳號與資料管理');
   console.log('Captured '+index+' fictional frames.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

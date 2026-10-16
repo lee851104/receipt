@@ -10,7 +10,7 @@
   function message(id,text){$(id).textContent=text||'';$(id).hidden=!text;}
   function render(state){
     const workspace=state.view==='workspace';
-    $('auth-view').hidden=workspace;$('workspace-view').hidden=!workspace;$('switch-account').hidden=!workspace;
+    $('auth-view').hidden=workspace;$('workspace-view').hidden=!workspace;$('switch-account').hidden=!workspace;$('settings-menu').hidden=!workspace;
     $('login-form').hidden=state.view!=='login';$('register-form').hidden=state.view!=='register';
     $('login-tab').setAttribute('aria-pressed',String(state.view==='login'));
     $('register-tab').setAttribute('aria-pressed',String(state.view==='register'));
@@ -27,7 +27,7 @@
       for(const user of state.demoUsers){const option=document.createElement('option');option.value=String(user.user_id);option.textContent=user.display_name;$('demo-user').append(option);}
       $('demo-user').value=state.demoUsers.some(u=>String(u.user_id)===selected)?selected:'';
       $('demo-submit').disabled=state.busy||state.demoUsers.length===0;
-      $('demo-note').textContent=state.demoUsers.length?'不用密碼，先試試品名分類。':'目前沒有示範帳號，請先註冊，或請管理者匯入示範資料。';
+      $('demo-note').textContent=state.demoUsers.length?'不用密碼，先看看示範品味與月報。':'目前沒有示範帳號，請先註冊，或請管理者匯入示範資料。';
       lastUsers=state.demoUsers;
     }
     $('demo-submit').disabled=state.busy||state.demoUsers.length===0;
@@ -62,14 +62,16 @@
       lastResult=result;
     }
     $('pending-note').textContent=classification.message==='稍後再查'?'屬性尚未完成分析，請稍後再查。':'屬性分析中，每 2 秒重新查詢，最多 5 次。';
-    if(lastView!==state.view){
-      history.replaceState(null,'',workspace?(['#upload','#profile','#matches','#settings'].includes(location.hash)?location.hash:'#classify'):'#'+state.view);
+    const viewChanged=lastView!==state.view;
+    if(viewChanged){
+      history.replaceState(null,'',workspace?(['#classify','#upload','#profile','#matches','#settings'].includes(location.hash)?location.hash:'#profile'):'#'+state.view);
       $('login-password').value='';$('register-password').value='';
       if(!workspace)$('item-name').value='';
-      if(lastView!==undefined)$(workspace?'workspace-title':'auth-title').focus();
+      if(lastView!==undefined&&!workspace)$('auth-title').focus();
       lastView=state.view;
     }
     workspaceUI?.sync(state);
+    if(viewChanged&&workspace)document.querySelector('#workspace-view [id$="-panel"]:not([hidden]) h1')?.focus();
   }
   flow=ReceiptFlow.createFlow({api,session,onChange:render});
   workspaceUI=ReceiptWorkspaceUI.createWorkspaceUI({api,session,onIdentityChange:()=>flow.identityChanged(),onEnded:()=>flow.switchAccount()});

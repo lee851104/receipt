@@ -1,3 +1,4 @@
+const {go:navigate,openCalculation}=require('./web-v2-navigation.cjs');
 /* 真 HTTP + 正式 API／SQLite／worker；無 route.fulfill，只有合成 CSV 與 fake 模型。 */
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
@@ -25,7 +26,7 @@ async function poll(read,check){
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
  page.on('pageerror',e=>errors.push(e.message));
  page.setDefaultTimeout(15000);
- const go=name=>page.locator('[data-workspace="'+name+'"]').click();
+ const go=name=>navigate(page,name);
  const login=async(name,pw)=>{await page.locator('#login-username').fill(name);await page.locator('#login-password').fill(pw);await page.locator('#login-form button').click();await page.locator('#workspace-view').waitFor();};
  const upload=async month=>{await go('upload');await page.locator('#invoice-file').setInputFiles({name:'synthetic-'+month+'.csv',mimeType:'text/csv',buffer:csv(month)});await page.locator('#upload-submit').click();await page.getByRole('heading',{name:'處理完成',exact:true}).waitFor();};
  try{
@@ -36,8 +37,24 @@ async function poll(read,check){
   assert.equal(math.percent,82);assert(Math.abs(math.dot-1.88)<1e-12);assert(Math.abs(math.denominator-2.29)<1e-12);
   assert.equal(math.cells.length,18);assert.equal(math.cells.filter(c=>c.part===null).length,13);
   await page.goto(origin+'/web/');
-  await page.locator('#demo-user').selectOption('1');await page.locator('#demo-submit').click();await go('matches');
-  await page.locator('.match-card').first().click();await page.locator('#explain-panel').waitFor();
+  await page.locator('#demo-user').selectOption('1');await page.locator('#demo-submit').click();
+  await page.locator('#profile-panel').waitFor({timeout:3000});
+  assert.equal(new URL(page.url()).hash,'#profile');
+  assert.equal(await page.locator('.workspace-nav [data-workspace]').count(),2);
+  assert(await page.locator('[data-workspace="upload"]').isHidden());
+  await page.locator('#settings-toggle').click();
+  assert(await page.locator('[data-workspace="upload"]').isVisible());
+  await page.locator('#settings-toggle').press('Escape');
+  assert.equal(await page.locator('#settings-toggle').getAttribute('aria-expanded'),'false');
+  await page.locator('#settings-toggle').press('Enter');
+  await page.locator('#profile-title').click();
+  assert(await page.locator('#settings-options').isHidden());
+  await go('matches');
+  await page.locator('.match-card').first().click();
+  await page.locator('#network-frame').waitFor();
+  assert(await page.locator('#explain-panel').isHidden());
+  assert.equal(await page.locator('#explain-panel').textContent(),'');
+  await openCalculation(page);
   assert.equal(await page.locator('#explain-percent').textContent(),'+82%');
   await page.frameLocator('#network-frame').locator('#views-note').filter({hasText:'重新計算中'}).waitFor();
   await go('settings');await page.locator('#account-content').waitFor();
@@ -49,6 +66,11 @@ async function poll(read,check){
   const username='live_'+Date.now(),peer='peer_'+Date.now();
   await page.locator('#register-tab').click();await page.locator('#register-username').fill(username);await page.locator('#register-password').fill(password);await page.locator('#register-form button').click();await page.locator('#auth-notice').waitFor();
   await login(username,password);
+  await page.locator('#profile-content').waitFor();
+  assert(await page.locator('#report-empty').isVisible());
+  assert.match(await page.locator('#report-empty').textContent(),/設定 → 上傳檔案/);
+  await page.reload();await page.locator('#profile-content').waitFor();
+  assert.equal(new URL(page.url()).hash,'#profile');
   await go('classify');await page.locator('#item-name').fill('虛構奶茶');await page.locator('#classify-form button').click();
   await page.getByText('分析完成',{exact:true}).waitFor();assert.equal(await page.locator('#attribute-list .attribute-row').count(),23);
   await upload('2026-05');await upload('2026-06');
@@ -71,7 +93,7 @@ async function poll(read,check){
   const list=(await request('/matches',{token:second})).data;
   const card=list.people.find(p=>p.display_name==='虛構同好');assert(card,'uploaded fake-model profiles must produce a match');
   await go('matches');const peerCard=page.locator('.match-card').filter({hasText:'虛構同好'});await peerCard.click();
-  await page.locator('#explain-panel').waitFor();assert.equal(await page.locator('#explain-percent').textContent(),await peerCard.locator('strong').textContent());
+  await openCalculation(page);assert.equal(await page.locator('#explain-percent').textContent(),await peerCard.locator('strong').textContent());
   assert.equal(await page.locator('#explain-panel tbody tr').count(),18);
   const graph=page.frameLocator('#network-frame');await graph.locator('#network .t-signal').first().waitFor();
   assert.equal(await graph.locator('#overall-score').textContent(),(card.percent>0?'+':'')+card.percent);
@@ -86,6 +108,9 @@ async function poll(read,check){
   await page.screenshot({path:'runtime/role4-live-matches-mobile.png',fullPage:true});
   console.log('LIVE uploads: two months -> 80 items -> report / 18 traits -> matches / 18 explanation cells / real network; desktop/mobile.');
 
+  await page.locator('#settings-toggle').click();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.locator('#settings-toggle').press('Escape');
   await go('settings');await page.locator('#account-content').waitFor();
   await page.getByRole('button',{name:'刪除 2026-05',exact:true}).click();await page.locator('#confirm-cancel').click();
   assert((await request('/me',{token:second})).data.months.includes('2026-05'));

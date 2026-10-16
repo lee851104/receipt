@@ -1,3 +1,4 @@
+const {go:navigate,openCalculation}=require('./web-v2-navigation.cjs');
 /* Optional browser integration: run with Playwright available; API server on 127.0.0.1:8001. All data is fictional. */
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');const fs=require('node:fs');
@@ -9,7 +10,7 @@ const fixture=require('./web-v2-fixtures.cjs');
  const origin=process.env.RECEIPT_TEST_URL||'http://127.0.0.1:8001';
  const csv='\ufeff發票日期,發票狀態,發票號碼,賣方名稱,賣方地址,消費明細_品名,消費明細_數量,消費明細_金額\r\n20260502,開立已確認,TEST-1,虛構店,臺北市大安區測試路1號,鮮奶茶,1,60\r\n20260503,開立已確認,TEST-2,虛構店,臺北市大安區測試路1號,衛生紙,1,100\r\n,,,匯出摘要\r\n';
  const uploadFile=()=>page.locator('#invoice-file').setInputFiles({name:'fictional.csv',mimeType:'text/csv',buffer:Buffer.from(csv)});
- const go=pageName=>page.locator('[data-workspace="'+pageName+'"]').click();
+ const go=pageName=>navigate(page,pageName);
  fs.mkdirSync('runtime',{recursive:true});
  try{
   await page.goto(origin+'/web/');await page.locator('#demo-panel').waitFor({state:'visible'});
@@ -66,7 +67,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   await page.screenshot({path:'runtime/role4-profile-mobile.png',fullPage:true});
   profile={...profile,ready:false,item_count:0,months:{},traits:profile.traits.map(t=>({...t,value:null}))};
   await page.locator('#refresh-profile').click();await page.locator('#report-empty').waitFor({state:'visible'});assert(await page.locator('#report-frame').isHidden());
-  await page.locator('#switch-account').click();assert.equal(await page.locator('#report-frame').getAttribute('src'),null);assert.equal(await page.locator('#network-frame').getAttribute('src'),null);
+  await page.locator('#settings-toggle').click();await page.locator('#switch-account').click();assert.equal(await page.locator('#report-frame').getAttribute('src'),null);assert.equal(await page.locator('#network-frame').getAttribute('src'),null);
   await page.locator('#demo-user').selectOption({index:1});await page.locator('#demo-submit').click();await page.locator('#workspace-view').waitFor({state:'visible'});await go('upload');assert(await page.locator('#upload-submit').isDisabled());
   assert.deepEqual(errors,[]);console.log('CONTRACT PASS: profile/months/18 traits/empty states/matches/scopes/network/identity cleanup/mobile; no page errors or overflow.');
  }finally{await browser.close();}

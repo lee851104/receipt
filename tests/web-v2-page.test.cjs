@@ -11,11 +11,12 @@ function page(responder){
   }
   const html=fs.readFileSync(path.join(dir,'index.html'),'utf8');
   const nodes=Object.fromEntries([...html.matchAll(/id="([^"]+)"/g)].map(m=>[m[1],new Element()]));
-  const doc={getElementById:id=>{assert.ok(nodes[id],`missing element ${id}`);return nodes[id];},createElement:()=>new Element(),querySelectorAll:()=>[]};
+  const docEvents={};
+  const doc={addEventListener:(k,v)=>docEvents[k]=v,querySelector:()=>null,getElementById:id=>{assert.ok(nodes[id],`missing element ${id}`);return nodes[id];},createElement:()=>new Element(),querySelectorAll:()=>[]};
   const store=new Map(), events={}, calls=[];const location={hash:'#classify'};
   const context=vm.createContext({document:doc,location,history:{replaceState(_,__,hash){location.hash=hash;}},sessionStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},addEventListener:(k,v)=>events[k]=v,Headers,URLSearchParams,AbortController,DOMException,setTimeout,clearTimeout,
     fetch:async(p,o)=>{calls.push([p,o]);const [status,body]=await responder(p,o);return new Response(JSON.stringify(body),{status});}});
-  for(const file of [...html.matchAll(/<script defer src="([^"]+)"/g)].map(m=>m[1]))vm.runInContext(fs.readFileSync(path.join(dir,file),'utf8'),context);
+  for(const file of [...html.matchAll(/<script defer src="([^"]+)"/g)].map(m=>m[1]))vm.runInContext(fs.readFileSync(path.join(dir,file.split('?')[0]),'utf8'),context);
   return {nodes,store,location,calls,events};
 }
 const tick=()=>new Promise(r=>setImmediate(r));
@@ -28,7 +29,7 @@ test('real page supports demo login, classification, safe result text and identi
   const x=page(p=>p.endsWith('/health')?[200,{demo_mode:true,models:{category:'fake',attributes:'fake'}}]:p.endsWith('/demo-users')?[200,[{user_id:2,display_name:'示範 A'}]]:p.endsWith('/demo-login')?[200,{access_token:'abc',expires_in:3600}]:[200,{name:'<img src=x onerror=alert(1)>',category:{name:'飲品',prob:0.9},attributes_status:'ready',attributes:{alcohol:false,sugar:0,fun:null}}]);
   await tick(); assert.equal(x.nodes['demo-panel'].hidden,false);
   x.nodes['demo-user'].value='2';await x.nodes['demo-form'].fire('submit');
-  assert.equal(x.nodes['workspace-view'].hidden,false); assert.equal(x.nodes['identity-label'].textContent,'示範 A');
+  assert.equal(x.nodes['workspace-view'].hidden,false);assert.equal(x.location.hash,'#profile'); assert.equal(x.nodes['identity-label'].textContent,'示範 A');
   x.nodes['item-name'].value='虛構茶'; await x.nodes['classify-form'].fire('submit');
   assert.equal(x.nodes['result-name'].textContent,'<img src=x onerror=alert(1)>');
   assert.equal(x.nodes['category-probability'].textContent,'90%');

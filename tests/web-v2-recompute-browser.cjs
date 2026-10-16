@@ -1,3 +1,4 @@
+const {go:navigate,openCalculation}=require('./web-v2-navigation.cjs');
 /* 可控制延遲的契約測試；實際 HTTP 全流程另見 live-browser。 */
 const {chromium}=require('playwright'),assert=require('node:assert/strict');
 const fixture=require('./web-v2-fixtures.cjs');
@@ -26,31 +27,31 @@ const fixture=require('./web-v2-fixtures.cjs');
  try{
   await page.goto(process.env.RECEIPT_TEST_URL+'/web/');
   await page.locator('#login-username').fill('synthetic');await page.locator('#login-password').fill('synthetic-password');await page.locator('#login-form button').click();
-  await page.locator('[data-workspace="settings"]').click();await page.locator('#account-content').waitFor();
+  await navigate(page,'settings');await page.locator('#account-content').waitFor();
   await page.getByRole('button',{name:'刪除 2026-05',exact:true}).click();await page.locator('#confirm-submit').click();await page.locator('#account-confirm').waitFor({state:'hidden'});
-  await page.locator('[data-workspace="profile"]').click();await page.locator('#profile-message').filter({hasText:'重新計算中'}).waitFor();
+  await navigate(page,'profile');await page.locator('#profile-message').filter({hasText:'重新計算中'}).waitFor();
   assert(await page.locator('#profile-content').isHidden());assert(await page.locator('#report-frame').isHidden());
-  await page.locator('[data-workspace="matches"]').click();await page.locator('#match-status').filter({hasText:'重新計算中'}).waitFor();
+  await navigate(page,'matches');await page.locator('#match-status').filter({hasText:'重新計算中'}).waitFor();
   await page.locator('#refresh-matches').click();assert.equal(matches,0);
   // 改名不能中斷已知的背景重算，或重新開放舊配對查詢。
-  await page.locator('[data-workspace="settings"]').click();
+  await navigate(page,'settings');
   await page.locator('#account-name').fill('虛構新名稱');await page.locator('#account-name-submit').click();
   await page.locator('#account-notice').filter({hasText:'顯示名稱已更新'}).waitFor();
-  await page.locator('[data-workspace="matches"]').click();
+  await navigate(page,'matches');
   await page.locator('#match-status').filter({hasText:'重新計算中'}).waitFor({timeout:3000});
   assert.equal(matches,0);
   // 密碼變更失敗與成功都不能讓重算中的配對提早解鎖。
-  await page.locator('[data-workspace="settings"]').click();
+  await navigate(page,'settings');
   await page.locator('#current-password').fill('incorrect');await page.locator('#new-password').fill('synthetic-next-password');await page.locator('#password-submit').click();
   await page.locator('#account-error').waitFor();
-  await page.locator('[data-workspace="matches"]').click();await page.locator('#match-status').filter({hasText:'重新計算中'}).waitFor();assert.equal(matches,0);
-  await page.locator('[data-workspace="settings"]').click();
+  await navigate(page,'matches');await page.locator('#match-status').filter({hasText:'重新計算中'}).waitFor();assert.equal(matches,0);
+  await navigate(page,'settings');
   await page.locator('#current-password').fill('synthetic-password');await page.locator('#new-password').fill('synthetic-next-password');await page.locator('#password-submit').click();
   await page.locator('#account-notice').filter({hasText:'密碼已更新'}).waitFor();
-  await page.locator('[data-workspace="matches"]').click();await page.locator('#match-status').filter({hasText:'重新計算中'}).waitFor();assert.equal(matches,0);
+  await navigate(page,'matches');await page.locator('#match-status').filter({hasText:'重新計算中'}).waitFor();assert.equal(matches,0);
   assert(profileTokens.includes('Bearer new-synthetic-token'));recomputing=false;
   await page.locator('.match-card').first().waitFor();assert.equal(matches,1);
-  await page.locator('[data-workspace="profile"]').click();await page.locator('#profile-content').waitFor();
+  await navigate(page,'profile');await page.locator('#profile-content').waitFor();
   assert.match(await page.locator('#profile-overview').textContent(),/40 個有效品項/);
   assert(checks>=4);assert.deepEqual(errors,[]);
   console.log('RECOMPUTE CONTRACT PASS: old profile hidden, two-second polling, matches blocked, rename/password success/failure preserve polling, completion refreshes active matches.');

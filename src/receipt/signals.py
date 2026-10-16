@@ -3,7 +3,8 @@ from collections import Counter
 from datetime import date, timedelta
 from statistics import mean, median
 
-from .attributes import DAILY, DESSERT, DRINK, MEAL, SPORT, TECH, asked, channel_of, describe, fold, from_model, has
+from .attributes import (BULK_QUANTITY, DAILY, DESSERT, DRINK, MEAL, SPORT, TECH, asked, channel_of, describe, fold,
+                         from_model, has)
 
 CONFIRMED = 10  # category 10 still waits for review
 MEAL_BILL = {MEAL, DRINK, DESSERT}  # what a meal bill may include when estimating cost per person
@@ -73,6 +74,24 @@ def known_share(part, answered, total):
     if answered < total and answered < MIN_KNOWN:
         return None
     return share(part, answered)
+
+
+def estimated_share(decided, open_items, question, total):
+    """A share of `total` items: the `decided` yeses a rule settles without the model, plus the `open_items` the model
+    answers, estimated from those with a known answer; None when unknown answers leave fewer than MIN_KNOWN of them.
+
+    Only the open items can be unknown, so the known answers among all the items are no fair sample (the rules' yeses or
+    noes are always known); among the open items alone they are. With every answer known this is share(decided + yeses,
+    total) exactly.
+    """
+    answered = known(open_items, question)
+    if len(answered) < len(open_items) and len(answered) < MIN_KNOWN:
+        return None
+    if not answered:
+        return share(decided, total)
+    yeses = count(answered, lambda item: item[question])
+    # (decided + len(open_items) * yeses / len(answered)) / total, in whole numbers until the one division.
+    return share(decided * len(answered) + len(open_items) * yeses, total * len(answered))
 
 
 def ranked(counter):
@@ -218,8 +237,9 @@ def measure(rows, period, context, attributes=None):
     purchases each signal counted.
 
     With a model's answers (see gather for `attributes`) an unknown answer is never a no: a share leaves out the items
-    whose answer is unknown and needs MIN_KNOWN known ones once some are unknown, and a count of yeses with not one known
-    answer among the items it asks about is None.
+    whose answer is unknown and needs MIN_KNOWN known ones once some are unknown (fresh_share and bulk_share estimate
+    only the part no rule decides, see estimated_share), and a count of yeses with not one known answer among the items
+    it asks about is None.
     """
     days, off, long_weekend = calendar_days(period, context["calendar"])
     months = len(period)
@@ -231,6 +251,9 @@ def measure(rows, period, context, attributes=None):
     meals = [item for item in items if item["category"] == MEAL]
     drinks = [item for item in items if item["category"] == DRINK]
     daily = [item for item in items if item["category"] == DAILY]
+    # Food that is not fresh is never for cooking and three of a kind are always bulk: only these need an answer.
+    fresh = [item for item in food if asked("cooking", item["category"])]
+    singles = [item for item in daily if item["quantity"] < BULK_QUANTITY]
     tech = [item for item in items if item["category"] == TECH]
     store_food = [item for item in food if item["channel"] == "超商"]
     portioned = {key: invoice for key, invoice in invoices.items() if invoice["portions"] and invoice["food"] > 0}
@@ -310,7 +333,7 @@ def measure(rows, period, context, attributes=None):
         "store_clearance_share": known_share(len(behind["store_clearance_share"]), len(known(store_food, "clearance")),
                                              len(store_food)),
         "shop_meal_share": share(len(behind["shop_meal_share"]), len(meals)),
-        "fresh_share": known_share(len(behind["fresh_share"]), len(known(food, "cooking")), len(food)),
+        "fresh_share": estimated_share(0, fresh, "cooking", len(food)),
         "ready_meal_share": share(len(meals), len(food)),
         "kitchen_per_month": len(behind["kitchen_per_month"]) / months,
         "sugar_mean": mean(item["sugar"] for item in behind["sugar_mean"]) if behind["sugar_mean"] else None,
@@ -324,7 +347,7 @@ def measure(rows, period, context, attributes=None):
         "away_share": share(len(away), len(located)) if home else None,
         "stays": visits("住宿"), "long_trips": visits("長途交通"),
         "convenience_share": share(len(bills("convenience_share")), len(store_bills)) if len(store_bills) >= 2 else None,
-        "bulk_share": known_share(len(behind["bulk_share"]), len(known(daily, "bulk")), len(daily)),
+        "bulk_share": estimated_share(len(daily) - len(singles), singles, "bulk", len(daily)),
         "small_daily_visits": len(bills("small_daily_visits")) / months,
         "home_items": len(behind["home_items"]) / months,
         "stationery_items": len(behind["stationery_items"]) / months,

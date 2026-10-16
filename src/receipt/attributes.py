@@ -8,6 +8,7 @@ MEAL, DRINK, DESSERT, FRESH, SPORT, DAILY, TECH = 0, 1, 2, 3, 4, 8, 9
 FOOD = {MEAL, DRINK, DESSERT, FRESH}
 GOODS = {4, 5, 6, 7, 8, 9}  # confirmed categories that are not food
 GENERAL = "一般店家"
+BULK_QUANTITY = 3  # this many of a kind on one invoice are bulk, whatever the name says
 # The categories a model's question is asked about; outside them the answer is a known no. Questions missing here are
 # asked about every category.
 ASKED_ABOUT = {"clearance": FOOD, "quick": {MEAL}, "cooking": {FRESH}, "kitchen": {FRESH, DAILY},
@@ -75,7 +76,8 @@ def describe(row, channel, vocabulary):
         "sport_supply": has(name, vocabulary["sport_supply"]),
         "sport_gear": goods and has(name, vocabulary["sport_gear"]),
         "car_care": goods and has(name, vocabulary["car_care"]),
-        "bulk": has(name, vocabulary["bulk"]) or bool(re.search(r"\d+入", fold(name))) or row["quantity"] >= 3,
+        "bulk": (has(name, vocabulary["bulk"]) or bool(re.search(r"\d+入", fold(name)))
+                 or row["quantity"] >= BULK_QUANTITY),
         "home": goods and has(name, vocabulary["home"]),
         "stationery": goods and has(name, vocabulary["stationery"]),
         "fun": fun_of(name, row["merchant"], vocabulary),
@@ -124,7 +126,7 @@ def from_model(row, channel, fields, vocabulary):
         "sport_gear": answer("sport_gear"),
         "car_care": answer("car_care"),
         # Three of a kind are bulk: the quantity is on the invoice, where the model cannot see it.
-        "bulk": True if row["quantity"] >= 3 else answer("bulk"),
+        "bulk": True if row["quantity"] >= BULK_QUANTITY else answer("bulk"),
         "home": answer("home"),
         "stationery": answer("stationery"),
         # No kind of fun from the model: the shop's own words decide, never the name (an empty name has none).

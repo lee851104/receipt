@@ -173,20 +173,22 @@ class SignalTests(unittest.TestCase):
         self.assertEqual(signals["store_clearance_share"], 5 / 10)
         self.assertEqual(signals["clearance_share"], 5 / 20)
 
-    def test_the_fresh_share_counts_fresh_food_still_waiting_as_unknown_but_other_food_as_not_cooking(self):
+    def test_the_fresh_share_is_the_fresh_part_of_food_times_the_cooking_share_of_fresh_food_with_a_known_answer(self):
         rows = bought((WORKDAYS[:6], "測試高麗菜", 3, 120, "測試傳統市場"),
                       (WORKDAYS[6:10], "測試新鮮蔬菜", 3, 100, "測試傳統市場"),
                       (WORKDAYS[10:20], "測試排骨便當", 0, 100, "測試便當店"))
         attributes = {"測試高麗菜": model(cooking=True), "測試新鮮蔬菜": None, "測試排骨便當": None}
-        self.assertEqual(signals_of(rows, attributes)["fresh_share"], 6 / 16)
+        # 10 fresh of 20 food; the 6 fresh items with a known answer are all for cooking.
+        self.assertEqual(signals_of(rows, attributes)["fresh_share"], 10 / 20 * 6 / 6)
 
-    def test_the_bulk_share_counts_daily_items_whose_answer_is_known(self):
+    def test_the_bulk_share_takes_three_of_a_kind_as_bulk_and_estimates_the_rest_from_known_answers(self):
         rows = bought((WORKDAYS[:3], "測試衛生紙箱", 8, 200, "測試量販店"),
                       (WORKDAYS[3:6], "測試牙刷", 8, 60, "測試量販店"),
                       (WORKDAYS[6:10], "測試新品日用品", 8, 90, "測試量販店"),
                       (WORKDAYS[10:12], "測試洗碗精", 8, 80, "測試量販店", 3))
         attributes = {"測試衛生紙箱": model(bulk=True), "測試牙刷": model(bulk=False), "測試新品日用品": None, "測試洗碗精": None}
-        self.assertEqual(signals_of(rows, attributes)["bulk_share"], 5 / 8)
+        # 2 bought three at a time, and of the other 10 the 6 known answers say 3 are bulk.
+        self.assertEqual(signals_of(rows, attributes)["bulk_share"], 7 / 12)
 
     def test_the_weekday_quick_share_counts_workdays_with_a_known_answer(self):
         rows = bought((WORKDAYS[:4], "測試鮪魚飯糰", 0, 45, "示範超商"),
@@ -277,6 +279,66 @@ class ThinAnswerTests(unittest.TestCase):
         self.assertIsNone(measured["signals"]["store_clearance_share"])
         self.assertEqual(measured["signals"]["weekday_quick_share"], 6 / 6)
         self.assertEqual(trait_value(motive, measured), 1)
+
+
+def a_month_of_daily_meals_and_fresh(known_singles=6, known_fresh=5):
+    """24 daily items (6 bought three at a time, 18 one at a time), 20 meals and 8 fresh items. Of the singles
+    `known_singles` have a name the model has judged and the rest a new name; likewise `known_fresh` of the fresh items."""
+    return bought((WORKDAYS[:6], "測試洗碗精", 8, 240, "測試量販店", 3),
+                  (WORKDAYS[6:6 + known_singles], "測試牙刷", 8, 60, "測試量販店"),
+                  (WORKDAYS[6 + known_singles:24], "測試新品日用品", 8, 90, "測試量販店"),
+                  (WORKDAYS[:20], "測試排骨便當", 0, 100, "測試便當店"),
+                  (WORKDAYS[20:20 + known_fresh], "測試高麗菜", 3, 120, "測試傳統市場"),
+                  (WORKDAYS[20 + known_fresh:28], "測試新鮮蔬菜", 3, 100, "測試傳統市場"))
+
+
+# Every answer known: only the three of a kind are bulk, and all the fresh food is for cooking.
+EVERY_ANSWER = {"測試洗碗精": model(), "測試牙刷": model(bulk=False), "測試新品日用品": model(bulk=False),
+                "測試排骨便當": model(), "測試高麗菜": model(cooking=True), "測試新鮮蔬菜": model(cooking=True)}
+# The new names still wait for the model.
+NEW_NAMES_WAITING = {**EVERY_ANSWER, "測試新品日用品": None, "測試新鮮蔬菜": None}
+
+
+class RulePartTests(unittest.TestCase):
+    """A rule decides part of fresh_share and bulk_share (food that is not fresh is not for cooking, three of a kind are
+    bulk); only the rest is estimated from the model's known answers, so waiting names cannot tilt either share."""
+
+    def shares(self, rows, attributes):
+        measured = measure(rows, PERIOD, CONTEXT, attributes)
+        return measured["signals"]["bulk_share"], measured["signals"]["fresh_share"], measured["purchases"]
+
+    def test_with_every_answer_known_the_shares_are_the_plain_ones(self):
+        rows = a_month_of_daily_meals_and_fresh()
+        for attributes in (EVERY_ANSWER, None):
+            with self.subTest(rules=attributes is None):
+                self.assertEqual(self.shares(rows, attributes)[:2], (6 / 24, 8 / 28))
+
+    def test_known_answers_that_are_a_fair_sample_give_the_same_shares(self):
+        # A third of the singles and five of the eight fresh items are known, answered as all of them would be.
+        bulk, fresh, purchases = self.shares(a_month_of_daily_meals_and_fresh(), NEW_NAMES_WAITING)
+        self.assertEqual((bulk, fresh), (6 / 24, 8 / 28))
+        # The purchases are still the ones counted as yes.
+        self.assertEqual([line["name"] for line in purchases["bulk_share"]], ["測試洗碗精"] * 6)
+        self.assertEqual([line["name"] for line in purchases["fresh_share"]], ["測試高麗菜"] * 5)
+
+    def test_with_every_name_waiting_neither_share_is_measured(self):
+        rows = a_month_of_daily_meals_and_fresh()
+        bulk, fresh, purchases = self.shares(rows, waiting(rows))
+        self.assertEqual((bulk, fresh), (None, None))
+        self.assertEqual((purchases["bulk_share"], purchases["fresh_share"]), ([], []))
+
+    def test_answers_a_rule_decides_do_not_count_toward_the_five_known_ones(self):
+        # Four known singles beside six three of a kind, four known fresh items beside twenty meals.
+        rows = a_month_of_daily_meals_and_fresh(known_singles=4, known_fresh=4)
+        self.assertEqual(self.shares(rows, NEW_NAMES_WAITING)[:2], (None, None))
+        rows = a_month_of_daily_meals_and_fresh(known_singles=5, known_fresh=5)
+        self.assertEqual(self.shares(rows, NEW_NAMES_WAITING)[:2], (6 / 24, 8 / 28))
+
+    def test_with_nothing_left_for_the_model_a_share_is_the_rules_part(self):
+        # No fresh food among the food, no daily item bought fewer than three at a time.
+        rows = bought((WORKDAYS[:20], "測試排骨便當", 0, 100, "測試便當店"), (WORKDAYS[:6], "測試洗碗精", 8, 240, "測試量販店", 3))
+        self.assertEqual(self.shares(rows, waiting(rows))[:2], (1.0, 0.0))
+        self.assertEqual(self.shares(rows, None)[:2], (1.0, 0.0))
 
 
 def a_month_of_everything():

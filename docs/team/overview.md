@@ -23,11 +23,11 @@
 | 假用戶 | 8 種類型 × 5 人 = 40 人，2026 年 3–4 月的假發票 | `src/receipt/personas.py` |
 | 網頁 | 單一 HTML 檔，JS 全部內嵌，GitHub Pages 公開中 | `scripts/build_report.py` → `invoice-insights.html` |
 | 後端骨架 | FastAPI + SQLite：註冊、登入、demo 快速切換、品名即時分類、健康檢查，模型先用假替身；v2 網頁從 `/web/` 提供（10/15 完成角色 1 第 1 週） | `src/api/`、`src/ml/`、`src/web_v2/` |
-| 測試 | Python 154 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
+| 測試 | Python 295 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
 | 分類實驗 | 品名 → 10 類。A：TF-IDF + 邏輯迴歸，macro-F1 0.62；B：bge-small-zh（512 維）+ 邏輯迴歸，macro-F1 0.66。只有 57 個人工確認品名，只能驗證 4 類 | `experiments/category-models/`、`docs/category-models-brief.md` |
 | 屬性實驗 | Qwen3-4B（Q4_K_M，2.4 GB）判斷 16 個屬性。真實資料上模型單獨 F1 44%，加規則 94%（事後回測，不是獨立驗證） | `experiments/receipt-attributes/` |
 
-**還沒有的：** 上傳與背景任務、品味向量和配對的 API、帳號管理、真的分類和屬性模型、CI、BERT。
+**還沒有的：** 配對的 API、帳號管理、真的分類和屬性模型、CI、BERT。上傳與背景任務（5.4）已經有了（10/15 完成角色 1 第 2 週第一批，分支 `role-1/uploads`，PR #8）；任務最後的品味向量重算和 `GET /api/me/profile`（5.6）也有了（第 2 週第二批，分支 `role-1/profiles`）。
 
 ### 18 格品味向量
 
@@ -85,14 +85,16 @@ FastAPI（src/api/）────────── SQLite（一個檔案）
    ├─ 上傳 CSV → 背景任務
    │     invoices.py 解析
    │     → 品名分類（src/ml/category.py：BERT → 0–9）
-   │     → 品項屬性（src/ml/attributes.py：查快取，沒有才問 Qwen）
+   │     → 品項屬性（後端先查 item_cache，沒有的才交給 src/ml/attributes.py 問 Qwen，結果由後端存進 item_cache）
    │     → signals.py / traits.py → 18 格品味向量 → 存 profiles
    ├─ 配對：similarity.compare(我, 每個人) → 相近前 5、互補前 5
    └─ 計算過程：逐格 我 × 對方 × 權重 → 加總 → ÷（長度相乘 + 0.25）
 
 Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
-沒開時 = 無 GPU 模式：只讀快取，沒看過的品名標「待分析」
+沒開時 = 無 GPU 模式：只讀後端的 item_cache，沒看過的品名標「待分析」
 ```
+
+**屬性快取歸後端（10/16 補上，見 13.3）：** `item_cache` 是後端資料庫裡的資料表，刪帳號、刪月份時一起清理（5.11）。`describe_items` 最多只能在記憶體裡留一份快取，不能把真實品名寫到磁碟或 git；會進 git 的屬性結果只有假用戶的假品名（design D10，`datasets/synthetic/`）。
 
 建議的資料夾（第一週可以調整，但要 4 個人一起改）：
 
@@ -172,28 +174,34 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 ### 5.4 上傳與進度
 
 **`POST /api/invoices`**：multipart，欄位名 `file`，一次一個財政部電子發票 CSV（一份一個月），上限 2 MB
-- 伺服器先**當場**用 `invoices.build_month` 的規則解析，格式有錯直接回 400；解析成功才建立背景任務
-- 同一個人重新上傳同一個月份，會取代那個月的舊資料
+- 伺服器先**當場**用 `invoices.build_month(..., for_upload=True)` 的規則解析，格式有錯直接回 400，既有資料不變；解析成功才建立背景任務
+- 整個請求超過 2 MB 加 64 KB 時，伺服器在讀取內容之前（甚至在檢查登入之前）就回 413；沒有 `Content-Length` 的請求（分段傳送）回 411 `length_required`。瀏覽器用 `fetch` 加 `FormData` 一定會帶 `Content-Length`，前端不必處理 411（10/15 補上）
+- 一個月最多 2000 筆留下來的明細，超過回 400 `invalid_csv`（真實的月份大約 50 筆；這樣一次上傳的背景任務不會跑超過大約一小時）（10/15 補上）
+- 同一個人重新上傳同一個月份，會取代那個月的舊資料：舊的品項和已經結束的任務刪掉；還在排隊或執行中的舊任務照樣跑完
 - demo 用戶不能上傳，回 403 `demo_user_read_only`（和 5.11 同一個代碼）：demo 帳號是大家共用的，上傳會把真實消費掛到公開的假用戶上（第 2 週實作）
 - 「作廢」開頭的發票狀態（例如「作廢已確認」）直接跳過，不算消費；只有「開立已確認」會被計入，其他狀態回 400
 - **金額低於 10 元（含 0 元和負數的折扣）或金額有小數的明細直接略過**，不算消費、不分析。月報總金額因此是折扣前的金額
 - 數量有小數的明細（加油的公升數、秤重商品）保留，**數量當 1**。不然加油次數會消失，30 公升也會被「數量 ≥ 3」誤判成囤貨
-- 現有 `build_month` 遇到作廢或小數都會直接報錯，5–8 月的真實發票就有這兩種情況，第二週接上傳前要先修。3–8 月真實發票共 336 列：作廢 2 列、金額規則略過 61 列，留下 273 列
+- 這些規則只在 `for_upload=True` 時套用，v1 報表的建置照舊（原本遇到作廢或小數會直接報錯）。3–8 月真實發票共 336 列：作廢 2 列、金額規則略過 56 列，留下 278 列（10/14 的 273 是決定保留小數數量之前算的，差的 5 列就是小數數量）
 - 回傳 202：`{"job_id": 12, "month": "2026-05", "rows": 35}`
-- 錯誤：400 `invalid_csv`（`message` 寫原因，例如一份 CSV 有兩個月份）、413 `file_too_large`
+- 錯誤：400 `invalid_csv`（`message` 寫原因，例如一份 CSV 有兩個月份；某一列的數字、日期或發票狀態不對時寫第幾行、哪一欄，例如 `Line 3: 消費明細_金額 is not a number`，不重複儲存格的內容，因為欄位錯位時那一格可能是品名的一部分（10/15 補上））、401、403 `demo_user_read_only`、411 `length_required`、413 `file_too_large`
 
 **`GET /api/jobs/{job_id}`**
 - 回傳：`{"job_id": 12, "month": "2026-05", "status": "running", "done": 10, "total": 25, "message": "判斷品項屬性"}`
 - `status`：queued / running / done / failed
-- `total` 是這份 CSV 不重複的品名數，`done` 是已經分類並判斷完屬性的品名數。無 GPU 模式下，快取裡沒有的品名直接標「待分析」，也算進 `done`
-- `message`：目前步驟的中文說明；failed 時寫失敗原因
-- 錯誤：404（任務不存在，或不是你的任務）
+- `total` 是這份 CSV 不重複的品名數，`done` 是已經分類並判斷完屬性的品名數。無 GPU 模式下，快取裡沒有的品名直接標「待分析」，也算進 `done`。全部品名判斷完之後 `done` 就等於 `total`，但任務還要重算品味向量（步驟 3），要等 `status` 是 `done` 才算做完（10/15 補上）
+- `message`：目前步驟的中文說明；failed 時寫失敗原因：「分類模型無法使用，請稍後重新上傳」「處理失敗，請重新上傳」「服務重新啟動，請重新上傳」
+- 伺服器一次只跑一個任務（只有一個 llama-server，SQLite 也只有一個寫入者）：所有任務交給同一條背景執行緒，依上傳順序（先進先出）一個一個跑，不佔用回應請求的執行緒，所以排隊的任務再多，其他 API 照常回應。別人的任務在跑時，新任務的 `status` 停在 `queued`，前端照常每 2 秒問一次就好。停止伺服器時不會等任務跑完，還沒跑完的任務在下次啟動時標成 failed（10/15 補上）
+- `job_id` 不會重複使用，任務刪掉之後也不會（10/15 補上）
+- 錯誤：404 `not_found`（任務不存在，或不是你的任務，兩種回應完全一樣）、422（`job_id` 不是 1 到 2^63−1 的整數）
 
 **背景任務的步驟：**
 1. 列出不重複品名，呼叫 `classify()`。最高機率低於 `CATEGORY_MIN_PROB`（預設 0.5）的品名存成 10 待確認，不算進品味向量
-2. 呼叫 `describe_items()`：先查 `item_cache`，沒有才問 Qwen。無 GPU 模式下沒有快取的回 `None`，算進 `pending_attributes`
-3. 用這個人所有月份的資料重算 18 格，存進 `profiles`
-4. `status` 改成 done。GPU 恢復之後，重新上傳同一個月份就能補算待分析的品名
+2. 後端先查 `item_cache`，沒有的品名才呼叫 `describe_items()` 問 Qwen，答案由後端存進 `item_cache`。無 GPU 模式下沒有快取的回 `None`，算進 `pending_attributes`
+3. 用這個人所有月份的資料重算 18 格，存進 `profiles`（`message` 是「重算品味向量」）。屬性只讀 `item_cache`（目前的屬性模型），不問模型，沒有的品名當成待分析，見 5.6。重算出錯時任務變成 failed（「處理失敗，請重新上傳」），舊的 profile 不變（10/15 補上）
+4. `status` 改成 done，這是任務的最後一次寫入：看到 done 時 profile 已經更新。GPU 恢復之後，重新上傳同一個月份就能補算待分析的品名
+
+任務 failed 時，那個月的品項不會刪掉：可能還是類別 10（待確認），或只做了一部分（例如已經分類、屬性還沒判斷完），一直留到重新上傳同一個月份把它們取代為止（10/16 補上）。
 
 ### 5.5 品名即時分類
 
@@ -209,7 +217,9 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 - `category` 一律是模型的第一名（0–9），`probs` 是 10 類各自的機率
 - `attributes`：16 個屬性加 7 個基本旗標，欄位名見 `src/ml/fields.py`。每個欄位都可能是 `null`
 - 分類框不會在請求裡等 Qwen，只查快取（`describe_items(names, ask_model=False)`）。快取裡有 → `ready`。沒有 → `attributes` 為 `null`、`attributes_status` 為 `pending`
-- 第 2 週起，GPU 模式下伺服器會把 pending 的品名排進背景分析，前端每 2 秒再問一次，最多 5 次。第 1 週還沒有這個排程，pending 不會自己變成 ready，前端先顯示「待分析」就好
+- 屬性先查後端的 `item_cache`，沒有才問 `describe_items(..., ask_model=False)`。GPU 模式下（假模型也算），pending 的品名在回應送出之後排進背景分析，結果寫進 `item_cache`，下次查詢就是 `ready`；前端每 2 秒再問一次，最多 5 次。同一個品名還在分析時再問，不會再排一次（10/15 補上）。無 GPU 模式下不排程，pending 不會自己變成 ready，顯示「待分析」就好（10/15 實作）
+- 現在用的假屬性模型一次就答完每個品名，所以分類框從來不會是 `pending`；`ATTRIBUTES_MODEL=qwen` 要等角色 3 的模型接上（任務 2.15）才能用，在那之前看不到 pending 變成 ready（10/16 補上）
+- 錯誤：401、422、503 `model_unavailable`（分類模型沒有載入，見 5.9）
 
 ### 5.6 我的品味向量與月報
 
@@ -225,11 +235,17 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
    "categories": [{"name": "正餐", "color": "#df646b"}],
    "months": {"2026-05": {"year": 2026, "monthNumber": 5, "rows": ["…現有格式"]}}}
   ```
-- `traits` 一定有 18 筆。`ready` 為 false 表示有效品項少於 `min_items`，這時 18 格的 `value` 全是 `null`
-- `item_count`：有效品項數，判斷 `ready` 用的就是它
+- `traits` 一定有 18 筆。`ready` 為 false 時 18 格的 `value` 全是 `null`；`ready` 為 true 時，某一格資料不夠（沒到 `configs/traits.json` 為那一格設的最低需求，或那一格的訊號都量不到）還是 `null`，其他格有數值
+- `ready`：只有存起來的品味向量存在時才是 true。有效品項（已略過的明細和類別 10 待確認的品項都不算）少於 `min_items`、還沒上傳過、第一個上傳的任務還沒做完，都是 false
+- `item_count`：有效品項數，判斷 `ready` 用的就是它。有效品項是金額大於 0、類別不是 10 的品項，而且同一張發票上同一個品名只算一次，所以不能拿 `months` 的列數自己數（10/16 補上）
+- `pending_attributes`（10/15 補上）：這個人所有品項裡，`item_cache` 沒有（以目前的屬性模型）的不重複品名數；每次查詢當場數，不問模型，也不會寫入。品名一進快取就不再算（例如 GPU 恢復後重新上傳同一個月份補算，或即時分類框在背景分析了這個品名），但 profile 要等下一次上傳的任務重算才會用到新的答案（10/16 補上）。用假模型時，任務判斷完每個品名都有答案（全是 `null`），所以任務結束後是 0；換上真的 Qwen 之後，沒有 GPU 時新品名都算
 - `areas`：生活圈，最多 2 個行政區（`places.areas_of`），可能是空陣列
 - `categories`：11 類的名稱和顏色（`configs/report.json`），給現有月報畫面用
-- 還沒上傳過的人：`ready` 為 false，`months` 為 `{}`
+- `months`：由存起來的品項當場整理，格式同月報（10/15 補上：類別 10 待確認的品項也在裡面，`provisional` 一律是 `false`）。上傳一被接受就有了，所以 `months` 不是空的不代表 profile 做好了；`ready`、`item_count`、`areas`、`traits` 是任務最後存起來的 profile，只在任務結束時才變，要先照 5.4 問任務到 `done`
+- profile 在每次上傳的任務最後重算一次（用這個人所有月份），這個端點只讀存好的結果，從不重算
+- 存起來的品味向量是 `configs/traits.json` 的每個 trait 一個值。新增或刪掉 trait 之後，每個人的 profile 都要重算（重新上傳），否則存著舊長度的 profile 查詢時會回 500（10/16 補上）
+- 還沒上傳過的人：`ready` 為 false，`item_count` 為 0，`months` 為 `{}`。假用戶的品項和 profile 要等 seed 擴充時才放入（任務 4.7），在那之前查假用戶一樣是 `ready` 為 false
+- 休假日和連假看 `configs/calendar-2026.json`：它目前只列了 2026 年 3–4 月的補假（檔案的 `covers`）。其他月份（包括其他年份）只有週末算休假日，沒有國定假日、補班和連假：`days` 格只用週末算，整個期間沒有任何一段連續三天以上的休假日時，`holiday` 格是 `null`
 
 ### 5.7 配對
 
@@ -304,7 +320,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `JWT_SECRET` | 無，一定要設 | 簽 JWT 用的密鑰，至少 32 字元 |
 | `JWT_EXPIRE_MINUTES` | 1440 | token 有效時間 |
 | `DEMO_MODE` | 0 | 1 = 開放 `demo-users` 和 `demo-login` |
-| `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git。相對路徑一律從 repo 根目錄算起，不管在哪個資料夾啟動 |
+| `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git。相對路徑一律從 repo 根目錄算起，不管在哪個資料夾啟動。只接受 `sqlite:///…`（檔案）和 `sqlite://`（記憶體，測試用），錯誤訊息不會印出設定的值 |
 | `LLAMA_SERVER_URL` | `http://127.0.0.1:8080` | Qwen 的 llama-server |
 | `CATEGORY_MODEL` | fake | fake / tfidf / embedding / bert |
 | `ATTRIBUTES_MODEL` | fake | fake / qwen |
@@ -313,7 +329,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `CATEGORY_MODEL_REPO` | 空 | Hugging Face 上公開的分類模型庫；資料夾裡沒有模型時從這裡下載。10/15 補上 |
 | `CATEGORY_MODEL_REVISION` | 空 | 要下載的固定版本（commit），和 `CATEGORY_MODEL_REPO` 一起設定。10/15 補上 |
 
-設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。`src/ml/` 有真的模型之前，`CATEGORY_MODEL` 和 `ATTRIBUTES_MODEL` 只有 `fake` 能用，設成別的值同樣會停下來。
+設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。伺服器只能開**一個行程**：不要加 `--workers`，也不要兩個伺服器共用同一個資料庫，因為啟動時會把還沒做完的任務標成 failed，「一次只跑一個任務」的背景執行緒也只管得到同一個行程裡的任務。`src/ml/` 有真的模型之前，`CATEGORY_MODEL` 和 `ATTRIBUTES_MODEL` 只有 `fake` 能用，設成別的值同樣會停下來。
 
 ### 5.11 帳號管理（2026-10-15 補上）
 
@@ -331,8 +347,8 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 - 錯誤：403 `wrong_password`
 
 **`DELETE /api/me`**：JSON `{"password": "…"}`
-- 回傳 204。依序刪掉這個人的 `items`、`jobs`、`profiles`、`users`，再刪掉 `item_cache` 裡已經沒有任何 `items` 用到的品名
-- 錯誤：403 `wrong_password`
+- 回傳 204。依序刪掉這個人的 `items`、`jobs`、`profiles`、`users`，再刪掉 `item_cache` 裡已經沒有任何 `items` 用到的品名。品名的屬性結果只存在後端的 `item_cache`（`describe_items` 最多只在記憶體裡留快取，不寫到磁碟），所以清掉這裡就清乾淨了（10/16 補上，見 13.3）
+- 錯誤：403 `wrong_password`、409 `job_in_progress`（還有 queued 或 running 的上傳任務，等它做完再刪；不然那個任務會在刪除之後又把品名寫進快取）（10/15 補上）
 
 **`DELETE /api/me/months/{month}`**：`month` 是 `YYYY-MM`
 - 回傳 204。刪掉那個月的 `items` 和 `jobs`，重算 18 格；`item_cache` 的清理方式同上
@@ -390,15 +406,15 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
 
 ### 角色 3：LLM 屬性與假用戶
 
-- **負責：** 在 4060 上重新選型、Qwen 介接、快取、100 筆人工複核、300 個假用戶
+- **負責：** 在 4060 上重新選型、Qwen 介接、100 筆人工複核、300 個假用戶。屬性結果的快取 `item_cache` 歸後端（資料庫，刪帳號時清理）；`describe_items` 最多只在記憶體裡留快取，不能把真實品名寫到磁碟或 git（10/16 補上，見 13.3）
 - **交出：** `src/ml/attributes.py` 的 `describe_items()`；假用戶資料；複核結果和 F1；配對驗證（同類型的人有沒有互相出現在相近前 5 名）
 - **先讀：** `experiments/receipt-attributes/CLAUDE.md`、`README.md`、`RESULTS.md`、`INTEGRATION.md`（**接入契約，必讀**）、`SELECTED_MODEL.json`；`src/receipt/attributes.py`、`personas.py`
 - **每週：**
   1. 4060 環境；用實驗資料夾的同一套評估，比較 Qwen3-4B 和約 5 GB 的候選模型（例如 Qwen3-8B Q4_K_M）；先用 0.5B 模型在 CPU 上把流程接通
-  2. 屬性介接取代 `attributes.describe` 的來源（`channel_of` 保留）；快取；`personas.py` 擴充到約 300 人
-  3. 4 人分著做 100 筆人工複核並算 F1；配對驗證；跑完假用戶品名的 Qwen 結果，把快取放進 git
+  2. 屬性介接：交出 `describe_items()`（接進品味計算的是後端的 `attributes.from_model`，見 13.5；`channel_of` 保留）；`personas.py` 擴充到約 300 人
+  3. 4 人分著做 100 筆人工複核並算 F1；配對驗證；跑完假用戶品名的 Qwen 結果，存成 `datasets/synthetic/attribute-cache.jsonl` 放進 git（任務 4.7；只有假品名，design D10）
   4. 修錯；講稿素材
-- **注意：** `INTEGRATION.md` 列了幾個要明確決定的地方：甜度沒寫時回 `null`、fun 的英文值要對應成中文、`null` 不等於 `false`。`experiments/receipt-attributes/CLAUDE.md` 的限制只適用於那個實驗資料夾，正式介接寫在 `src/ml/`
+- **注意：** `INTEGRATION.md` 列了幾個要明確決定的地方：甜度沒寫時回 `null`、fun 的英文值要對應成中文、`null` 不等於 `false`（10/15 決定：`describe_items` 照任務 4.3 把 fun 對應成中文值交出；後端的 `attributes.from_model` 也接受實驗的英文值，兩種以外的 fun 一律當成沒給。甜度預設由後端補，見 13.4）。`experiments/receipt-attributes/CLAUDE.md` 的限制只適用於那個實驗資料夾，正式介接寫在 `src/ml/`
 
 ### 角色 4：前端與展示
 
@@ -481,13 +497,13 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
    .venv/Scripts/python.exe -m unittest discover -s tests -v
    node --test "tests/*.test.cjs"
    ```
-   預期結果：Python 154 個、JS 82 個全部通過
+   預期結果：Python 295 個、JS 82 個全部通過
 3. 後端（角色 1 的第一週成果）：
    - 複製 `.env.example` 成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼：`.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"`
-   - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人；名單只能往後加，資料庫裡的帳號和名單對不上時會停下來並說明，這時刪掉 `data/app.db` 再重來）
+   - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人；名單只能往後加，資料庫裡的帳號和名單對不上時會停下來並說明，這時刪掉 `data/app.db*` 再重來）
    - 啟動：`.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload`，打開 `http://127.0.0.1:8000/docs`。v2 網頁在 `http://127.0.0.1:8000/web/`，角色 4 做好之前只有一個預留頁
    - 改了 `.env` 要手動重啟伺服器（`--reload` 只看 `.py` 檔）
-   - `src/api/tables.py` 的資料表有變動時，刪掉 `data/app.db` 再重新放入 demo 用戶
+   - `src/api/tables.py` 多了新的資料表時不用動，伺服器或 seed 啟動時會自動建立；已經存在的資料表改了欄位或索引時，才要刪掉 `data/app.db*`（資料庫和它的 `-wal`、`-shm` 檔）再重新放入 demo 用戶
    - `DEMO_MODE=1` 時不要加 `--host 0.0.0.0`，啟動時會印出提醒
 4. 4060：
    - 安裝 NVIDIA 驅動，用 `nvidia-smi` 確認看得到顯示卡
@@ -504,19 +520,19 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
-### 13.4 角色 3 接入與審查修正（2026-10-15，來源：角色 3 worktree、原 role3-handoff 與本次審查）
+### 13.6 角色 3 接入與審查修正（2026-10-16 更新，來源：角色 3 worktree、原 role3-handoff 與使用者合併指示）
 
 **給角色 1**
 - 2.15：以 `AttributeDescriber(server_url=settings.llama_server_url)` 提供 `backends.describe_items`；`ATTRIBUTES_MODEL=qwen` 的正式啟用由角色 1 接入 `src/api/backends.py`。本次審查修正沒有修改角色 1 的 API 檔案。
-- 每列明放 `attributes`（23 欄字典或 `None`）；省略欄位仍走 v1，`None` 才是待分析。7 個基本旗標只供儲存/API 回傳；現有訊號依舊使用類別，包含 `food = category in FOOD`。已分析的 `fun=null` 是非娛樂、`species=null` 是未寫物種；布林 null 才是未知。待分析的寵物店發票若沒有已知物種，不拆給貓狗。
+- 2026-10-15 使用者決定：接入以角色 1 的 `from_model` 為準；呼叫 `measure/explain/build_vector(rows, period, context, attributes={品名: 23 欄 dict 或 None})`，字典裡沒有的品名也算待分析；不傳 `attributes` 參數才走 v1。每列不再放屬性，也不再使用舊的 external 介面。7 個基本旗標只供儲存/API 回傳，現有訊號仍由類別決定；類別閘門、待分析飲品甜度預設、娛樂店家與未知寵物造訪依 13.5。
 - `ask_model=True` 會等同一實例的前一筆推論完成，不再因等鎖超過 60 秒而偽裝成待分析；60 秒僅限制單次 HTTP。角色 1 請由上傳背景工作呼叫，兩份上傳會排隊；即時查詢用 `ask_model=False`，不等推論鎖。預設函式的 `LLAMA_SERVER_URL` 僅在首次非空呼叫建立時檢查；無效會記錄一次不含網址／品名的錯誤並回全 `None`，修正設定後須重啟程序。直接建構實例仍會立即檢查設定。
-- `(model_version, name)` mapping 是程序內快取，不是資料庫；持久化 `item_cache` 與版本清理由 2.3/2.4 負責。4.7 必須等 2.3/2.4 完成，再把假發票、屬性與 profiles 接入一般管線；不要把目前核心驗證當成完整 seed 已完成。
+- `(model_version, name)` mapping 是程序內快取，不是資料庫；持久化 `item_cache` 與版本清理由 2.3/2.4 負責。4.7 需把假發票、屬性與 profiles 接入已完成的後端管線；目前核心驗證不代表完整 seed 已完成。
 - 介面只有 names，merchant 固定空字串、quantity=1；品項數量的 bulk 補位只在計算副本。新版採單筆推論、輸入只去開頭「示範」、保留原名快取鍵；prompt hash 與 input-v2:batch1 已進 model_version。換版本須重算舊屬性，不能沿用舊版本 cache。
-- `build_personas(calendar, total=300)` 尾端擴充、保留原 40 人順序；v1 未指定 total 仍是 40 人。先前 seed 入口改為 300 的變更請在角色 1 合併時確認，本次不再修改該檔案。
+- `build_personas(calendar, total=300)` 尾端擴充、保留原 40 人順序；v1 未指定 total 仍是 40 人。本次合併已確認 seed 入口仍為 `total=300`。
 - 107 筆假品名逐筆對照見 `docs/results/synthetic-cache-review.md`，舊／新模型輸出分存 `datasets/synthetic/attribute-cache.model-v1.jsonl`、`attribute-cache.model-v2.jsonl`；有效快取保留每欄 corrections。2026-10-15 使用者檢查並確認全部 107 筆：46 筆為 `human_corrected`、61 筆為 `human_confirmed`，保留助理準備與使用者確認的來源，並用屬性雜湊避免重建或後續修改誤用核准；此確認僅涵蓋公開假品名。配對數字見 `docs/results/matching.md`，僅核心公式，尚未驗證分類/API/DB 端到端。
 - 4.8（10/15 使用者續作要求）：100 筆真實品名已用新版模型全部重跑，舊 `predictions.jsonl` 與四份空白盲標檔保留。使用者改採「先由本機模型預標，再由本人審核」，所以新增稿標示 `review_method=model_assisted`，不宣稱獨立盲標。私人根目錄為主資料夾 `C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-review-20261015\`；新版預測為 `predictions-01cd0f32b598.jsonl`，待審稿與中文檢查表在 `assisted-01cd0f32b598\`。2026-10-15 使用者已確認 100/100 筆，保留 1 筆／1 欄人工修正；4.8 已完成，23 欄彙總見 `docs/results/attributes.md` 與 `attributes.json`。這批為使用者審核模型預標，並非四人獨立盲標；品名只准本機腳本處理，畫面只印彙總。
 - `scripts/predict_private_attributes.py` 可依目前版本產生私有預測，加 `--assisted` 產生四份各 25 筆待審稿；不覆寫既有預測或人工稿。`scripts/attribute_review.py` 檢查 ID/品名一致、23 欄型別、模型版本與全部 100 筆人工狀態，未完成就拒絕正式評分。布林以 true 為正例，三個列舉欄位用非 null 類別 micro 指標；gold=null 排除、模型 null 對已知正例計漏判，分母為零顯示 —。本批已通過人工確認門檻並產生完整指標；進度彙總見 `docs/results/attribute-review-status.json`。
-- 4.7 相依更新（來源：角色 1 分支 `role-1/uploads`，`873f46c`）：2.3 已完成，2.4 的分類／快取／背景分析已完成，但 `profiles` 重算仍在下一批；因此完整 seed 尚不能驗收，本角色未另建替代的資料庫管線。
+- 4.7 相依更新（2026-10-16，來源：已合併角色 1 `role-1/profiles` 的 `828bad1`）：2.3/2.4 與 profiles 重算已完成，完整 seed 可接續開發；本次只整合屬性介面與核心配對驗證，4.7 尚未驗收。`src/api/seed.py` 的 `total=300` 已確認保留。
 - 已確認資料可在角色 3 worktree 執行下列命令重現 `docs/results/attributes.md` 與 JSON（未完成會回傳 exit 2，不寫正式報告）：
 
 ```powershell
@@ -526,12 +542,49 @@ $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-r
 
 - 工作區為 `codex/role-3/attributes` worktree；共用主資料夾 Python 與 llama.cpp，不升級共用套件。本角色此次只修改自身檔案與 `src/receipt/` 新增的外部屬性邏輯。
 
+### 13.5 屬性接入以 `from_model` 為準（2026-10-16，使用者決定，角色 1 轉告，分支 `role-1/profiles`）
+
+- 「讓品味計算讀取模型屬性」以角色 1 的 `src/receipt/attributes.from_model` 為準；角色 3 分支上的 `attributes.describe(..., external=...)` 會移除，之後不要再接它
+- 介面：`signals.measure(rows, period, context, attributes)`、`traits.explain(rows, period, context, attributes)`、`traits.build_vector(rows, period, context, attributes)`，`attributes` 是 `{品名: 23 個欄位的 dict，或 None（待分析）}`；字典裡沒有的品名也當成待分析。不給 `attributes` 就照舊用 v1 的關鍵字規則，結果完全不變
+- 從角色 3 的版本搬過來兩條規則（design D6、taste-profile 規格「沒有已知答案的次數不是 0」，測試在 `tests/test_model_attributes.py`）：
+  1. 計次的訊號（`kitchen_per_month`、`sport_supplies`、`sport_gear`、`car_care`、`home_items`、`stationery_items`、`alcohol_items`、`pet_food_*`、`pet_supply_*`）在問題適用的品項裡沒有任何已知答案時是 `null`，不是 0；完全沒有適用的品項時是 0。娛樂（`fun_visits`、`fun_kinds`）只有在全部品項都待分析、而且店家名稱也沒有娛樂字時才是 `null`，判斷過的品名沒有娛樂種類就是「不是娛樂」
+  2. 寵物店發票上沒有已知物種、又有待分析的品項時，這次造訪不算給貓也不算給狗；這個人的寵物店發票全部如此時，`pet_visits_cat`、`pet_visits_dog` 是 `null`（角色 3 的版本這時是 0）。有已知物種時照已知物種算，判斷過但沒寫物種的照舊各算一半
+- 待分析的飲品照樣套用甜度預設規則（taste-profile 規格「飲品甜度的預設值」）
+- `fresh_share`、`bulk_share` 拆成規則的部分和模型回答的部分（10/16 補上，使用者決定；design D6、taste-profile 規格「規則決定的部分不拿來代表模型的答案」）：`fresh_share` = 生鮮占食物的比例 × 已知的生鮮裡下廚的比例；`bulk_share` = 一次買 3 個以上的占比，加上其餘日用品裡由已知答案估出的囤貨比例。`MIN_KNOWN`（5 個）只看模型回答的部分。原本規則決定的「沒有」（不是生鮮的食物）和「是」（數量 ≥ 3）也被當成已知答案，全部待分析時 `fresh_share` 會是 0、`bulk_share` 會是 1；現在兩個都是 `null`。每個答案都已知時和 v1 一樣
+- 給角色 3（10/16 補上）：屬性結果的快取 `item_cache` 歸後端（資料庫，刪帳號、刪月份時清理，見 13.3、5.11）。`describe_items` 最多只在記憶體裡留快取，不能把真實品名寫到磁碟或 git；進 git 的只有假用戶假品名的結果（design D10）。你現在的 `src/ml/attributes.py` 只用記憶體裡的 dict，已經符合
+- 用 40 個 v1 假用戶、全部品項待分析實測：不需要屬性的 25 個訊號和 v1 完全一樣；sweet、routine、travel、stock、tech、days、holiday 七格不變，其他格子只因為依賴屬性的訊號量不到而改變（例如 alcohol 格只剩 `bar_visits`，pets 格是 `null`）。給角色 4：沒有 GPU、很多品名待分析時，這些格子可能是 `null`，畫面照「沒有資料」顯示
+
+### 13.4 角色 1 轉告（2026-10-15，第 2 週第二批，分支 `role-1/profiles`）
+
+品味向量接好了：每次上傳的任務最後用這個人所有月份的品項重算 18 格，存進 `profiles`（5.4 第 3 步，`message` 是「重算品味向量」），`GET /api/me/profile`（5.6）可以用了。配對和計算過程的 API（5.7）還沒做。
+
+**給角色 4**
+- 5.6 可以用了。上傳照 13.3：拿到 `job_id` 之後每 2 秒問 `GET /api/jobs/{job_id}`，直到 `done` 或 `failed`，再查 `GET /api/me/profile`。進度條到 100%（`done` 等於 `total`）之後還有一小段 `message` 是「重算品味向量」，`status` 還是 `running`，要等 `done`，這時 profile 才更新
+- `months` 由存起來的品項當場整理，上傳一被接受就有了；`ready`、`item_count`、`areas`、`traits` 是任務最後存起來的 profile，任務結束才變。`months` 不是空的不代表 profile 做好了，要先問任務到 `done`。任務 `failed` 時，`months` 已經是新上傳的月份，profile 還是上一次成功的結果，請使用者重新上傳
+- `ready` 為 true 才有品味向量（有效品項至少 `min_items` 個）。false 時 18 筆 `traits` 的 `value` 全是 `null`，畫面可以用 `item_count` 和 `min_items` 顯示「還差幾個品項」。`ready` 為 true 時，個別格子還是可能是 `null`（那一格資料不夠），畫面要畫得出「沒有資料」
+- `item_count` 是有效品項數（略過的明細和類別 10 待確認的品項不算）：金額大於 0、類別不是 10，同一張發票上同一個品名只算一次，所以不能拿 `months` 的列數自己數（10/16 補上）。`months` 裡的品項照樣包含類別 10，`provisional` 一律是 `false`，畫面用 `category` 是不是 10 顯示「待確認」
+- `pending_attributes` 是屬性模型還沒判斷過的不重複品名數，大於 0 時可以提示「有 N 個品名還在分析」。現在用假模型，任務結束後是 0，換上真的 Qwen、沒有 GPU 時新品名才會算進去
+- 還沒上傳過的人和假用戶（`is_demo`，假用戶的資料要等 seed 擴充，任務 4.7）：`ready` 為 false、`item_count` 為 0、`months` 為 `{}`，不是錯誤
+- `configs/calendar-2026.json` 只列了 2026 年 3–4 月的補假，其他月份只算週末，所以沒有連假的期間 `holiday` 格是 `null`（見 5.6 最後一點）
+
+**給角色 3**
+- 品味計算現在讀你的 `describe_items` 結果：上傳任務把它存進 `item_cache`，重算 profile 時只讀快取，不問模型。換成訊號用的答案時（`src/receipt/attributes.from_model`），`null` 是「不知道」，比例的分母只算已知的答案（`fresh_share`、`bulk_share` 只用已知答案估規則決定不了的部分，見 13.5），所以不確定就給 `null`，不要猜 `false`（design D6）
+- `fun`：`describe_items` 照任務 4.3 把它對應成中文值交出（電影、唱歌、展演、遊樂），後端照單全收；實驗的英文值 `movie`、`singing`、`show`、`game` 後端也接受，換成同一組中文。兩種以外的值會被當成沒給，改看店家名稱有沒有娛樂的字
+- `species` 只認 `cat`、`dog`，其他是 `null`（不知道）
+- `sugar` 是 0 到 1 的數字，不知道給 `null`：後端會套現有的甜度預設規則（奶茶、手搖店的飲品全糖，美式無糖……）。後端不檢查範圍，給了就直接拿去算，請自己保證在 0–1
+- 類別決定問題適不適用：`clearance` 只看食物、`quick` 只看正餐、`cooking` 只看生鮮、`kitchen` 只看生鮮和日用品、`sport_gear`／`car_care`／`home`／`stationery` 只看非食物，不適用的類別不管模型怎麼答，都當成已知的「沒有」。數量 ≥ 3 的 `bulk` 也由後端直接當 `true`
+- 任務 4.4（讓品味計算接收外部屬性）和 4.5（甜度預設補位）的內容已經由 `from_model` 和 `attributes` 參數做完，不要再另外做一份。這兩項在你的章節，看過後請自行打勾（10/16 補上）
+
+**給做帳號管理（任務 2.8、2.9）的人**
+- `profiles.user_id` 是外鍵：刪帳號要先刪 `profiles` 的那一列，再刪 `users`（5.11 的順序已經是這樣）。每個跑完任務的人都有一列
+- 刪掉一個月之後重算 profile 用 `profiles.recompute(session, backends, context, user_id)`（`src/api/profiles.py`），沒有任何品項時它存成 `ready` 為 false 的空 profile。但不要在回應請求的執行緒上直接呼叫：同一個人的上傳任務可能正在跑，舊的讀取可能蓋掉比較新的 profile。要把重算排進 app 的上傳背景執行緒（`app.state.worker`，和上傳任務同一條，profile 的寫入就不會重疊），例如當成一種任務排進去（10/16 補上）
+
 ### 13.3 角色 1 轉告（2026-10-15，第 2 週上傳管線，分支 `role-1/uploads`）
 
-上傳（5.4）、任務進度和即時分類的屬性快取（5.5）都接好了，規格的增補都標了「10/15」。品味向量的重算（5.4 第 3 步）、`GET /api/me/profile` 和帳號管理在下一批。
+上傳（5.4）、任務進度和即時分類的屬性快取（5.5）都接好了，規格的增補都標了「10/15」。品味向量的重算（5.4 第 3 步）和 `GET /api/me/profile` 在下一批做好了，見 13.4；帳號管理還沒做。
 
 **給所有人**
-- 資料表變了（多了 `jobs`、`items`、`item_cache`、`profiles`，外鍵會檢查）。合併這個分支之後，在自己的 worktree 刪掉 `data/app.db*`（資料庫和它的 `-wal`、`-shm` 檔），再跑一次 seed
+- 資料表變了（多了 `jobs`、`items`、`item_cache`、`profiles`，外鍵會檢查）。第 1 週的資料庫（只有 `users`）不用刪：啟動時會自動補上新的資料表。只有用這個分支較早的 commit 建出來的資料庫要刪掉 `data/app.db*`（資料庫和它的 `-wal`、`-shm` 檔）再跑一次 seed，因為那時的 `items` 等資料表和現在的欄位、索引不同，啟動時不會被改過來
 - 伺服器只能開一個行程（不要 `--workers`），見 5.10
 - 程式的錯誤訊息和 log 都不能帶品名：資料庫的錯誤已經設定成不印參數，自己寫的例外訊息也不要把品名放進去（第 10 節）
 
@@ -546,8 +599,8 @@ $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-r
 
 **給角色 4**
 - 上傳：`POST /api/invoices`（multipart，欄位名 `file`）回 202 的 `job_id` 之後，每 2 秒問 `GET /api/jobs/{job_id}`，直到 `done` 或 `failed`；進度條用 `done / total`，文字用 `message`。別人的任務在跑時會停在 `queued` 一陣子，是正常的
-- 錯誤：400 `invalid_csv` 顯示 `message`（英文，例如缺哪個欄位）；413「檔案超過 2 MB」；403 `demo_user_read_only`「示範帳號不能上傳」
-- 即時分類框：`pending` 現在會自己變成 `ready`（GPU 模式，或假模型），照 5.5 每 2 秒再問、最多 5 次；503 `model_unavailable` 顯示「分類模型暫時無法使用」
+- 錯誤：400 `invalid_csv` 顯示 `message`（英文，例如缺哪個欄位，或 `Line 3: 消費明細_金額 is not a number` 這樣的第幾行、哪一欄）；413「檔案超過 2 MB」；403 `demo_user_read_only`「示範帳號不能上傳」
+- 即時分類框：GPU 模式下 `pending` 會自己變成 `ready`，照 5.5 每 2 秒再問、最多 5 次；503 `model_unavailable` 顯示「分類模型暫時無法使用」。現在的假屬性模型一次就答完每個品名，分類框從來不會是 `pending`；`ATTRIBUTES_MODEL=qwen` 要等角色 3 的模型接上（任務 2.15）才能用，所以目前還看不到 pending 變成 ready，這段先照 5.5 寫好（10/16 補上）
 
 ### 13.1 同一台電腦用 worktree 分開做（2026-10-15）
 
@@ -570,7 +623,7 @@ $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-r
 **給角色 3**
 - `describe_items(names, ask_model=True)`：`ask_model=False` 時只查快取（即時分類框用）；沒分析過、或連不到 llama-server 時回 `None`，不要丟例外；呼叫 Qwen 要設 timeout、要加鎖。用 `tests/model_contract.py` 的 `check_describe(self, describe_items)` 測
 - llama.cpp 的 CUDA 版（b11557，和實驗同一版）已經放在主資料夾的 `runtime/llama-b11557-cuda/`。後端用 `GET {LLAMA_SERVER_URL}/health` 判斷 GPU 模式，預設 `http://127.0.0.1:8080`
-- 假用戶擴充到約 300 人時：seed 依位置命名（`demo_001` 起），清單只能從尾端加。`build_personas` 的順序或名字一變，seed 會停下來，要刪掉 `data/app.db` 重新 seed，擴充時請一起考慮
+- 假用戶擴充到約 300 人時：seed 依位置命名（`demo_001` 起），清單只能從尾端加。`build_personas` 的順序或名字一變，seed 會停下來，要刪掉 `data/app.db*` 重新 seed，擴充時請一起考慮
 - demo 用戶之後不能上傳或修改資料（403 `demo_user_read_only`）
 
 **給角色 4**

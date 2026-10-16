@@ -128,6 +128,7 @@
   "cache_revisions": [
     "synthetic-review-20261015-v2"
   ],
+  "calculation_note": "2026-10-16 改採角色 1 from_model 與按品名傳入的 attributes，包含類別閘門、待分析飲品甜度預設及 fresh_share／bulk_share 的估算。與 6fa3e8b 隔離快照逐人比較，本批 300 人的訊號、18 格向量與整體／8 類配對指標全部不變；107 筆快取皆已分析，相關答案未觸發新舊規則差異，因此本次沒有數字變動。",
   "scope": "core formula with known synthetic categories and reviewed Qwen cache; not raw model accuracy; API/DB ingestion not verified",
   "comparable_profiles": 300
 }

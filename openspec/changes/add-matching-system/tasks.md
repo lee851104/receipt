@@ -12,13 +12,13 @@
 ## 2. 角色 1：後端與配對
 
 - [x] 2.1 完成第 1 週計畫的 Task 2–11（設定、模型接口與 GPU 偵測、健康檢查、密碼與 token、註冊登入、品名即時分類、seed、demo 名單與切換、`/web/` 網頁（`src/web_v2/` 的預留頁）、總覽的啟動說明）；Python 154 個、Node 82 個測試通過，實際啟動後 `/api/health`、`/api/auth/demo-users`、`/docs`、`/web/` 都正常
-- [ ] 2.2 修正發票解析：「作廢」開頭的發票略過、金額低於 10 元或有小數的明細略過、小數數量當成 1、其他不認得的狀態才報錯；用虛構的 CSV 寫測試涵蓋這幾種情況，現有測試照樣通過
-- [ ] 2.3 加入 `jobs`、`items`、`item_cache`、`profiles` 四張表，實作 `POST /api/invoices`（當場解析，400 `invalid_csv`、413 `file_too_large`，成功回 202 和 `job_id`、`month`、`rows`）和 `GET /api/jobs/{job_id}`；測試涵蓋 invoice-ingestion 規格的情境（含重傳取代、別人的工作回 404、假用戶上傳回 403 `demo_user_read_only`、原始檔不保留、發票號碼已編碼）
-- [ ] 2.4 實作背景任務：分類（最高機率低於 `CATEGORY_MIN_PROB` 存成 10）、查 `item_cache`、無 GPU 時記成待分析、重算 `profiles`；GPU 模式下即時分類遇到新品名要排進背景分析；用假模型測試 item-classification 和 item-attributes 規格的情境，包含分類模型 `unavailable` 時即時分類回 503、背景工作變成 `failed`
-- [ ] 2.5 實作 `GET /api/me/profile`；測試 taste-profile 規格的情境（還沒上傳、`ready` 為 false 時 18 格都是 `null`、兩個月合併、`pending_attributes`、類別 10 不計入）
+- [x] 2.2 修正發票解析：「作廢」開頭的發票略過、金額低於 10 元或有小數的明細略過、小數數量當成 1、其他不認得的狀態才報錯；用虛構的 CSV 寫測試涵蓋這幾種情況，現有測試照樣通過
+- [x] 2.3 加入 `jobs`、`items`、`item_cache`、`profiles` 四張表，實作 `POST /api/invoices`（當場解析，400 `invalid_csv`、413 `file_too_large`，成功回 202 和 `job_id`、`month`、`rows`）和 `GET /api/jobs/{job_id}`；測試涵蓋 invoice-ingestion 規格的情境（含重傳取代、別人的工作回 404、假用戶上傳回 403 `demo_user_read_only`、原始檔不保留、發票號碼已編碼）
+- [x] 2.4 實作背景任務：分類（最高機率低於 `CATEGORY_MIN_PROB` 存成 10）、查 `item_cache`、無 GPU 時記成待分析、重算 `profiles`；GPU 模式下即時分類遇到新品名要排進背景分析；用假模型測試 item-classification 和 item-attributes 規格的情境，包含分類模型 `unavailable` 時即時分類回 503、背景工作變成 `failed`（10/15 完成：重算 `profiles` 在 `role-1/profiles`，其他在 `role-1/uploads`）
+- [x] 2.5 實作 `GET /api/me/profile`；測試 taste-profile 規格的情境（還沒上傳、`ready` 為 false 時 18 格都是 `null`、兩個月合併、`pending_attributes`、類別 10 不計入）（10/15 完成，在 `role-1/profiles`）
 - [ ] 2.6 實作 `GET /api/matches`；測試 taste-matching 規格的門檻、排序和同分規則、只取前 5、`eligible` 和 `within`、四種範圍、`no_home_area`、自己資料不足，以及 0.295 這個邊界值
 - [ ] 2.7 實作 `GET /api/matches/{user_id}/explain`；測試固定 18 格、各格貢獻加總等於分數、與 `tests/fixtures/similarity-cases.json` 一致、`not_enough_items` 和 `too_few_shared`、查自己回 400 `self`、不存在回 404，以及 `network` 裡的品名已經去掉地名、沒有店家、日期和金額
-- [ ] 2.8 實作 overview 5.11 的帳號管理（`GET`／`PATCH /api/me`、`POST /api/me/password`、`DELETE /api/me`、`POST /api/auth/logout`），改密碼和登出都換掉 `users.token_key`（權杖本來就帶著它，第 1 週已有，不加欄位、不比較簽發時間）；測試涵蓋 user-account 規格的全部情境（改名長度、`wrong_password`、改密碼後舊權杖 401 而新權杖可用、登出讓所有裝置失效、登出後重新登入可用、刪帳號時的快取清理、`demo_user_read_only`）
+- [ ] 2.8 實作 overview 5.11 的帳號管理（`GET`／`PATCH /api/me`、`POST /api/me/password`、`DELETE /api/me`、`POST /api/auth/logout`），改密碼和登出都換掉 `users.token_key`（權杖本來就帶著它，第 1 週已有，不加欄位、不比較簽發時間）；測試涵蓋 user-account 規格的全部情境（改名長度、`wrong_password`、改密碼後舊權杖 401 而新權杖可用、登出讓所有裝置失效、登出後重新登入可用、刪帳號時的快取清理、還有上傳工作時刪帳號回 409 `job_in_progress`、`demo_user_read_only`）
 - [ ] 2.9 實作 `DELETE /api/me/months/{month}`；測試刪除後品味向量重算、`month_not_found`、`job_in_progress`
 - [ ] 2.10 新增 `start.bat`：檢查 `.env`、執行 seed、啟動 uvicorn、打開 `/web/`；在沒有 GPU 的電腦上手動確認，點兩下就能打開 `/docs` 和 v2 網頁
 - [ ] 2.11 新增 GitHub Actions，用 Python 3.12 和 Node 24 執行 `python -m unittest discover -s tests` 和 `node --test "tests/*.test.cjs"`，模型設定為 fake；確認 PR 上是綠燈，執行紀錄裡也沒有下載任何模型
@@ -44,8 +44,8 @@
 - [x] 4.1 在 4060 電腦上照 overview 第 12 節裝好 NVIDIA 驅動和 CUDA 版的 `llama-server`（放在 `runtime/`）；確認 `nvidia-smi` 看得到顯示卡，`llama-server.exe --list-devices` 看得到 `CUDA0`，對測試 prompt 有回應
 - [x] 4.2 用 `experiments/receipt-attributes/` 的同一套評估，比較 Qwen3-4B 和約 5 GB 的候選模型，並更新選型紀錄；第 1 週結束還沒定案就用 Qwen3-4B
 - [x] 4.3 實作 `src/ml/attributes.describe_items`（`ATTRIBUTES_MODEL=qwen`）：呼叫 `LLAMA_SERVER_URL`、套用 `bulk_rule` 和 `sugar_guard`、把 fun 對應成中文值、保留 `null`；用錄下來的回應做測試，不需要 GPU
-- [x] 4.4 讓 `attributes.describe` 可以接收外部屬性，`channel_of` 照舊；現有測試照樣通過，另外新增外部屬性的測試
-- [x] 4.5 在品味計算中加入甜度預設補位；測試沒寫甜度的手搖奶茶，屬性回傳的 `sugar` 是 `null`，但 sweet 格把它當成全糖
+- [x] 4.4 讓品味計算透過 `attributes` 品名對照字典讀取模型屬性，`channel_of` 照舊；現有與模型屬性測試通過（由角色 1 的 `from_model` 實作，2026-10-15 使用者決定；見 design D6）
+- [x] 4.5 在品味計算中加入甜度預設補位；測試沒寫甜度的手搖奶茶，屬性回傳的 `sugar` 是 `null`，但 sweet 格把它當成全糖（由角色 1 的 `from_model` 實作，2026-10-15 使用者決定；待分析飲品也套用預設）
 - [x] 4.6 把 `personas.py` 擴充到約 300 人；測試 8 種類型的人數相差不超過 1 人、同一個種子產生的結果完全相同，而且 seed 之後 `/api/auth/demo-users` 列出約 300 人
 - [ ] 4.7 擴充 seed：假發票寫進 `items`，假品名的屬性結果存成 `datasets/synthetic/attribute-cache.jsonl` 並載入 `item_cache`，再走一般的管線算出品味向量；在無 GPU 模式下執行，確認每位假用戶都有品項紀錄，重新計算也得到相同的向量
 - [x] 4.8 組織 4 人人工複核 100 個品名，產出 23 個欄位的 precision、recall、F1 和 `null` 比例，寫成 `docs/results/attributes.md`（只放彙總數字）；掃描確認裡面沒有任何真實品名（10/15 使用者改採本機模型預標後由本人審核，分四份各 25 筆；100 筆已由使用者逐筆看完並確認，保留 1 筆／1 欄修正；23 欄指標與隱私掃描完成）

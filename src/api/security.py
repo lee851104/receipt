@@ -7,9 +7,8 @@ import jwt
 from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
-from sqlmodel import Session
 
-from .db import get_session
+from .db import SessionDep
 from .errors import ApiError
 from .tables import User
 
@@ -68,8 +67,7 @@ def token_response(user, settings):
             "expires_in": settings.jwt_expire_minutes * 60}
 
 
-def current_user(request: Request, token: Annotated[str | None, Depends(bearer)],
-                 session: Annotated[Session, Depends(get_session)]):
+def current_user(request: Request, token: Annotated[str | None, Depends(bearer)], session: SessionDep):
     """The user the bearer token names; 401 not_authenticated when there is no valid token. The key must match
     too, so a token issued to a deleted account never works for a newer one that got the same id."""
     claims = None if token is None else read_token(token, request.app.state.settings)

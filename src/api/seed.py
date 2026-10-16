@@ -3,7 +3,7 @@
     .venv/Scripts/python.exe -m src.api.seed
 
 The list of fictional people may only grow at the end. After reordering or renaming people, delete the database
-file (data/app.db) and run the seed again.
+files (data/app.db*: the database and its -wal and -shm files) and run the seed again.
 """
 import os
 import sys

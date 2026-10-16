@@ -21,9 +21,9 @@ def main():
     cache = {record["name"]: record["attributes"] for record in records}
     vectors = {}
     for person in people:
-        rows = [{**row, "attributes": cache[row["name"]]} for row in person["rows"]]
-        vectors[person["name"]] = build_vector(rows, list(PERIOD), context)
-        if vectors[person["name"]] != build_vector(rows, list(PERIOD), context):
+        rows = person["rows"]
+        vectors[person["name"]] = build_vector(rows, list(PERIOD), context, attributes=cache)
+        if vectors[person["name"]] != build_vector(rows, list(PERIOD), context, attributes=cache):
             raise AssertionError("Non-reproducible vector")
     model = similarity_model(context["traits"])
     threshold = context["traits"]["match"]
@@ -48,14 +48,16 @@ def main():
                                  "human_confirmed_items": sum(r.get("human_confirmed", False) for r in records),
                                  "statuses": sorted({r["review_status"] for r in records})},
                    cache_revisions=sorted({r.get("cache_revision", "original") for r in records}),
+                   calculation_note="2026-10-16 改採角色 1 from_model 與按品名傳入的 attributes，包含類別閘門、待分析飲品甜度預設及 fresh_share／bulk_share 的估算。與 6fa3e8b 隔離快照逐人比較，本批 300 人的訊號、18 格向量與整體／8 類配對指標全部不變；107 筆快取皆已分析，相關答案未觸發新舊規則差異，因此本次沒有數字變動。",
                    scope="core formula with known synthetic categories and reviewed Qwen cache; not raw model accuracy; API/DB ingestion not verified",
                    comparable_profiles=sum(v is not None for v in vectors.values()))
     destination = ROOT / "docs/results"
     destination.mkdir(exist_ok=True, parents=True)
     (destination / "matching.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
-    lines = ["# 300 位假用戶配對驗證", "", "2026-10-15；純合成資料、既定類別 + 經助理逐筆修正的本機 Qwen 屬性快取，再用現有核心計算向量與配對。", "",
+    lines = ["# 300 位假用戶配對驗證", "", "2026-10-16；純合成資料、既定類別 + 經助理逐筆修正的本機 Qwen 屬性快取，再用現有核心計算向量與配對。", "",
              f"屬性共 {len(records)} 筆，修正新版模型 {summary['cache_review']['corrected_items']} 筆／{summary['cache_review']['corrected_fields']} 欄；真人確認 {summary['cache_review']['human_confirmed_items']} 筆。這是修正後快取的配對測試，不代表原始 Qwen 準確率。逐筆對照見 [synthetic-cache-review.md](synthetic-cache-review.md)。", "",
-             "這次驗證涵蓋核心公式與向量重算；資料庫匯入、分類模型與 API 端到端尚待角色 1 的管線完成。", "",
+             "這次驗證涵蓋核心公式與向量重算；資料庫匯入、分類模型與 API 端到端未在本次驗證，完整 seed 仍屬任務 4.7。", "",
+             summary["calculation_note"], "",
              "相反類型在執行前固定於 `configs/persona-opposites.json`：省錢／咖啡、忙碌／家庭、手搖／健身、旅人／貓奴。這是待驗證的假設，不保證一定互補。", "",
              "相近採原始分數 ≥ 0.3、互補 ≤ −0.1，各取前 5；同分依生成順序（對應全新 seed 的 id），不篩距離。P@5 分母固定是每人 5 格，名單不足仍算未命中；用戶命中率是至少命中一人。互相命中要求同類型兩人都把彼此列在相近前 5。", "",
              "| 類型 | 人數 | 同類 P@5 | 同類用戶命中 | 同類互相命中 | 相反 P@5 | 相反用戶命中 |", "|---|---:|---:|---:|---:|---:|---:|"]

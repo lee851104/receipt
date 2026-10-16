@@ -542,8 +542,10 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 任務 2.15 能做的部分做完了：`ATTRIBUTES_MODEL=qwen` 接上角色 3 的 `describe_items`，`CATEGORY_MODEL=bert` 還在等角色 2。
 
 **給角色 3**
-- 後端用 `src/ml/attributes.MODEL_VERSION` 當屬性快取（`item_cache.model`）的鍵，fake 模式照舊是 `"fake"`。你的 seed（任務 4.7）寫入 `item_cache` 時，`model` 欄位請用同一個值：`load_backends(settings).attributes_version`，不要用設定名稱 `qwen`，否則後端讀不到
-- 要在容器或 `start.bat` 用 qwen：你的分支合併進來之後，設 `ATTRIBUTES_MODEL=qwen`（容器另外設 `DOCKER_LLAMA_SERVER_URL`）。沒有 GPU 時健康檢查顯示 `cache_only`，只用快取裡的答案
+- 後端用 `src/ml/attributes.MODEL_VERSION` 當屬性快取（`item_cache.model`）的鍵，fake 模式照舊是 `"fake"`。你的 seed（任務 4.7）把 Qwen 的答案寫進 `item_cache` 時，`model` 欄位請用 `src.ml.attributes.MODEL_VERSION`（也就是 qwen 模式下後端用的鍵），不要用設定名稱 `qwen`，也不要用 `load_backends(settings).attributes_version`：預設 `ATTRIBUTES_MODEL=fake` 時它是 `"fake"`，Qwen 的答案會被記成假模型的
+- 服務只有在 `ATTRIBUTES_MODEL=qwen` 時才讀得到上面那些答案（沒有 GPU 時顯示 `cache_only`）；預設的 `fake` 只讀 `model` 是 `"fake"` 的資料。所以你的分支合併之後，demo（`start.bat` 或 compose）要設 `ATTRIBUTES_MODEL=qwen`，才看得到 seed 放進去的屬性
+- 要在容器或 `start.bat` 用 qwen：你的分支合併進來之後，設 `ATTRIBUTES_MODEL=qwen`。容器預設就連主機的 `http://host.docker.internal:8080`，只有要用別的位址時才設 `DOCKER_LLAMA_SERVER_URL`。沒有 GPU 時健康檢查顯示 `cache_only`，只用快取裡的答案
+- 你的 `AttributeDescriber` 只接受 `localhost`、`127.0.0.1`、`::1`、`host.docker.internal` 當 llama-server 的主機；容器設了別的 `DOCKER_LLAMA_SERVER_URL` 時，每個答案都會是 `None`，健康檢查卻仍顯示 `gpu_mode` 為 true。請放寬這個檢查，或把限制寫進文件
 - 合併之後角色 1 會用 `tests/model_contract.check_describe` 對真的模組再驗一次
 
 **給角色 2**

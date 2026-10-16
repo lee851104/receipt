@@ -90,4 +90,13 @@ class MultiSeedTests(unittest.TestCase):
   with (rp.parent/'private-outer-predictions.jsonl').open('a') as f:f.write('\n')
   with self.assertRaises(ValueError):self.ms.summarize_runs(out)
 
+
+ def test_reject_epochs_outside_frozen_protocol_cap(self):
+  src,parent,base=self.fixture()
+  cp=parent/'training-config.json';cfg=json.loads(cp.read_text(encoding='utf-8'))
+  for index,epochs in enumerate((11,0,True)):
+   cfg['epochs']=epochs;write_json(cp,cfg)
+   with self.subTest(epochs=epochs):
+    with self.assertRaises(ValueError):self.ms.prepare(parent,self.root/f'invalid-{index}')
+
 if __name__=='__main__':unittest.main()

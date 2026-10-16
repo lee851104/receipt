@@ -45,6 +45,8 @@ def load(root):
         fingerprint(parent/'training-config.json')!=p['parent_config_sha256'] or
         json.loads((parent/'training-config.json').read_text(encoding='utf-8'))!=p['training_config']):
         raise ValueError('parent_changed')
+    epochs=p['training_config']['epochs']
+    if type(epochs) is not int or not 1<=epochs<=10:raise ValueError('invalid_epoch_cap')
     expected=dict(lr=2e-5,batch_size=16,max_length=32,weight_decay=.01,patience=2,min_delta=1e-4,initialization='public_encoder',plan_sha256=p['parent_plan_sha256'])
     if any(p['training_config'][k]!=v for k,v in expected.items()):raise ValueError('unexpected_recipe')
     if (root/'protocol.json').read_bytes()!=raw:raise ValueError('protocol_changed')

@@ -24,10 +24,10 @@ Spec: 使用者本輪與前輪已授權的分組、共同起點／lr／seed方�
 - 早停只看inner，外層不進梯度或epoch選擇。
 
 ## Task 1: 工具與虛構回歸
-- [ ] 新test_bert_multiseed_cv.py：設定、test guard、分組、seed/輸出隔離、30run完整彙總／缺失／竄改；先看失敗。
-- [ ] bert_ratio_cv.train_fold新增seed=None,output_root=None，保持原預設；seed override必須獨立root。
-- [ ] bert_multiseed_cv.py prepare/load/train/summarize，固定父plan/config與seed集合，拒絕未完成或竄改結果。
-- [ ] CPU新測試與完整實驗回歸、主tests，預期全通過；commit。
+- [x] 新test_bert_multiseed_cv.py：設定、test guard、分組、seed/輸出隔離、30run完整彙總／缺失／竄改；先看失敗。
+- [x] bert_ratio_cv.train_fold新增seed=None,output_root=None，保持原預設；seed override必須獨立root。
+- [x] bert_multiseed_cv.py prepare/load/train/summarize，固定父plan/config與seed集合，拒絕未完成或竄改結果。
+- [x] CPU新測試與完整實驗回歸、主tests，預期全通過；commit。
 Interface: wrapper consumes verified parent folds and reports; override config includes initialization_seed, parent plan fingerprint preserved.
 
 ## Task 2: 實驗與交接
@@ -43,3 +43,8 @@ No repeated full-suite runs after docs-only changes.
 - Pre-flight: 設定override要與wrapper預期config一致；舊summary不可用於新override outputs，因此新wrapper獨立summary。
 - Ruling: 使用者已授權共同設定的分組CV；實作採有界擴充，直接執行不重問同一許可。
 - Setup: 沿用現有git-linked worktree；既有測試結果不作本輪驗證。
+
+- Task1完成：新測試先缺模組3fail再3pass；完整回歸93項92pass/1plot skip；主tests154pass，獨立plot1pass。
+- 最終獨立複查：無資料洩漏／覆寫／偽增樣本缺陷；發現P2 epochs上限漏驗證。新增11/0/True回歸3個子案例先失敗，修正type=int且1..10後完整94項93pass/1plot skip。只此一項重要問題，無deferred minor。
+- Reviewer未查私人內容/真encoder/結果：由本機prepare核對355單例群、encoder指紋與完整30run驗證補齊，不由雲端讀名稱；這不是Claude正式審核。
+- Task1 commits b9fbb05..6e95c85及本次修正；原CV預設不變，實際parent epochs=10，私人protocol已固定。

@@ -32,11 +32,13 @@ def classify(body: ItemName, request: Request, background: BackgroundTasks, sess
     [answer] = backends.classify([body.name])
     # The box never waits for Qwen: only the caches answer, and a name not seen yet is pending...
     [attributes] = cache.describe(session, backends, [body.name], ask_model=False)
-    # ...while the model, if it can answer now, judges it in the background for next time.
-    if attributes is None and cache.model_ready(backends):
-        background.add_task(cache.describe_later, state.engine, backends, body.name)
     category = answer["category"]
-    return {"name": body.name,
-            "category": {"id": category, "name": state.categories[category], "prob": answer["probs"][category]},
-            "probs": answer["probs"], "attributes": attributes,
-            "attributes_status": "pending" if attributes is None else "ready"}
+    reply = {"name": body.name,
+             "category": {"id": category, "name": state.categories[category], "prob": answer["probs"][category]},
+             "probs": answer["probs"], "attributes": attributes,
+             "attributes_status": "pending" if attributes is None else "ready"}
+    # ...while the model, if it can answer now, judges it in the background for next time: once, however often the
+    # page asks meanwhile. Last, so nothing can fail between taking the name and the task that drops it.
+    if attributes is None and cache.model_ready(backends) and state.judging.take(body.name):
+        background.add_task(cache.describe_later, state.engine, backends, body.name, state.judging)
+    return reply

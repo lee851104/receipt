@@ -12,17 +12,18 @@ MIN_AMOUNT = 10  # an uploaded line below this (a discount, a free item, small c
 MAX_NUMBER = 10**9  # far above any receipt line, far below what a database integer holds
 
 
-def whole(text, column):
+def whole(text, column, line):
     """The integer a CSV cell holds (12, or 12.0), or None for a true decimal such as 4.49; a cell that is no finite
-    number, or one too large for any receipt, raises a ValueError naming the column."""
+    number, or one too large for any receipt, raises a ValueError naming the line and column. Never the cell itself:
+    in a line whose columns have shifted it can be a piece of a product name, and the page shows the message."""
     try:
         number = float(text)
     except (TypeError, ValueError):
         number = math.nan
     if not math.isfinite(number):
-        raise ValueError(f"{column} is not a number: {text!r}")
+        raise ValueError(f"Line {line}: {column} is not a number")
     if abs(number) > MAX_NUMBER:
-        raise ValueError(f"{column} is too large: {text!r}")
+        raise ValueError(f"Line {line}: {column} is too large")
     return int(number) if number.is_integer() else None
 
 
@@ -44,23 +45,31 @@ def build_month(path, catalog, for_upload=False):
         for row in reader:
             if not row.get("發票日期"):
                 continue  # CSV export footer, not a transaction.
+            line = reader.line_num  # an upload's errors name the line and column, never a cell (see whole)
             if for_upload and any(row.get(column) is None for column in REQUIRED):
-                raise ValueError("A line has fewer columns than the header")
+                raise ValueError(f"Line {line} has fewer columns than the header")
             if for_upload and row["發票狀態"].startswith("作廢"):
                 continue  # A voided invoice was never a purchase.
             if row["發票狀態"] != "開立已確認":
+                if for_upload:
+                    raise ValueError(f"Line {line}: Unreviewed invoice status in 發票狀態")
                 raise ValueError(f"Unreviewed invoice status: {row['發票狀態']!r}")
-            date = datetime.strptime(row["發票日期"], "%Y%m%d")
+            try:
+                date = datetime.strptime(row["發票日期"], "%Y%m%d")
+            except ValueError:
+                if not for_upload:
+                    raise
+                raise ValueError(f"Line {line}: 發票日期 is not a date written YYYYMMDD") from None
             key = date.strftime("%Y-%m")
             if month_key and month_key != key:
                 raise ValueError("Expected one month per CSV")
             month_key = key
             if for_upload:
                 # The amount decides first, so a skipped line's quantity is never read and cannot spoil the upload.
-                amount = whole(row["消費明細_金額"], "消費明細_金額")
+                amount = whole(row["消費明細_金額"], "消費明細_金額", line)
                 if amount is None or amount < MIN_AMOUNT:
                     continue
-                quantity = whole(row["消費明細_數量"], "消費明細_數量")
+                quantity = whole(row["消費明細_數量"], "消費明細_數量", line)
                 if quantity is None:
                     quantity = 1
             else:

@@ -21,11 +21,13 @@ def file_url(url):
 
 def pragmas(write_ahead):
     """What each new connection turns on. Foreign keys, so a row for a missing user fails at once instead of waiting
-    for the next account that gets the same id; and for a file, write-ahead logging, so readers do not wait for a
-    background upload's writes. (Python's sqlite3 already waits up to 5 seconds for a busy database.)"""
+    for the next account that gets the same id; secure delete, so a deleted row is overwritten in the file rather
+    than left in free pages (D13: deleting really deletes); and for a file, write-ahead logging, so readers do not
+    wait for a background upload's writes. (Python's sqlite3 already waits up to 5 seconds for a busy database.)"""
     def run(connection, record):
         cursor = connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA secure_delete=ON")
         if write_ahead:
             cursor.execute("PRAGMA journal_mode=WAL")
         cursor.close()
@@ -52,8 +54,10 @@ def make_engine(url):
 
 
 def init_db(engine):
-    """Create the tables that do not exist yet. It never changes a table that exists, so after a column or an index
-    is added to tables.py, delete data/app.db* (the database and its -wal and -shm files) and run the seed again."""
+    """Create the tables that do not exist yet, so a database from before new tables were added (week 1's, which
+    has only users) simply gains them. It never changes a table that exists: only after a column or an index of an
+    existing table changes in tables.py (as in databases made from earlier commits of role-1/uploads), delete
+    data/app.db* (the database and its -wal and -shm files) and run the seed again."""
     SQLModel.metadata.create_all(engine)
 
 
@@ -62,6 +66,6 @@ def get_session(request: Request):
         yield session
 
 
-# scope="function": the session closes when the route returns, not after the response and its background task, which
-# would keep a connection checked out for a whole upload job.
+# scope="function": the session closes when the route returns, not after the response and its background task (the
+# classify box's judgement), which would keep a connection checked out through a model call.
 SessionDep = Annotated[Session, Depends(get_session, scope="function")]

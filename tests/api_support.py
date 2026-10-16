@@ -1,6 +1,10 @@
-"""A test client on its own in-memory database, with the fake models and no GPU, and fictional invoice files."""
+"""A test client on its own in-memory database (or a temporary file), with the fake models and no GPU, and fictional
+invoice files."""
 import csv
 import io
+import sqlite3
+import tempfile
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -21,6 +25,35 @@ def fake_backends(**changes):
 def make_client(demo_mode=False, **backend_changes):
     settings = Settings(jwt_secret=SECRET, demo_mode=demo_mode, database_url="sqlite://")
     return TestClient(create_app(settings, fake_backends(**backend_changes)))
+
+
+def file_client(test, **backend_changes):
+    """A test client on a SQLite file in a temporary folder, and the file's path, for a test that needs a connection
+    of its own next to the app's, which the shared in-memory database cannot give. The test's cleanup removes it."""
+    folder = tempfile.TemporaryDirectory()
+    test.addCleanup(folder.cleanup)
+    path = Path(folder.name) / "app.db"
+    settings = Settings(jwt_secret=SECRET, database_url="sqlite:///" + path.as_posix())
+    client = TestClient(create_app(settings, fake_backends(**backend_changes)))
+    test.addCleanup(client.app.state.engine.dispose)  # first: Windows cannot delete a file that is still open
+    return client, path
+
+
+def commit_a_job(path, user_id, month):
+    """Commit a queued upload job from a connection of its own, as another request's upload does: "locked" while
+    someone else holds SQLite's write lock (waiting 0.1 seconds for it, not 5), else "written"."""
+    connection = sqlite3.connect(path, timeout=0.1)
+    try:
+        connection.execute("INSERT INTO jobs (user_id, month, status, done, total, message, created_at)"
+                           " VALUES (?, ?, 'queued', 0, 0, '排隊中', '2026-10-16 00:00:00')", (user_id, month))
+        connection.commit()
+        return "written"
+    except sqlite3.OperationalError as error:
+        if "locked" not in str(error):
+            raise
+        return "locked"
+    finally:
+        connection.close()
 
 
 def register(client, username="amy", password="password123", **extra):
@@ -54,5 +87,15 @@ def invoice_csv(rows, columns=COLUMNS):
     return (chr(0xFEFF) + stream.getvalue()).encode("utf-8")
 
 
-def upload(client, headers, data):
-    return client.post("/api/invoices", files={"file": ("month.csv", data, "text/csv")}, headers=headers)
+def drain(client):
+    """Wait until the app's worker has run every job queued so far."""
+    client.app.state.worker.queue.join()
+
+
+def upload(client, headers, data, wait=True):
+    """POST a file to /api/invoices. The job runs on the app's worker thread, so unless wait is False this also
+    waits for it, and the test reads the finished result."""
+    response = client.post("/api/invoices", files={"file": ("month.csv", data, "text/csv")}, headers=headers)
+    if wait:
+        drain(client)
+    return response

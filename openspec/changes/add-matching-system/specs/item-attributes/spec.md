@@ -14,11 +14,15 @@
 - **THEN** 結果剛好包含這 23 個欄位，沒有缺少也沒有多出
 
 ### Requirement: 不知道與否定要分開
-模型無法判斷的欄位 SHALL 是 `null`，MUST NOT 被當成 `false`。品味向量計算時，`null` 欄位 SHALL 視為沒有資料，而不是「沒有這個屬性」。
+模型無法判斷的欄位 SHALL 是 `null`，MUST NOT 被當成 `false`。品味向量計算時，`null` 欄位 SHALL 視為沒有資料，而不是「沒有這個屬性」（比例怎麼只算已知的，見 taste-profile 規格「未知的屬性不當成『沒有』」）。類別已經說明問題不適用時（例如非生鮮品項的 `cooking`），後端不看模型的答案，直接當成已知的「沒有」。
 
 #### Scenario: 甜度不明
 - **WHEN** 品名沒有提到甜度，模型也判斷不出來
 - **THEN** `sugar` 是 `null`，不是 `0` 或 `false`
+
+#### Scenario: 類別說不適用的問題
+- **WHEN** 一個正餐品項，模型把它的 `cooking` 答成 `null`
+- **THEN** 屬性 API 照樣顯示 `null`，但計算生鮮占比時，它的 `cooking` 是已知的「沒有」（`false`），因為 `cooking` 只問生鮮
 
 ### Requirement: 屬性結果快取
 同一個品名判斷過一次後，系統 SHALL 把結果存進快取，之後直接沿用，不再呼叫模型。快取 MUST 記錄是哪一個模型版本產生的。

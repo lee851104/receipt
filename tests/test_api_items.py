@@ -1,5 +1,6 @@
 """POST /api/items/classify needs a login and answers the category and attributes of one name."""
 import json
+import threading
 import unittest
 
 from fastapi.testclient import TestClient
@@ -74,6 +75,35 @@ class ClassifyTests(unittest.TestCase):
         first = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers).json()
         second = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers).json()
         self.assertEqual((first["attributes_status"], second["attributes_status"]), ("pending", "ready"))
+
+    def test_asking_again_while_a_name_is_judged_schedules_no_second_judgement(self):
+        started, release, judged = threading.Event(), threading.Event(), []
+
+        def describe_items(names, ask_model=True):
+            if ask_model:
+                judged.append(list(names))
+                if len(judged) == 1:  # the first judgement is still running while the page asks again, then fails
+                    started.set()
+                    release.wait(timeout=5)
+                    raise RuntimeError("llama-server went away")
+            return [None for _ in names]
+        client, headers = self.client_and_headers(describe_items=describe_items)
+        self.addCleanup(release.set)
+
+        def ask():
+            return client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers=headers)
+        # TestClient runs a request's background task before it returns, so the first ask waits in a thread of its own.
+        first = threading.Thread(target=ask)
+        with self.assertLogs("src.api.cache", level="ERROR"):
+            first.start()
+            self.assertTrue(started.wait(timeout=5))
+            self.assertEqual(ask().json()["attributes_status"], "pending")
+            release.set()
+            first.join(timeout=5)
+        self.assertEqual(judged, [["鮮奶茶"]])
+        # Once that judgement has ended, even by failing, asking again judges the name again.
+        ask()
+        self.assertEqual(judged, [["鮮奶茶"], ["鮮奶茶"]])
 
     def test_without_the_gpu_nothing_is_judged_in_the_background(self):
         asked = []

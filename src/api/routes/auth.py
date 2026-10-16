@@ -1,17 +1,17 @@
-"""Accounts: register and log in, and the demo quick switch that exists only when DEMO_MODE=1."""
+"""Accounts: register, log in and log out, and the demo quick switch that exists only when DEMO_MODE=1."""
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel, Field, StringConstraints, field_validator
+from pydantic import BaseModel, StringConstraints, field_validator
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
 from ..db import SessionDep
 from ..errors import ApiError
-from ..security import MAX_PASSWORD, hash_password, token_response, verify_password
+from ..security import Password, UserDep, end_sessions, hash_password, token_response, verify_password
 from ..tables import User
-from ..validation import RowId, visible
+from ..validation import DisplayName, RowId
 
 router = APIRouter(prefix="/api/auth")
 demo_router = APIRouter(prefix="/api/auth")
@@ -20,8 +20,8 @@ demo_router = APIRouter(prefix="/api/auth")
 class Registration(BaseModel):
     # Stored in lowercase, so Amy, amy and AMY are one account however a phone capitalises it.
     username: Annotated[str, StringConstraints(to_lower=True, pattern=r"^[A-Za-z0-9_]{3,32}$")]
-    password: str = Field(min_length=8, max_length=MAX_PASSWORD)
-    display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20)] | None = None
+    password: Password
+    display_name: DisplayName | None = None
 
     @field_validator("username")
     @classmethod
@@ -30,11 +30,6 @@ class Registration(BaseModel):
         if username.startswith("demo_"):
             raise ValueError("usernames starting with demo_ are kept for the fictional users")
         return username
-
-    @field_validator("display_name")
-    @classmethod
-    def visible_name(cls, name):
-        return None if name is None else visible(name, "display_name")
 
 
 class DemoLogin(BaseModel):
@@ -61,6 +56,17 @@ def login(form: Annotated[OAuth2PasswordRequestForm, Depends()], request: Reques
     if not verify_password(form.password, None if user is None else user.password_hash):
         raise ApiError(401, "bad_credentials", headers={"WWW-Authenticate": "Bearer"})
     return token_response(user, request.app.state.settings)
+
+
+@router.post("/logout", status_code=204)
+def logout(user: UserDep, session: SessionDep):
+    # A demo persona is shared by everyone who switches to it, so its key stays: the browser that logs out drops its
+    # token, and the persona's other visitors stay logged in.
+    if not user.is_demo:
+        end_sessions(user)
+        session.add(user)
+        session.commit()
+    return Response(status_code=204)
 
 
 @demo_router.get("/demo-users")

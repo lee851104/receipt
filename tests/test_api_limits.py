@@ -15,9 +15,9 @@ async def answer(request):
     return PlainTextResponse("in")
 
 
-def make_client():
+def make_client(root_path=""):
     routes = [Route("/up", answer, methods=["GET", "POST"]), Route("/other", answer, methods=["POST"])]
-    return TestClient(UploadLimit(Starlette(routes=routes), "/up", LIMIT))
+    return TestClient(UploadLimit(Starlette(routes=routes), "/up", LIMIT), root_path=root_path)
 
 
 class UploadLimitTests(unittest.TestCase):
@@ -31,6 +31,13 @@ class UploadLimitTests(unittest.TestCase):
             big = b"x" * (LIMIT + 1)
             self.assertEqual(client.post("/other", content=big).status_code, 200)
             self.assertEqual(client.request("GET", "/up", content=big).status_code, 200)
+
+    def test_behind_a_root_path_the_upload_path_is_still_limited(self):
+        # uvicorn --root-path puts the prefix in front of the path it passes on, as this client does.
+        with make_client(root_path="/receipt") as client:
+            self.assertEqual(client.post("/receipt/up", content=b"x" * LIMIT).status_code, 200)
+            self.assertEqual(client.post("/receipt/up", content=b"x" * (LIMIT + 1)).status_code, 413)
+            self.assertEqual(client.post("/receipt/other", content=b"x" * (LIMIT + 1)).status_code, 200)
 
     def test_only_plain_digits_up_to_the_limit_are_acceptable(self):
         limit = UploadLimit(None, "/up", LIMIT)

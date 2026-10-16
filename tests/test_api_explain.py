@@ -182,48 +182,42 @@ class ExplainTests(unittest.TestCase):
         response = self.client.get("/api/matches/2/explain", headers=self.headers)
         self.assertEqual(response.status_code, 200, response.text)
         text = response.text
-        # Positive control: the stripped name is there, so the answer is not just empty. Amounts are kept out too: the
-        # other person's money signals are null, which the next test checks with a price of its own (here every bill
-        # is 4321, a number my own signals may carry). Every purchase entry is [name, number of bills], and the names
-        # below are the ones that must not show.
+        # Positive control: the stripped name is there, so the answer is not just empty. Amounts cannot be searched for
+        # as text here: every bill is 4321, which the graph's meal cost (a median) and 3C spending (a monthly mean)
+        # may show; the next test looks for a single purchase's price instead. Every purchase entry is [name, number
+        # of bills], and the names below are the ones that must not show.
         self.assertIn("測試奶茶", text)
         for secret in ("測試秘密商行", "測試另一間", "測試路", "TEST-05", "2026-05-R", "大安", "臺中", "20260501"):
             self.assertNotIn(secret, text)
 
-    def test_the_other_persons_spending_never_reaches_the_answer_but_mine_does(self):
+    def test_the_graph_shows_the_monthly_3c_spending_never_the_price_of_a_purchase_and_adds_up_as_v1_checks(self):
         client = make_client(classify=classify_with_3c)
         register(client, display_name="Amy")
         register(client, username="ben", display_name="Ben")
         amy, ben = login(client), login(client, username="ben")
         for stamp in ("202605", "202606"):
-            # Each of us buys one pair of headphones, in May only: the 3C spending of a month is its price over the
-            # two months, and a push on the 3C trait is linear in that, so either would give the price back.
-            for headers, price, merchant in ((ben, 2490, "測試另一間"), (amy, 1990, "測試秘密商行")):
-                bought = [headphones(stamp, price)] if stamp == "202605" else []
+            # Ben buys one pair of headphones, in May only: his 3C spending a month is its price over the two months.
+            for headers, merchant, buys in ((ben, "測試另一間", stamp == "202605"), (amy, "測試秘密商行", False)):
+                bought = [headphones(stamp, 2490)] if buys else []
                 upload(client, headers, invoice_csv(month(SHOPPING, merchant=merchant, stamp=stamp) + bought))
         response = client.get("/api/matches/2/explain", headers=amy)
         self.assertEqual(response.status_code, 200, response.text)
-        # The price and the price over two months, as whole numbers: 1245 is also a run of digits inside a score's decimals.
-        for amount in ("2490", "1245"):
-            self.assertIsNone(re.search(rf"(?<![\d.]){amount}(?:\.0+)?(?!\d)", response.text), amount)
+        # The price as a whole number: no purchase's amount is sent. (The monthly 1245.0 below is an aggregate, which
+        # the graph shows as v1 does; searching for 1245 as text would also meet a run of digits inside a score.)
+        self.assertIsNone(re.search(r"(?<![\d.])2490(?:\.0+)?(?!\d)", response.text))
         network = response.json()["network"]
         ids = [signal["id"] for signal in network["signals"]]
-        money = [ids.index("meal_cost"), ids.index("tech_spend")]
-        self.assertEqual([signal["unit"] for signal in network["signals"] if signal["id"] in ("meal_cost", "tech_spend")],
-                         ["money", "money_month"])
-        for index in money:
-            self.assertIsNone(network["theirs"]["signals"][index])
-            self.assertIsNotNone(network["mine"]["signals"][index])
-        # Mine keeps its own spending: one pair of headphones at 1990 over two months.
-        self.assertEqual(network["mine"]["signals"][ids.index("tech_spend")], 995.0)
-        # The pushes of those two signals are null on his side and drawn on mine; his other signals are still measured.
-        for side, drawn in (("theirs", False), ("mine", True)):
-            money_pushes = [push for trait, pushes in zip(network["traits"], network[side]["pushes"], strict=True)
-                            for signal_id, push in zip(trait["signals"], pushes, strict=True)
-                            if signal_id in ("meal_cost", "tech_spend")]
-            self.assertEqual(len(money_pushes), 2)
-            self.assertEqual([push is not None for push in money_pushes], [drawn, drawn], side)
-        self.assertTrue(any(value is not None for value in network["theirs"]["signals"]))
+        self.assertEqual(network["theirs"]["signals"][ids.index("tech_spend")], 1245.0)
+        # What src/web/trait-network.js validate enforces for each trait with a value: its pushes, a null as 0, add up
+        # to it, give or take the rounding of each push. Both sides are drawn, so both must pass.
+        for side in ("mine", "theirs"):
+            drawing = network[side]
+            checked = 0
+            for trait, value, pushes in zip(network["traits"], drawing["vector"], drawing["pushes"], strict=True):
+                if value is not None:
+                    checked += 1
+                    self.assertAlmostEqual(sum(push or 0 for push in pushes), value, delta=0.001, msg=f"{side} {trait['id']}")
+            self.assertGreater(checked, 5, side)
 
     def test_the_location_signals_list_no_purchases(self):
         upload(self.client, self.headers, invoice_csv(month(SHOPPING)))

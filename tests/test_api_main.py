@@ -26,8 +26,9 @@ class MainTests(unittest.TestCase):
 
     def test_a_model_that_is_not_there_yet_stops_it_in_one_line(self):
         # The subprocess has no role 3 file src/ml/attributes.py, so qwen stops it until that branch is merged.
-        for changes, message in (({"CATEGORY_MODEL": "tfidf"}, "error: CATEGORY_MODEL=tfidf does not work yet"),
-                                 ({"ATTRIBUTES_MODEL": "qwen"}, "error: ATTRIBUTES_MODEL=qwen needs src/ml/attributes.py")):
+        for changes, message in (
+                ({"CATEGORY_MODEL": "tfidf"}, "error: CATEGORY_MODEL=tfidf does not work yet"),
+                ({"ATTRIBUTES_MODEL": "qwen"}, "error: ATTRIBUTES_MODEL=qwen needs src/ml/attributes.py")):
             with self.subTest(changes=changes):
                 result = start(**changes)
                 self.assertEqual(result.returncode, 1, result.stderr)

@@ -83,12 +83,15 @@ def attribute_backend(settings):
     if settings.attributes_model == "fake":
         return "fake", "fake", fakes.describe_items
     if settings.attributes_model == "qwen":
+        # The same relative form as find_spec above and `from ..ml import fakes`: the module src.ml.attributes.
+        module = importlib.util.resolve_name("..ml.attributes", __package__)
         try:
-            # The same relative form as find_spec above and `from ..ml import fakes`: the module src.ml.attributes.
             # import_module looks in sys.modules first, so a stand-in (or None) there decides, even when something
             # else has already imported the real module and the package keeps it as an attribute.
-            attributes = importlib.import_module("..ml.attributes", __package__)
-        except ImportError:
+            attributes = importlib.import_module(module)
+        except ModuleNotFoundError as error:
+            if error.name != module:
+                raise  # the file is there but a package it imports is not: that is the error to show
             raise ValueError("ATTRIBUTES_MODEL=qwen needs src/ml/attributes.py from role 3 (task 4.3): "
                              "merge its branch first, or use ATTRIBUTES_MODEL=fake") from None
         return "qwen", attributes.MODEL_VERSION, attributes.describe_items

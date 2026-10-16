@@ -148,7 +148,7 @@ class QwenBackendTests(unittest.TestCase):
         return module
 
     def test_without_role_3s_module_qwen_stops_the_server_saying_to_merge_it(self):
-        # `from ..ml import attributes` in src/api/backends.py is the module named src.ml.attributes; None in
+        # The import_module call in src/api/backends.py asks for the module named src.ml.attributes; None in
         # sys.modules makes importing it fail, whether or not role 3's file is in the repository by then.
         with mock.patch.dict(sys.modules, {"src.ml.attributes": None}):
             with self.assertRaisesRegex(ValueError, "src/ml/attributes.py"):
@@ -160,6 +160,16 @@ class QwenBackendTests(unittest.TestCase):
                 mock.patch.dict(sys.modules, {"src.ml.attributes": None}):
             with self.assertRaisesRegex(ValueError, "src/ml/attributes.py"):
                 load_backends(Settings(jwt_secret=SECRET, attributes_model="qwen"))
+
+    def test_a_module_that_is_there_but_cannot_import_something_shows_that_error_not_the_merge_message(self):
+        # Role 3's file merged, but a package it needs (say a typo in its requirements) is not installed: saying
+        # "merge role 3's branch first" would send whoever reads it the wrong way.
+        settings = Settings(jwt_secret=SECRET, attributes_model="qwen")
+        broken = ModuleNotFoundError("No module named 'some_dependency'", name="some_dependency")
+        with mock.patch("src.api.backends.importlib.import_module", side_effect=broken):
+            with self.assertRaises(ModuleNotFoundError) as caught:
+                load_backends(settings)
+        self.assertEqual(caught.exception.name, "some_dependency")
 
     def test_with_the_module_qwen_answers_through_it_and_keys_the_cache_by_its_version(self):
         module = self.stand_in()

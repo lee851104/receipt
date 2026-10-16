@@ -93,7 +93,7 @@
 
 ### D6. 屬性來源的接法
 
-`src/ml/attributes.describe_items(names)` 回傳 23 個欄位，或 `None`（待分析）。屬性接入以角色 1 的 `attributes.from_model` 為準（10/16 使用者決定；角色 3 分支上的 `attributes.describe(external=...)` 會移除）。品味計算（`signals.gather`／`measure`、`traits.explain`）多一個 `attributes` 參數，內容是 `{品名: 23 個欄位或 None}`；給了就用 `attributes.from_model(row, channel, fields, vocabulary)` 把它換成 `describe` 同樣的 17 個答案，不給就照舊用 `describe`。重算 profile 時屬性只讀 `item_cache`（目前的屬性模型），不問模型，快取裡沒有的品名就是待分析。快取的鍵是屬性模型的版本（`src/ml/attributes.MODEL_VERSION`；fake 模式是 `"fake"`），換版本後舊答案不再使用（10/16 補上）。換算規則（10/15 決定）：
+`src/ml/attributes.describe_items(names)` 回傳 23 個欄位，或 `None`（待分析）。屬性接入以角色 1 的 `attributes.from_model` 為準（10/16 使用者決定；角色 3 分支上的 `attributes.describe(external=...)` 會移除）。品味計算（`signals.gather`／`measure`、`traits.explain`）多一個 `attributes` 參數，內容是 `{品名: 23 個欄位或 None}`；給了就用 `attributes.from_model(row, channel, fields, vocabulary)` 把它換成 `describe` 同樣的 17 個答案，不給就照舊用 `describe`。重算 profile 時屬性只讀 `item_cache`（目前的屬性模型），不問模型，快取裡沒有的品名就是待分析。快取的鍵是屬性模型的版本（`src/ml/attributes.MODEL_VERSION`；fake 模式是 `"fake"`），換版本後舊答案不再使用，在 `fake` 和 `qwen` 之間切換也一樣：服務啟動時的重算會用新的鍵底下（大多是空的）的快取重做真實使用者的 profile，他們的屬性特徵變成待分析，要等有 GPU 時重新上傳才補得回來；假用戶要重跑 seed（10/16 補上）。換算規則（10/15 決定）：
 
 - 店家通路 `channel_of` 照舊用規則，不交給 LLM；7 個基本旗標先不用，類別仍然來自分類模型
 - **類別是已知的事實**：問題只在自己的類別門檻內才用模型的值，門檻外一律是 `False`（不適用），模型的 `null` 在門檻內保持 `null`。門檻照舊：`clearance` 只看食物、`quick` 只看正餐、`cooking` 只看生鮮、`kitchen` 只看生鮮和日用品、`sport_gear`／`car_care`／`home`／`stationery` 只看非食物（已確認的類別 4–9）

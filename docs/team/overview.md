@@ -245,7 +245,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 - `months`：由存起來的品項當場整理，格式同月報（10/15 補上：類別 10 待確認的品項也在裡面，`provisional` 一律是 `false`）。上傳一被接受就有了，所以 `months` 不是空的不代表 profile 做好了；`ready`、`item_count`、`areas`、`traits` 是最後一次重算存起來的 profile，只在上傳的任務結束、刪月份的重算跑完，或伺服器重新啟動時的重算跑完才變，剛上傳時要先照 5.4 問任務到 `done`（10/16 補上）
 - profile 在每次上傳的任務最後重算一次（用這個人所有月份），這個端點只讀存好的結果，從不重算。另外服務每次啟動時，都把每個真實使用者（有 profile 的）的 profile 排進背景執行緒重算一次，只讀存著的品項和屬性快取，不問模型；假用戶不算，因為他們不能刪月份。這是因為刪月份之後排隊的重算只在記憶體裡，服務在它跑之前重新啟動就不見了（10/16 補上）
 - 存起來的品味向量是 `configs/traits.json` 的每個 trait 一個值。新增或刪掉 trait 之後，每個人的 profile 都要重算（重新上傳），否則存著舊長度的 profile 查詢時會回 500（10/16 補上）。真實使用者在伺服器重新啟動時會自動重算；假用戶要重跑 seed（10/16 補上）
-- 啟動時的重算只讀資料庫裡的品項和屬性快取，所以重新啟動之後，有兩種情況會讓 profile 和重啟之前不同：上傳失敗的月份（品項在上傳被接受時就存了，任務失敗時 profile 沒有重算）會算進去；換了屬性模型（例如 `fake` 換成 `qwen`），profile 會改用目前模型的屬性答案。這是預期的行為，不是錯誤（10/16 補上）
+- 啟動時的重算只讀資料庫裡的品項和屬性快取，所以重新啟動之後，有兩種情況會讓 profile 和重啟之前不同：上傳失敗的月份（品項在上傳被接受時就存了，任務失敗時 profile 沒有重算）會算進去；換了屬性模型（例如 `fake` 換成 `qwen`），profile 會改用目前模型的屬性答案。這是預期的行為，不是錯誤。`MODEL_VERSION` 一變、或在 `fake` 和 `qwen` 之間切換之後也一樣：新的鍵底下的快取大多是空的，真實使用者的屬性特徵會變成待分析，要等有 GPU 時重新上傳才補得回來；假用戶要重跑 seed（10/16 補上，見 13.10）（10/16 補上）
 - 還沒上傳過的人：`ready` 為 false，`item_count` 為 0，`months` 為 `{}`。假用戶的品項和 profile 要等 seed 擴充時才放入（任務 4.7），在那之前查假用戶一樣是 `ready` 為 false
 - 休假日和連假看 `configs/calendar-2026.json`：它目前只列了 2026 年 3–4 月的補假（檔案的 `covers`）。其他月份（包括其他年份）只有週末算休假日，沒有國定假日、補班和連假：`days` 格只用週末算，整個期間沒有任何一段連續三天以上的休假日時，`holiday` 格是 `null`
 
@@ -331,7 +331,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git。相對路徑一律從 repo 根目錄算起，不管在哪個資料夾啟動。只接受 `sqlite:///…`（檔案）和 `sqlite://`（記憶體，測試用），錯誤訊息不會印出設定的值 |
 | `LLAMA_SERVER_URL` | `http://127.0.0.1:8080` | Qwen 的 llama-server |
 | `CATEGORY_MODEL` | fake | `fake` 和 `bert` 可以設；`bert` 在真模型接上（任務 2.15）之前一律是 `unavailable`，模型資料夾裡已經有模型也一樣（10/16 補上） |
-| `ATTRIBUTES_MODEL` | fake | fake / qwen。`qwen` 要有角色 3 的 `src/ml/attributes.py`（合併它的分支之後）；沒有時伺服器用一行訊息停下來。`CATEGORY_MODEL=bert` 照舊一律是 `unavailable`，等任務 3.6（10/16 補上） |
+| `ATTRIBUTES_MODEL` | fake | fake / qwen。`qwen` 要有角色 3 的 `src/ml/attributes.py`（合併它的分支之後）；沒有時伺服器用一行訊息停下來 |
 | `CATEGORY_MIN_PROB` | 0.5 | 低於這個機率的品名歸到 10 待確認 |
 | `CATEGORY_MODEL_DIR` | `models/category` | `CATEGORY_MODEL=bert` 時讀模型的資料夾（`/models/` 不進 git）；`start.bat` 和 `uvicorn` 只讀這個資料夾，不下載。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`（10/16 補上） |
 | `CATEGORY_MODEL_REPO` | 空 | Hugging Face 上公開的分類模型庫；只有 Docker 容器（`python -m src.api.container`）會在 `CATEGORY_MODEL=bert`、資料夾裡沒有模型時從這裡下載，`start.bat`／`launch` 和直接跑 `uvicorn` 都不下載（`huggingface_hub` 只裝在 `requirements-docker.txt`）。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`，沒設的話伺服器啟動時停下來（10/16 補上） |
@@ -542,10 +542,12 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 任務 2.15 能做的部分做完了：`ATTRIBUTES_MODEL=qwen` 接上角色 3 的 `describe_items`，`CATEGORY_MODEL=bert` 還在等角色 2。
 
 **給角色 3**
-- 後端用 `src/ml/attributes.MODEL_VERSION` 當屬性快取（`item_cache.model`）的鍵，fake 模式照舊是 `"fake"`。你的 seed（任務 4.7）把 Qwen 的答案寫進 `item_cache` 時，`model` 欄位請用 `src.ml.attributes.MODEL_VERSION`（也就是 qwen 模式下後端用的鍵），不要用設定名稱 `qwen`，也不要用 `load_backends(settings).attributes_version`：預設 `ATTRIBUTES_MODEL=fake` 時它是 `"fake"`，Qwen 的答案會被記成假模型的
+- 後端用 `src/ml/attributes.MODEL_VERSION` 當屬性快取（`item_cache.model`）的鍵，fake 模式照舊是 `"fake"`。你的 seed（任務 4.7）把 Qwen 的答案寫進 `item_cache` 時，`model` 欄位請用 `src.ml.attributes.MODEL_VERSION`（也就是 qwen 模式下後端用的鍵），不要用設定名稱 `qwen`，也不要用 `load_backends(settings).attributes_version`：預設 `ATTRIBUTES_MODEL=fake` 時它是 `"fake"`，Qwen 的答案會被記成假模型的答案
+- 合併之後 `Backends` 有一個必填的 `attributes_version`（屬性快取的鍵，沒有預設值）。你的 `src/api/seed.py` 自己建的 `Backends(...)`（第 152 行附近，現在只傳 `category`、`classify`、`attributes`、`describe_items`、`gpu_probe`）要多傳 `attributes_version=`，值和 seed 寫進 `item_cache.model` 的是同一個，也就是 `src.ml.attributes.MODEL_VERSION`，不是設定名稱。沒傳的話每次呼叫 seed 都會 `TypeError`，`start.bat` 在伺服器啟動之前（seed 比 uvicorn 先跑）就停下來
+- 回覆你分支 13.7 的提議（seed 用目前後端的屬性模式當 `item_cache.model`，預設 `fake`，也可 `qwen`）：角色 1 維持 `MODEL_VERSION`，不照設定名稱。item-attributes 規格要求快取記錄是哪一個模型版本產生的（MUST），`fake`／`qwen` 這兩個名稱記不了版本，換了模型或 prompt 也不會讓舊答案失效；而且合併之後 demo 是在 qwen（沒有 GPU 時 `cache_only`）模式下讀這些答案，那時的鍵就是 `MODEL_VERSION`。所以 seed 不管 `ATTRIBUTES_MODEL` 設成什麼，都用 `MODEL_VERSION` 當鍵，包括查有沒有衝突答案的那個 `where`
 - 服務只有在 `ATTRIBUTES_MODEL=qwen` 時才讀得到上面那些答案（沒有 GPU 時顯示 `cache_only`）；預設的 `fake` 只讀 `model` 是 `"fake"` 的資料。所以你的分支合併之後，demo（`start.bat` 或 compose）要設 `ATTRIBUTES_MODEL=qwen`，才看得到 seed 放進去的屬性
 - 要在容器或 `start.bat` 用 qwen：你的分支合併進來之後，設 `ATTRIBUTES_MODEL=qwen`。容器預設就連主機的 `http://host.docker.internal:8080`，只有要用別的位址時才設 `DOCKER_LLAMA_SERVER_URL`。沒有 GPU 時健康檢查顯示 `cache_only`，只用快取裡的答案
-- 你的 `AttributeDescriber` 只接受 `localhost`、`127.0.0.1`、`::1`、`host.docker.internal` 當 llama-server 的主機；容器設了別的 `DOCKER_LLAMA_SERVER_URL` 時，每個答案都會是 `None`，健康檢查卻仍顯示 `gpu_mode` 為 true。請放寬這個檢查，或把限制寫進文件
+- 你的 `AttributeDescriber` 只接受 `localhost`、`127.0.0.1`、`::1`、`host.docker.internal` 當 llama-server 的主機；容器設了別的 `DOCKER_LLAMA_SERVER_URL` 時，已經在 `item_cache` 的品名照樣有答案，新的品名一直是待分析（`None`），健康檢查卻仍顯示 `gpu_mode` 為 true。請放寬這個檢查，或把限制寫進文件
 - 合併之後角色 1 會用 `tests/model_contract.check_describe` 對真的模組再驗一次
 
 **給角色 2**
@@ -553,10 +555,19 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 - 交出時請附 `tests/model_contract.check_classify` 的測試，並把 CPU 版 `torch`、`transformers` 加進 `requirements-docker.txt`（見 13.9）
 
 **給合併角色 3 分支的人（角色 1）**
-- 合併之後，`tests/test_api_main.py` 裡「`ATTRIBUTES_MODEL=qwen` 要讓伺服器停下來」的子行程測試會變成啟動成功（模組已經存在了）：要換掉它的觸發方式，例如讓子行程在匯入 app 之前，先把 `None` 放進 `sys.modules["src.ml.attributes"]`。同時用 `tests/model_contract.check_describe` 對真的 `describe_items` 再驗一次
+- 合併之後 `Backends.attributes_version` 是必填：角色 3 的 `src/api/seed.py` 自己建的 `Backends(...)`（第 152 行附近）沒有傳它，不補的話每次呼叫 seed 都會 `TypeError`，`start.bat` 在伺服器啟動之前就停下來。其他要改的照下面的清單做
+
+**合併當天的清單（角色 1 負責）**
+1. 把預設換成 `ATTRIBUTES_MODEL=qwen`：`docker-compose.yml` 改成 `${ATTRIBUTES_MODEL:-qwen}`，`.env.example` 的值和註解也跟著改。原因是 seed 的答案以 `MODEL_VERSION` 為鍵，只有 qwen 的服務讀得到；沒有 GPU 時健康檢查顯示 `cache_only`，也就是 service-runtime 規格「無 GPU 模式」情境要的畫面。這兩處在合併之前維持 `fake`，因為沒有角色 3 的模組時，`qwen` 會讓伺服器停下來
+2. seed 自己建的 `Backends(...)` 傳 `attributes_version=`，值是 seed 寫進 `item_cache.model` 的鍵（`src.ml.attributes.MODEL_VERSION`，見上面給角色 3 的說明）
+3. 角色 3 的測試裡，預期種子假用戶 `pending_attributes == 0` 的那一個，要用以 `MODEL_VERSION` 為鍵的 qwen 用戶端（`attributes="qwen"`、`attributes_version` 是 `MODEL_VERSION` 的 `Backends`）；用預設的 fake 會去讀 `"fake"` 的鍵，讀不到 seed 的答案
+4. `tests/test_api_main.py` 裡「`ATTRIBUTES_MODEL=qwen` 要讓伺服器停下來」的子行程測試會變成啟動成功（模組已經存在了）：換掉它的觸發方式，例如讓子行程在匯入 app 之前，先把 `None` 放進 `sys.modules["src.ml.attributes"]`
+5. 用 `tests/model_contract.check_describe` 對真的 `describe_items` 再驗一次
+6. 考慮在 `attribute_backend` 裡自己建 `attributes.AttributeDescriber(server_url=settings.llama_server_url)`，不用模組層級的 `describe_items`：後者自己從環境變數讀 `LLAMA_SERVER_URL`，網址有兩個來源。自己建之後 Settings 是網址的唯一來源，不是本機的位址（`AttributeDescriber` 只接受 `localhost`、`127.0.0.1`、`::1`、`host.docker.internal`）在啟動時就用一行訊息停下來，不會等到每個新品名都問不到答案才發現；快取的鍵改取 describer 的 `model_version`（`batch_size` 是預設的 1 時，和 `MODEL_VERSION` 相同）
+7. `MODEL_VERSION` 一改（換模型或 prompt）就重跑 seed：假用戶的答案還記在舊的鍵底下，新版本的服務讀不到。跑 seed 之前先停掉服務。真實使用者的 profile 怎麼變見 5.6
 
 **目前的前提**
-- `docker-compose.yml` 現在會傳 `ATTRIBUTES_MODEL`（預設 `fake`），第六批（13.9）寫的「容器一律用假屬性模型」已經改掉。但 service-runtime 規格的「連到主機的模型服務」情境（容器以 GPU 模式運作、新品名的屬性可以被判斷）和 proposal 第 19 行（分類模型第一次啟動自動下載）要等角色 3 的分支合併、設成 `ATTRIBUTES_MODEL=qwen`，以及角色 2 的 BERT 接上之後才成立；在那之前容器預設是 `fake`，設成 `qwen` 會用一行訊息停下來。這兩處規格不用改，合併之後就成立。用替身驗證過，還沒有用真的模組驗過
+- `docker-compose.yml` 現在會傳 `ATTRIBUTES_MODEL`（預設 `fake`），第六批（13.9）寫的「容器一律用假屬性模型」已經改掉。service-runtime 規格的「連到主機的模型服務」情境（容器以 GPU 模式運作、新品名的屬性可以被判斷）要等角色 3 的分支合併、**而且**預設換成 `qwen`（上面清單的第 1 項，或自己設 `ATTRIBUTES_MODEL=qwen`）之後才成立；在那之前容器預設是 `fake`，設成 `qwen` 會用一行訊息停下來。proposal 第 19 行（分類模型第一次啟動自動下載）另外要等角色 2 的 BERT 接上。這兩處規格不用改，條件滿足之後就成立。用替身驗證過，還沒有用真的模組驗過
 
 ### 13.9 角色 1 轉告（2026-10-16，第 3 週第六批，分支 `role-1/deploy`）
 

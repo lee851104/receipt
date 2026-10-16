@@ -1,14 +1,20 @@
 """The server picks its models from the settings and probes the llama-server for GPU mode."""
 import os
 import socketserver
+import tempfile
 import threading
 import unittest
 import urllib.request
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 from unittest import mock
 
-from src.api.backends import llama_probe, load_backends
+from fastapi.testclient import TestClient
+
+from src.api.app import create_app
+from src.api.backends import llama_probe, load_backends, model_dir
+from src.api.db import ROOT
 from src.api.settings import Settings
 from src.ml import fakes
 
@@ -60,7 +66,7 @@ class BackendTests(unittest.TestCase):
         self.assertIs(backends.describe_items, fakes.describe_items)
 
     def test_asking_for_a_real_model_before_it_exists_stops_the_server(self):
-        for changes in ({"category_model": "bert"}, {"attributes_model": "qwen"}):
+        for changes in ({"category_model": "tfidf"}, {"category_model": "embedding"}, {"attributes_model": "qwen"}):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 load_backends(Settings(jwt_secret=SECRET, **changes))
 
@@ -92,6 +98,33 @@ class BackendTests(unittest.TestCase):
             self.assertTrue(fresh())
         self.assertTrue(remembered())
         self.assertFalse(fresh())
+
+
+class BertBackendTests(unittest.TestCase):
+    def settings(self, folder):
+        return Settings(jwt_secret=SECRET, category_model="bert", category_model_dir=str(folder))
+
+    def test_without_a_model_the_category_model_is_unavailable_and_the_server_still_starts(self):
+        folder = Path(tempfile.mkdtemp())
+        with self.assertLogs("src.api.backends", level="WARNING"):
+            backends = load_backends(self.settings(folder))
+        self.assertEqual(backends.category, "unavailable")
+        with self.assertRaises(RuntimeError):
+            backends.classify(["鮮奶茶"])
+
+    def test_the_health_check_says_unavailable_and_the_classify_box_is_503(self):
+        folder = Path(tempfile.mkdtemp())
+        with self.assertLogs("src.api.backends", level="WARNING"):
+            client = TestClient(create_app(Settings(jwt_secret=SECRET, database_url="sqlite://", category_model="bert",
+                                                    category_model_dir=str(folder))))
+        self.assertEqual(client.get("/api/health").json()["models"]["category"], "unavailable")
+        client.post("/api/auth/register", json={"username": "amy", "password": "password123"})
+        token = client.post("/api/auth/login", data={"username": "amy", "password": "password123"}).json()["access_token"]
+        response = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers={"Authorization": "Bearer " + token})
+        self.assertEqual((response.status_code, response.json()), (503, {"detail": "model_unavailable"}))
+
+    def test_a_relative_folder_starts_at_the_repository_root(self):
+        self.assertEqual(model_dir(Settings(jwt_secret=SECRET)), ROOT / "models" / "category")
 
 
 if __name__ == "__main__":

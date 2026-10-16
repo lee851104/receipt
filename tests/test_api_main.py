@@ -2,6 +2,7 @@
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -24,7 +25,17 @@ class MainTests(unittest.TestCase):
         self.assertEqual((result.returncode, result.stdout.strip()), (0, "FastAPI"), result.stderr)
 
     def test_a_model_that_is_not_there_yet_stops_it_in_one_line(self):
-        result = start(CATEGORY_MODEL="bert")
-        self.assertEqual(result.returncode, 1, result.stderr)
+        for changes, message in (({"CATEGORY_MODEL": "tfidf"}, "error: CATEGORY_MODEL=tfidf does not work yet"),
+                                 ({"ATTRIBUTES_MODEL": "qwen"}, "error: Only ATTRIBUTES_MODEL=fake")):
+            with self.subTest(changes=changes):
+                result = start(**changes)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(len(result.stderr.strip().splitlines()), 1, result.stderr)
+                self.assertTrue(result.stderr.startswith(message), result.stderr)
+
+    def test_bert_without_its_model_still_starts_and_says_so_in_one_line(self):
+        with tempfile.TemporaryDirectory() as folder:
+            result = start(CATEGORY_MODEL="bert", CATEGORY_MODEL_DIR=folder)
+        self.assertEqual((result.returncode, result.stdout.strip()), (0, "FastAPI"), result.stderr)
         self.assertEqual(len(result.stderr.strip().splitlines()), 1, result.stderr)
-        self.assertTrue(result.stderr.startswith("error: Only CATEGORY_MODEL=fake"), result.stderr)
+        self.assertIn("the category model is unavailable", result.stderr)

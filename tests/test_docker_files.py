@@ -38,6 +38,10 @@ class DockerFileTests(unittest.TestCase):
         self.assertIn("LLAMA_SERVER_URL: ${DOCKER_LLAMA_SERVER_URL:-http://host.docker.internal:8080}", text)
         self.assertNotIn("${LLAMA_SERVER_URL", text)
 
+    def test_compose_passes_the_attribute_model_choice_with_the_fake_as_default(self):
+        text = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+        self.assertIn("ATTRIBUTES_MODEL: ${ATTRIBUTES_MODEL:-fake}", text)
+
 
 class WorkflowTests(unittest.TestCase):
     def test_ci_runs_both_test_suites_with_the_fakes_and_builds_the_image(self):

@@ -1,7 +1,7 @@
 # docker compose up: the demo at http://127.0.0.1:8000/web/ and the API docs at /docs (design D14).
 # No GPU inside the container. A llama-server running on this computer is probed through host.docker.internal and
-# shows as gpu_mode on /api/health, but ATTRIBUTES_MODEL is not passed yet (task 2.15): the container always uses the
-# fake attribute model, so Qwen is not reached.
+# shows as gpu_mode on /api/health. ATTRIBUTES_MODEL=qwen needs role 3's src/ml/attributes.py merged first (until then
+# the container stops in one line) and reaches that llama-server through DOCKER_LLAMA_SERVER_URL.
 services:
   app:
     build: .
@@ -10,6 +10,7 @@ services:
     environment:
       DEMO_MODE: "1"
       CATEGORY_MODEL: ${CATEGORY_MODEL:-fake}
+      ATTRIBUTES_MODEL: ${ATTRIBUTES_MODEL:-fake}
       CATEGORY_MODEL_REPO: ${CATEGORY_MODEL_REPO:-}
       CATEGORY_MODEL_REVISION: ${CATEGORY_MODEL_REVISION:-}
       # Its own variable, not LLAMA_SERVER_URL: compose reads the root .env, which start.bat makes with 127.0.0.1:8080,

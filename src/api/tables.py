@@ -62,10 +62,11 @@ class Item(SQLModel, table=True):
 
 
 class ItemCache(SQLModel, table=True):
-    """What an attribute model answered for a product name, so the name is judged once per model."""
+    """What an attribute model answered for a product name, so the name is judged once per model version
+    (Backends.attributes_version)."""
     __tablename__ = "item_cache"
     name: str = Field(primary_key=True)
-    model: str = Field(primary_key=True)  # which attribute model answered, such as fake or qwen
+    model: str = Field(primary_key=True)  # the attribute model's version: "fake", or role 3's MODEL_VERSION
     fields: str                           # the 23 fields as JSON; null means unknown, never false
 
 

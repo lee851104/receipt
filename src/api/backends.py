@@ -22,7 +22,7 @@ class Backends:
     classify: Callable               # list[str] -> list[{"category": 0-9, "probs": [10 floats]}]
     attributes: str
     attributes_version: str          # the item_cache key: which model and prompt answered
-    describe_items: Callable        # (list[str], ask_model=True) -> list[dict | None]
+    describe_items: Callable         # (list[str], ask_model=True) -> list[dict | None]
     gpu_probe: Callable[[], bool]    # whether the llama-server answers right now
 
 
@@ -76,10 +76,28 @@ def category_backend(settings):
     raise ValueError(f"CATEGORY_MODEL={settings.category_model} does not work yet; use fake or bert")
 
 
+def attribute_backend(settings):
+    """(name, cache key, describe_items) for ATTRIBUTES_MODEL: the fake, or role 3's Qwen (src/ml/attributes.py,
+    task 4.3), imported only when asked for. Its describe_items reads LLAMA_SERVER_URL from the environment itself,
+    the same variable Settings.llama_server_url comes from."""
+    if settings.attributes_model == "fake":
+        return "fake", "fake", fakes.describe_items
+    if settings.attributes_model == "qwen":
+        try:
+            # The same relative form as find_spec above and `from ..ml import fakes`: the module src.ml.attributes.
+            # import_module looks in sys.modules first, so a stand-in (or None) there decides, even when something
+            # else has already imported the real module and the package keeps it as an attribute.
+            attributes = importlib.import_module("..ml.attributes", __package__)
+        except ImportError:
+            raise ValueError("ATTRIBUTES_MODEL=qwen needs src/ml/attributes.py from role 3 (task 4.3): "
+                             "merge its branch first, or use ATTRIBUTES_MODEL=fake") from None
+        return "qwen", attributes.MODEL_VERSION, attributes.describe_items
+    raise ValueError(f"ATTRIBUTES_MODEL={settings.attributes_model} does not work; use fake or qwen")
+
+
 def load_backends(settings):
-    """The models settings ask for. Only the fake attribute model exists until src/ml has the real one."""
-    if settings.attributes_model != "fake":
-        raise ValueError("Only ATTRIBUTES_MODEL=fake works until src/ml has the real attribute model")
+    """The models settings ask for."""
     category, classify = category_backend(settings)
-    return Backends(category=category, classify=classify, attributes="fake", attributes_version="fake",
-                    describe_items=fakes.describe_items, gpu_probe=llama_probe(settings.llama_server_url))
+    attributes, attributes_version, describe_items = attribute_backend(settings)
+    return Backends(category=category, classify=classify, attributes=attributes, attributes_version=attributes_version,
+                    describe_items=describe_items, gpu_probe=llama_probe(settings.llama_server_url))

@@ -66,8 +66,8 @@ def explain_match(user_id: PathId, user: UserDep, request: Request, session: Ses
     parts = matching.breakdown(vectors["mine"], vectors["theirs"], similarity_model(settings))
     cells = [{"id": cell["id"], "name": word["name"], **{key: value for key, value in cell.items() if key != "id"}}
              for cell, word in zip(parts.pop("cells"), trait_words(settings), strict=True)]
-    # The graph's pushes, signals and purchases are worked out now from the stored items; its dots are the stored
-    # vectors, the same values as the cells.
+    # The graph's dots, pushes, signals and purchases are all worked out now from the stored items, so its pushes add
+    # up to its dots; the cells keep the stored vectors, which are the same values once the recompute has run.
     sides = {}
     for side, person in (("mine", user.id), ("theirs", other.id)):
         explained = None

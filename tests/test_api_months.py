@@ -126,6 +126,40 @@ class DeleteMonthTests(unittest.TestCase):
             drain(self.client)
         self.assertEqual((self.rows(User), self.rows(Profile)), ([], []))
 
+    def test_explain_draws_what_the_items_give_now_while_the_cells_wait_for_the_recompute(self):
+        register(self.client, username="ben", display_name="Ben")
+        upload(self.client, self.headers, invoice_csv(teas(5, 20) + teas(5, 10, "測試五月奶茶")))
+        upload(self.client, self.headers, invoice_csv(teas(6, 25, "測試六月茶")))
+        upload(self.client, login(self.client, username="ben"), invoice_csv(teas(5, 30)))
+        release = self.hold_worker()
+        self.assertEqual(self.delete("2026-06").status_code, 204)
+        body = self.client.get("/api/matches/2/explain", headers=self.headers).json()
+        stored = [cell["mine"] for cell in body["cells"]]
+        drawn = body["network"]["mine"]
+        self.assertTrue(body["comparable"])
+        self.assertNotEqual(drawn["vector"], stored)  # the graph already shows May alone; the cells wait
+        for trait, (value, pushes) in enumerate(zip(drawn["vector"], drawn["pushes"], strict=True)):
+            if value is not None:  # trait-network.js validate: the pushes add up to the value
+                self.assertAlmostEqual(sum(push or 0 for push in pushes), value, delta=0.001, msg=trait)
+        release.set()
+        drain(self.client)
+        body = self.client.get("/api/matches/2/explain", headers=self.headers).json()
+        self.assertEqual(body["network"]["mine"]["vector"], [cell["mine"] for cell in body["cells"]])
+
+    def test_explain_draws_nothing_for_me_once_my_last_month_is_gone(self):
+        register(self.client, username="ben", display_name="Ben")
+        upload(self.client, self.headers, invoice_csv(teas(5, 25)))
+        upload(self.client, login(self.client, username="ben"), invoice_csv(teas(5, 25)))
+        release = self.hold_worker()
+        self.delete("2026-05")
+        body = self.client.get("/api/matches/2/explain", headers=self.headers).json()
+        self.assertTrue(body["comparable"])  # the stored vector is still there
+        self.assertEqual(body["network"]["mine"], {"vector": None, "pushes": None, "signals": None, "items": None})
+        release.set()
+        drain(self.client)
+        body = self.client.get("/api/matches/2/explain", headers=self.headers).json()
+        self.assertEqual((body["comparable"], body["reason"]), (False, "not_enough_items"))
+
     def test_demo_users_cannot_delete_a_month(self):
         client = make_client(demo_mode=True)
         with Session(client.app.state.engine) as session:

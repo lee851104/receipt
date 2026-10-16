@@ -226,11 +226,12 @@ class NetworkTests(unittest.TestCase):
         self.assertEqual(set(data), set(v1) - {"friends"} | {"mine", "theirs"})
         self.assertEqual({key: data[key] for key in v1 if key != "friends"}, {key: v1[key] for key in v1 if key != "friends"})
 
-    def test_a_side_shows_the_stored_vector_with_the_drawing_worked_out_now(self):
+    def test_a_side_shows_the_vector_worked_out_now_with_its_drawing_not_the_stored_one(self):
         settings = CONTEXT["traits"]
         explained = self.explained()
+        self.assertNotEqual(explained["vector"], ME)  # the stored vector and the one worked out now tell apart
         data = matching.network(settings, {"mine": (ME, explained), "theirs": (None, None)})
-        self.assertEqual(data["mine"], {"vector": ME, **drawing_of(explained, signal_ids(settings))})
+        self.assertEqual(data["mine"], {"vector": explained["vector"], **drawing_of(explained, signal_ids(settings))})
 
     def test_a_side_without_a_stored_vector_or_a_taste_now_is_all_null(self):
         settings = CONTEXT["traits"]
@@ -248,7 +249,7 @@ class NetworkTests(unittest.TestCase):
         count = iter(range(1, 1000))
         explained["pushes"] = [[next(count) / 1000 for _ in trait["signals"]] for trait in settings["traits"]]
         data = matching.network(settings, {"mine": (ME, explained), "theirs": (ME, explained)})
-        drawn = {"vector": ME, **drawing_of(explained, order)}
+        drawn = {"vector": explained["vector"], **drawing_of(explained, order)}
         self.assertEqual(data["theirs"], drawn)
         self.assertEqual(data["mine"], drawn)
         self.assertFalse(any(value is None for value in data["theirs"]["signals"]))

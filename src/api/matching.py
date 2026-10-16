@@ -84,15 +84,17 @@ def breakdown(mine, theirs, model):
 def network(settings, sides):
     """The network graph's data in v1's traitNetworkData shape (build.trait_network_data), with the two people as
     mine and theirs instead of the demo friends. sides maps "mine" and "theirs" to (stored vector, traits.explain's
-    answer worked out now): the graph shows the stored vector, so its dots are the explain cells' values, and a side
-    with no stored vector, or no taste worked out now, is all null. Both sides are drawn the same way, as v1 draws
-    a friend, so each trait's pushes add up to its value as src/web/trait-network.js checks; that includes the two
-    spending aggregates (the median meal cost and the 3C spending a month), but never the amount of a single purchase."""
+    answer worked out now). Both sides are the taste worked out now (the vector, pushes, signals and purchases from
+    traits.explain), so each trait's pushes add up to its value as src/web/trait-network.js checks, even while a
+    recompute still waits on the worker and the stored vector is out of date; that includes the two spending
+    aggregates (the median meal cost and the 3C spending a month), but never the amount of a single purchase. A
+    side with no stored vector, or no taste worked out now, is all null. Only the cells and the score use the stored
+    vector, so the two differ until the recompute has run."""
     order = signal_ids(settings)
     data = {key: value for key, value in trait_network_data(settings, {}, []).items() if key != "friends"}
     for side, (vector, explained) in sides.items():
         if vector is None or explained is None:
             data[side] = {"vector": None, **drawing_of(None, order)}
         else:
-            data[side] = {"vector": vector, **drawing_of(explained, order)}
+            data[side] = {"vector": explained["vector"], **drawing_of(explained, order)}
     return data

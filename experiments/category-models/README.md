@@ -401,7 +401,13 @@ $role2CpuPython = './experiments/category-models/.venv/Scripts/python.exe'
 $role2CudaPython = './experiments/category-models/bert-runtime/.venv/Scripts/python.exe'
 & $role2CpuPython experiments/category-models/bert_release_data.py prepare --source "$role2Data/bert-continuation-20261016-v1" --cv "$role2Data/bert-ratio-cv-20261016-v1" --private-root $role2Data --out "$role2Data/bert-next25-data-20261016-v1"
 & $role2CpuPython experiments/category-models/bert_release_data.py check --dataset "$role2Data/bert-next25-data-20261016-v1"
-& $role2CudaPython experiments/category-models/bert_finetune.py --development-only --dataset "$role2Data/bert-next25-data-20261016-v1" --pretrained "$role2Data/models/bert-base-chinese" --out "$role2Data/runs/bert-next25-20261016-v1" --seed 42 --device cuda --lr 0.00002
+& $role2CudaPython experiments/category-models/bert_finetune.py --development-only --dataset "$role2Data/bert-next25-data-20261016-v1" --pretrained "$role2Data/models/bert-base-chinese" --out "$role2Data/runs/bert-next25-20261016-v3" --seed 42 --device cuda --lr 0.00002
 ```
 
 輸出必須是新資料夾，不能覆寫既有run。`--development-only` 拒絕warm-start及已微調分類checkpoint，從公開encoder訓練，最多10輪、validation loss早停；保存後以CPU重載核對完整機率。執行前核對公開encoder與epoch/lr/batch/max_length/weight_decay/patience/min_delta和CV的training-config一致。本次只跑預先指定seed42，不評test、不挑多seed。validation曾參與配方交叉驗證，這次分數屬開發診斷，不能稱獨立測試準確率。模型、逐筆預測與資料只保留在主資料夾Git忽略的data/role2。
+
+
+- v3完整成功，原test開啟嘗試0。best epoch5／stop7，validation47/50＝94%，best loss .2614683621；先前validation48/50，本輪不宣稱提升。
+- v1/v2/v3最終safetensors SHA256相同；v3每次保存逐tensor完全相同；重載validation50分類全同，max差2.3283064365386963e-09，train probe10差0。CPU1000筆27.31秒；訓練26.54秒；程序退出後GPU背景821MiB／0%。
+- 完整產物runs/bert-next25-20261016-v3；資料bert-next25-data-20261016-v1；execution-evidence綁定63db6b0及CV設定／report指紋。v1/v2失敗證據保留。私人輸出git check-ignore通過。
+- 內部複查BERT專用容差6/6通過，無阻擋；結果文件classification-bert-next25.md列出生鮮食材3筆均錯、少樣本類別及validation非盲測限制。下一步追加共用交接送Claude，狀態待Claude審核／未整合。

@@ -7,8 +7,8 @@
 
 - [x] 虛構測試先失敗：不開test、比例、保持partition、CV來源／summary損壞拒絕、訓練重載與禁止warmstart。
 - [x] 實作、完整回歸、階段commit。
-- [ ] 確認GPU資源、真模型訓練及重載。
-- [ ] 獨立複查、彙總文件、隱私稽核、結果commit與交接。
+- [x] 確認GPU資源、真模型訓練及重載。
+- [x] 獨立複查、彙總文件、隱私稽核、結果commit與交接。
 
 限制：validation已參與配方選擇，分數只為開發診斷；不能稱全新盲測或保證超過舊test82%。本輪不部署、不接管角色1 API，不公開私人權重。預覽8001不動。所有真實名稱僅本機處理，輸出彙總。
 
@@ -22,3 +22,8 @@
 - 已增加BERT專用verify_bert_roundtrip（rtol1e-6、atol1e-8），仍要求類別完全一致與機率有效；輸出每組最大差值及門檻，不變更TF-IDF／Embedding驗證。新增虛構回歸測試確認小誤差允許、1e-4變動及分類改變拒絕。
 - 修正後實驗完整回歸90項（89通過、1繪圖環境跳過）；獨立繪圖環境1/1通過，主tests154/154通過。沙箱繪圖暫存權限失敗、主測試卡住後停止，改正常本機權限成功；沒有變更環境套件。
 - 下一步固定配方v3完成收尾，保存時逐tensor核對safetensors與記憶體權重；保留v1/v2失敗目錄，不挑種子或分數。
+
+- v3完整成功，原test開啟嘗試0。best epoch5／stop7，validation47/50＝94%，best loss .2614683621；先前validation48/50，本輪不宣稱提升。
+- v1/v2/v3最終safetensors SHA256相同；v3每次保存逐tensor完全相同；重載validation50分類全同，max差2.3283064365386963e-09，train probe10差0。CPU1000筆27.31秒；訓練26.54秒；程序退出後GPU背景821MiB／0%。
+- 完整產物runs/bert-next25-20261016-v3；資料bert-next25-data-20261016-v1；execution-evidence綁定63db6b0及CV設定／report指紋。v1/v2失敗證據保留。私人輸出git check-ignore通過。
+- 內部複查BERT專用容差6/6通過，無阻擋；結果文件classification-bert-next25.md列出生鮮食材3筆均錯、少樣本類別及validation非盲測限制。下一步追加共用交接送Claude，狀態待Claude審核／未整合。

@@ -11,12 +11,13 @@ from sqlmodel import Session, select
 
 from src.api import cache, jobs
 from src.api.app import create_app
-from src.api.db import MEMORY, init_db, make_engine
+from src.api.db import MEMORY, ROOT, init_db, make_engine
 from src.api.jobs import classify_items, fail_unfinished, run_job
 from src.api.settings import Settings
 from src.api.tables import Item, ItemCache, Job, User
 from src.ml import fakes
 from src.ml.fields import FIELDS
+from src.receipt.traits import load_context
 from tests.api_support import (MAY, SECRET, drain, fake_backends, invoice_csv, login, make_client, register,
                                upload)
 
@@ -24,6 +25,7 @@ JUNE = [["20260601", "開立已確認", "TEST-INV-9", "測試飲料店", "臺北
         for name in ("鮮奶茶", "測試新品")]
 JULY = [["20260701", "開立已確認", "TEST-INV-10", "測試飲料店", "臺北市大安區測試路1號", "測試七月品", 1, 50]]
 SETTINGS = Settings(jwt_secret=SECRET, database_url="sqlite://")
+CONTEXT = load_context(ROOT)
 
 
 def judged_only_with_the_model(names, ask_model=True):
@@ -142,7 +144,8 @@ class JobTests(unittest.TestCase):
 
 class ConnectionTests(unittest.TestCase):
     def test_no_connection_is_held_while_the_model_works(self):
-        """The request's session closes before its background task, and the job lets go of its own before asking."""
+        """The request's session closes when its route returns, not when its job on the worker thread ends, and the job
+        lets go of its own before asking."""
         held = []
 
         def describe_items(names, ask_model=True):
@@ -228,7 +231,7 @@ class RunJobTests(unittest.TestCase):
         init_db(self.engine)
 
     def run_job(self, job_id=1, **backend_changes):
-        run_job(self.engine, fake_backends(**backend_changes), SETTINGS, job_id)
+        run_job(self.engine, fake_backends(**backend_changes), SETTINGS, CONTEXT, job_id)
 
     def test_a_job_that_does_not_exist_ends_quietly_and_writes_nothing(self):
         with self.assertNoLogs("src.api.jobs", level="ERROR"):

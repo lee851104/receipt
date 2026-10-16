@@ -56,3 +56,16 @@ CUA 實際查看原 8001 預覽：分類元素 0、品味 18 格，月報摘要�
 - 補驗 python -X utf8 tests/run_web_v2_live.py tests/web-v2-pages-browser.cjs：通過；轉場250ms後resize到320×568、離開至配對再回首頁皆可繼續操作，臨時埠62278已釋放。
 - openspec validate add-matching-system --strict、git diff --check、v1差異檢查通過。
 - 獨立 Codex 靜態複查無阻擋問題；子代理獨立 Chromium 啟動受沙箱限制，因此動態證據以主代理上列實跑為準，非 Claude 正式審核。
+
+## 關係圖動態效果（2026-10-16）
+
+工作 ID R4-NETWORK-MOTION-20261016；基準7bfa9f4，待 Claude 審核。
+依使用者截圖，背景光暈加入6秒明暗／小幅縮放呼吸，中間主要貢獻連線加入6.5秒流動光點，錯開相位；原實線／扣分虛線、粗細、分數、文字不變。零貢獻與微弱線不加光點，裝飾不接收指標事件。原連線與光點共用透明度容器，選取別格時一起淡化。
+
+圖表新增播放／暫停按鈕。初次依 prefers-reduced-motion 決定；使用者明確選擇只記在本分頁 sessionStorage，重開關係圖沿用。未修改系統偏好。實際預覽原本 reduced-motion=true，先確認靜止，再由UI開啟本頁動畫並保持播放。
+
+本次驗證：
+- node --test "tests/*.test.cjs"：145/145通過。
+- python -X utf8 tests/run_web_v2_live.py tests/web-v2-explanation-browser.cjs tests/web-v2-browser.cjs：最終2組通過，涵蓋正負分、資料不足、桌機／手機、身分清理和配對圖；假模型／隔離DB，測試埠56345、65187均釋放。
+- CUA實際預覽：初始動畫none；點播放後taste-breathe/taste-flow；兩次讀取glow opacity與stroke-dashoffset皆改變。暫停後glow animation=none、flow display=none，再次播放成功。保存role4-network-motion.png於本聊天visualizations。
+- git diff --check通過，git diff --quiet 7bfa9f4 -- src/web invoice-insights.html exit0。未跑Python全套／真模型／Docker。原8001服務保留，未改後端、資料庫或GPU資源。

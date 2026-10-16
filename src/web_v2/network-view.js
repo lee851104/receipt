@@ -85,7 +85,18 @@ function drawTraits(svg,mobile,both){
   const path=el('path',{d:cell.d,class:'t-cell',stroke:cell.part>0?'#5eeac7':cell.part<0?'#ffb65c':'#77736c','stroke-width':zero?.6:(.8+20*Math.abs(cell.part)).toFixed(2),'stroke-dasharray':cell.part<0?'7 5':'none',opacity:base.toFixed(2)});
   const cellPoints=TraitSimilarity.percent(cell.part),hit=el('g',{class:'t-hit',tabindex:'0',role:'button','aria-label':`「${trait.name}」這一格，${cellPoints>0?'加 '+cellPoints+' 分':cellPoints<0?'扣 '+Math.abs(cellPoints)+' 分':'不加也不扣'}，查看連線`});
   hit.append(el('path',{d:cell.d,class:'t-cell-hit'}),el('title',{},trait.name));bind(hit,()=>selectTrait(cell.trait));
-  middles.append(path,hit);view.cells.push({...cell,el:path,base});
+  // Keep the original line continuous/dashed; a separate decorative highlight travels over it.
+  // The shared wrapper makes both layers dim together when another trait is selected.
+  const layer=el('g',{class:'t-cell-layer',opacity:base.toFixed(2)});
+  path.removeAttribute('opacity');layer.append(path);
+  if(!zero&&base>=.35){
+   layer.append(el('path',{d:cell.d,class:'t-flow',pathLength:100,
+    stroke:cell.part>0?'#d8fff5':'#ffe8c5',
+    'stroke-width':Math.max(1,Number(path.getAttribute('stroke-width'))*.7).toFixed(2),
+    'stroke-dasharray':'2 98','aria-hidden':'true',
+    style:'animation-delay:-'+(cell.trait*.47).toFixed(2)+'s'}));
+  }
+  middles.append(layer,hit);view.cells.push({...cell,el:layer,base});
  }
  for(const side of graph.sides){
   const name=who[side.side==='a'?0:1];
@@ -190,6 +201,22 @@ if(network){
  $('trait-method-text').textContent='品味相似度是 '+TraitNetwork.traitCount(network.traits)+' 項品味特質（'+network.traits.length+' 格）的餘弦相似度，範圍 '+TraitSimilarity.signed(-1)+'～'+TraitSimilarity.signed(1)+'。';
  $('trait-graph-method').textContent='每項特質由幾個消費訊號加權而成，訊號線越粗，代表這個訊號推得越多；中間每條線是那一格對分數的加減，全部加起來就是品味相似度。點一個訊號，外圈會出現最常買的品項（最多 3 個，×N 是整段期間的次數）；'+unlisted.join('、')+'這 '+unlisted.length+' 個訊號不列品項。';
 }$('reset').addEventListener('click',clearSelection);$('network').addEventListener('keydown',event=>{if(event.key==='Escape')clearSelection();});matchMedia('(max-width:640px)').addEventListener('change',draw);
+// Respect the system preference until the user explicitly chooses for this session.
+const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
+let motionChoice=null;
+try{motionChoice=sessionStorage.getItem('receipt-network-motion');}catch(_){}
+function setMotion(on){
+ document.body.classList.toggle('motion-enabled',on);
+ $('network-motion').setAttribute('aria-pressed',String(on));
+ $('network-motion').textContent=on?'暫停動態效果':'播放動態效果';
+}
+setMotion(motionChoice===null?!motionPreference.matches:motionChoice==='on');
+$('network-motion').addEventListener('click',()=>{
+ const on=!document.body.classList.contains('motion-enabled');motionChoice=on?'on':'off';
+ try{sessionStorage.setItem('receipt-network-motion',motionChoice);}catch(_){}
+ setMotion(on);
+});
+motionPreference.addEventListener('change',()=>{if(motionChoice===null)setMotion(!motionPreference.matches);});
 draw();
 
 }catch(error){const notice=document.createElement('p');notice.textContent='無法顯示關係圖，請回配對清單重新載入。';document.body.replaceChildren(notice);}

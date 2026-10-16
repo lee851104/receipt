@@ -20,6 +20,14 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 .return-report{display:inline-block;color:var(--muted);font-size:12px;text-decoration:none;margin-bottom:14px}.return-report:hover{color:var(--pink)}
 .views-note{margin:0;padding:96px 20px;text-align:center;font-size:15px;line-height:1.7;color:var(--muted)}
 .t-label{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.t-trait,.t-signal{stroke-width:1.4}.t-link,.t-cell{fill:none;stroke-linecap:round;transition:opacity .15s}.t-hit{cursor:pointer;outline:none;transition:opacity .15s}.t-hit:focus-visible .t-signal,.t-hit:focus-visible .t-trait{stroke:#fff;stroke-width:2.5}.t-cell-hit{fill:none;stroke:transparent;stroke-width:14}.t-hit:focus-visible .t-cell-hit{stroke:#fff;stroke-opacity:.35}.t-tip{fill:var(--ink);paint-order:stroke;stroke:#101010;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.detail-text{white-space:pre-line}.t-buy-line{fill:none;stroke-linecap:round;opacity:.85}.t-buy{fill-opacity:.35;stroke-width:1.2}.t-outer{pointer-events:none}.t-glow,.t-score{pointer-events:none}.t-score-box{fill:#101010;fill-opacity:.9;stroke-width:1.5}.t-score-label{fill:#c8c6bf;text-anchor:middle}.t-score-number{text-anchor:middle;font-weight:600}
+/* Ambient motion stays behind the labels and never changes the score encoding. */
+.t-glow ellipse{transform-box:fill-box;transform-origin:center}
+.motion-enabled .t-glow ellipse{animation:taste-breathe 6s ease-in-out infinite}
+.t-cell-layer{transition:opacity .15s}
+.t-flow{fill:none;stroke-linecap:round;pointer-events:none;display:none}
+.motion-enabled .t-flow{display:inline;animation:taste-flow 6.5s linear infinite}
+@keyframes taste-breathe{0%,100%{opacity:.42;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes taste-flow{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
 </style>
 </head>
 <body>
@@ -30,7 +38,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 <section class="comparison-overview" aria-label="評分與綜合解讀"><div class="overall"><div class="overall-label">品味相似度</div><div class="score"><span id="overall-score">—</span><small id="score-unit">%</small></div><div class="overall-note" id="overall-note">等待另一人匯入</div></div><div class="readout"><span class="readout-number">綜合解讀</span><div><p id="summary"></p><p class="summary-case"><strong class="summary-best-label">臭味相投</strong><span id="summary-best"></span></p><p class="summary-case"><strong class="summary-worst-label">背道而馳</strong><span id="summary-worst"></span></p><small id="summary-note">這是消費偏好的相似指數，不代表同樣比例的喜好完全相同，也不是關係契合度。</small></div></div>
 </section>
 <section class="graph-card" aria-label="兩人的品味特質連線圖">
-<div class="toolbar"><div class="scope" id="scope" role="status" aria-live="polite"></div></div>
+<div class="toolbar"><button id="network-motion" class="reset" type="button" aria-pressed="false">播放動態效果</button><div class="scope" id="scope" role="status" aria-live="polite"></div></div>
 <div class="legend" id="trait-legend"><span class="legend-item">訊號線：實線往右端推、虛線往左端推</span><span class="legend-item positive-label">中間：綠線加分</span><span class="legend-item negative-label">橘虛線扣分</span><span class="legend-item">越粗影響越大</span><span class="legend-item">空心：資料不足</span><span class="legend-item">外圈：常買的品項（點小點出現）</span><span class="legend-hint">點選查看連線，點空白處取消</span></div>
 <div class="canvas"><p class="views-note" id="views-note" hidden></p><svg id="network" viewBox="0 0 1200 570" role="group" aria-label="左側粉紅是你的資料，右側藍色是朋友的資料；可點選圓點或連線"></svg></div>
 <div class="detail"><span class="detail-icon" aria-hidden="true">↔</span><div class="detail-text" id="detail" role="status" aria-live="polite">點一個訊號或特質，看看它怎麼一路連到分數。</div><button class="reset" id="reset" type="button">顯示全部連線</button></div>
@@ -39,4 +47,4 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 </main><footer><span>品味特質比較 · 資料由配對服務提供</span><span>You are what you buy. / TASTE CONNECTIONS</span></footer>
 <noscript><p>請開啟 JavaScript 以查看點線圖。</p></noscript>
 
-<script src="legacy-similarity.js"></script><script src="legacy-match-filter.js"></script><script src="legacy-network.js"></script><script src="view-adapters.js"></script><script src="network-view.js"></script></body></html>
+<script src="legacy-similarity.js"></script><script src="legacy-match-filter.js"></script><script src="legacy-network.js"></script><script src="view-adapters.js"></script><script src="network-view.js?v=20261016-glow"></script></body></html>

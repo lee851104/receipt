@@ -85,7 +85,7 @@
       ReceiptExplanation.buildModel(network.data);
       $('explain-details').hidden=false;
      }
-     if(network.data?.network){$('network-frame').src='network.html';$('network-frame').hidden=false;}
+     if(network.data?.network){$('network-frame').src='network.html?v=20261016-glow';$('network-frame').hidden=false;}
     }catch(error){networkRenderError=error.message;}
     lastNetwork=network.data;
    }

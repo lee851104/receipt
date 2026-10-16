@@ -287,14 +287,14 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
   - `denominator` = norm_mine × norm_theirs + shrink；`score` = dot ÷ denominator
   - `part` = product ÷ denominator，是每格對分數的貢獻，全部加起來等於 `score`
 - 分數和清單一致：`cells` 的 `mine`／`theirs` 是存起來的向量，`score`、`percent` 和配對清單上的完全一樣；`part` 依序加總剛好等於 `score`（10/16 補上）
-- `comparable` 為 false 時，`reason` 是 `not_enough_items`（任一方有效品項不夠）或 `too_few_shared`（共同的雙向格少於 5 格），`dot` 以下的欄位全部是 `null`；每一格的 `product` 和 `part` 也是 `null`；`mine`、`theirs`、`weight`、`shared` 照實給，`shared_two_sided` 照實數（任一方沒有向量時是 0）（10/16 補上）
+- `comparable` 為 false 時，`reason` 是 `not_enough_items`（任一方沒有存起來的品味向量：有效品項不夠，或還沒上傳）或 `too_few_shared`（共同的雙向格少於 5 格），`dot` 以下的欄位全部是 `null`；每一格的 `product` 和 `part` 也是 `null`；`mine`、`theirs`、`weight`、`shared` 照實給，`shared_two_sided` 照實數（任一方沒有向量時是 0）（10/16 補上）
 - 另外有一個 `network` 欄位，給連線圖用，格式和 v1 的 `traitNetworkData` 相同（`build.trait_network_data`），只是 `friends` 換成 `mine` 和 `theirs` 兩個人：
   ```json
   "network": {"model": {"…": "同 similarity_model"}, "traits": ["…"], "signals": ["…"], "readout": {"…": "…"},
               "mine":   {"vector": ["…18 格"], "pushes": ["…"], "signals": ["…46 個訊號"], "items": [[["鮮奶茶", 6], ["美式咖啡", 2]], null]},
               "theirs": {"vector": ["…"], "pushes": ["…"], "signals": ["…"], "items": ["…"]}}
   ```
-  `src/web/trait-network.js`（複製到 `src/web_v2/` 之後）可以直接拿來畫。資料不夠的人，四個欄位都是 `null`；`vector` 就是存起來的向量（和 `cells` 的值一樣）；`pushes`、`signals`、`items` 是查詢時用那個人存著的品項和屬性快取當場算的，不問模型、不寫入。沒有存起來的向量，或品項現在已經算不出品味（例如剛刪掉一個月、重算還在排隊）時，那一邊四個欄位都是 `null`。上次上傳之後才有答案的品名，`pushes`、`signals` 會先反映，向量要等下一次上傳的任務重算（10/16 補上）
+  `src/web/trait-network.js`（複製到 `src/web_v2/` 之後）可以直接拿來畫。資料不夠的人，四個欄位都是 `null`；`vector` 就是存起來的向量（和 `cells` 的值一樣）；`pushes`、`signals`、`items` 是查詢時用那個人存著的品項和屬性快取當場算的，不問模型、不寫入。沒有存起來的向量，或品項現在已經算不出品味（例如剛刪掉一個月、重算還在排隊）時，那一邊四個欄位都是 `null`。上次上傳之後才有答案的品名，`pushes`、`signals` 會先反映，向量要等下一次上傳的任務重算（10/16 補上）。`theirs` 這一邊以金額為單位的訊號（單位是 `money`、`money_month`，也就是每餐花費、每月 3C 花費）和它們在 `pushes` 裡的值都是 `null`，所以不會送出對方任何一筆金額；`mine` 照常給自己的，存起來的向量和 `cells` 也不受影響（10/16 補上）
 - `items` 是每個訊號買最多次的 3 個品名和出現的發票張數，品名一律經過 5.8 的處理
 - 錯誤：404 `not_found`（沒有這個人，或我是假用戶而對方不是）、400 `self`（查自己）、422（`user_id` 不是 1 到 2^63−1 的整數）。我是假用戶而對方不是時，當作沒有這個人，回應內容和真的沒有這個人完全一樣，和配對清單同一條規則（10/16 補上）
 
@@ -307,6 +307,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 - 跟地點有關的 4 個訊號（`list_items` 為 false）不列品名
 - 每個訊號最多 3 個品名，最長 20 字。去掉地名後只剩數字或符號的，改顯示類別名稱
 - 不回店家名稱、發票號碼、日期、金額
+- 對方的花費金額也不回：`network.theirs` 裡以金額為單位的訊號和它們的 push 都是 `null`（10/16 補上）
 - 漏網的地名（商圈、地標、分店名）加進 `place_words`，不要在 API 裡另寫一套規則
 
 2026-10-14 用 3–8 月真實發票檢查（只看數量）：245 種商品中，2 種改顯示通用名稱、1 種去掉了地名。處理後還有 2 種含「店」字，都是 0 元明細，照 5.4 的金額規則會被略過，不會顯示
@@ -535,6 +536,10 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 - 關係圖：`network` 的格式同 v1 的 `traitNetworkData`，只是 `friends` 換成 `mine` 和 `theirs` 兩個人，`src/web/trait-network.js` 複製到 `src/web_v2/` 後可以直接畫。一邊資料不夠時，那一邊的 `vector`、`pushes`、`signals`、`items` 都是 `null`，要畫成「資料不夠」
 - 任何人都能查，不限清單前 5 名；查自己是 400 `self`，沒有這個人是 404 `not_found`。用假用戶登入時查真實使用者也是 404
 - 品名已經去掉地名（5.8），回應裡沒有店家、發票號碼、日期、金額，前端不用再處理
+- 對方的花費訊號是 `null`：`network.theirs` 裡以金額為單位的訊號（每餐花費、每月 3C 花費）和它們的 push 一律是 `null`，畫成「沒量到」；`mine` 照常顯示自己的
+- 一邊的圖可能全部是 `null`，但 `comparable` 是 true、`cells` 也有值：存起來的向量還在，可是現在的品項已經算不出品味（例如剛刪掉一個月、重算還沒跑完）。`cells` 和分數照常顯示，那一邊的圖畫成「重新計算中」，不要畫成「資料不夠」
+- `not_enough_items` 時，沒有向量的那一邊，每一格的 `mine` 或 `theirs` 都是 `null`
+- 使用者打開某個人的面板時才呼叫 `explain`，不要為清單上的 5 張卡片事先全部呼叫：每次呼叫都要從品項當場算兩個人的品味，一般的人大約 0.3–0.6 秒
 
 ### 13.6 角色 1 轉告（2026-10-16，第 2–3 週第三批，分支 `role-1/matches`）
 

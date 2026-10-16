@@ -1,15 +1,19 @@
-"""Account management (overview 5.11): see and rename the account, change its password, delete it. Logout is in
-routes/auth.py; deleting a month is below too."""
-from fastapi import APIRouter, Request, Response
+"""Account management (overview 5.11): see and rename the account, change its password, delete one month of it or all
+of it. Logout is in routes/auth.py."""
+from functools import partial
+from typing import Annotated
+
+from fastapi import APIRouter, Path, Request, Response
 from pydantic import BaseModel
 
-from .. import accounts
+from .. import accounts, jobs
 from ..db import SessionDep
 from ..errors import ApiError
 from ..security import Password, UserDep, end_sessions, hash_password, token_response, verify_password
 from ..validation import DisplayName
 
 router = APIRouter(prefix="/api/me")
+Month = Annotated[str, Path(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")]  # YYYY-MM
 
 
 class Rename(BaseModel):
@@ -75,4 +79,25 @@ def delete_account(body: Confirmation, user: UserDep, session: SessionDep):
         raise ApiError(409, "job_in_progress")
     accounts.delete_account(session, user.id)
     session.commit()
+    return Response(status_code=204)
+
+
+@router.delete("/months/{month}", status_code=204)
+def delete_month(month: Month, user: UserDep, request: Request, session: SessionDep):
+    writable(user)
+    # The id before the commit: the commit expires the user, so reading user.id after it costs a query whose connection
+    # stays checked out until the route returns, next to the worker's (the in-memory test database has only one
+    # connection for both, and closing this session would roll the recompute's write back).
+    user_id = user.id
+    if month not in accounts.months_of(session, user_id):
+        raise ApiError(404, "month_not_found")
+    if accounts.busy(session, user_id, month):
+        raise ApiError(409, "job_in_progress")
+    accounts.delete_month(session, user_id, month)
+    session.commit()
+    state = request.app.state
+    # Not here on the request's thread: an upload job of this user may be writing the profile right now. Queued behind
+    # it on the worker, the recompute reads the items as they are when it runs.
+    state.worker.call(f"recompute for user {user_id}",
+                      partial(jobs.run_recompute, state.engine, state.backends, state.context, user_id))
     return Response(status_code=204)

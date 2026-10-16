@@ -46,13 +46,19 @@ def attributes_of(session, backends, names):
     return {name: known.get(name) for name in names}
 
 
+def history(session, backends, user_id):
+    """The user's stored items as dated rows and the (year, month) period they cover, with the cached attribute
+    answers of their names ({} without a period). It only reads: the model is never asked."""
+    items = session.exec(select(Item).where(Item.user_id == user_id).order_by(Item.id)).all()
+    rows, period = traits.dated(months_of(items))
+    return rows, period, attributes_of(session, backends, {row["name"] for row in rows}) if period else {}
+
+
 def recompute(session, backends, context, user_id):
     """Work the user's profile out again from all their items and store it, replacing the old one in one statement,
     so a failure before it leaves the old profile as it was."""
-    items = session.exec(select(Item).where(Item.user_id == user_id).order_by(Item.id)).all()
-    rows, period = traits.dated(months_of(items))
+    rows, period, attributes = history(session, backends, user_id)
     if period:
-        attributes = attributes_of(session, backends, {row["name"] for row in rows})
         item_count = measure(rows, period, context, attributes)["counts"]["items"]
         vector, areas = traits.build_vector(rows, period, context, attributes), places.areas_of(rows, context)
     else:

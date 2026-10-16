@@ -36,7 +36,7 @@
     $('service-alert').hidden=!state.serviceError;$('service-error').textContent=state.serviceError;
     $('identity-label').textContent=workspace?(session.get()?.label||'已登入'):'';
     const fake=state.health?.models?.category==='fake'||state.health?.models?.attributes==='fake';
-    message('model-note',fake?'目前為示範模型，品味僅供流程體驗。':'');
+    message('model-note',fake?'目前為示範模型，分類結果僅供流程體驗。':'');
     const viewChanged=lastView!==state.view;
     if(viewChanged){
       history.replaceState(null,'',workspace?(['#upload','#profile','#matches','#settings'].includes(location.hash)?location.hash:'#profile'):'#'+state.view);

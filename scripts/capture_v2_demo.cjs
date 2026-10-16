@@ -27,9 +27,9 @@ const fixture=require('../tests/web-v2-fixtures.cjs');
  try{
   await page.goto((process.env.RECEIPT_TEST_URL||'http://127.0.0.1:8001')+'/web/');await page.locator('#login-form').waitFor();await capture('登入');
   await page.locator('#login-username').fill('fictional_demo');await page.locator('#login-password').fill('fake-password');await page.locator('#login-form button').click();
-  await page.locator('#profile-content').waitFor();await capture('首屏：完整品味');
+  await page.locator('#profile-content').waitFor();await openReport(page);await capture('首屏：我的月報');
   await navigate(page,'upload');await page.locator('#invoice-file').setInputFiles({name:'fictional.csv',mimeType:'text/csv',buffer:Buffer.from('fictional demo only')});await page.locator('#upload-submit').click();await page.getByRole('heading',{name:'處理完成',exact:true}).waitFor();await capture('上傳完成');
-  await navigate(page,'profile');await page.locator('.trait-value').first().waitFor();await capture('18 格品味');
+  await navigate(page,'profile');await openReport(page);await capture('類別與品項金額圖');
   await openReport(page);
   await page.frameLocator('#report-frame').locator('#total').waitFor();await capture('每月消費回顧','#report-frame');
   await navigate(page,'matches');await page.locator('.match-card').first().waitFor();await capture('配對與距離篩選');

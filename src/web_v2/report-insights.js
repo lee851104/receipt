@@ -73,6 +73,7 @@ function renderInsights(key, autoplay = false) {
   $('audit-summary').textContent = '查看分類明細與計算方式 · ' + current.length + ' 筆品項';
   $('audit-description').textContent = '類別由分類模型判斷，低信心品項標示待確認；作廢、低於 10 元或金額含小數的明細不計入。數量含小數時按 1 計。';
   $('audit-rows').innerHTML = current.map(row => '<tr><td>' + dateLabel(row.day) + '</td><td>' + escapeHTML(row.invoice) + '</td><td>' + escapeHTML(row.merchant) + '</td><td>' + escapeHTML(row.district || '未知') + '</td><td>' + escapeHTML(row.name) + '</td><td' + (row.provisional ? ' class="provisional"' : '') + '>' + categories[row.category].name + (row.provisional ? '（暫定）' : '') + '</td><td class="numeric">' + row.quantity + '</td><td class="numeric">' + number(row.amount) + '</td></tr>').join('');
+  ReceiptReportOverview.render(current,categories);
   $('report-source').textContent = '目前洞察來源：' + month.source + '。金額依明細加總，未計入折扣、低額或小數金額明細；發票張數按號碼去重。沒有紀錄不代表沒有消費。頁面只保留匿名發票代碼與行政區，不嵌入原始號碼、統編或完整地址。';
 
   const calendar = $('calendar');
@@ -154,7 +155,7 @@ function renderInsights(key, autoplay = false) {
   render(); updatePlay(); requestAnimationFrame(tick);
 
   const largestFrequency = Math.max(1, ...frequency.map(category => category.count));
-  $('category-cloud').innerHTML = frequency.map(category => '<button class="cloud-word" data-category="' + category.index + '" style="--word-color:' + category.color + ';--word-size:' + (20 + 52 * category.count / largestFrequency) + '" aria-pressed="false" aria-label="' + category.name + '，' + category.count + ' 次消費">' + category.name + '<small>' + category.count + ' 次</small></button>').join('');
+  $('category-cloud').innerHTML = frequency.map((category,position) => '<button class="cloud-word" data-category="' + category.index + '" style="--word-color:' + category.color + ';--float-delay:-' + (position * 1.3) + 's;--float-duration:' + (8 + position * .6) + 's;--word-size:' + (20 + 52 * category.count / largestFrequency) + '" aria-pressed="false" aria-label="' + category.name + '，' + category.count + ' 次消費"><span class="cloud-float">' + category.name + '<small>' + category.count + ' 次</small></span></button>').join('');
   function showCategory(index) {
     const category = frequency.find(item => item.index === index);
     if (!category) return;
@@ -162,7 +163,9 @@ function renderInsights(key, autoplay = false) {
     $('cloud-detail').innerHTML = '<strong>' + category.name + ' · ' + category.count + ' 次 · ' + money(category.amount) + '</strong><p>出現在 ' + category.days.length + ' 個日期，金額依已計入品項加總。</p><div class="date-chips">' + category.days.map(day => '<span>' + dateLabel(day) + '</span>').join('') + '</div>';
   }
   document.querySelectorAll('.cloud-word').forEach(button => button.onclick = () => showCategory(Number(button.dataset.category)));
+  $('cloud-detail').replaceChildren();
   if (frequency.length) showCategory(frequency[0].index);
+  else $('cloud-detail').textContent='本月沒有可計入的消費紀錄。';
 
   const point = (radius, angle) => [190 + radius * Math.sin(angle * Math.PI / 180), 190 - radius * Math.cos(angle * Math.PI / 180)];
   function wedge(start, end, outer, inner = 42) {

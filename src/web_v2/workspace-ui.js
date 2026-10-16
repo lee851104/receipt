@@ -5,7 +5,6 @@
   const $=id=>document.getElementById(id);
   let accountUI,credentialChange=false,resumeProfileAfterRotation=false;
   let enabled=false,current='profile',lastProfile=null,lastNetwork=null,networkRenderError='',sessionVersion=-1;
-  const pages=ReceiptPages.createPages();
   const work=ReceiptWorkspace.createWorkspace({api,session,onChange:render});
   const make=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
   function clearFrame(id){const frame=$(id);frame.hidden=true;frame.removeAttribute('src');}
@@ -23,7 +22,6 @@
     if(button.dataset.workspace===current)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
    }
    history.replaceState(null,'','#'+current);
-   if(current!=='profile')pages.close();
    if(load && current==='settings' && accountUI.state().status==='idle')accountUI.load();
    if(load && current==='profile' && work.state().profile.status==='idle')work.loadProfile();
    if(load && current==='matches' && work.state().matches.status==='idle')work.loadMatches();
@@ -42,24 +40,13 @@
    $('upload-count').textContent=upload.jobId?(upload.month||'')+' · '+(upload.done||0)+' / '+(upload.total||0)+' 個不重複品名':'';
    $('retry-job').hidden=upload.status!=='error'||!upload.jobId;$('open-profile').hidden=upload.status!=='done';
    const profile=state.profile;
-   $('profile-message').textContent=profile.status==='loading'?'載入品味與月報中…':profile.message;
+   $('profile-message').textContent=profile.status==='loading'?'載入月報中…':profile.message;
    $('profile-content').hidden=profile.status!=='ready';
    if(profile.data!==lastProfile){
-    clearFrame('report-frame');$('trait-values').replaceChildren();pages.render(profile.data);
-    if(profile.data){
-     const p=profile.data;
-     $('profile-overview').textContent=(p.is_demo?'虛構示範資料 · ':'')+(p.ready?'已有 '+p.item_count+' 個有效品項。':'目前 '+p.item_count+' 個有效品項，至少需要 '+p.min_items+' 個才能形成品味輪廓。')+' 待分析屬性：'+p.pending_attributes+' 個。';
-     $('profile-areas').textContent=p.areas?.length?'生活圈：'+p.areas.join('、'):'目前看不出生活圈。';
-     for(const trait of p.traits||[]){
-      const card=make('div',undefined,'trait-value');card.append(make('span',trait.name));
-      const value=trait.value;card.append(make('strong',value===null?'未知':Number(value).toFixed(2)));
-      if(typeof value==='number'){
-       const meter=make('meter');meter.min=trait.kind==='level'?0:-1;meter.max=1;meter.value=value;meter.setAttribute('aria-label',trait.name);card.append(meter);
-      }
-      $('trait-values').append(card);
-     }
-     $('taste-empty').hidden=Object.keys(p.months||{}).length>0;
-    }
+    clearFrame('report-frame');
+    const hasMonths=Object.keys(profile.data?.months||{}).length>0;
+    $('report-empty').hidden=hasMonths;
+    if(hasMonths){$('report-frame').src='report.html?v=20261017-report2';$('report-frame').hidden=false;}
     lastProfile=profile.data;
    }
    const matches=state.matches;
@@ -139,7 +126,7 @@
   for(const button of document.querySelectorAll('[data-match-kind]'))button.addEventListener('click',()=>work.loadMatches(button.dataset.matchKind,$('match-scope').value));
   return {busyCredentials:()=>credentialChange,sync(auth){
    if(auth.view!=='workspace'){
-    closeSettings();pages.close();
+    closeSettings();
     if(enabled||sessionVersion!==session.version()){
      enabled=false;work.reset();accountUI.reset();$('invoice-file').value='';clearFrame('report-frame');clearFrame('network-frame');
     }

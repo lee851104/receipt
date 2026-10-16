@@ -52,7 +52,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   assert(profileTokens.includes('Bearer new-synthetic-token'));recomputing=false;
   await page.locator('.match-card').first().waitFor();assert.equal(matches,1);
   await navigate(page,'profile');await page.locator('#profile-content').waitFor();
-  assert.match(await page.locator('#profile-overview').textContent(),/40 個有效品項/);
+  await page.frameLocator('#report-frame').locator('#total').filter({hasText:'80'}).waitFor();
   assert(checks>=4);assert.deepEqual(errors,[]);
   console.log('RECOMPUTE CONTRACT PASS: old profile hidden, two-second polling, matches blocked, rename/password success/failure preserve polling, completion refreshes active matches.');
  }finally{await browser.close();}

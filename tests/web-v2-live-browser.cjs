@@ -73,8 +73,8 @@ async function poll(read,check){
   assert.equal(new URL(page.url()).hash,'#profile');
   await upload('2026-05');await upload('2026-06');
   await go('profile');await page.locator('#profile-content').waitFor();
-  assert.match(await page.locator('#profile-overview').textContent(),/80 個有效品項/);
-  assert.equal(await page.locator('.trait-value').count(),18);
+  await openReport(page);assert.equal(await page.frameLocator('#report-frame').locator('#insights-month option').count(),2);
+  assert.equal(await page.locator('.trait-value').count(),0);
   await openReport(page);
   const report=page.frameLocator('#report-frame');await report.locator('#total').waitFor();
   await report.locator('#insights-month').selectOption('2026-05');
@@ -105,7 +105,7 @@ async function poll(read,check){
   fs.mkdirSync('runtime',{recursive:true});await page.screenshot({path:'runtime/role4-live-matches-desktop.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await page.screenshot({path:'runtime/role4-live-matches-mobile.png',fullPage:true});
-  console.log('LIVE uploads: two months -> 80 items -> report / 18 traits -> matches / 18 explanation cells / real network; desktop/mobile.');
+  console.log('LIVE uploads: two months -> 80 items -> direct monthly report -> matches / 18 explanation cells / real network; desktop/mobile.');
 
   await page.locator('#settings-toggle').click();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
@@ -114,7 +114,7 @@ async function poll(read,check){
   await page.getByRole('button',{name:'刪除 2026-05',exact:true}).click();await page.locator('#confirm-cancel').click();
   assert((await request('/me',{token:second})).data.months.includes('2026-05'));
   await page.getByRole('button',{name:'刪除 2026-05',exact:true}).click();await page.locator('#confirm-submit').click();await page.locator('#account-confirm').waitFor({state:'hidden'});
-  await go('profile');await page.locator('#profile-content').waitFor();assert.match(await page.locator('#profile-overview').textContent(),/40 個有效品項/);
+  await go('profile');await page.locator('#profile-content').waitFor();await openReport(page);assert.equal(await page.frameLocator('#report-frame').locator('#insights-month option').count(),1);
   assert.deepEqual((await request('/me',{token:second})).data.months,['2026-06']);
   await go('settings');await page.locator('#account-name').fill('虛構更名');await page.locator('#account-name-submit').click();await page.locator('#account-notice').filter({hasText:'顯示名稱已更新'}).waitFor();
   await page.locator('#current-password').fill(password);await page.locator('#new-password').fill(nextPassword);await page.locator('#password-submit').click();await page.locator('#account-notice').filter({hasText:'密碼已更新'}).waitFor();

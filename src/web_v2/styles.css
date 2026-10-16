@@ -134,3 +134,10 @@ body:has(#workspace-view:not([hidden])) .service-alert{flex-shrink:0;margin:6px 
  .chapter-nav button{transition:none}
  .profile-page>:not(.page-turn){opacity:1}
 }
+
+/* Report is the home screen; no taste overview or report modal. */
+#profile-content{display:flex;flex-direction:column}
+#profile-content #report-frame{flex:1;min-height:0;width:100%;height:100%;margin:0;border:0;border-radius:0}
+.profile-header{min-height:44px;padding:6px 0}
+.profile-header h1{font-size:22px}
+#profile-panel>#model-note{flex:0 0 auto;margin:0 0 5px;font-size:10px;color:var(--muted)}

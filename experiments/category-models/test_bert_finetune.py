@@ -132,4 +132,16 @@ class BertTests(unittest.TestCase):
         self.assertNotIn('PRIVATE_BERT_MARKER',p.stdout+p.stderr)
         self.assertNotIn('Traceback',p.stderr)
 
+
+    def test_bert_roundtrip_accepts_fp32_noise_but_rejects_changed_outputs(self):
+        from copy import deepcopy
+        from prepare_data import CATEGORIES
+        p=[dict(category=0,category_name=CATEGORIES[0],probabilities=[.919]+[.01]*8+[.001])]
+        noise=deepcopy(p);noise[0]['probabilities'][-1]+=2.4e-9
+        self.train.verify_bert_roundtrip(p,noise,1)
+        changed=deepcopy(p);changed[0]['probabilities'][0]-=1e-4;changed[0]['probabilities'][1]+=1e-4
+        with self.assertRaises(ValueError):self.train.verify_bert_roundtrip(p,changed,1)
+        different=deepcopy(p);different[0]['category']=1
+        with self.assertRaises(ValueError):self.train.verify_bert_roundtrip(p,different,1)
+
 if __name__=='__main__':unittest.main()

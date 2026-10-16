@@ -17,9 +17,23 @@ from transformers import AutoTokenizer,BertForSequenceClassification
 from common import environment,peak_rss_bytes
 from embedding_features import local_manifest
 from fixed_split_data import load_dataset,score
-from fixed_split_train import verify_roundtrip,verify_predictions
+from fixed_split_train import verify_predictions
 from prepare_data import CATEGORIES,write_json,write_jsonl
 
+
+
+def verify_bert_roundtrip(first,reloaded,expected_count):
+    # CPU FP32 kernels can differ slightly after CUDA weights are reconstructed.
+    # Keep label equality and distribution checks; record the numerical tolerance.
+    verify_predictions(first,expected_count)
+    verify_predictions(reloaded,expected_count)
+    maximum=0.0
+    for before,after in zip(first,reloaded):
+        a,b=np.asarray(before['probabilities']),np.asarray(after['probabilities'])
+        maximum=max(maximum,float(np.max(np.abs(a-b))))
+        if before['category']!=after['category'] or not np.allclose(a,b,rtol=1e-6,atol=1e-8):
+            raise ValueError('bert_reload_prediction_mismatch')
+    return dict(items=expected_count,max_absolute_probability_difference=maximum,rtol=1e-6,atol=1e-8,labels_identical=True)
 
 class EarlyStopping:
     def __init__(self,patience=2,min_delta=1e-4):
@@ -167,8 +181,8 @@ def run(dataset_dir,pretrained,output_dir,seed=42,device='cuda',epochs=10,batch_
     reload_seconds=time.perf_counter()-started
     predictions=predictor.predict(names)
     verify_predictions(predictions,len(validation))
-    verify_roundtrip(saved_validation,predictions,len(validation))
-    verify_roundtrip(saved_probe,predictor.predict(probe),len(probe))
+    reload_checks=[verify_bert_roundtrip(saved_validation,predictions,len(validation)),
+                   verify_bert_roundtrip(saved_probe,predictor.predict(probe),len(probe))]
     benchmark=[training[i%len(training)]['name'] for i in range(benchmark_count)]
     predictor.predict(benchmark[:10])
     started=time.perf_counter();predictor.predict(benchmark)
@@ -177,7 +191,7 @@ def run(dataset_dir,pretrained,output_dir,seed=42,device='cuda',epochs=10,batch_
     report=dict(experiment='C',model='bert',seed=seed,best_epoch=stop.best_epoch,best_validation_loss=stop.best_loss,
         settings=settings,history=history,pretrained=pretrained_manifest,
         dataset=dict(manifest_sha256=identity,files_sha256=manifest['files_sha256'],source_sha256=manifest['source_sha256'],summary=manifest['summary']),
-        training_sources=sources,test_evaluation='not_run',reload_verified=True,reload_probe_items=len(probe),
+        training_sources=sources,test_evaluation='not_run',reload_verified=True,reload_probe_items=len(probe),reload_checks=reload_checks,
         test_access='not_opened' if development_only else 'loaded_for_integrity_checks_only',
         validation=dict(model=score([r['category'] for r in validation],[r['category'] for r in predictions])),
         cost=dict(initial_load_seconds=load_seconds,training_seconds=training_seconds,reload_seconds=reload_seconds,

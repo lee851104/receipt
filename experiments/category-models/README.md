@@ -362,3 +362,31 @@ foreach ($role2Seed in 42,43,44) {
 本輪 train905（305真實、600合成）／validation50／test50。選出 seed44 epoch1，validation 94%→96%，test 80%→82%（40/50→41/50），3筆改善、2筆退步。測試結果未回饋調參；只屬小幅描述性改善。這批來源曾參與上一輪模型比較，且人工審核看過模型建議，不能稱為全新盲測；運動、住宿沒有 test 樣本。
 
 完整彙總與前後混淆矩陣：`C:/Users/User/Desktop/AI_project/receipt/data/role2/runs/bert-continuation-comparison-20261016-v1/comparison.md`。權重：`C:/Users/User/Desktop/AI_project/receipt/data/role2/runs/bert-continuation-20261016-seed44/model`。本輪未部署或公開模型。
+
+## 合成比例比較：只在開發資料做交叉驗證
+
+`bert_ratio_cv.py` 僅開啟固定來源的 `train.jsonl`、`validation.jsonl` 與 manifest，完全不開啟原 `test.jsonl`，亦不使用會載入 test 的既有 loader。355筆真實開發資料分成5個相同群組外折（各71筆），外折訓練池再內留40–41筆真實資料早停，243–244筆真實資料參與梯度。三組依梯度訓練資料總數計算合成比例：0%、約25%（81筆）、約66.3%（478–480筆）。合成樣本盡量平均分配各類，25%集合是66.3%集合的子集。
+
+三組各折都從已固定版本的公開BERT encoder開始，重新初始化分類head；不能沿用之前用過合成資料或開發資料的分類權重。相同fold使用相同seed42+fold。inner驗證loss只用來選epoch，outer最後評一次。這是配方的開發比較，不能與舊保留測試82%直接比較；原測試集繼續封存。
+
+本次指令（各輸出版本只能建立一次，失敗run保留，不刪除重跑挑結果）：
+
+```powershell
+$role2Data = 'C:/Users/User/Desktop/AI_project/receipt/data/role2'
+$role2CpuPython = './experiments/category-models/.venv/Scripts/python.exe'
+$role2CudaPython = './experiments/category-models/bert-runtime/.venv/Scripts/python.exe'
+$role2Cv = "$role2Data/bert-ratio-cv-20261016-v1"
+& $role2CpuPython experiments/category-models/bert_ratio_cv.py prepare --source "$role2Data/bert-continuation-20261016-v1" --out $role2Cv --private-root $role2Data
+foreach ($role2Fold in 0..4) {
+    foreach ($role2Regime in 'real_only','synthetic_25','synthetic_current') {
+        & $role2CudaPython experiments/category-models/bert_ratio_cv.py train --experiment $role2Cv --pretrained "$role2Data/models/bert-base-chinese" --fold $role2Fold --regime $role2Regime --private-root $role2Data
+        if ($LASTEXITCODE -ne 0) { throw 'CV stopped; preserve this attempt' }
+    }
+}
+& $role2CpuPython experiments/category-models/bert_ratio_cv.py summarize --experiment $role2Cv --private-root $role2Data
+& $role2CpuPython -m unittest discover -s experiments/category-models -p test_bert_ratio_cv.py
+```
+
+固定lr2e-5、batch16、FP32、max_length32、最多10輪、patience2。輸出plan、共享training-config、各fold模型／report、私人OOF預測及aggregate summary。彙總重新核對模型與資料指紋、15組完整性、每個真實項目每組恰評一次、報告分數與OOF重算一致。樣本標準差只是折間描述；每折初始化種子不同，不能分離切分與種子影響，也不是信賴區間。合成比例增加亦增加每輪更新步數，並非等計算量實驗。運動3筆、住宿2筆，無法保證各折都有該類或代表穩定表現。
+
+本次比較結果與各類F1見 [classification-ratio-cv.md](../../docs/results/classification-ratio-cv.md)。

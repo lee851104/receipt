@@ -69,4 +69,48 @@ class RatioCVTests(unittest.TestCase):
   src=self.fixture()
   with (src/'train.jsonl').open('a') as f:f.write('\n')
   with self.assertRaises(ValueError):self.cv.prepare(src,self.root/'cv')
+
+ def test_complete_summary_paired_counts_and_tamper_rejection(self):
+  src=self.fixture();out=self.root/'cv';self.cv.prepare(src,out)
+  from test_embedding_lr import EmbeddingTest
+  from transformers import AutoTokenizer,BertForSequenceClassification
+  from embedding_features import local_manifest
+  from bert_model import save_bundle
+  from evaluate_reviewed import summarize
+  from prepare_data import CATEGORIES
+  maker=EmbeddingTest();maker.root=self.root;base=maker.encoder_fixture()
+  tok=AutoTokenizer.from_pretrained(base,local_files_only=True)
+  model=BertForSequenceClassification.from_pretrained(base,num_labels=10,local_files_only=True)
+  write_json(out/'training-config.json',dict(fictional=True))
+  ph=fingerprint(out/'plan.json');ch=fingerprint(out/'training-config.json')
+  for regime,divisor in zip(self.cv.REGIMES,[5,7,4]):
+   for fold in range(5):
+    parts,plan=self.cv.load_fold(out,fold,regime)
+    run=out/'runs'/f'{regime}-fold-{fold}';run.mkdir(parents=True)
+    preds=[dict(id=r['id'],actual=r['category'],predicted=(r['category']+1)%10 if i%divisor==0 else r['category']) for i,r in enumerate(parts['outer'])]
+    write_jsonl(run/'private-outer-predictions.jsonl',preds)
+    save_bundle(model,tok,run/'model',dict(categories=list(CATEGORIES),max_length=32,dataset_sha256=ph,seed=42+fold))
+    score=summarize([r['actual'] for r in preds],[r['predicted'] for r in preds])
+    write_json(run/'report.json',dict(fold=fold,regime=regime,seed=42+fold,best_epoch=1,outer=score,
+       training_counts=plan['folds'][fold]['counts'][regime],training_seconds=1,gradient_steps=1,
+       plan_sha256=ph,config_sha256=ch,predictions_sha256=fingerprint(run/'private-outer-predictions.jsonl'),
+       model_manifest_sha256=fingerprint(run/'model/classifier-manifest.json'),original_test='not_opened_or_evaluated'))
+  original=Path.open
+  def no_test(p,*args,**kw):
+   if p.name=='test.jsonl':raise AssertionError('test access')
+   return original(p,*args,**kw)
+  with patch.object(Path,'open',no_test):summary=self.cv.summarize_runs(out)
+  self.assertEqual(summary['highest_mean'],'synthetic_25')
+  for regime,correct in zip(self.cv.REGIMES,[160,170,150]):
+   self.assertEqual(summary['results'][regime]['pooled']['correct'],correct)
+   self.assertEqual(summary['results'][regime]['pooled']['support'],200)
+  self.assertEqual(summary['paired']['real_only__to__synthetic_25']['improved'],30)
+  self.assertEqual(summary['paired']['real_only__to__synthetic_25']['worsened'],20)
+  rp=out/'runs/real_only-fold-0/report.json';saved=rp.read_bytes()
+  bad=json.loads(saved);bad['outer']['accuracy']=1;write_json(rp,bad)
+  with self.assertRaisesRegex(ValueError,'score_mismatch'):self.cv.summarize_runs(out)
+  rp.write_bytes(saved)
+  with (out/'runs/real_only-fold-0/private-outer-predictions.jsonl').open('a') as f:f.write('\n')
+  with self.assertRaisesRegex(ValueError,'predictions_changed'):self.cv.summarize_runs(out)
+
 if __name__=='__main__':unittest.main()

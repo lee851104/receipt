@@ -23,7 +23,7 @@
 | 假用戶 | 8 種類型 × 5 人 = 40 人，2026 年 3–4 月的假發票 | `src/receipt/personas.py` |
 | 網頁 | 單一 HTML 檔，JS 全部內嵌，GitHub Pages 公開中 | `scripts/build_report.py` → `invoice-insights.html` |
 | 後端骨架 | FastAPI + SQLite：註冊、登入、demo 快速切換、品名即時分類、健康檢查，模型先用假替身；v2 網頁從 `/web/` 提供（10/15 完成角色 1 第 1 週） | `src/api/`、`src/ml/`、`src/web_v2/` |
-| 測試 | Python 275 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
+| 測試 | Python 290 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
 | 分類實驗 | 品名 → 10 類。A：TF-IDF + 邏輯迴歸，macro-F1 0.62；B：bge-small-zh（512 維）+ 邏輯迴歸，macro-F1 0.66。只有 57 個人工確認品名，只能驗證 4 類 | `experiments/category-models/`、`docs/category-models-brief.md` |
 | 屬性實驗 | Qwen3-4B（Q4_K_M，2.4 GB）判斷 16 個屬性。真實資料上模型單獨 F1 44%，加規則 94%（事後回測，不是獨立驗證） | `experiments/receipt-attributes/` |
 
@@ -491,7 +491,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
    .venv/Scripts/python.exe -m unittest discover -s tests -v
    node --test "tests/*.test.cjs"
    ```
-   預期結果：Python 275 個、JS 82 個全部通過
+   預期結果：Python 290 個、JS 82 個全部通過
 3. 後端（角色 1 的第一週成果）：
    - 複製 `.env.example` 成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼：`.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"`
    - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人；名單只能往後加，資料庫裡的帳號和名單對不上時會停下來並說明，這時刪掉 `data/app.db*` 再重來）
@@ -513,6 +513,16 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 ## 13. 角色之間的交接
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
+
+### 13.5 屬性接入以 `from_model` 為準（2026-10-16，使用者決定，角色 1 轉告，分支 `role-1/profiles`）
+
+- 「讓品味計算讀取模型屬性」以角色 1 的 `src/receipt/attributes.from_model` 為準；角色 3 分支上的 `attributes.describe(..., external=...)` 會移除，之後不要再接它
+- 介面：`signals.measure(rows, period, context, attributes)`、`traits.explain(rows, period, context, attributes)`、`traits.build_vector(rows, period, context, attributes)`，`attributes` 是 `{品名: 23 個欄位的 dict，或 None（待分析）}`；字典裡沒有的品名也當成待分析。不給 `attributes` 就照舊用 v1 的關鍵字規則，結果完全不變
+- 從角色 3 的版本搬過來兩條規則（design D6、taste-profile 規格「沒有已知答案的次數不是 0」，測試在 `tests/test_model_attributes.py`）：
+  1. 計次的訊號（`kitchen_per_month`、`sport_supplies`、`sport_gear`、`car_care`、`home_items`、`stationery_items`、`alcohol_items`、`pet_food_*`、`pet_supply_*`）在問題適用的品項裡沒有任何已知答案時是 `null`，不是 0；完全沒有適用的品項時是 0。娛樂（`fun_visits`、`fun_kinds`）只有在全部品項都待分析、而且店家名稱也沒有娛樂字時才是 `null`，判斷過的品名沒有娛樂種類就是「不是娛樂」
+  2. 寵物店發票上沒有已知物種、又有待分析的品項時，這次造訪不算給貓也不算給狗；這個人的寵物店發票全部如此時，`pet_visits_cat`、`pet_visits_dog` 是 `null`（角色 3 的版本這時是 0）。有已知物種時照已知物種算，判斷過但沒寫物種的照舊各算一半
+- 待分析的飲品照樣套用甜度預設規則（taste-profile 規格「飲品甜度的預設值」）
+- 用 40 個 v1 假用戶、全部品項待分析實測：不需要屬性的 25 個訊號和 v1 完全一樣；sweet、routine、travel、stock、tech、days、holiday 七格不變，其他格子只因為依賴屬性的訊號量不到而改變（例如 alcohol 格只剩 `bar_visits`，pets 格是 `null`）。給角色 4：沒有 GPU、很多品名待分析時，這些格子可能是 `null`，畫面照「沒有資料」顯示
 
 ### 13.4 角色 1 轉告（2026-10-15，第 2 週第二批，分支 `role-1/profiles`）
 

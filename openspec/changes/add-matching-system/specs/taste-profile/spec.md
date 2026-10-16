@@ -43,25 +43,36 @@
 - **THEN** 系統回應 200，`ready` 為 false，18 筆 `traits` 的數值都是 `null`，`months` 是空的
 
 ### Requirement: 飲品甜度的預設值
-計算 sweet 格時，若飲品的 sugar 是 `null`，系統 SHALL 套用現有的甜度預設規則（例如名稱含「奶茶」視為全糖、含「美式」視為無糖、手搖飲店家的飲品視為全糖）；套用後仍無法判斷的，才當成沒有資料。屬性 API 回傳的 MUST 仍是模型的原始結果。
+計算 sweet 格時，若飲品的 sugar 是 `null`（模型判斷過但沒寫甜度，或品名還在待分析），系統 SHALL 套用現有的甜度預設規則（例如名稱含「奶茶」視為全糖、含「美式」視為無糖、手搖飲店家的飲品視為全糖）；套用後仍無法判斷的，才當成沒有資料。屬性 API 回傳的 MUST 仍是模型的原始結果。（10/16 決定：待分析的飲品也套用預設規則，因為規則只看品名和店家，不需要模型的答案）
 
 #### Scenario: 沒寫甜度的奶茶
 - **WHEN** 手搖飲店家的「珍珠奶茶」經模型判斷後 sugar 是 `null`
 - **THEN** 屬性 API 顯示 sugar 為 `null`，但計算 sweet 時把它當成全糖
 
+#### Scenario: 待分析的奶茶
+- **WHEN** 手搖飲店家的「珍珠奶茶」還在待分析
+- **THEN** 計算 sweet 時同樣把它當成全糖；名稱和店家都看不出甜度的待分析飲品，才當成沒有資料
+
 ### Requirement: 待分析品項不影響已知結果
-屬性還在待分析的品項，SHALL 只在需要屬性的格子裡被當成沒有資料；類別、金額和日期仍然照常計入其他格子。待分析的品名數 SHALL 顯示在查詢結果中。
+屬性還在待分析的品項，SHALL 只在需要屬性的格子裡被當成沒有資料；類別、金額和日期仍然照常計入其他格子。不需要模型就知道的事實照常使用：類別門檻外的問題是已知的「沒有」、數量 ≥ 3 是囤貨、飲品套用甜度預設規則（見「飲品甜度的預設值」）、店家名稱裡的娛樂字照算。待分析的品名數 SHALL 顯示在查詢結果中。
 
 #### Scenario: 部分品項待分析
 - **WHEN** 使用者有 30 個品項，其中 5 個不同品名的屬性是待分析
-- **THEN** 品味向量照常算出，只有依賴那 5 個品項屬性的計算少了它們，`pending_attributes` 是 5
+- **THEN** 品味向量照常算出，只有依賴那 5 個品項屬性的計算少了它們（已知的答案太少時，那個訊號整個量不到，見「已知的答案太少時量不到」），`pending_attributes` 是 5
 
 ### Requirement: 未知的屬性不當成「沒有」
-用模型屬性計算時，`null`（未知，包含還在待分析的品名）SHALL 視為沒有資料，MUST NOT 當成 `false`。五個只算已知品項的比例訊號（`clearance_share`、`store_clearance_share`、`fresh_share`、`bulk_share`、`weekday_quick_share`）的分母 SHALL 只算那個屬性已知的品項；`weekday_quick_share` 的分母是至少有一筆 `quick` 已知的正餐的上班日。計次的訊號（例如 `alcohol_items`）只數答案是 `true` 的品項。分母裡有未知的答案、而且已知的少於 5 個時，那個訊號 SHALL 是 `null`（量不到），權重交給同一格的其他訊號；每個答案都已知時，結果 MUST 和照原本的比例算出的一樣。品味格子的最低品項需求（例如 `food_items`、`meal_items`）SHALL 照舊數全部品項，不只數屬性已知的。類別已經說明問題不適用時（例如正餐的 `cooking`），答案是已知的「沒有」，不是未知。
+用模型屬性計算時，`null`（未知，包含還在待分析的品名）SHALL 視為沒有資料，MUST NOT 當成 `false`。五個只算已知品項的比例訊號（`clearance_share`、`store_clearance_share`、`fresh_share`、`bulk_share`、`weekday_quick_share`）的分母 SHALL 只算那個屬性已知的品項；`weekday_quick_share` 的分母是至少有一筆 `quick` 已知的正餐的上班日。類別已經說明問題不適用時（例如正餐的 `cooking`），答案是已知的「沒有」，不是未知。
 
 #### Scenario: 未知的答案不算進分母
 - **WHEN** 使用者有 12 個食物品項，其中 4 個品名還在待分析，其餘 8 個的 `clearance` 已知，而且其中 2 個是 `true`
 - **THEN** `clearance_share` 是 2 ÷ 8 = 0.25，不是 2 ÷ 12
+
+#### Scenario: 類別不適用
+- **WHEN** 使用者的食物品項裡有一個正餐，它的品名還在待分析
+- **THEN** 它的 `cooking` 是已知的「沒有」（正餐不是生鮮），照樣算進 `fresh_share` 的分母；它的 `clearance` 是未知，不算進 `clearance_share` 的分母
+
+### Requirement: 已知的答案太少時量不到
+比例訊號的分母裡有未知的答案、而且已知的少於 5 個時，那個訊號 SHALL 是 `null`（量不到），權重交給同一格的其他訊號。每個答案都已知時，結果 MUST 和照原本的比例算出的一樣。
 
 #### Scenario: 已知的答案太少
 - **WHEN** 使用者有 12 個食物品項，其中 9 個品名還在待分析，只有 3 個的 `clearance` 已知
@@ -71,10 +82,38 @@
 - **WHEN** 同一份品項，每個答案都已知，而且和關鍵字規則給的答案一樣
 - **THEN** 品味向量和用關鍵字規則算出的完全一樣；已知的答案再少，比例訊號也不會因為少於 5 個而變成 `null`
 
+### Requirement: 最低品項需求照舊數全部品項
+品味格子的最低品項需求（`food_items`、`store_food_items`、`daily_items`、`meal_items` 等）SHALL 照舊數全部品項，不只數屬性已知的。`known_sugar_drinks` 本來就只數甜度已知（包含套用預設規則之後）的飲品，不在此列。
+
 #### Scenario: 待分析的品項照樣算進最低品項需求
 - **WHEN** 使用者有 10 個食物品項，其中 6 個品名還在待分析
 - **THEN** `food_items` 仍然是 10，需要 10 個食物品項的格子不因此被判為資料不足
 
-#### Scenario: 類別不適用
-- **WHEN** 使用者的食物品項裡有一個正餐，它的品名還在待分析
-- **THEN** 它的 `cooking` 是已知的「沒有」（正餐不是生鮮），照樣算進 `fresh_share` 的分母；它的 `clearance` 是未知，不算進 `clearance_share` 的分母
+### Requirement: 沒有已知答案的次數不是 0
+用模型屬性計算時，計次的訊號（`kitchen_per_month`、`sport_supplies`、`sport_gear`、`car_care`、`home_items`、`stationery_items`、`alcohol_items`、`pet_food_cat`、`pet_food_dog`、`pet_supply_cat`、`pet_supply_dog`）在「問題適用的品項」至少有一筆、但沒有任何一筆的答案已知時，SHALL 是 `null`（量不到），MUST NOT 是 0。問題適用的品項就是類別門檻內的品項：`kitchen` 是生鮮和日用品，`sport_gear`、`car_care`、`home`、`stationery` 是非食物（類別 4–9），其他問題不分類別。只要有一筆答案已知，就只數答案是 `true` 的品項；完全沒有適用的品項時是 0。不給模型屬性時，算法不變。（10/16 補上）
+
+#### Scenario: 全部待分析的酒類問題
+- **WHEN** 使用者的 3 筆飲品都還在待分析
+- **THEN** `alcohol_items` 是 `null`，alcohol 格只看其他訊號；其中一筆判斷過、答案是「不是酒」時，`alcohol_items` 是 0
+
+#### Scenario: 問題不適用任何品項
+- **WHEN** 使用者只有正餐，品名都還在待分析
+- **THEN** 只問生鮮、日用品或非食物的次數（`kitchen_per_month`、`sport_gear`、`car_care`、`home_items`、`stationery_items`）是 0；不分類別的問題（例如 `alcohol_items`）是 `null`
+
+### Requirement: 全部待分析時的娛樂
+模型判斷過的品名沒有娛樂種類，SHALL 視為「不是娛樂」照算。只有全部品項都還在待分析、而且沒有任何店家名稱說是娛樂時，`fun_visits` 和 `fun_kinds` SHALL 是 `null`。（10/16 補上）
+
+#### Scenario: 娛樂
+- **WHEN** 使用者的品項全部還在待分析
+- **THEN** 沒有娛樂店家時 `fun_visits` 是 `null`；有一筆在名稱含「影城」的店家時照算；品項判斷過但都沒有娛樂種類時是 0
+
+### Requirement: 待分析的寵物店造訪
+一張寵物店發票上沒有任何已知物種、又有品項還在待分析時，這次造訪 SHALL NOT 算給貓或狗（不拆成各一半）；這個人的寵物店發票全部如此時，`pet_visits_cat` 和 `pet_visits_dog` SHALL 是 `null`。同一張發票上有已知物種時照已知物種算；判斷過但沒寫物種的寵物商品，照舊貓狗各算一半。（10/16 補上）
+
+#### Scenario: 待分析的寵物店發票
+- **WHEN** 養狗的使用者每張寵物店發票上的品項都還在待分析
+- **THEN** 這些造訪不算給貓也不算給狗，`pet_visits_cat` 和 `pet_visits_dog` 是 `null`，pets_cat 格不會因此高於用關鍵字規則算出的值
+
+#### Scenario: 已知物種優先
+- **WHEN** 一張寵物店發票上有一筆判斷過的「犬用飼料」（species 是 dog）和一筆待分析的品項
+- **THEN** 這次造訪只算給狗

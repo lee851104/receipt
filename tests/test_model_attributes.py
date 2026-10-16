@@ -5,8 +5,9 @@ from datetime import date
 from pathlib import Path
 
 from src.ml.fields import ATTRIBUTES, FIELDS
-from src.receipt.attributes import FUN_WORDS, channel_of, describe, from_model
-from src.receipt.signals import calendar_days, gather, measure
+from src.receipt.attributes import FUN_WORDS, GOODS, channel_of, describe, from_model
+from src.receipt.personas import PERIOD as PERSONA_PERIOD, build_personas
+from src.receipt.signals import calendar_days, gather, measure, valid_items
 from src.receipt.traits import build_vector, explain, load_context, trait_value
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -341,6 +342,184 @@ class SameAnswersTests(unittest.TestCase):
             for key, value in answers.items():
                 if key not in ("sugar", "fun", "species"):
                     self.assertIsNotNone(value, msg=(row["name"], key))
+
+
+# The counted signals and the question each one counts the yeses of.
+COUNTED = {"kitchen_per_month": "kitchen", "sport_supplies": "sport_supply", "sport_gear": "sport_gear",
+           "car_care": "car_care", "home_items": "home", "stationery_items": "stationery", "alcohol_items": "alcohol",
+           "pet_food_cat": "pet_food", "pet_food_dog": "pet_food", "pet_supply_cat": "pet_supply",
+           "pet_supply_dog": "pet_supply"}
+# The categories a question is asked about; the other questions are asked about every category.
+ASKED_ABOUT = {"kitchen": {3, 8}, "sport_gear": GOODS, "car_care": GOODS, "home": GOODS, "stationery": GOODS}
+# For each question, an item it is asked about: (category, shop).
+ASKED = {"kitchen": (8, "測試量販店"), "sport_supply": (4, "測試運動店"), "sport_gear": (4, "測試運動店"),
+         "car_care": (5, "測試洗車場"), "home": (8, "測試量販店"), "stationery": (8, "測試文具店"),
+         "alcohol": (1, "示範超商"), "pet_food": (8, "測試寵物店"), "pet_supply": (8, "測試寵物店")}
+
+
+def asked(question, category):
+    return category in ASKED_ABOUT.get(question, {category})
+
+
+class UnknownCountTests(unittest.TestCase):
+    def test_a_count_with_no_known_answer_among_the_items_it_asks_about_is_unmeasured(self):
+        for signal, question in COUNTED.items():
+            category, shop = ASKED[question]
+            rows = bought((WORKDAYS[:3], "測試新品", category, 100, shop))
+            # Still waiting for the model, or judged without an answer to this question: either way nothing is known.
+            for fields in (None, model()):
+                with self.subTest(signal=signal, fields=fields):
+                    measured = measure(rows, PERIOD, CONTEXT, {"測試新品": fields})
+                    self.assertIsNone(measured["signals"][signal])
+                    self.assertEqual(measured["purchases"][signal], [])
+
+    def test_one_known_answer_lets_a_count_count_its_yeses(self):
+        rows = bought((WORKDAYS[:3], "測試新品飲料", 1, 60, "示範超商"), (WORKDAYS[3:4], "測試氣泡水", 1, 30, "示範超商"))
+        self.assertEqual(signals_of(rows, {"測試新品飲料": None, "測試氣泡水": model(alcohol=False)})["alcohol_items"], 0)
+
+    def test_a_count_asked_about_none_of_the_items_stays_zero(self):
+        rows = bought((WORKDAYS[:3], "測試排骨便當", 0, 100, "測試便當店"))
+        signals, rules = signals_of(rows, {"測試排骨便當": None}), signals_of(rows, None)
+        for signal in ("kitchen_per_month", "sport_gear", "car_care", "home_items", "stationery_items"):
+            self.assertEqual((signals[signal], rules[signal]), (0, 0), msg=signal)
+        # These questions are asked about a meal too, and its answer is unknown.
+        for signal in ("sport_supplies", "alcohol_items", "pet_food_cat", "pet_food_dog", "pet_supply_cat", "pet_supply_dog"):
+            self.assertIsNone(signals[signal], msg=signal)
+
+    def test_the_rules_always_measure_the_counts(self):
+        rows = bought(*((WORKDAYS[day:day + 1], f"測試新品{day}", category, 100, shop)
+                        for day, (category, shop) in enumerate(ASKED.values())))
+        signals = signals_of(rows, None)
+        self.assertEqual([signal for signal in COUNTED if signals[signal] is None], [])
+
+
+class UnknownFunTests(unittest.TestCase):
+    def test_fun_is_unmeasured_when_every_name_waits_and_no_shop_says_fun(self):
+        rows = bought((WORKDAYS[:3], "測試排骨便當", 0, 100, "測試便當店"), (WORKDAYS[3:5], "測試新品", 5, 300, "測試服務中心"))
+        measured = measure(rows, PERIOD, CONTEXT, {"測試排骨便當": None, "測試新品": None})
+        self.assertEqual((measured["signals"]["fun_visits"], measured["signals"]["fun_kinds"]), (None, None))
+        self.assertEqual((measured["purchases"]["fun_visits"], measured["purchases"]["fun_kinds"]), ([], []))
+        rules = signals_of(rows, None)
+        self.assertEqual((rules["fun_visits"], rules["fun_kinds"]), (0, 0))
+
+    def test_a_shop_that_says_fun_counts_while_every_name_waits(self):
+        rows = bought((WORKDAYS[:3], "測試排骨便當", 0, 100, "測試便當店"), (WORKDAYS[3:5], "測試新品", 5, 300, "測試影城"))
+        signals = signals_of(rows, {"測試排骨便當": None, "測試新品": None})
+        self.assertEqual((signals["fun_visits"], signals["fun_kinds"]), (2 / 2, 1))
+
+    def test_a_judged_name_without_a_kind_of_fun_is_no_fun(self):
+        rows = bought((WORKDAYS[:3], "測試排骨便當", 0, 100, "測試便當店"), (WORKDAYS[3:5], "測試新品", 5, 300, "測試服務中心"))
+        for attributes in ({"測試排骨便當": model(), "測試新品": model()}, {"測試排骨便當": model(), "測試新品": None}):
+            signals = signals_of(rows, attributes)
+            self.assertEqual((signals["fun_visits"], signals["fun_kinds"]), (0, 0))
+
+
+def pet_bill(day, invoice, *lines):
+    """One pet-shop invoice holding (name, amount) lines."""
+    return [{"date": day, "day": day.day, "invoice": invoice, "merchant": "測試寵物店", "district": HOME, "name": name,
+             "quantity": 1, "amount": amount, "category": 8, "provisional": False} for name, amount in lines]
+
+
+VISITS = ("pet_visits_cat", "pet_visits_dog")
+
+
+class WaitingPetShopTests(unittest.TestCase):
+    def test_a_known_species_decides_the_visit_even_with_another_line_waiting(self):
+        rows = pet_bill(WORKDAYS[0], "P1", ("犬用飼料", 500), ("測試新品", 200))
+        measured = measure(rows, PERIOD, CONTEXT, {"犬用飼料": model(pet_food=True, species="dog"), "測試新品": None})
+        self.assertEqual(tuple(measured["signals"][key] for key in VISITS), (0, 1 / 2))
+        self.assertEqual(measured["purchases"]["pet_visits_cat"], [])
+
+    def test_a_waiting_bill_without_a_known_species_counts_for_neither(self):
+        rows = pet_bill(WORKDAYS[0], "P1", ("測試新品", 200)) + pet_bill(WORKDAYS[1], "P2", ("犬用飼料", 500))
+        measured = measure(rows, PERIOD, CONTEXT, {"犬用飼料": model(pet_food=True, species="dog"), "測試新品": None})
+        self.assertEqual(tuple(measured["signals"][key] for key in VISITS), (0, 1 / 2))
+        self.assertEqual([line["invoice"] for line in measured["purchases"]["pet_visits_dog"]], ["P2"])
+
+    def test_visits_are_unmeasured_when_every_pet_shop_bill_waits(self):
+        rows = pet_bill(WORKDAYS[0], "P1", ("測試新品", 200)) + pet_bill(WORKDAYS[1], "P2", ("測試新品罐頭", 100))
+        measured = measure(rows, PERIOD, CONTEXT, {"測試新品": None, "測試新品罐頭": None})
+        self.assertEqual(tuple(measured["signals"][key] for key in VISITS), (None, None))
+        self.assertEqual(tuple(measured["purchases"][key] for key in VISITS), ([], []))
+
+    def test_judged_pet_items_without_a_species_split_the_visit_as_before(self):
+        rows = pet_bill(WORKDAYS[0], "P1", ("測試寵物罐頭", 100))
+        signals = signals_of(rows, {"測試寵物罐頭": model(pet_food=True)})
+        self.assertEqual(tuple(signals[key] for key in VISITS), (1 / 4, 1 / 4))
+        self.assertEqual(tuple(signals[key] for key in VISITS), tuple(signals_of(rows, None)[key] for key in VISITS))
+
+
+# Signals that ask nothing of an item's attributes: the category, amount, date and shop decide them.
+WITHOUT_ATTRIBUTES = ("meal_cost premium_drink_share store_meal_share shop_meal_share ready_meal_share dessert_share "
+                      "repeat_rate shop_focus new_shop_share sport_visits fuel_visits parking_visits away_share stays "
+                      "long_trips convenience_share small_daily_visits select_visits tech_items tech_spend tech_visits "
+                      "offday_invoice_share offday_amount_share holiday_trip_share bar_visits").split()
+
+
+def waiting(rows):
+    return dict.fromkeys((row["name"] for row in rows), None)
+
+
+def rules_by_name(rows):
+    """Each name's attributes as a model reading only the name would write down the rules' answers. The shop's words,
+    the quantity and the sweetness defaults are from_model's own business, as with a real model."""
+    by_kind = {word: kind for kind, word in FUN_WORDS.items()}
+    attributes = {}
+    for row in rows:
+        answers = describe({**row, "merchant": "", "quantity": 1}, "", WORDS)
+        attributes[row["name"]] = model(**{key: answers[key] for key in ATTRIBUTES if key not in ("sugar", "fun")},
+                                        fun=by_kind.get(answers["fun"]))
+    return attributes
+
+
+class FortyPeopleTests(unittest.TestCase):
+    """The 40 fictional v1 people, every name still waiting for the model, or answered the way the rules answer."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.people = build_personas(CONTEXT["calendar"])
+
+    def test_waiting_names_leave_the_signals_that_ask_no_attribute_as_they_were(self):
+        for person in self.people:
+            rows = person["rows"]
+            before = measure(rows, PERSONA_PERIOD, CONTEXT)["signals"]
+            after = measure(rows, PERSONA_PERIOD, CONTEXT, waiting(rows))["signals"]
+            with self.subTest(person=person["name"]):
+                self.assertEqual({key: after[key] for key in WITHOUT_ATTRIBUTES},
+                                 {key: before[key] for key in WITHOUT_ATTRIBUTES})
+
+    def test_waiting_names_leave_a_count_unmeasured_only_where_its_question_is_asked(self):
+        unmeasured = 0
+        for person in self.people:
+            rows = person["rows"]
+            items = valid_items(gather(rows, CONTEXT, waiting(rows))[0])
+            measured = measure(rows, PERSONA_PERIOD, CONTEXT, waiting(rows))
+            for signal, question in COUNTED.items():
+                with self.subTest(person=person["name"], signal=signal):
+                    if any(asked(question, item["category"]) for item in items):
+                        self.assertIsNone(measured["signals"][signal])
+                        self.assertEqual(measured["purchases"][signal], [])
+                        unmeasured += 1
+                    else:
+                        self.assertEqual(measured["signals"][signal], 0)
+        self.assertGreater(unmeasured, 0)
+
+    def test_a_dog_owner_waiting_for_the_model_gains_no_cat(self):
+        person = next(person for person in self.people if person["name"] == "家庭下廚 A")
+        rows = person["rows"]
+        cat = [trait["id"] for trait in CONTEXT["traits"]["traits"]].index("pets_cat")
+        before = build_vector(rows, PERSONA_PERIOD, CONTEXT)[cat]
+        after = build_vector(rows, PERSONA_PERIOD, CONTEXT, waiting(rows))[cat]
+        self.assertTrue(after is None or after <= before, (before, after))
+        signals = measure(rows, PERSONA_PERIOD, CONTEXT, waiting(rows))["signals"]
+        self.assertEqual(tuple(signals[key] for key in VISITS), (None, None))
+
+    def test_the_rules_answers_give_every_one_of_the_40_the_same_taste(self):
+        for person in self.people:
+            rows = person["rows"]
+            before = build_vector(rows, PERSONA_PERIOD, CONTEXT)
+            with self.subTest(person=person["name"]):
+                self.assertEqual(build_vector(rows, PERSONA_PERIOD, CONTEXT, rules_by_name(rows)), before)
 
 
 if __name__ == "__main__":

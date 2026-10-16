@@ -3,7 +3,7 @@ from collections import Counter
 from datetime import date, timedelta
 from statistics import mean, median
 
-from .attributes import DAILY, DESSERT, DRINK, MEAL, SPORT, TECH, channel_of, describe, fold, from_model, has
+from .attributes import DAILY, DESSERT, DRINK, MEAL, SPORT, TECH, asked, channel_of, describe, fold, from_model, has
 
 CONFIRMED = 10  # category 10 still waits for review
 MEAL_BILL = {MEAL, DRINK, DESSERT}  # what a meal bill may include when estimating cost per person
@@ -12,7 +12,15 @@ STORES = {"超商", "量販"}
 # A share over a model's answers needs this many known ones once some are unknown, so a lucky few answers cannot
 # stand for the whole (like meal_cost needing 3 costs and convenience_share 2 store bills).
 MIN_KNOWN = 5
-SPLIT = {"cat": (("cat", 1.0),), "dog": (("dog", 1.0),), None: (("cat", 0.5), ("dog", 0.5))}
+# Counts of yeses, and the model's question each one counts.
+COUNTED = {"kitchen_per_month": "kitchen", "sport_supplies": "sport_supply", "sport_gear": "sport_gear",
+           "car_care": "car_care", "home_items": "home", "stationery_items": "stationery", "alcohol_items": "alcohol",
+           "pet_food_cat": "pet_food", "pet_food_dog": "pet_food", "pet_supply_cat": "pet_supply",
+           "pet_supply_dog": "pet_supply"}
+# A pet-shop bill with no known species and an item still waiting for the model: no evidence for either species, unlike
+# judged items that name none (None), which split the visit as the rules always have.
+WAITING = object()
+SPLIT = {WAITING: (), "cat": (("cat", 1.0),), "dog": (("dog", 1.0),), None: (("cat", 0.5), ("dog", 0.5))}
 
 
 def calendar_days(period, calendar):
@@ -88,7 +96,7 @@ def gather(rows, context, attributes=None):
     """Answer the item questions once per line, then group the lines into invoices.
 
     The answers come from the keyword rules, or from `attributes` when given: {name: a model's fields, or None while
-    the name waits for the model}.
+    the name waits for the model}. Each line says whether its name is still waiting.
     """
     brands, vocabulary = context["brands"], context["vocabulary"]
     channels, lines, invoices = {}, [], {}
@@ -96,9 +104,10 @@ def gather(rows, context, attributes=None):
         merchant = row["merchant"]
         if merchant not in channels:
             channels[merchant] = channel_of(merchant, brands, vocabulary)
+        fields = None if attributes is None else attributes.get(row["name"])
         answers = (describe(row, channels[merchant], vocabulary) if attributes is None
-                   else from_model(row, channels[merchant], attributes.get(row["name"]), vocabulary))
-        line = {**row, "channel": channels[merchant], **answers}
+                   else from_model(row, channels[merchant], fields, vocabulary))
+        line = {**row, "channel": channels[merchant], **answers, "waiting": attributes is not None and fields is None}
         lines.append(line)
         invoice = invoices.setdefault(row["invoice"], {
             "date": row["date"], "merchant": merchant, "channel": channels[merchant],
@@ -177,8 +186,11 @@ def weekday_quick_share(meals, off):
 
 
 def bill_species(invoice):
-    """The one species a pet-shop bill's pet items name, or None when they name neither or both."""
+    """The one species a pet-shop bill's pet items name, or None when they name neither or both; WAITING when they name
+    none and an item on the bill still waits for the model."""
     named = {line["species"] for line in invoice["lines"] if line["species"] and (line["pet_food"] or line["pet_supply"])}
+    if not named and any(line["waiting"] for line in invoice["lines"]):
+        return WAITING
     return named.pop() if len(named) == 1 else None
 
 
@@ -189,19 +201,25 @@ def pet_signals(items, paid, months):
             if item[kind]:
                 for species, part in SPLIT[item["species"]]:
                     pets[species][kind] += part
-    for invoice in paid:
-        if invoice["channel"] == "寵物":
-            for species, part in SPLIT[bill_species(invoice)]:
-                pets[species]["visits"] += part
-    return {f"pet_{kind}_{species}": pets[species][key] / months
-            for species in ("cat", "dog") for kind, key in (("food", "pet_food"), ("supply", "pet_supply"), ("visits", "visits"))}
+    shop_bills = [bill_species(invoice) for invoice in paid if invoice["channel"] == "寵物"]
+    for named in shop_bills:
+        for species, part in SPLIT[named]:
+            pets[species]["visits"] += part
+    signals = {f"pet_{kind}_{species}": pets[species][key] / months
+               for species in ("cat", "dog") for kind, key in (("food", "pet_food"), ("supply", "pet_supply"), ("visits", "visits"))}
+    if shop_bills and all(named is WAITING for named in shop_bills):
+        # Pet-shop visits, but every one of them still waits for the model: they say nothing about either species.
+        signals["pet_visits_cat"] = signals["pet_visits_dog"] = None
+    return signals
 
 
 def measure(rows, period, context, attributes=None):
     """Raw signals (None when they cannot be measured), the counts traits require, calendar constants, and the
     purchases each signal counted.
 
-    A share over items answered by a model leaves out the items whose answer is unknown (see gather for `attributes`).
+    With a model's answers (see gather for `attributes`) an unknown answer is never a no: a share leaves out the items
+    whose answer is unknown and needs MIN_KNOWN known ones once some are unknown, and a count of yeses with not one known
+    answer among the items it asks about is None.
     """
     days, off, long_weekend = calendar_days(period, context["calendar"])
     months = len(period)
@@ -275,6 +293,7 @@ def measure(rows, period, context, attributes=None):
         **{f"pet_{kind}_{species}": [item for item in items if item[f"pet_{kind}"] and item["species"] != other[species]]
            for species in ("cat", "dog") for kind in ("food", "supply")},
         **{f"pet_visits_{species}": [item for item in items if item["invoice"] in pet_bills
+                                     and pet_bills[item["invoice"]] is not WAITING
                                      and pet_bills[item["invoice"]] != other[species]] for species in ("cat", "dog")},
         "alcohol_items": flagged("alcohol"), "bar_visits": at("酒吧"),
     }
@@ -322,6 +341,15 @@ def measure(rows, period, context, attributes=None):
         "alcohol_items": len(behind["alcohol_items"]) / months,
         "bar_visits": visits("酒吧"),
     }
+    # The rules answer every one of these questions, so only a model's unknowns leave a signal unmeasured here.
+    for signal, question in COUNTED.items():
+        pool = [item for item in items if asked(question, item["category"])]
+        if pool and not known(pool, question):
+            signals[signal] = None
+    # Once the model has judged a name, no kind of fun means not fun; with every name still waiting and no shop saying
+    # fun, nothing is known about fun at all.
+    if items and all(item["waiting"] for item in items) and not behind["fun_visits"]:
+        signals["fun_visits"] = signals["fun_kinds"] = None
     # A signal that cannot be measured lists nothing; a signal missing from `behind` fails here instead of listing nothing.
     if behind.keys() != signals.keys():
         raise KeyError(sorted(behind.keys() ^ signals.keys()))

@@ -65,6 +65,9 @@ class BackendTests(unittest.TestCase):
         self.assertIs(backends.classify, fakes.classify)
         self.assertIs(backends.describe_items, fakes.describe_items)
 
+    def test_the_fake_model_keeps_the_key_fake(self):
+        self.assertEqual(load_backends(Settings(jwt_secret=SECRET)).attributes_version, "fake")
+
     def test_asking_for_a_real_model_before_it_exists_stops_the_server(self):
         for changes in ({"category_model": "tfidf"}, {"category_model": "embedding"}, {"attributes_model": "qwen"}):
             with self.subTest(changes=changes), self.assertRaises(ValueError):

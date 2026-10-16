@@ -21,7 +21,8 @@ class Backends:
     category: str                    # the name /api/health reports
     classify: Callable               # list[str] -> list[{"category": 0-9, "probs": [10 floats]}]
     attributes: str
-    describe_items: Callable         # (list[str], ask_model=True) -> list[dict | None]
+    attributes_version: str          # the item_cache key: which model and prompt answered
+    describe_items: Callable        # (list[str], ask_model=True) -> list[dict | None]
     gpu_probe: Callable[[], bool]    # whether the llama-server answers right now
 
 
@@ -80,5 +81,5 @@ def load_backends(settings):
     if settings.attributes_model != "fake":
         raise ValueError("Only ATTRIBUTES_MODEL=fake works until src/ml has the real attribute model")
     category, classify = category_backend(settings)
-    return Backends(category=category, classify=classify, attributes="fake",
+    return Backends(category=category, classify=classify, attributes="fake", attributes_version="fake",
                     describe_items=fakes.describe_items, gpu_probe=llama_probe(settings.llama_server_url))

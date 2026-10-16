@@ -19,7 +19,10 @@ SECRET = "test-secret-0123456789abcdef0123456789"
 def fake_backends(**changes):
     values = {"category": "fake", "classify": fakes.classify, "attributes": "fake",
               "describe_items": fakes.describe_items, "gpu_probe": lambda: False}
-    return Backends(**{**values, **changes})
+    merged = {**values, **changes}
+    # Unless a test names a version, the cache key is the setting name, as it was before versions existed.
+    merged.setdefault("attributes_version", merged["attributes"])
+    return Backends(**merged)
 
 
 def make_client(demo_mode=False, **backend_changes):

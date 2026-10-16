@@ -194,6 +194,20 @@ class PendingAttributesTests(unittest.TestCase):
             session.commit()
         self.assertEqual(self.pending(), 2)
 
+    def test_answers_of_another_version_are_not_used(self):
+        client = make_client(attributes="qwen", attributes_version="v2", gpu_probe=lambda: False,
+                             describe_items=lambda names, ask_model=True: [None] * len(names))
+        register(client)
+        headers = login(client)
+        fields = json.dumps(dict.fromkeys(FIELDS))
+        with Session(client.app.state.engine) as session:
+            # One name answered by an older version, one by the current version: only the second counts as judged.
+            session.add_all([ItemCache(name="測試奶茶", model="v1", fields=fields),
+                             ItemCache(name="測試新品", model="v2", fields=fields)])
+            session.commit()
+        upload(client, headers, invoice_csv(month_of(5, ["測試奶茶", "測試新品"])))
+        self.assertEqual(client.get("/api/me/profile", headers=headers).json()["pending_attributes"], 1)
+
     def test_the_request_never_asks_the_model_even_when_it_could_answer(self):
         asked, answering = [], []
 

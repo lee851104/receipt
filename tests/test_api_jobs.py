@@ -88,6 +88,14 @@ class JobTests(unittest.TestCase):
         self.assertEqual(sorted(row.name for row in self.rows(client, ItemCache)), ["滷肉飯", "衛生紙", "鮮奶茶"])
         self.assertEqual({row.model for row in self.rows(client, ItemCache)}, {"qwen"})
 
+    def test_the_cache_key_is_the_attribute_models_version(self):
+        # A stand-in model whose version is "v2" stores its answers under "v2", not under the setting name.
+        client, headers = self.client(
+            attributes="qwen", attributes_version="v2", gpu_probe=lambda: True,
+            describe_items=lambda names, ask_model=True: [dict.fromkeys(FIELDS) for _ in names])
+        upload(client, headers, invoice_csv(MAY))
+        self.assertEqual({row.model for row in self.rows(client, ItemCache)}, {"v2"})
+
     def test_an_unavailable_classifier_fails_the_job_and_says_why(self):
         client, headers = self.client(category="unavailable")
         self.assertEqual(upload(client, headers, invoice_csv(MAY)).status_code, 202)

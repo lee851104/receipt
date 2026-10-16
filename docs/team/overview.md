@@ -286,17 +286,17 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
   - `norm` = √(Σ weight × 值²)，只算 shared 的格子
   - `denominator` = norm_mine × norm_theirs + shrink；`score` = dot ÷ denominator
   - `part` = product ÷ denominator，是每格對分數的貢獻，全部加起來等於 `score`
-- `comparable` 為 false 時，`reason` 是 `not_enough_items`（任一方有效品項不夠）或 `too_few_shared`（共同的雙向格少於 5 格），`dot` 以下的欄位全部是 `null`
+- 分數和清單一致：`cells` 的 `mine`／`theirs` 是存起來的向量，`score`、`percent` 和配對清單上的完全一樣；`part` 依序加總剛好等於 `score`（10/16 補上）
+- `comparable` 為 false 時，`reason` 是 `not_enough_items`（任一方有效品項不夠）或 `too_few_shared`（共同的雙向格少於 5 格），`dot` 以下的欄位全部是 `null`；每一格的 `product` 和 `part` 也是 `null`；`mine`、`theirs`、`weight`、`shared` 照實給，`shared_two_sided` 照實數（任一方沒有向量時是 0）（10/16 補上）
 - 另外有一個 `network` 欄位，給連線圖用，格式和 v1 的 `traitNetworkData` 相同（`build.trait_network_data`），只是 `friends` 換成 `mine` 和 `theirs` 兩個人：
   ```json
   "network": {"model": {"…": "同 similarity_model"}, "traits": ["…"], "signals": ["…"], "readout": {"…": "…"},
               "mine":   {"vector": ["…18 格"], "pushes": ["…"], "signals": ["…46 個訊號"], "items": [[["鮮奶茶", 6], ["美式咖啡", 2]], null]},
               "theirs": {"vector": ["…"], "pushes": ["…"], "signals": ["…"], "items": ["…"]}}
   ```
-  `src/web/trait-network.js`（複製到 `src/web_v2/` 之後）可以直接拿來畫。資料不夠的人，四個欄位都是 `null`
+  `src/web/trait-network.js`（複製到 `src/web_v2/` 之後）可以直接拿來畫。資料不夠的人，四個欄位都是 `null`；`vector` 就是存起來的向量（和 `cells` 的值一樣）；`pushes`、`signals`、`items` 是查詢時用那個人存著的品項和屬性快取當場算的，不問模型、不寫入。沒有存起來的向量，或品項現在已經算不出品味（例如剛刪掉一個月、重算還在排隊）時，那一邊四個欄位都是 `null`。上次上傳之後才有答案的品名，`pushes`、`signals` 會先反映，向量要等下一次上傳的任務重算（10/16 補上）
 - `items` 是每個訊號買最多次的 3 個品名和出現的發票張數，品名一律經過 5.8 的處理
-- 錯誤：404（沒有這個人）、400 `self`（查自己）
-- demo 用戶查真實使用者的計算過程，回 404，當作沒有這個人，和清單同一條規則（任務 2.7 要照這樣做）（10/16 補上）
+- 錯誤：404 `not_found`（沒有這個人，或我是假用戶而對方不是）、400 `self`（查自己）、422（`user_id` 不是 1 到 2^63−1 的整數）。我是假用戶而對方不是時，當作沒有這個人，回應內容和真的沒有這個人完全一樣，和配對清單同一條規則（10/16 補上）
 
 ### 5.8 品名隱私
 
@@ -524,6 +524,17 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 ## 13. 角色之間的交接
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
+
+### 13.7 角色 1 轉告（2026-10-16，第 3 週第四批，分支 `role-1/matches`）
+
+計算過程 `GET /api/matches/{user_id}/explain`（5.7）可以用了。
+
+**給角色 4**
+- 計算過程面板（任務 5.7）：`cells` 一定 18 筆，順序同 `configs/traits.json`；`part` 加起來就是 `score`，`percent` 和配對清單卡片上的一樣，面板直接顯示 API 的數字，不要自己算
+- `comparable` 為 false 時看 `reason`：`not_enough_items`（任一方資料不夠）或 `too_few_shared`（共同的雙向格不到 `min_shared_two_sided`，`shared_two_sided` 是實際格數）；這時總數和每格的 `product`、`part` 都是 `null`
+- 關係圖：`network` 的格式同 v1 的 `traitNetworkData`，只是 `friends` 換成 `mine` 和 `theirs` 兩個人，`src/web/trait-network.js` 複製到 `src/web_v2/` 後可以直接畫。一邊資料不夠時，那一邊的 `vector`、`pushes`、`signals`、`items` 都是 `null`，要畫成「資料不夠」
+- 任何人都能查，不限清單前 5 名；查自己是 400 `self`，沒有這個人是 404 `not_found`。用假用戶登入時查真實使用者也是 404
+- 品名已經去掉地名（5.8），回應裡沒有店家、發票號碼、日期、金額，前端不用再處理
 
 ### 13.6 角色 1 轉告（2026-10-16，第 2–3 週第三批，分支 `role-1/matches`）
 

@@ -81,7 +81,7 @@
 
 #### Scenario: 不可比較的對象
 - **WHEN** 使用者查詢一位共同雙向格不足的對象
-- **THEN** 回應的 `comparable` 為 `false`，`reason` 是 `too_few_shared`，內積以下的數值都是 `null`
+- **THEN** 回應的 `comparable` 為 `false`，`reason` 是 `too_few_shared`，內積以下的數值和每一格的乘積、貢獻都是 `null`
 
 #### Scenario: 查詢自己或不存在的人
 - **WHEN** 使用者查詢自己的計算過程，或查詢不存在的使用者

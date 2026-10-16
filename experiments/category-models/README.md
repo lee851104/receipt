@@ -435,3 +435,6 @@ foreach ($role2Seed in 42,43,44) {
 
 
 30-run results: [classification-multiseed-cv.md](../../docs/results/classification-multiseed-cv.md). 25% mean88.73% (seed SD0.28pp), current mean88.17% (seed SD1.29pp); paired +0.56pp, 7 wins / 3 ties / 5 losses. This is development evidence, not independent test accuracy.
+
+
+Current user-selected BERT: 25% synthetic, bert-next25-20261016-v3. See [selected model](../../docs/results/classification-selected-model.md) for the exact artifact and integration status.

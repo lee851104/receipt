@@ -250,9 +250,10 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 ### 5.7 配對
 
 **`GET /api/matches?kind=similar&scope=all`**
-- `kind`：similar（相近，`percent` ≥ +30）或 opposite（互補，`percent` ≤ −10），預設 similar。門檻來自 `configs/traits.json` 的 `match`
-- `scope`：all / district / city / region，也就是不限、同區、同縣市、同地區，對應 `places.distance` ≤ 0、1、2。預設 all
-- 對象：自己以外、算得出品味向量的所有使用者（包含假用戶）
+- `kind`：similar（相近，`percent` ≥ +30）或 opposite（互補，`percent` ≤ −10），預設 similar。門檻來自 `configs/traits.json` 的 `match`；不是這兩個值（含大小寫不同）回 422（10/16 補上）
+- `scope`：all / district / city / region，也就是不限、同區、同縣市、同地區，對應 `places.distance` ≤ 0、1、2。預設 all；不是這四個值（含大小寫不同）回 422（10/16 補上）
+- 對象：自己以外、存起來的 profile 有品味向量的所有使用者（包含假用戶）；和我不可比較的人（共同的雙向格少於 5 格，見 `explain` 的 `too_few_shared`）不算進任何人數；假用戶不管 `DEMO_MODE` 有沒有開都算（`DEMO_MODE` 只管 demo 名單和快速切換，見 5.10）（10/16 補上）
+- 門檻：看整數百分比，和 v1 的 `match-filter.js` 一樣：相近是 `percent` ≥ `similarity.percent(min_score)`（+30），互補是 `percent` ≤ `similarity.percent(−opposite_score)`（−10）。所以 0.295 是 +30%、列入，−0.095 是 −9%（四捨五入往上）、不列入；分數剛好 0 兩邊都不列（10/16 補上）
 - 排序：similar 分數由高到低，opposite 由低到高；同分時依 `display_name` 的字碼順序，再依 `user_id`；取前 5 名
 - 回傳：
   ```json
@@ -263,8 +264,11 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
   ```
 - `eligible`：過門檻的人數，不看距離；`within`：過門檻又在範圍內的人數。前端用這兩個數字照 v1 的方式寫狀態文字
 - `area`：對方離我最近的生活圈（`places.closest_area`），可能是 `null`
-- 我自己資料不夠時：`ready` 為 false，`people` 為空陣列，`eligible` 和 `within` 都是 0
-- 錯誤：400 `no_home_area`（看不出我的生活圈，`scope` 卻不是 all）
+- `distance`：0 同區、1 同縣市、2 同地區、3 更遠；我或對方看不出生活圈時是 `null`（不知道），這樣的人只會出現在 `scope=all`（10/16 補上）
+- `my_areas`：我存起來的 profile 的生活圈，同 `/api/me/profile` 的 `areas`，資料不夠時也照實給（10/16 補上）
+- 我自己資料不夠時（沒有存起來的品味向量）：不管 `scope` 是什麼，`ready` 為 false，`people` 為空陣列，`eligible` 和 `within` 都是 0，不回 `no_home_area`（10/16 補上）
+- 錯誤：400 `no_home_area`（我的資料夠，但看不出我的生活圈，`scope` 卻不是 all）、422（`kind`、`scope` 不是列出的值）
+- 分數每次查詢當場算，不存（design D3，`src/api/matching.py`）。任何一個人存著舊長度的向量（改了 `configs/traits.json` 的 trait 卻沒重算），配對清單回 500，不拿錯位的格子算分數；改 trait 之後要把每個人的 profile 重算（同 5.6）（10/16 補上）
 
 **`GET /api/matches/{user_id}/explain`**：任何一個使用者都能看，不限前 5 名
 - 回傳：
@@ -519,6 +523,24 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 ## 13. 角色之間的交接
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
+
+### 13.6 角色 1 轉告（2026-10-16，第 2–3 週第三批，分支 `role-1/matches`）
+
+`GET /api/matches`（5.7）可以用了；計算過程 `GET /api/matches/{user_id}/explain` 還沒做（任務 2.7）。分數由後端當場算，前端不再自己算（design D3）。
+
+**給角色 4**
+- 參數：`kind` 是 `similar`／`opposite`，`scope` 是 `all`／`district`／`city`／`region`（不限、同一區、同縣市、同地區），都要小寫；其他值回 422
+- 先看 `ready`：false 時不管選哪個範圍都是 200、清單空的，畫面照 v1 顯示「資料還不夠」（還差幾個品項用 `/api/me/profile` 的 `item_count` 和 `min_items`）
+- `my_areas` 是空陣列時只能選「不限」：其他範圍請在畫面上停用，選了會回 400 `no_home_area`
+- 狀態文字照 v1 `match-filter.js` 的 `status`：`eligible` 是 0 →「目前沒有品味夠相似的人」（互補是「目前沒有和你明顯相反的人」）；`eligible` 大於 0、`within` 是 0 →「這個距離內沒有…，試試放寬距離」；`within` 大於 5 → 加「顯示前 5 位」
+- `people` 已經排好序、最多 5 人，不要再排。`score` 沒有四捨五入，卡片上的數字用 `percent`
+- `area` 可能是 `null`（對方看不出生活圈）；`distance` 是 0–3，我或對方看不出生活圈時是 `null`，這時不要顯示距離
+- 不要在畫面上自己依距離篩選或重新排序：`people`、`eligible`、`within` 已經照選的 `scope` 算好。v1 的 `src/web/match-filter.js` 用 `distance <= range` 篩選，JavaScript 裡 `null <= 0` 是 true，照搬到 API 資料上，看不出生活圈（`distance` 是 `null`）的人會跑進每一種範圍
+- 清單只有對方的編號、顯示名稱、生活圈、距離和分數；畫連線圖的資料要等 `explain`
+
+**給角色 3**
+- 假用戶要等 seed 擴充（任務 4.7）讓他們在 `profiles` 有向量之後，才會出現在別人的配對清單裡
+- 配對驗證（任務 4.9）請用 `src/api/matching.py` 的 `entries` 和 `pick`，門檻、排序和同分規則才會和 API 一樣
 
 ### 13.5 屬性接入以 `from_model` 為準（2026-10-16，使用者決定，角色 1 轉告，分支 `role-1/profiles`）
 

@@ -60,7 +60,7 @@
 
 ### D3. 配對在每次查詢時即時計算
 
-拿 `profiles` 裡所有人的向量逐一跑 `similarity.compare`（300 人 × 18 格不到 1 秒），再套用 `configs/traits.json` 的門檻和 `places` 的距離。計算過程直接使用 `compare` 回傳的 `parts`，另外補上分母的各項，所以「貢獻加總 = 分數」一定成立；關係圖的資料用現有的 `build.trait_network_data`，品名經過 `items.label` 去掉地名（overview 5.8）。前端只負責顯示，不再自己算分數。
+拿 `profiles` 裡所有人的向量逐一跑 `similarity.compare`（300 人 × 18 格不到 1 秒），再套用 `configs/traits.json` 的門檻和 `places` 的距離。計算過程直接使用 `compare` 回傳的 `parts`，另外補上分母的各項，所以「貢獻加總 = 分數」一定成立；關係圖的資料用現有的 `build.trait_network_data`，品名經過 `items.label` 去掉地名（overview 5.8）。前端只負責顯示，不再自己算分數。門檻用整數百分比判斷，和 v1 的 `src/web/match-filter.js` 同一套；清單的排名在 `src/api/matching.py`（`entries` 打分數、`pick` 判斷門檻、距離、排序和前 5 名），配對驗證（任務 4.9）也用它，不另寫一份。（10/16 補上）
 
 - 替代方案：預先算好所有配對並存起來。否決，因為 300 × 300 約 9 萬筆，每次有人上傳就要全部重算。
 

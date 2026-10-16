@@ -200,5 +200,51 @@ class MatchListTests(unittest.TestCase):
                          (True, ["臺北市大安區"], 0, []))
 
 
+class DemoSessionTests(unittest.TestCase):
+    """Demo login needs no password, so a demo session's list holds demo users only: never a real person."""
+
+    def setUp(self):
+        self.client = make_client(demo_mode=True)
+        engine = self.client.app.state.engine
+        with Session(engine) as session:
+            for name, is_demo in (("Mia", True), ("Noa", True), ("Ben", False)):  # users 1, 2 and 3
+                session.add(User(username=f"{name.lower()}_test", display_name=name, is_demo=is_demo,
+                                 persona="咖啡上班族" if is_demo else None))
+            session.commit()
+            for user_id in (1, 2, 3):
+                session.add(Profile(user_id=user_id, vector=json.dumps(ME if user_id == 1 else scoring(0.6)),
+                                    areas=json.dumps(["臺北市大安區"]), item_count=30))
+            session.commit()
+
+    def headers(self, user_id):
+        token = self.client.post("/api/auth/demo-login", json={"user_id": user_id}).json()["access_token"]
+        return {"Authorization": "Bearer " + token}
+
+    def test_a_demo_user_sees_only_other_demo_users_never_a_real_one(self):
+        for scope in ("all", "district"):
+            with self.subTest(scope=scope):
+                response = self.client.get("/api/matches", params={"scope": scope}, headers=self.headers(1))
+                body = response.json()
+                self.assertEqual(response.status_code, 200, response.text)
+                self.assertEqual((ids(body), body["eligible"], body["within"]), ([2], 1, 1))
+                self.assertNotIn("Ben", response.text)
+
+    def test_the_opposite_list_of_a_demo_user_holds_no_real_user_either(self):
+        with Session(self.client.app.state.engine) as session:
+            session.merge(Profile(user_id=3, vector=json.dumps(scoring(-0.6)), areas=json.dumps(["臺北市大安區"]),
+                                  item_count=30))
+            session.commit()
+        body = self.client.get("/api/matches", params={"kind": "opposite"}, headers=self.headers(1)).json()
+        self.assertEqual((ids(body), body["eligible"]), ([], 0))
+
+    def test_a_real_user_still_sees_demo_users_next_to_real_ones(self):
+        register(self.client, display_name="Amy")  # user 4
+        with Session(self.client.app.state.engine) as session:
+            session.add(Profile(user_id=4, vector=json.dumps(ME), areas=json.dumps(["臺北市大安區"]), item_count=30))
+            session.commit()
+        body = self.client.get("/api/matches", headers=login(self.client)).json()
+        self.assertEqual((sorted(ids(body)), body["eligible"]), ([1, 2, 3], 3))
+
+
 if __name__ == "__main__":
     unittest.main()

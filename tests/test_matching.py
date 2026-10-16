@@ -124,6 +124,12 @@ class PickTests(unittest.TestCase):
         result = self.pick([entry(2, 0.5, distance=3), entry(3, 0.2, distance=0)], level=0)
         self.assertEqual((result["eligible"], result["within"], self.ids(result)), (1, 0, []))
 
+    def test_a_kind_other_than_similar_or_opposite_is_refused_not_taken_for_similar(self):
+        for kind in ("close", "Similar", "", None):
+            with self.subTest(kind=kind):
+                with self.assertRaises(ValueError):
+                    self.pick([entry(2, 0.5)], kind)
+
     def test_the_chosen_entries_come_back_unchanged(self):
         chosen = entry(2, 0.5, distance=1)
         self.assertEqual(self.pick([dict(chosen)])["people"], [chosen])

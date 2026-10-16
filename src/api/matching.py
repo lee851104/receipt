@@ -27,7 +27,9 @@ def pick(entries, kind, level, match):
 
     The bar is checked on the whole percentage the page prints, as src/web/match-filter.js does, so a card reading
     +30% is always listed. Similar goes from the highest score and opposite from the lowest; ties go by display
-    name in code-point order, then by user id."""
+    name in code-point order, then by user id. A kind other than "similar" or "opposite" is a ValueError."""
+    if kind not in ("similar", "opposite"):
+        raise ValueError(f"kind must be 'similar' or 'opposite', not {kind!r}")
     opposite = kind == "opposite"
     line = similarity.percent(-match["opposite_score"] if opposite else match["min_score"])
     eligible = [entry for entry in entries if (entry["percent"] <= line if opposite else entry["percent"] >= line)]

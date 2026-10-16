@@ -34,8 +34,11 @@ def match_list(user: UserDep, request: Request, session: SessionDep,
     if level is not None and not my_areas:
         raise ApiError(400, "no_home_area")
     # Scores are worked out now from everyone's stored profile and never stored (design D3).
-    others = session.exec(select(User, Profile).join(Profile, col(Profile.user_id) == col(User.id))
-                          .where(col(User.id) != user.id, col(Profile.vector).is_not(None))).all()
+    query = (select(User, Profile).join(Profile, col(Profile.user_id) == col(User.id))
+             .where(col(User.id) != user.id, col(Profile.vector).is_not(None)))
+    if user.is_demo:  # demo login needs no password, so a demo session must never reveal real people
+        query = query.where(col(User.is_demo))
+    others = session.exec(query).all()
     people = [{"user_id": other.id, "display_name": other.display_name,
                "vector": profiles.stored_vector(stored, size), "areas": json.loads(stored.areas)}
               for other, stored in others]

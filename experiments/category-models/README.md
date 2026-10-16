@@ -288,3 +288,31 @@ node --test "tests/*.test.cjs"
 本輪比較計算已完成，但完整報告的文字掃描有 1 個名稱片段重合。完整報告先保留於主專案 `data/role2/runs/comparison-v2-20261015/report-detail.md`（Git 忽略），`docs/results/classification.md` 只保留待複核狀態。不要把命中的真實品名貼回聊天；使用者可在本機確認後再決定公開版本。
 
 如需在本機人工判讀，可另外加 `--local-match-report <新的私人JSON檔路徑>`；名稱與行號只寫入該檔，終端仍只有數字。此檔必須放主專案被 Git 忽略的 `data/role2/`，不應提交、列印或貼給雲端。已有檔案會拒絕覆寫。本輪已產生 `data/role2/runs/comparison-v2-20261015/privacy-review.json`，雲端 AI 未讀回內容。
+
+## 新增真實資料：先預標，再由使用者審核
+
+`prelabel_review.py` 只在本機使用既有 BERT seed 42 及 TF-IDF；不更新權重、不評估舊測試集，也不把預標當作人工標籤。輸入只取品名，交易欄位僅用於過濾：排除無日期的結尾、作廢發票、非整數或低於 10 元的明細；其餘狀態與格式錯誤直接停止。品名依 NFKC、去空白、忽略大小寫分組去重。
+
+從角色 2 worktree 執行；每次使用新的輸出資料夾：
+
+```powershell
+experiments/category-models/.venv/Scripts/python.exe experiments/category-models/prelabel_review.py --input-dir C:/Users/User/Desktop/AI_project/receipt/rawdata/receipt_2/receipt_2 --private-root C:/Users/User/Desktop/AI_project/receipt/data/role2 --out C:/Users/User/Desktop/AI_project/receipt/data/role2/category-review-20261016-v1 --bert C:/Users/User/Desktop/AI_project/receipt/data/role2/runs/bert-v2-20261015-seed42/model --tfidf C:/Users/User/Desktop/AI_project/receipt/data/role2/runs/tfidf-v2-20261015/model.joblib
+```
+
+輸出 `draft-items.jsonl`、`review.html`、只含彙總的 `summary.json`、來源／模型雜湊 `provenance.json` 和本機推論日誌。所有輸出都留在主資料夾被 Git 忽略的 `data/role2/`。終端只印彙總數字，失敗不回顯儲存格或例外內容。
+
+開啟 `review.html` 後：
+
+1. 預設列出待審核，將模型分歧或低分品項排在前面；可篩選「優先審核」。BERT 分數與分歧只是審核排序依據，沒有校準成正確率。
+2. 逐筆修改類別，必要時勾選「需背景」，最後勾選「已確認」。未知或運動裝備等尚未決定的品項選 10「待決定」，不能確認、不能匯出成訓練標籤。
+3. 離開前按「儲存進度 HTML」，確認下載完成，存回本次審核資料夾；下次開啟該檔繼續。原始審核頁不會自動覆寫，也不使用雲端或瀏覽器儲存服務。
+4. 完成後按「匯出已確認 JSONL」，存回審核資料夾，再提供本機路徑。匯出只包含使用者明確確認的 0–9 類，帶有 `source=real`、`review_status=human_confirmed`。其餘品項留待後續審核；修改類別或背景註記會取消該筆確認。
+
+待審核草稿固定 `category=null`、`review_status=model_pending`，現有訓練資料驗證器會拒絕。人工確認後，仍須另行合併、去重與檢查標籤衝突，再建立新版本資料切分；不能直接宣稱新增資料構成獨立測試集。
+
+虛構資料測試：
+
+```powershell
+experiments/category-models/.venv/Scripts/python.exe -m unittest discover -s experiments/category-models -p "test_prelabel_review.py"
+node --test experiments/category-models/test_review_core.cjs
+```

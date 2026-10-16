@@ -70,7 +70,7 @@ def validation_loss(model,tokenizer,rows,device,batch_size,max_length):
     return value
 
 
-def run(dataset_dir,pretrained,output_dir,seed=42,device='cuda',epochs=10,batch_size=16,lr=2e-5,benchmark_count=1000,progress=None,warm_start=False):
+def run(dataset_dir,pretrained,output_dir,seed=42,device='cuda',epochs=10,batch_size=16,lr=2e-5,benchmark_count=1000,progress=None,warm_start=False,development_only=False):
     if (type(seed) is not int or not 0<=seed<2**32 or type(epochs) is not int or epochs<1
             or type(batch_size) is not int or batch_size<1 or not math.isfinite(lr) or lr<=0
             or device not in ('cpu','cuda') or type(benchmark_count) is not int or benchmark_count<1):
@@ -79,10 +79,20 @@ def run(dataset_dir,pretrained,output_dir,seed=42,device='cuda',epochs=10,batch_
     if output_dir.exists():raise FileExistsError('output_exists')
     if output_dir.is_relative_to(dataset_dir) or output_dir.is_relative_to(pretrained):raise ValueError('unsafe_output')
     from bert_continuation import load as load_continuation
-    dataset_loader=load_continuation if warm_start else load_dataset
+    if development_only and warm_start:raise ValueError('development_recipe_requires_public_encoder')
+    if development_only:
+        from bert_release_data import load as load_development
+        dataset_loader=load_development
+    else:
+        dataset_loader=load_continuation if warm_start else load_dataset
     parts,manifest,identity=dataset_loader(dataset_dir)
     training,validation=parts['train'],parts['validation']
     if not training or len({r['category'] for r in training})<2 or not validation:raise ValueError('insufficient_train_or_validation')
+    if development_only:
+        config=json.loads((pretrained/'config.json').read_text(encoding='utf-8'))
+        if ((pretrained/'classifier-manifest.json').exists() or
+                any('SequenceClassification' in a for a in config.get('architectures',[]))):
+            raise ValueError('finetuned_initialization_forbidden')
     pretrained_checker=verified_manifest if warm_start else local_manifest
     pretrained_manifest=pretrained_checker(pretrained)
     if warm_start:
@@ -104,6 +114,7 @@ def run(dataset_dir,pretrained,output_dir,seed=42,device='cuda',epochs=10,batch_
     settings=dict(seed=seed,device=device,epochs=epochs,batch_size=batch_size,lr=lr,weight_decay=.01,
                   max_length=max_length,patience=2,min_delta=1e-4,gradient_clip=1.0,dtype='float32',threads=1,
                   selection='minimum_validation_cross_entropy; min_delta_controls_patience_only',tuned=False,
+                  data_policy='development_only' if development_only else 'fixed_split',
                   initialization='verified_classifier_warm_start' if warm_start else 'public_pretrained_encoder')
     started=time.perf_counter()
     tokenizer=AutoTokenizer.from_pretrained(pretrained,local_files_only=True,trust_remote_code=False)
@@ -167,6 +178,7 @@ def run(dataset_dir,pretrained,output_dir,seed=42,device='cuda',epochs=10,batch_
         settings=settings,history=history,pretrained=pretrained_manifest,
         dataset=dict(manifest_sha256=identity,files_sha256=manifest['files_sha256'],source_sha256=manifest['source_sha256'],summary=manifest['summary']),
         training_sources=sources,test_evaluation='not_run',reload_verified=True,reload_probe_items=len(probe),
+        test_access='not_opened' if development_only else 'loaded_for_integrity_checks_only',
         validation=dict(model=score([r['category'] for r in validation],[r['category'] for r in predictions])),
         cost=dict(initial_load_seconds=load_seconds,training_seconds=training_seconds,reload_seconds=reload_seconds,
                   inference_seconds=inference_seconds,benchmark_count=benchmark_count,
@@ -195,12 +207,13 @@ def main():
     parser.add_argument('--seed',type=int,default=42)
     parser.add_argument('--device',choices=('cpu','cuda'),default='cuda')
     parser.add_argument('--warm-start',action='store_true')
+    parser.add_argument('--development-only',action='store_true')
     parser.add_argument('--lr',type=float,default=2e-5)
     args=parser.parse_args()
     stream=__import__('sys').stdout
     try:
         with redirect_stdout(io.StringIO()),redirect_stderr(io.StringIO()):
-            report=run(args.dataset,args.pretrained,args.out,seed=args.seed,device=args.device,lr=args.lr,warm_start=args.warm_start,
+            report=run(args.dataset,args.pretrained,args.out,seed=args.seed,device=args.device,lr=args.lr,warm_start=args.warm_start,development_only=args.development_only,
                        progress=lambda row:print(json.dumps(row),file=stream,flush=True))
         print(json.dumps(dict(status='complete',seed=report['seed'],best_epoch=report['best_epoch'],validation=report['validation'],cost=report['cost'])))
     except Exception:

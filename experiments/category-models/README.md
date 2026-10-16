@@ -390,3 +390,18 @@ foreach ($role2Fold in 0..4) {
 固定lr2e-5、batch16、FP32、max_length32、最多10輪、patience2。輸出plan、共享training-config、各fold模型／report、私人OOF預測及aggregate summary。彙總重新核對模型與資料指紋、15組完整性、每個真實項目每組恰評一次、報告分數與OOF重算一致。樣本標準差只是折間描述；每折初始化種子不同，不能分離切分與種子影響，也不是信賴區間。合成比例增加亦增加每輪更新步數，並非等計算量實驗。運動3筆、住宿2筆，無法保證各折都有該類或代表穩定表現。
 
 本次比較結果與各類F1見 [classification-ratio-cv.md](../../docs/results/classification-ratio-cv.md)。
+
+## 選定25%配方的下一版BERT（原test繼續封存）
+
+`bert_release_data.py` 保留原本真實train／validation分界，從600筆合成候選用固定seed1042均衡取102筆，得到305真實＋102合成（25.06%），validation50。只讀train／validation及來源manifest、CV plan／summary，驗證指紋；新版本沒有test檔案。既有原test仍保留原處。
+
+```powershell
+$role2Data = 'C:/Users/User/Desktop/AI_project/receipt/data/role2'
+$role2CpuPython = './experiments/category-models/.venv/Scripts/python.exe'
+$role2CudaPython = './experiments/category-models/bert-runtime/.venv/Scripts/python.exe'
+& $role2CpuPython experiments/category-models/bert_release_data.py prepare --source "$role2Data/bert-continuation-20261016-v1" --cv "$role2Data/bert-ratio-cv-20261016-v1" --private-root $role2Data --out "$role2Data/bert-next25-data-20261016-v1"
+& $role2CpuPython experiments/category-models/bert_release_data.py check --dataset "$role2Data/bert-next25-data-20261016-v1"
+& $role2CudaPython experiments/category-models/bert_finetune.py --development-only --dataset "$role2Data/bert-next25-data-20261016-v1" --pretrained "$role2Data/models/bert-base-chinese" --out "$role2Data/runs/bert-next25-20261016-v1" --seed 42 --device cuda --lr 0.00002
+```
+
+輸出必須是新資料夾，不能覆寫既有run。`--development-only` 拒絕warm-start及已微調分類checkpoint，從公開encoder訓練，最多10輪、validation loss早停；保存後以CPU重載核對完整機率。執行前核對公開encoder與epoch/lr/batch/max_length/weight_decay/patience/min_delta和CV的training-config一致。本次只跑預先指定seed42，不評test、不挑多seed。validation曾參與配方交叉驗證，這次分數屬開發診斷，不能稱獨立測試準確率。模型、逐筆預測與資料只保留在主資料夾Git忽略的data/role2。

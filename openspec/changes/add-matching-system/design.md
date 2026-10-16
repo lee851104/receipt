@@ -199,14 +199,14 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 
 ### D14. Docker
 
-- 一個映像檔，以 `python:3.12-slim` 為基底，只裝服務需要的套件（含 CPU 版 torch）
+- 一個映像檔，以 `python:3.12-slim` 為基底，只裝服務需要的套件：目前只裝 `requirements.txt` 和 `requirements-docker.txt`（`huggingface_hub`）；CPU 版 `torch`、`transformers` 等角色 2 交出 BERT（任務 3.6）時才加（10/16 改寫）
 - `docker-compose.yml` 只有一個服務，兩個 volume：一個放 SQLite 資料庫，一個放下載的模型
 - 啟動流程：
   1. 讀設定（`JWT_SECRET` 沒設時用資料 volume 裡的 `/data/jwt-secret`，第一次啟動時產生）（10/16 補上）
   2. `CATEGORY_MODEL=bert` 而且 `CATEGORY_MODEL_DIR`（在模型 volume 裡）沒有模型時，用 `huggingface_hub` 下載 `CATEGORY_MODEL_REPO` 在 `CATEGORY_MODEL_REVISION` 的版本（下載到暫存資料夾，完整之後才改名；失敗時服務照樣啟動，健康檢查顯示 `unavailable`）（10/16 補上）
   3. 資料庫是空的且 `DEMO_MODE=1` 時，執行和 `python -m src.api.seed` 相同的匯入
   4. 用 uvicorn 啟動 `src.api.main:app`
-- 容器預設是無 GPU 模式；`LLAMA_SERVER_URL` 設成 `http://host.docker.internal:8080` 時，就連到主機上的 `llama-server`
+- 容器預設是無 GPU 模式；容器的 `LLAMA_SERVER_URL` 預設是 `http://host.docker.internal:8080`，主機上有開 `llama-server` 時就連得到，要連別的位址設 `DOCKER_LLAMA_SERVER_URL`。不直接用 `.env` 的 `LLAMA_SERVER_URL`：compose 會讀根目錄的 `.env`，而 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己（10/16 補上）
 - `.dockerignore` 排除 `rawdata/`、`data/`、`*.csv`、壓縮檔、`.env`、`models/`、`experiments/*/private`、`results`、`outputs`、`src/web/`、`*-data.js`；映像檔只 COPY `configs/` 和 `src/`，所以即使 `.dockerignore` 漏了什麼，根目錄的私人檔案也進不去（10/16 補上）
 - 組員開發時仍以 `start.bat` 為主；Docker 是給面試官和「乾淨環境驗證」用的
 

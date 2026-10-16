@@ -96,7 +96,14 @@ flowchart LR
 
 ### 啟動方式一：Windows，雙擊 `start.bat`
 
-1. 先照 [`docs/team/overview.md`](docs/team/overview.md) 第 12 節「環境」裝好 Python 3.12，在專案根目錄建立虛擬環境 `.venv`，再安裝 `requirements.txt`：
+1. 先照 [`docs/team/overview.md`](docs/team/overview.md) 第 12 節「環境」裝好 Python 3.12，在專案根目錄建立虛擬環境 `.venv`，再安裝 `requirements.txt`。用 Python 3.12 內建的 `venv` 和 `pip`：
+
+   ```
+   python -m venv .venv
+   .venv\Scripts\python.exe -m pip install -r requirements.txt
+   ```
+
+   或者用 uv（要先安裝 uv）：
 
    ```
    uv venv --python 3.12 .venv
@@ -123,8 +130,8 @@ docker compose up
 
 - 打開 `http://127.0.0.1:8000/web/`（網頁）和 `http://127.0.0.1:8000/docs`（API 文件）。埠只開在這台電腦的 `127.0.0.1`，因為 `DEMO_MODE=1` 時，任何連得到伺服器的人都能用假用戶登入。
 - 資料庫和下載的模型放在 Docker 的 volume 裡，重建容器資料還在（`docker compose down` 不會刪 volume）。`JWT_SECRET` 沒設時，會產生一次並存在資料 volume 裡。
-- 容器沒有 GPU。想用 Qwen，在主機上開 `llama-server`，`LLAMA_SERVER_URL` 預設就指向主機的 `http://host.docker.internal:8080`；沒開時是無 GPU 模式。
-- `CATEGORY_MODEL` 預設是 `fake`。設成 `bert`，並同時設 `CATEGORY_MODEL_REPO`（Hugging Face 上公開的模型庫）和 `CATEGORY_MODEL_REVISION`（固定版本）時，第一次啟動會把分類模型下載到 volume；下載失敗時服務照樣啟動，`/api/health` 的 `models.category` 顯示 `unavailable`。目前真的 BERT 還沒接上，`bert` 一律顯示 `unavailable`，所以先用預設的 `fake`。
+- 容器沒有 GPU。想用 Qwen，在主機上開 `llama-server`，容器預設就連主機的 `http://host.docker.internal:8080`；沒開時是無 GPU 模式。要連別的位址，設 `DOCKER_LLAMA_SERVER_URL`。容器不用 `.env` 裡的 `LLAMA_SERVER_URL`，因為那是給虛擬環境用的 `http://127.0.0.1:8080`，在容器裡指的是容器自己。
+- `CATEGORY_MODEL`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION` 從執行 `docker compose` 的環境變數，或專案根目錄的 `.env` 讀取（compose 會讀它）。`CATEGORY_MODEL` 預設是 `fake`。設成 `bert`，並同時設 `CATEGORY_MODEL_REPO`（Hugging Face 上公開的模型庫）和 `CATEGORY_MODEL_REVISION`（固定版本）時，第一次啟動會把分類模型下載到 volume；下載失敗時服務照樣啟動，`/api/health` 的 `models.category` 顯示 `unavailable`。目前真的 BERT 還沒接上，`bert` 一律顯示 `unavailable`，所以先用預設的 `fake`。
 - 映像檔只放 `configs/` 和 `src/`，不含 `data/`、`rawdata/`、CSV 和 `.env`。GitHub Actions 在每次 push 都會建置映像檔、檢查裡面沒有私人檔案，並啟動一次確認 `/api/health`。
 
 ### 為什麼沒有用 pgvector

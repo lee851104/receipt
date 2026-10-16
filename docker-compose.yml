@@ -11,7 +11,9 @@ services:
       CATEGORY_MODEL: ${CATEGORY_MODEL:-fake}
       CATEGORY_MODEL_REPO: ${CATEGORY_MODEL_REPO:-}
       CATEGORY_MODEL_REVISION: ${CATEGORY_MODEL_REVISION:-}
-      LLAMA_SERVER_URL: ${LLAMA_SERVER_URL:-http://host.docker.internal:8080}
+      # Its own variable, not LLAMA_SERVER_URL: compose reads the root .env, which start.bat makes with 127.0.0.1:8080,
+      # and inside the container that address is the container itself.
+      LLAMA_SERVER_URL: ${DOCKER_LLAMA_SERVER_URL:-http://host.docker.internal:8080}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

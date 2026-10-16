@@ -30,6 +30,13 @@ class DockerFileTests(unittest.TestCase):
             self.assertIn(volume, text)
         self.assertNotIn("JWT_SECRET=", text)  # the container keeps its own in the data volume
 
+    def test_compose_takes_the_llama_server_address_from_its_own_variable(self):
+        # Compose reads the root .env, which start.bat makes with LLAMA_SERVER_URL=http://127.0.0.1:8080: inside the
+        # container that address is the container itself, not the computer running llama-server.
+        text = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+        self.assertIn("LLAMA_SERVER_URL: ${DOCKER_LLAMA_SERVER_URL:-http://host.docker.internal:8080}", text)
+        self.assertNotIn("${LLAMA_SERVER_URL", text)
+
 
 class WorkflowTests(unittest.TestCase):
     def test_ci_runs_both_test_suites_with_the_fakes_and_builds_the_image(self):

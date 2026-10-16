@@ -31,5 +31,15 @@ class DockerFileTests(unittest.TestCase):
         self.assertNotIn("JWT_SECRET=", text)  # the container keeps its own in the data volume
 
 
+class WorkflowTests(unittest.TestCase):
+    def test_ci_runs_both_test_suites_with_the_fakes_and_builds_the_image(self):
+        text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        for needed in ('python-version: "3.12"', 'node-version: "24"', "python -m unittest discover -s tests",
+                       'node --test "tests/*.test.cjs"', "CATEGORY_MODEL: fake", "ATTRIBUTES_MODEL: fake",
+                       "docker build", "/api/health"):
+            with self.subTest(needed=needed):
+                self.assertIn(needed, text)
+
+
 if __name__ == "__main__":
     unittest.main()

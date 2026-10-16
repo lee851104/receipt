@@ -294,7 +294,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
               "mine":   {"vector": ["…18 格"], "pushes": ["…"], "signals": ["…46 個訊號"], "items": [[["鮮奶茶", 6], ["美式咖啡", 2]], null]},
               "theirs": {"vector": ["…"], "pushes": ["…"], "signals": ["…"], "items": ["…"]}}
   ```
-  `src/web/trait-network.js`（複製到 `src/web_v2/` 之後）可以直接拿來畫。資料不夠的人，四個欄位都是 `null`；`vector` 就是存起來的向量（和 `cells` 的值一樣）；`pushes`、`signals`、`items` 是查詢時用那個人存著的品項和屬性快取當場算的，不問模型、不寫入。沒有存起來的向量，或品項現在已經算不出品味（例如剛刪掉一個月、重算還在排隊）時，那一邊四個欄位都是 `null`。上次上傳之後才有答案的品名，`pushes`、`signals` 會先反映，向量要等下一次上傳的任務重算（10/16 補上）。連線圖和 v1 一樣會顯示對方兩個花費的彙總值（`meal_cost` 每餐花費的中位數、`tech_spend` 每月 3C 花費），每個特質的 pushes 加起來等於 vector，可以直接用 `trait-network.js` 的檢查（10/16 補上）
+  `src/web/trait-network.js`（複製到 `src/web_v2/` 之後）可以直接拿來畫。資料不夠的人，四個欄位都是 `null`；`vector` 和 `pushes`、`signals`、`items` 一樣是查詢時算出的，所以 push 加起來一定等於 `vector`；通常和 `cells` 的值一樣，只有上次重算之後品項或屬性答案變了的時候（例如刪了一個月、重算還在排隊）會暫時不同，重算跑完就一樣（10/16 補上）。四個欄位都是用那個人存著的品項和屬性快取當場算的，不問模型、不寫入。沒有存起來的向量，或品項現在已經算不出品味（例如剛刪掉一個月、重算還在排隊）時，那一邊四個欄位都是 `null`。上次重算之後才有答案的品名，`vector`、`pushes`、`signals` 會先反映，`cells` 和分數要等下一次重算（上傳或刪月份的任務）才跟上（10/16 補上）。連線圖和 v1 一樣會顯示對方兩個花費的彙總值（`meal_cost` 每餐花費的中位數、`tech_spend` 每月 3C 花費），每個特質的 pushes 加起來等於 vector，可以直接用 `trait-network.js` 的檢查（10/16 補上）
 - `items` 是每個訊號買最多次的 3 個品名和出現的發票張數，品名一律經過 5.8 的處理
 - 錯誤：404 `not_found`（沒有這個人，或我是假用戶而對方不是）、400 `self`（查自己）、422（`user_id` 不是 1 到 2^63−1 的整數）。我是假用戶而對方不是時，當作沒有這個人，回應內容和真的沒有這個人完全一樣，和配對清單同一條規則（10/16 補上）
 
@@ -343,26 +343,31 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 
 **`GET /api/me`**
 - 回傳：`{"user_id": 301, "username": "amy", "display_name": "Amy", "is_demo": false, "months": ["2026-07", "2026-08"]}`
-- `months`：已上傳的月份，由舊到新
+- `months`：有品項或有上傳任務的月份，由舊到新（只有任務、沒有留下品項的月份也算）（10/16 補上）
 
 **`PATCH /api/me`**：JSON `{"display_name": "愛喝咖啡的人"}`，1–20 字元
 - 回傳：同 `GET /api/me`。`username` 不能改
+- 規則和註冊一樣：去掉前後空白後 1–20 字元，不能有看不見的字元或換行，否則 422，名稱不變；`username` 帶了也不理（10/16 補上）
 
 **`POST /api/me/password`**：JSON `{"current_password": "…", "new_password": "…"}`，新密碼 8–128 字元
 - 回傳：同 login（一個新的 token）。改完之後，這個帳號的 `token_key` 換成新的，舊的 token 全部失效，回傳的新 token 帶著新的 key
 - 錯誤：403 `wrong_password`
+- 新密碼不合格回 422，不回傳送出的值（10/16 補上）
 
 **`DELETE /api/me`**：JSON `{"password": "…"}`
-- 回傳 204。依序刪掉這個人的 `items`、`jobs`、`profiles`、`users`，再刪掉 `item_cache` 裡已經沒有任何 `items` 用到的品名。品名的屬性結果只存在後端的 `item_cache`（`describe_items` 最多只在記憶體裡留快取，不寫到磁碟），所以清掉這裡就清乾淨了（10/16 補上，見 13.3）
+- 回傳 204。依序刪掉這個人的 `items`、`jobs`、`profiles`、`users`，再刪掉 `item_cache` 裡這個人用過、而且已經沒有任何 `items` 用到的品名。品名的屬性結果只存在後端的 `item_cache`（`describe_items` 最多只在記憶體裡留快取，不寫到磁碟），所以清掉這裡就清乾淨了（10/16 補上，見 13.3）
+- 品名的屬性快取只刪「這個人的品項用過、刪完後已經沒有任何品項用到」的品名（每個屬性模型的答案都刪）。只在即時分類框查過、從沒上傳過的品名沒有記錄是誰查的，不會被刪（10/16 補上）
 - 錯誤：403 `wrong_password`、409 `job_in_progress`（還有 queued 或 running 的上傳任務，等它做完再刪；不然那個任務會在刪除之後又把品名寫進快取）（10/15 補上）
 
 **`DELETE /api/me/months/{month}`**：`month` 是 `YYYY-MM`
 - 回傳 204。刪掉那個月的 `items` 和 `jobs`，重算 18 格；`item_cache` 的清理方式同上
 - 錯誤：404 `month_not_found`、409 `job_in_progress`（那個月還有 queued 或 running 的任務）
+- `month` 不是 `YYYY-MM`（月份 01–12）回 422；那個月沒有品項也沒有任務回 404；只有那個月的任務才擋（409），別的月份的任務不擋。重算排進背景執行緒，排在已經排隊的上傳任務後面，不在請求裡算：重算跑完之前，`/api/me/profile` 的 `ready`、`item_count`、`areas`、`traits` 還是舊的（`months` 立刻是新的）。前面有上傳任務在排隊時，要等它們做完（10/16 補上）
 
 **`POST /api/auth/logout`**
 - 回傳 204。換掉這個人的 `token_key`，這個帳號在**所有裝置**上的 token 都會失效
 - `users.token_key` 第 1 週就有了，不必再加欄位。登出後馬上重新登入，新拿到的 token 可以用
+- 假用戶是共用的：用假用戶登出，所有切換成同一個假用戶的人都會被登出（10/16 補上）
 
 ## 6. 模型介面（角色 2、3 交給角色 1）
 
@@ -526,6 +531,21 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
+### 13.8 角色 1 轉告（2026-10-16，第 3 週第五批，分支 `role-1/account`）
+
+帳號管理（5.11）都可以用了：`GET`／`PATCH /api/me`、`POST /api/me/password`、`DELETE /api/me`、`DELETE /api/me/months/{month}`、`POST /api/auth/logout`。
+
+**給角色 4**（任務 5.10 帳號設定頁）
+- 改密碼成功會回一個新的 token（和登入一樣的格式），請換成它；舊的 token（包括其他裝置的）都失效了
+- 登出回 204，之後所有裝置的 token 都是 401。用假用戶登出會讓同一個假用戶的所有人一起登出
+- `DELETE /api/me` 和改密碼要使用者再輸入密碼；密碼錯是 403 `wrong_password`，還有上傳在處理是 409 `job_in_progress`（請使用者等上傳做完）
+- 刪月份回 204 之後，品味向量在背景重算：`months` 立刻少了那個月，`ready`、`item_count`、`traits` 要等重算跑完才變（前面有上傳在排隊時要等更久）。畫面可以先顯示「重新計算中」，過一下再查 `/api/me/profile`
+- 假用戶改名、改密碼、刪帳號、刪月份都是 403 `demo_user_read_only`，設定頁對假用戶唯讀
+- 計算過程（13.7 補充）：關係圖用 `network`，逐格的面板用 `cells`。`network` 的向量現在是查詢時算的，push 加起來一定等於它；刪了一個月、重算還沒跑完時，圖上的點可能和 `cells` 的值暫時不同，重算跑完就一樣
+
+**給角色 3**
+- seed 寫入的假用戶不能被這些端點修改或刪除（403），重建假用戶請照舊刪掉資料庫重跑 seed
+
 ### 13.7 角色 1 轉告（2026-10-16，第 3 週第四批，分支 `role-1/matches`）
 
 計算過程 `GET /api/matches/{user_id}/explain`（5.7）可以用了。
@@ -533,7 +553,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 **給角色 4**
 - 計算過程面板（任務 5.7）：`cells` 一定 18 筆，順序同 `configs/traits.json`；`part` 加起來就是 `score`，`percent` 和配對清單卡片上的一樣，面板直接顯示 API 的數字，不要自己算
 - `comparable` 為 false 時看 `reason`：`not_enough_items`（任一方沒有存起來的品味向量）或 `too_few_shared`（共同的雙向格不到 `min_shared_two_sided`，`shared_two_sided` 是實際格數）；這時總數和每格的 `product`、`part` 都是 `null`
-- 關係圖：`network` 的格式同 v1 的 `traitNetworkData`，只是 `friends` 換成 `mine` 和 `theirs` 兩個人，`src/web/trait-network.js` 複製到 `src/web_v2/` 後可以直接畫。一邊資料不夠時，那一邊的 `vector`、`pushes`、`signals`、`items` 都是 `null`，要畫成「資料不夠」
+- 關係圖：`network` 的格式同 v1 的 `traitNetworkData`，只是 `friends` 換成 `mine` 和 `theirs` 兩個人，`src/web/trait-network.js` 複製到 `src/web_v2/` 後可以直接畫。沒有存起來的向量時（那一邊的 `cells` 也是 `null`），那一邊的 `vector`、`pushes`、`signals`、`items` 都是 `null`，要畫成「資料不夠」
 - 任何人都能查，不限清單前 5 名；查自己是 400 `self`，沒有這個人是 404 `not_found`。用假用戶登入時查真實使用者也是 404
 - 品名已經去掉地名（5.8），回應裡沒有店家、發票號碼、日期，也沒有任何一筆消費的金額，前端不用再處理
 - 對方的兩個花費彙總值（`meal_cost` 每餐花費、`tech_spend` 每月 3C 花費）和 v1 一樣照常顯示；每個特質的 `pushes` 加起來等於 `vector`，所以 `trait-network.js` 的 `validate` 兩邊都會通過

@@ -17,9 +17,9 @@
 - [x] 2.4 實作背景任務：分類（最高機率低於 `CATEGORY_MIN_PROB` 存成 10）、查 `item_cache`、無 GPU 時記成待分析、重算 `profiles`；GPU 模式下即時分類遇到新品名要排進背景分析；用假模型測試 item-classification 和 item-attributes 規格的情境，包含分類模型 `unavailable` 時即時分類回 503、背景工作變成 `failed`（10/15 完成：重算 `profiles` 在 `role-1/profiles`，其他在 `role-1/uploads`）
 - [x] 2.5 實作 `GET /api/me/profile`；測試 taste-profile 規格的情境（還沒上傳、`ready` 為 false 時 18 格都是 `null`、兩個月合併、`pending_attributes`、類別 10 不計入）（10/15 完成，在 `role-1/profiles`）
 - [x] 2.6 實作 `GET /api/matches`；測試 taste-matching 規格的門檻、排序和同分規則、只取前 5、`eligible` 和 `within`、四種範圍、`no_home_area`、自己資料不足，以及 0.295 這個邊界值（10/16 完成，在 `role-1/matches`）
-- [x] 2.7 實作 `GET /api/matches/{user_id}/explain`；測試固定 18 格、各格貢獻加總等於分數、與 `tests/fixtures/similarity-cases.json` 一致、`not_enough_items` 和 `too_few_shared`、查自己回 400 `self`、不存在回 404，以及 `network` 裡的品名已經去掉地名、沒有店家、日期和金額（10/16 完成，在 `role-1/matches`；另外測試假用戶查真實使用者回 404）
-- [ ] 2.8 實作 overview 5.11 的帳號管理（`GET`／`PATCH /api/me`、`POST /api/me/password`、`DELETE /api/me`、`POST /api/auth/logout`），改密碼和登出都換掉 `users.token_key`（權杖本來就帶著它，第 1 週已有，不加欄位、不比較簽發時間）；測試涵蓋 user-account 規格的全部情境（改名長度、`wrong_password`、改密碼後舊權杖 401 而新權杖可用、登出讓所有裝置失效、登出後重新登入可用、刪帳號時的快取清理、還有上傳工作時刪帳號回 409 `job_in_progress`、`demo_user_read_only`）
-- [ ] 2.9 實作 `DELETE /api/me/months/{month}`；測試刪除後品味向量重算、`month_not_found`、`job_in_progress`
+- [x] 2.7 實作 `GET /api/matches/{user_id}/explain`；測試固定 18 格、各格貢獻加總等於分數、與 `tests/fixtures/similarity-cases.json` 一致、`not_enough_items` 和 `too_few_shared`、查自己回 400 `self`、不存在回 404，以及 `network` 裡的品名已經去掉地名、沒有店家、日期和任何一筆的金額（10/16 完成，在 `role-1/matches`；另外測試假用戶查真實使用者回 404）
+- [x] 2.8 實作 overview 5.11 的帳號管理（`GET`／`PATCH /api/me`、`POST /api/me/password`、`DELETE /api/me`、`POST /api/auth/logout`），改密碼和登出都換掉 `users.token_key`（權杖本來就帶著它，第 1 週已有，不加欄位、不比較簽發時間）；測試涵蓋 user-account 規格的全部情境（改名長度、`wrong_password`、改密碼後舊權杖 401 而新權杖可用、登出讓所有裝置失效、登出後重新登入可用、刪帳號時的快取清理、還有上傳工作時刪帳號回 409 `job_in_progress`、`demo_user_read_only`）（10/16 完成，在 `role-1/account`）
+- [x] 2.9 實作 `DELETE /api/me/months/{month}`；測試刪除後品味向量重算、`month_not_found`、`job_in_progress`（10/16 完成，在 `role-1/account`）
 - [ ] 2.10 新增 `start.bat`：檢查 `.env`、執行 seed、啟動 uvicorn、打開 `/web/`；在沒有 GPU 的電腦上手動確認，點兩下就能打開 `/docs` 和 v2 網頁
 - [ ] 2.11 新增 GitHub Actions，用 Python 3.12 和 Node 24 執行 `python -m unittest discover -s tests` 和 `node --test "tests/*.test.cjs"`，模型設定為 fake；確認 PR 上是綠燈，執行紀錄裡也沒有下載任何模型
 - [ ] 2.12 新增 `Dockerfile`、`docker-compose.yml`、`.dockerignore`，並在 CI 加上 `docker build`；確認映像檔裡找不到 `rawdata/`、`data/`、CSV、壓縮檔和 `.env`，CI 上建置成功

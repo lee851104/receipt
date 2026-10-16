@@ -60,7 +60,7 @@
 
 ### D3. 配對在每次查詢時即時計算
 
-拿 `profiles` 裡所有人的向量逐一跑 `similarity.compare`（300 人 × 18 格不到 1 秒），再套用 `configs/traits.json` 的門檻和 `places` 的距離。計算過程直接使用 `compare` 回傳的 `parts`，另外補上分母的各項，所以「貢獻加總 = 分數」一定成立；關係圖的資料用現有的 `build.trait_network_data`，品名經過 `items.label` 去掉地名（overview 5.8）。前端只負責顯示，不再自己算分數。門檻用整數百分比判斷，和 v1 的 `src/web/match-filter.js` 同一套；清單的排名在 `src/api/matching.py`（`entries` 打分數、`pick` 判斷門檻、距離、排序和前 5 名），配對驗證（任務 4.9）也用它，不另寫一份。（10/16 補上）計算過程的關係圖資料在查詢時用兩人存著的品項和屬性快取當場算（`profiles.history` + `traits.explain`，不問模型、不寫入），點的位置用存起來的向量，所以和逐格的數字一致。（10/16 補上）
+拿 `profiles` 裡所有人的向量逐一跑 `similarity.compare`（300 人 × 18 格不到 1 秒），再套用 `configs/traits.json` 的門檻和 `places` 的距離。計算過程直接使用 `compare` 回傳的 `parts`，另外補上分母的各項，所以「貢獻加總 = 分數」一定成立；關係圖的資料用現有的 `build.trait_network_data`，品名經過 `items.label` 去掉地名（overview 5.8）。前端只負責顯示，不再自己算分數。門檻用整數百分比判斷，和 v1 的 `src/web/match-filter.js` 同一套；清單的排名在 `src/api/matching.py`（`entries` 打分數、`pick` 判斷門檻、距離、排序和前 5 名），配對驗證（任務 4.9）也用它，不另寫一份。（10/16 補上）計算過程的關係圖資料在查詢時用兩人存著的品項和屬性快取當場算（`profiles.history` + `traits.explain`，不問模型、不寫入），關係圖整個用查詢時算出的品味（向量、push、訊號、品名），所以 push 加起來等於向量；`cells` 和分數用存起來的向量，和配對清單一致，兩者只在重算還沒跑的時候暫時不同。（10/16 補上）
 
 - 替代方案：預先算好所有配對並存起來。否決，因為 300 × 300 約 9 萬筆，每次有人上傳就要全部重算。
 
@@ -191,8 +191,8 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 
 端點和錯誤代碼見 overview 5.11（`/api/me`、`/api/me/password`、`/api/me/months/{month}`、`/api/auth/logout`）。資料表和欄位都不增加：`users.token_key` 第 1 週就有了，登出和改密碼靠它（見 D8）。
 
-- **刪除帳號**在一個交易裡依序刪除：`items` → `jobs` → `profiles` → `users`，最後刪掉 `item_cache` 裡已經沒有任何 `items` 用到的品名。帳號刪除後，權杖查不到使用者，自然回應 401 `not_authenticated`。這個人還有 `queued` 或 `running` 的工作時回 409 `job_in_progress`，和刪除月份一樣，免得執行中的工作在刪除之後又把品名寫進快取
-- **刪除月份**：先確認那個月份沒有 `queued` 或 `running` 的工作，再刪除那個月的 `items` 和 `jobs`，然後重算品味向量；快取的清理方式和刪除帳號相同
+- **刪除帳號**在一個交易裡依序刪除：`items` → `jobs` → `profiles` → `users`，最後刪掉 `item_cache` 裡這個人的品項用過、而且已經沒有任何 `items` 用到的品名（只在即時分類框查過的品名沒有記錄是誰查的，不會被刪）。帳號刪除後，權杖查不到使用者，自然回應 401 `not_authenticated`。這個人還有 `queued` 或 `running` 的工作時回 409 `job_in_progress`，和刪除月份一樣，免得執行中的工作在刪除之後又把品名寫進快取
+- **刪除月份**：先確認那個月份沒有 `queued` 或 `running` 的工作，再刪除那個月的 `items` 和 `jobs`，然後重算品味向量；快取的清理方式和刪除帳號相同。重算不在請求裡做，而是用 `jobs.Worker.call` 排進上傳任務的同一條背景執行緒，排在已經排隊的上傳後面，所以同一個人的 profile 不會同時被兩個地方寫；重算還在排隊時帳號被刪掉，重算就什麼都不做。刪除規則集中在 `src/api/accounts.py`。（10/16 補上）
 - **假用戶**（`is_demo`）的修改、刪除和上傳發票一律回 403 `demo_user_read_only`，而且這個檢查要在比對密碼之前；登出照常可用
 
 - 替代方案：資料表加 `deleted_at`，只做「軟刪除」。否決，因為使用者要求刪除時就應該真的刪掉，軟刪除還得另外處理「刪除後的資料不能出現」的所有查詢。

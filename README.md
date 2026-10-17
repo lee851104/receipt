@@ -1,51 +1,77 @@
 # You are what you buy.
 
-## v2 本機應用（開發中）
+## v2 本機應用
 
-v2 由 FastAPI 提供 `/web/`，包含登入、CSV 上傳與進度、消費月報、配對計算及帳號設定。登入首頁直接顯示「我的月報」：首屏以類別金額圖與可點選的品項排行呈現，往下分頁查看消費節奏、動態文字雲、日期分布與月份比較。文字雲提供播放／暫停，並尊重減少動態偏好。已移除獨立品名分類畫面；右上角「設定」提供上傳檔案、帳號設定。配對點選對象後先顯示關係圖，計算明細需自行展開。資料保留在本機 SQLite；API 規格與各角色進度見 [團隊總覽](docs/team/overview.md)。
+登入後只有兩個選項：**看自己的品味**、**跟陌生人配對品味**。月報以五個章節呈現品項金額、消費節奏、漂浮文字雲、日期分布與月份比較；配對選人後顯示放大的連線圖與精簡綜合解讀，需要時才展開計算明細。上傳與帳號管理放在右上角設定。
 
-**本分支已驗證的實際串接（2026-10-16）：** 已整合角色 1 後端，使用 fake 模型與隔離 SQLite，完成註冊／登入、兩個月上傳、月報／品味／配對／計算過程、改名／改密碼／刪月份／登出／刪帳號的實際 HTTP 與瀏覽器驗證。真模型、完整 300 人 seed、Docker 與 CI 尚未驗收。詳見 [整合驗證紀錄](docs/results/role4-integration.md)，產出待 Claude 審核。
+FastAPI 在同一個服務提供網頁與 API，資料保存在本機 SQLite；v2 需啟動服務，GitHub Pages 只提供下方標示的 v1 原型。
 
-### v2 前端展示
+### 展示動圖
 
-以下是 **虛構資料與模擬 API 的前端契約展示**，不是完整後端或真模型驗收影片。每個畫面下方均標示模擬狀態。
+![v2 虛構資料與模擬 API 展示：登入、二選一首頁、月報、文字雲、上傳、配對、連線圖、計算過程與帳號設定](docs/assets/v2-contract-demo.gif)
 
-![v2 前端契約展示：登入、分類、上傳、月報、配對、計算與帳號管理；使用虛構資料與模擬 API](docs/assets/v2-contract-demo.gif)
+2026-10-17 新版九幕展示。畫面使用已提交的虛構資料，全部 API 回應由錄製腳本模擬；粉紅底標示展示狀態。這是介面導覽，不代表真模型或 300 人整合驗收。[展示與 Docker 驗收紀錄](docs/results/role4-delivery.md) 另列真實 HTTP 驗證結果。
 
-上方 GIF 為 10/15 舊版導覽的契約展示；10/17 新版月報首頁與設定選單以實際介面為準，重錄腳本已同步。
+### Docker 啟動（建議展示使用）
 
-可重現錄製方式：在有 Playwright／Chromium 的工具環境啟動本機服務，執行 `node scripts/capture_v2_demo.cjs`，再在有 Pillow 的工具環境執行 `python scripts/build_v2_demo_gif.py`。錄製腳本攔截全部 `/api/` 請求，不建立真實帳號或發票；中間截圖留在被忽略的 `runtime/`。
-
-### 目前可用的啟動方式（Windows）
-
-使用 Python 3.12、Node 24。建立虛擬環境並安裝 `requirements.txt`，不要使用 `uv sync`（`pyproject.toml` 未列服務套件）。
+先安裝並啟動 Docker Desktop（Linux containers），在**此分支的專案根目錄**執行：
 
 ```powershell
-python -m venv .venv
+docker compose up --build -d
+```
+
+第一次會建置映像並安裝套件，需要網路；預設分類與屬性均為 fake，**不下載模型、不需要 GPU 或本機 Python**。不必建立 .env，容器會在資料 volume 產生簽章密鑰。已有 .env 時，Compose 會讀取其中的模型設定；若要固定本文件的假模型驗證模式，可先設定：
+
+```powershell
+$env:CATEGORY_MODEL = "fake"
+$env:ATTRIBUTES_MODEL = "fake"
+```
+
+開啟 [v2 網頁](http://127.0.0.1:8000/web/) 或 [API 文件](http://127.0.0.1:8000/docs)。健康檢查位於 [api/health](http://127.0.0.1:8000/api/health)。若主機沒有啟動模型服務，gpu_mode 為 false。
+
+```powershell
+docker compose logs --tail=30 app
+docker compose down
+docker compose up -d
+```
+
+down 會停止容器並保留資料；再次 up 可恢復。帳號、發票與密鑰在 db volume，模型位置在 models volume。**不要加上 down -v，否則會刪除這個 Compose 專案的資料 volume。** 8000 若已被其他程式占用，可將 docker-compose.yml 的埠映射改成 127.0.0.1:8002:8000，並以 8002 開啟網頁。
+
+**目前分支的範圍：** 自動建立 40 個唯讀示範帳號，但尚未合入角色 3 的完整消費 seed，因此這些帳號會顯示沒有月報／資料不足。要實際走流程，請註冊測試帳號並從設定上傳 CSV；配對需要其他已有足夠資料的帳號。本輪 Docker 驗收用兩位虛構帳號各上傳 40 筆，確認月報、配對、圖與計算，並重建容器確認資料仍在。完整 300 人與受保護真模型交付由其他角色整合，本分支不要直接設為 bert 或 qwen。這不等於全隊 6.4 驗收完成。
+
+### Windows Python 啟動
+
+需 Python 3.12（Node 24 僅前端開發／測試需要）。在專案根目錄執行：
+
+```powershell
+py -3.12 -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt
-Copy-Item .env.example .env
+.venv/Scripts/python.exe --version
 ```
 
-在本機 `.env` 設定至少 32 字元的隨機 `JWT_SECRET`，保持 `CATEGORY_MODEL=fake`、`ATTRIBUTES_MODEL=fake` 以驗證流程。不要提交 `.env`；已有設定時不要重新覆蓋。
+接著雙擊 start.bat；它會在沒有 .env 時建立設定與隨機密鑰、加入示範帳號，然後開啟 http://127.0.0.1:8000/web/。保持啟動視窗開啟，停止按 Ctrl+C；已有 .env 不會覆蓋。不要使用 uv sync（pyproject.toml 未列服務套件）。
+
+若出現 No Python at，代表 .venv 指向的基底 Python 不可用，單純看到 Scripts/python.exe 檔案不表示環境可執行。先安裝或修復對應 Python 3.12，再建立新的虛擬環境；開發中的共用 .venv 不要直接刪除。Docker 方式不依賴這個環境。
+
+### 重錄展示與驗證
+
+已有 Playwright／Chromium 的 Node 環境及 Python 服務依賴時：
 
 ```powershell
-.venv/Scripts/python.exe -m src.api.seed
-.venv/Scripts/python.exe -m uvicorn src.api.main:app --host 127.0.0.1 --port 8001
+python -X utf8 tests/run_web_v2_live.py scripts/capture_v2_demo.cjs
+python scripts/build_v2_demo_gif.py
 ```
 
-開啟 [v2 本機頁面](http://127.0.0.1:8001/web/) 或 [API 文件](http://127.0.0.1:8001/docs)。demo 帳號為唯讀；上傳請註冊自己的帳號。角色 worktree 可共用主資料夾 `.venv`，但 `.env`／資料庫各自獨立，做法見團隊總覽 13.1。
+第二行需要 Pillow（可在獨立工具環境安裝）。錄製服務使用臨時資料庫，結束自動關閉；腳本攔截全部 /api/ 請求，中間截圖與 manifest 留在被忽略的 runtime/，成品只有 docs/assets/v2-contract-demo.gif。可用 NODE_PATH、BROWSER_EXECUTABLE 指定既有 Playwright 與 Chromium。
 
-### Docker 交付狀態
+- [向量化、內積、餘弦與收縮項](docs/team/concepts.md)：兩位虛構人物的 +82% 範例，可由 explain API 重現。
+- [團隊總覽與 API 契約](docs/team/overview.md)。
+- [前後端整合紀錄](docs/results/role4-integration.md)；[本輪展示與 Docker 交付驗收](docs/results/role4-delivery.md)。
+- python -m unittest discover -s tests：後端與核心；node --test "tests/*.test.cjs"：前端與 v1。
+- python -X utf8 tests/run_web_v2_live.py：隔離 SQLite、fake 模型、真正 HTTP 與瀏覽器流程。
+- GitHub Actions 使用 Python 3.12／Node 24，執行測試、建置與檢查容器；不下載模型。
 
-**目前本分支沒有 Dockerfile 或 Compose 設定，不能用 Docker 一鍵啟動。** 角色 1 完成容器交付並合併後，預定操作為在專案根目錄設定 `.env`，執行 `docker compose up`，依容器啟動輸出開啟 `/web/`；停止時執行 `docker compose down`。實際 port、模型下載與持久化設定須等 Compose 檔確認，之後才補上可照做的完整步驟。這段是待整合操作說明，尚未通過乾淨電腦驗收。
-
-### 概念與驗證
-
-- [向量化、內積、餘弦與收縮項](docs/team/concepts.md)：兩位虛構人物的 +82% 範例，附本機重算腳本；已用真正 explain API 在隔離資料庫重現。
-- `node --test "tests/*.test.cjs"`：前端與既有 v1 回歸。
-- `.venv/Scripts/python.exe -m unittest discover -s tests`：後端及計算核心回歸。
-- 真 HTTP 瀏覽器整合：`python -X utf8 tests/run_web_v2_live.py` 自動建立臨時 DB、選擇空閒埠並於結束清理；需既有 Playwright／Chromium。
-- 瀏覽器契約驗證：`tests/web-v2-account-browser.cjs`、`tests/web-v2-explanation-browser.cjs`；可設定 `NODE_PATH`、`BROWSER_EXECUTABLE` 指向既有 Playwright／Chromium。
+產出待 Claude 審核；角色 4 分支驗收和合併 main 是不同階段。
 
 ## v1 靜態原型
 

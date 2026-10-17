@@ -66,7 +66,9 @@ def category_backend(settings):
         return "fake", fakes.classify
     if settings.category_model == "bert":
         try:
-            from ..ml.category import load
+            from ..ml.category import load, digest
+            if settings.category_model_sha256 and digest(model_dir(settings)/"model.safetensors") != settings.category_model_sha256:
+                raise ValueError("category_model_pin_mismatch")
             classify = load(model_dir(settings))
         except Exception:
             # Third-party exception text may expose local paths or private values.

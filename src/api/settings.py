@@ -1,5 +1,6 @@
 """Server settings from environment variables; docs/team/overview.md section 5.10 lists them."""
 from dataclasses import dataclass, field
+import re
 
 CATEGORY_MODELS = ("fake", "tfidf", "embedding", "bert")
 ATTRIBUTE_MODELS = ("fake", "qwen")
@@ -36,6 +37,9 @@ class Settings:
     category_model_repo: str = ""                # the public Hugging Face repo a missing model comes from
     category_model_revision: str = ""            # the fixed commit of that repo
 
+    category_model_repo_type: str = "model"     # space uses protected demo manifest
+    category_model_sha256: str = ""             # expected model.safetensors SHA256
+
     @classmethod
     def from_env(cls, env):
         """Settings from a mapping such as os.environ, where a blank value means the default. A weak secret,
@@ -55,6 +59,8 @@ class Settings:
             category_model_dir=text(env, "CATEGORY_MODEL_DIR", cls.category_model_dir),
             category_model_repo=text(env, "CATEGORY_MODEL_REPO", cls.category_model_repo),
             category_model_revision=text(env, "CATEGORY_MODEL_REVISION", cls.category_model_revision),
+            category_model_repo_type=text(env, "CATEGORY_MODEL_REPO_TYPE", cls.category_model_repo_type),
+            category_model_sha256=text(env, "CATEGORY_MODEL_SHA256", cls.category_model_sha256),
         )
         if settings.jwt_expire_minutes <= 0:
             raise ValueError(f"JWT_EXPIRE_MINUTES must be above 0, got {settings.jwt_expire_minutes}")
@@ -67,6 +73,15 @@ class Settings:
             raise ValueError(f"ATTRIBUTES_MODEL must be one of {', '.join(ATTRIBUTE_MODELS)}; got {settings.attributes_model!r}")
         if settings.category_model_repo and not settings.category_model_revision:
             raise ValueError("CATEGORY_MODEL_REVISION must name a fixed commit whenever CATEGORY_MODEL_REPO is set")
+        if settings.category_model_repo_type not in ("model", "space"):
+            raise ValueError("CATEGORY_MODEL_REPO_TYPE must be model or space")
+        if settings.category_model_sha256 and not re.fullmatch(r"[0-9a-f]{64}", settings.category_model_sha256):
+            raise ValueError("CATEGORY_MODEL_SHA256 must be a lowercase SHA256")
+        if settings.category_model_repo_type == "space":
+            if not settings.category_model_repo or not re.fullmatch(r"[0-9a-f]{40}",settings.category_model_revision):
+                raise ValueError("CATEGORY_MODEL_REVISION must be a full commit for a Space")
+            if not settings.category_model_sha256:
+                raise ValueError("CATEGORY_MODEL_SHA256 is required for a Space")
         # Only plain SQLite URLs get the root-relative path, foreign keys and write-ahead logging (db.make_engine).
         # The message leaves the value out: a rejected URL may carry a password.
         if settings.database_url != "sqlite://" and not settings.database_url.startswith("sqlite:///"):

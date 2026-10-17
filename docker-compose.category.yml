@@ -1,0 +1,14 @@
+# Run with the base compose file; the token is a runtime file, never an image ARG or environment value.
+# HF_TOKEN_FILE on the host must point at your existing local Hugging Face token file.
+services:
+  app:
+    environment:
+      CATEGORY_MODEL: bert
+      CATEGORY_MODEL_REPO_TYPE: space
+      CATEGORY_MODEL_SHA256: ${CATEGORY_MODEL_SHA256:?Set the verified model weight SHA256}
+      HF_TOKEN_FILE: /run/secrets/hf_token
+    secrets:
+      - hf_token
+secrets:
+  hf_token:
+    file: ${HF_TOKEN_FILE:?Set a local token file path outside Git}

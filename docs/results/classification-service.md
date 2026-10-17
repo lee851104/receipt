@@ -79,3 +79,7 @@ $categoryTarget = 'C:/Users/User/Desktop/AI_project/receipt/data/role2/service-m
 本輪回歸：主環境457/457通過；新增安裝工具後，新CPU環境459/459通過；審查建議補上參考檔完整10維／有限值檢查後，最終460/460通過（30.132秒）。Linux x86_64 Python3.12依賴解析成功（非Linux實跑）。OpenSpec strict通過。三份新/重建文件用audit_synthetic.py對既有57筆私人reference僅本機比對，public_text_private_matches=0、synthetic exact matches=0；不是所有私人來源的全面掃描。
 
 Codex獨立審查adbb535..5c5d396未發現Critical/Important，指定25項測試通過；非Claude正式審核。後續已修正參考檔截短可能漏比的Minor，新增測試先RED後PASS，重跑全套及真模型驗收。366筆歷史彙總與最終小修待Claude一併審核。
+
+## 後續：受保護遠端取得
+
+2026-10-17後續已新增repo_type=space固定revision/模型hash下載器與runtime secret Compose override；詳見[classification-remote.md](classification-remote.md)。原先「Space ID不可直接填model repo」限制仍成立，但新程式可在明確CATEGORY_MODEL_REPO_TYPE=space時處理。實際認證下載和Docker驗收仍待登入與WSL，不因程式存在就當作完成。

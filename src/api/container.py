@@ -61,6 +61,16 @@ def ensure_category_model(settings, download=hub_download):
     model unavailable."""
     if settings.category_model != "bert":
         return "skipped"
+    if settings.category_model_repo_type == "space":
+        try:
+            from ..ml.category_remote import download_space_model
+            return download_space_model(repo_id=settings.category_model_repo,
+                                        revision=settings.category_model_revision,
+                                        destination=model_dir(settings),
+                                        expected_sha256=settings.category_model_sha256)
+        except Exception:
+            log.warning("protected category download failed; model availability will be checked at startup")
+            return "failed"
     folder = model_dir(settings)
     if (folder / "config.json").exists():
         return "present"

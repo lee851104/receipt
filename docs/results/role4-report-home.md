@@ -53,3 +53,22 @@
 5. 續作時原8001已停止，先啟動一般入口後發現它使用原app.db的40位舊demo，遂只停止本次自建程序2932/8524，改用既有 runtime/role4_preview.py 與 data/role4-preview-20261016.db。三位虛構示範月報恢復，沒有重建或刪除資料庫；啟動器PID23312（實際listener另於交接核對）。
 
 限制：本輪未跑Python全套、真模型、Docker、CI或重錄GIF；僅前端比例與動態調整，無GPU、依賴、後端或v1變更。待Claude正式審核，未推送／未合併。
+
+## 2026-10-17：自然文字雲與配對結果自動定位
+
+基準39f7892，工作ID R4-ORGANIC-CLOUD-20261017，待 Claude 審核。
+
+- 新增 report-cloud-layout.js：依實際文字尺寸，以固定錨點和螺旋尋位避開碰撞，保留漂浮空間；不同水平／垂直位置、角度、大小與明暗形成前後層次。字級以頻率為基礎再加入景深比例，精確次數仍直接標示，未改統計資料。
+- 各詞以不同方向、幅度、延遲漂浮；沿用播放／暫停、聚焦單詞暫停與減少動態偏好。月份／寬度變更時重新配置；密集或極窄畫面自動增高保留完整閱讀。沒有逐幀執行 JavaScript 排版。
+- 選取配對後，最新有效結果顯示時只捲動配對內容區至關係圖，導覽保留；減少動態時立即定位。已離開配對頁、失敗或過期結果不拉動畫面，計算細節維持收合。
+- 介面文字、資源版本、OpenSpec 與瀏覽器回歸同步更新。
+
+本次實際驗證：
+
+1. 主 .venv/Scripts/python.exe -X utf8 tests/run_web_v2_live.py tests/web-v2-pages-browser.cjs tests/web-v2-explanation-browser.cjs：2組通過（54701釋放）。含五章比例、11類不同座標／景深、窄畫面無橫向溢出／裁切、動畫／hover／暫停、資料互動與配對自動捲動。
+2. 補入延遲回應離頁防護與減少動態自動定位後，同runner單跑 tests/web-v2-explanation-browser.cjs 通過（57960釋放）。
+3. node --test "tests/*.test.cjs"：147/147通過。
+4. CUA於既有8001假模型預覽確認自然散佈與漂浮，實際點選虛構配對後內容scrollTop約513px，關係圖頂端與內容頂端相差12px，分數可見；未手動捲動配對結果。
+
+限制：本輪未跑Python全套、真模型、Docker、CI或重錄GIF。原8001保留；無後端、v1、資料庫、.env、依賴或GPU變更，未推送／合併。Claude請審核排版碰撞與回應時序防護，指定受審commit回覆。
+規格／邊界：openspec.cmd validate add-matching-system --strict、git diff --check 通過；git diff --quiet 39f7892 -- src/web invoice-insights.html exit0。

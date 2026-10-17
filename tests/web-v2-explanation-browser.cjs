@@ -7,9 +7,10 @@ const fixture=require('./web-v2-fixtures.cjs');
  const browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{})});
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
  page.on('pageerror',e=>errors.push(e.message));
- let explanation=structuredClone(fixture.explanation),matches=structuredClone(fixture.matches),status=200;
- await page.route('**/api/**',route=>{
+ let explanation=structuredClone(fixture.explanation),matches=structuredClone(fixture.matches),status=200,delayExplain=null,explainStarted=null;
+ await page.route('**/api/**',async route=>{
   const path=new URL(route.request().url()).pathname;
+  if(path.endsWith('/explain')&&delayExplain){explainStarted?.();await delayExplain;}
   let body=path.endsWith('/health')?{demo_mode:true,models:{category:'fake',attributes:'fake'}}:
    path.endsWith('/demo-users')?[{user_id:1,display_name:'虛構測試'}]:
    path.endsWith('/demo-login')?{access_token:'fictional-browser-token',expires_in:3600}:
@@ -21,6 +22,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   await page.goto((process.env.RECEIPT_TEST_URL||'http://127.0.0.1:8001')+'/web/');
   await page.locator('#demo-user').selectOption('1');await page.locator('#demo-submit').click();
   await navigate(page,'matches');await page.locator('.match-card').first().click();
+  await page.waitForFunction(()=>{const p=document.getElementById('matches-panel'),f=document.getElementById('network-frame');return !f.hidden&&p.scrollTop>0&&Math.abs(f.getBoundingClientRect().top-p.getBoundingClientRect().top-12)<3;});
   await openCalculation(page);
   assert.equal(await page.locator('#explain-percent').textContent(),await page.locator('.match-card strong').first().textContent());
   assert.equal(await page.locator('#explain-panel tbody tr').count(),18);
@@ -57,8 +59,22 @@ const fixture=require('./web-v2-fixtures.cjs');
   // Changing a filter clears all detail before the next selection.
   await page.locator('#match-scope').selectOption('city');assert(await page.locator('#explain-panel').isHidden());assert.equal(await page.locator('#explain-panel').textContent(),'');
   await page.locator('.match-card').first().click();await openCalculation(page);
+  // A delayed result must not pull the user back after they leave matches.
+  let release;delayExplain=new Promise(resolve=>release=resolve);
+  const started=new Promise(resolve=>explainStarted=resolve);
+  await page.locator('.match-card').first().click();await started;
+  await navigate(page,'profile');
+  const before=await page.locator('#matches-panel').evaluate(n=>n.scrollTop);
+  const response=page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/explain'));
+  release();await response;delayExplain=null;explainStarted=null;
+  await page.waitForTimeout(300);
+  assert.equal(new URL(page.url()).hash,'#profile');
+  assert.equal(await page.locator('#matches-panel').evaluate(n=>n.scrollTop),before);
+  await navigate(page,'matches');await page.emulateMedia({reducedMotion:'reduce'});
+  await page.locator('.match-card').first().click();
+  await page.waitForFunction(()=>{const p=document.getElementById('matches-panel'),f=document.getElementById('network-frame');return !f.hidden&&p.scrollTop>0&&Math.abs(f.getBoundingClientRect().top-p.getBoundingClientRect().top-12)<3;});
   status=401;explanation={detail:'not_authenticated'};await page.locator('.match-card').first().click();
   await page.locator('#auth-view').waitFor({state:'visible'});assert.equal(await page.locator('#explain-panel').textContent(),'');assert.equal(await page.locator('#network-frame').getAttribute('src'),null);
-  assert.deepEqual(errors,[]);console.log('EXPLANATION PASS: 18 exact cells, summary, precision, card/graph percentage, negative scores, both insufficient-data reasons, invalid response, filter/401 cleanup, desktop/mobile.');
+  assert.deepEqual(errors,[]);console.log('EXPLANATION PASS: 18 exact cells, summary, precision, card/graph percentage, negative scores, both insufficient-data reasons, invalid response, filter/401 cleanup, automatic result scroll, desktop/mobile.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

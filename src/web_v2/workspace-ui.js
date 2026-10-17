@@ -46,7 +46,7 @@
     clearFrame('report-frame');
     const hasMonths=Object.keys(profile.data?.months||{}).length>0;
     $('report-empty').hidden=hasMonths;
-    if(hasMonths){$('report-frame').src='report.html?v=20261017-layout2';$('report-frame').hidden=false;}
+    if(hasMonths){$('report-frame').src='report.html?v=20261017-organic1';$('report-frame').hidden=false;}
     lastProfile=profile.data;
    }
    const matches=state.matches;
@@ -72,7 +72,16 @@
       ReceiptExplanation.buildModel(network.data);
       $('explain-details').hidden=false;
      }
-     if(network.data?.network){$('network-frame').src='network.html?v=20261016-glow';$('network-frame').hidden=false;}
+     if(network.data?.network){
+      $('network-frame').src='network.html?v=20261016-glow';$('network-frame').hidden=false;
+      const result=network.data;
+      requestAnimationFrame(()=>{
+       if(!enabled||current!=='matches'||work.state().network.data!==result||$('network-frame').hidden)return;
+       const panel=$('matches-panel'),target=$('network-frame');
+       panel.scrollTo({top:panel.scrollTop+target.getBoundingClientRect().top-panel.getBoundingClientRect().top-12,
+        behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+      });
+     }
     }catch(error){networkRenderError=error.message;}
     lastNetwork=network.data;
    }

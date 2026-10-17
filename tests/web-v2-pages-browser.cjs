@@ -82,6 +82,9 @@ const fixture=require('./web-v2-fixtures.cjs');
   for(const size of [{width:1366,height:768},{width:558,height:510},{width:390,height:844},{width:320,height:568}]){
    await page.setViewportSize(size);await report.locator('.flow-links a[href="#cloud-page"]').click();
    assert.equal(await report.locator('.cloud-word').count(),11);
+   await report.locator('.cloud-organic .cloud-word[style*="left"]').first().waitFor();
+   const spread=await report.locator('.cloud-word').evaluateAll(words=>({x:new Set(words.map(n=>n.style.left)).size,y:new Set(words.map(n=>n.style.top)).size,depth:new Set(words.map(n=>n.dataset.depth)).size}));
+   assert(spread.x>3&&spread.y>3&&spread.depth>3,JSON.stringify(spread));
    const clipped=await report.locator('#category-cloud').evaluate(n=>{
     const b=n.getBoundingClientRect();return n.ownerDocument.documentElement.scrollWidth>n.ownerDocument.defaultView.innerWidth||n.parentElement.scrollWidth>n.parentElement.clientWidth+1||[...n.querySelectorAll('.cloud-word')].some(w=>{const r=w.getBoundingClientRect();return r.top<b.top||r.bottom>b.bottom||r.left<b.left||r.right>b.right;});
    });assert.equal(clipped,false,JSON.stringify(size));

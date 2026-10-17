@@ -211,3 +211,14 @@ body>main{width:100%;max-width:1160px;margin-inline:auto}
 }
 
 @media(max-width:760px){.flow-heading h2,.flow-region h2{font-size:19px}}
+
+/* Words are placed individually in a loose volume instead of rows and columns. */
+#category-cloud.cloud-organic{display:block;position:relative;padding:0;perspective:850px}
+#category-cloud.cloud-organic .cloud-word{position:absolute;display:block;width:max-content;max-width:calc(100% - 36px);padding:0;line-height:1.2;transform:translate(-50%,-50%) rotate(var(--cloud-angle,0deg));transform-style:preserve-3d;overflow:visible}
+.cloud-organic .cloud-float{opacity:var(--depth-opacity,1);transform:translateZ(var(--depth-z,0px));text-shadow:0 3px 14px #0009,0 0 25px color-mix(in srgb,var(--word-color),transparent 68%)}
+.cloud-organic .cloud-word small{font-size:10px;margin-top:5px}
+.cloud-organic .cloud-word:focus-visible{outline-offset:10px}
+@keyframes cloud-drift{
+ 0%,100%{transform:translate3d(calc(var(--drift-x,7px)*-1),var(--drift-y,10px),var(--depth-z,0px)) rotate(-1deg);opacity:var(--depth-opacity,.85)}
+ 50%{transform:translate3d(var(--drift-x,7px),calc(var(--drift-y,10px)*-1),calc(var(--depth-z,0px) + 25px)) rotate(1deg);opacity:1}
+}

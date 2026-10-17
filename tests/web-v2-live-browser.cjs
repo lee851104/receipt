@@ -55,7 +55,7 @@ async function poll(read,check){
   await page.locator('[data-workspace="home"]').click();
   await page.locator('[data-entry="matches"]').click();
   await page.locator('#matches-panel').waitFor();
-  assert.equal(await page.locator('.workspace-nav [data-workspace]').count(),3);
+  assert.equal(await page.locator('.workspace-nav [data-workspace]').count(),1);
   assert(await page.locator('[data-workspace="upload"]').isHidden());
   await page.locator('#settings-toggle').click();
   assert(await page.locator('[data-workspace="upload"]').isVisible());

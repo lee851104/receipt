@@ -1,7 +1,8 @@
 /* Navigate through the same visible controls used by a person. */
 async function go(page,name){
  await page.locator('#workspace-view').waitFor();
- if(['profile','matches'].includes(name)&&await page.locator('#home-panel').isVisible()){
+ if(['profile','matches'].includes(name)){
+  if(!(await page.locator('#home-panel').isVisible()))await page.locator('[data-workspace="home"]').click();
   await page.locator('[data-entry="'+name+'"]').click();return;
  }
  const target=page.locator('[data-workspace="'+name+'"]');
@@ -18,4 +19,7 @@ async function openReport(page){
  await page.frameLocator('#report-frame').locator('#total').filter({hasText:'NT$'}).waitFor();
  await page.frameLocator('#report-frame').locator('#frame-status').waitFor({state:'hidden'});
 }
-module.exports={go,openCalculation,openReport};
+async function refreshReport(page){
+ await page.locator('#settings-toggle').click();await page.locator('#refresh-profile').click();
+}
+module.exports={go,openCalculation,openReport,refreshReport};

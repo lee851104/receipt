@@ -32,7 +32,7 @@ const fixture=require('./web-v2-fixtures.cjs');
    await page.setViewportSize(size);
    await page.waitForFunction(()=>{
     const f=document.getElementById('network-frame'),d=f.contentDocument;
-    return d&&parseFloat(d.querySelector('main').style.getPropertyValue('--graph-height'))===Math.max(220,Math.min(680,document.getElementById('matches-panel').clientHeight-260))&&d.documentElement.scrollHeight<=f.clientHeight+2&&d.documentElement.scrollWidth<=f.clientWidth+1;
+    return d&&parseFloat(d.querySelector('main').style.getPropertyValue('--graph-height'))===Math.max(220,Math.min(680,document.getElementById('matches-panel').clientHeight-170))&&d.documentElement.scrollHeight<=f.clientHeight+2&&d.documentElement.scrollWidth<=f.clientWidth+1;
    });
    if(size.width>640){
     const fits=await page.locator('#network-frame').evaluate(f=>f.getBoundingClientRect().bottom<=document.getElementById('matches-panel').getBoundingClientRect().bottom);
@@ -48,6 +48,14 @@ const fixture=require('./web-v2-fixtures.cjs');
     assert(layout.font>=(size.width>1200?13:10.5),JSON.stringify(layout));
     assert(layout.spread>.65,JSON.stringify(layout));
     assert.equal(layout.clipped,false);
+    const overlay=await graph.locator('.comparison-overview').evaluate(n=>{
+     const r=n.getBoundingClientRect(),c=n.closest('.canvas').getBoundingClientRect();
+     return {inside:r.left>=c.left&&r.right<=c.right&&r.top>=c.top&&r.bottom<=c.bottom,
+      collisions:[...n.closest('.canvas').querySelectorAll('.t-label,.t-score')].filter(t=>{
+       const b=t.getBoundingClientRect();return b.left<r.right&&b.right>r.left&&b.top<r.bottom&&b.bottom>r.top;
+      }).map(t=>t.textContent)};
+    });
+    assert(overlay.inside);assert.deepEqual(overlay.collisions,[]);
    }
   }
   // Wheel over the embedded graph must reach the only scroll owner.

@@ -185,6 +185,7 @@ function draw(){
  const mobile=matchMedia('(max-width:640px)').matches,svg=$('network');svg.replaceChildren();selected=null;traitGraph=null;
  // One big number everywhere: the taste similarity of the two people's trait vectors.
  const both=traitPair(),result=both?apiResult:null,scored=Boolean(result&&result.comparable);
+ document.body.classList.toggle('is-comparable',scored);
  renderSummary(result,both);
  // Without taste traits on both sides there is no graph; its place says why.
  if(both){svg.removeAttribute('hidden');$('scope').textContent=TraitNetwork.traitCount(network.traits)+' 項品味特質 · '+network.signals.length+' 個訊號';drawTraits(svg,mobile,both);}

@@ -1,3 +1,4 @@
+const {refreshReport}=require('./web-v2-navigation.cjs');
 const {chromium}=require('playwright'),assert=require('node:assert/strict');
 const fixture=require('./web-v2-fixtures.cjs');
 (async()=>{
@@ -14,7 +15,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   await page.locator('#demo-user').selectOption('1');await page.locator('#demo-submit').click();await page.locator('[data-entry="profile"]').click();
   const report=page.frameLocator('#report-frame');await report.locator('#total').filter({hasText:'80'}).waitFor();await report.locator('#frame-status').waitFor({state:'hidden'});
   assert.equal(await page.locator('#taste-page,.trait-value,#report-dialog,#classify-panel').count(),0);
-  assert.equal(await page.locator('[data-workspace="profile"]').textContent(),'我的月報');
+  assert.equal(await page.locator('.workspace-nav button').count(),1);
   assert.match(await report.locator('#total').textContent(),/80/);
   assert.equal(await report.locator('#report-pages > section').count(),5);
   assert.equal(await report.locator('.audit').getAttribute('open'),null);
@@ -69,7 +70,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   await report.locator('#insights-month').selectOption('2026-06');assert.equal(await report.locator('.cloud-word').count(),1);
   // Item names are untrusted; top-six disclosure preserves the hidden remainder.
   profile.months['2026-06'].rows=Array.from({length:8},(_,i)=>({day:2,invoice:'fictional-'+i,merchant:'虛構店',name:i===0?'<img src=x onerror=alert(1)>':'虛構品項'+i,amount:(i+1)*10,quantity:1,category:1}));
-  await page.locator('#refresh-profile').click();await report.locator('#total').filter({hasText:'360'}).waitFor();
+  await refreshReport(page);await report.locator('#total').filter({hasText:'360'}).waitFor();
   assert.equal(await report.locator('.item-bar-row').count(),6);assert.match(await report.locator('#item-chart-note').textContent(),/其餘 2 項合計 NT\$ 30/);
   await report.locator('#item-chart-more').click();assert.equal(await report.locator('.item-bar-row').count(),8);assert.equal(await report.locator('#item-chart img').count(),0);
   await report.locator('#item-chart-more').click();assert.equal(await report.locator('.item-bar-row').count(),6);
@@ -78,7 +79,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   assert.equal(await report.locator('body').evaluate(n=>n.scrollWidth>n.ownerDocument.defaultView.innerWidth),false);
   // A dense month can grow, but every word and count must remain inside its stage.
   profile.months['2026-06'].rows=Array.from({length:11},(_,i)=>({day:2,invoice:'dense-'+i,merchant:'虛構店',name:'虛構品項'+i,amount:20,quantity:1,category:i}));
-  await page.locator('#refresh-profile').click();await report.locator('#total').filter({hasText:'220'}).waitFor();
+  await refreshReport(page);await report.locator('#total').filter({hasText:'220'}).waitFor();
   for(const size of [{width:1366,height:768},{width:558,height:510},{width:390,height:844},{width:320,height:568}]){
    await page.setViewportSize(size);await report.locator('.flow-links a[href="#cloud-page"]').click();
    assert.equal(await report.locator('.cloud-word').count(),11);
@@ -92,7 +93,7 @@ const fixture=require('./web-v2-fixtures.cjs');
    await report.locator('.chapter-details[open] .card-footnote').waitFor();
    await report.locator('.chapter-details summary').filter({hasText:'查看次數'}).click();
   }
-  profile={...profile,months:{}};await page.locator('#refresh-profile').click();await page.locator('#report-empty').waitFor();
+  profile={...profile,months:{}};await refreshReport(page);await page.locator('#report-empty').waitFor();
   assert.equal(await page.locator('#report-frame').getAttribute('src'),null);
   assert.deepEqual(errors,[]);console.log('REPORT HOME PASS: direct monthly entry, item/category totals, four viewport proportions, five chapters, eleven-category cloud bounds, cloud animation/pause/reduced-motion, item disclosure/XSS and empty cleanup.');
  }finally{await browser.close();}

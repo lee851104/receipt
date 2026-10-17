@@ -82,7 +82,7 @@
       $('explain-details').hidden=false;
      }
      if(network.data?.network){
-      $('network-frame').src='network.html?v=20261017-scale1';$('network-frame').hidden=false;
+      $('network-frame').src='network.html?v=20261017-clean1';$('network-frame').hidden=false;
      }
     }catch(error){networkRenderError=error.message;}
     lastNetwork=network.data;
@@ -144,7 +144,7 @@
   $('upload-form').addEventListener('submit',async event=>{event.preventDefault();if(credentialChange)return;const file=$('invoice-file').files?.[0];await work.upload(file);if(work.state().upload.status==='done')$('invoice-file').value='';});
   $('retry-job').addEventListener('click',()=>work.resumeUpload());
   $('open-profile').addEventListener('click',()=>navigate('profile'));
-  $('refresh-profile').addEventListener('click',()=>work.loadProfile());
+  $('refresh-profile').addEventListener('click',()=>{closeSettings();work.loadProfile();});
   $('refresh-matches').addEventListener('click',()=>work.loadMatches(work.state().kind,work.state().scope));
   $('match-scope').addEventListener('change',()=>work.loadMatches(work.state().kind,$('match-scope').value));
   for(const button of document.querySelectorAll('[data-match-kind]'))button.addEventListener('click',()=>work.loadMatches(button.dataset.matchKind,$('match-scope').value));

@@ -219,3 +219,6 @@ body:has(#workspace-view:not([hidden])) .service-alert{flex-shrink:0;margin:6px 
 }
 #workspace-view>#home-panel{justify-content:safe center}
 .entry-intro h1:focus{outline:none}
+
+body:has(#profile-panel[hidden]) #refresh-profile{display:none}
+.workspace-nav .back-choice{border-bottom:0}

@@ -29,3 +29,14 @@ main{max-width:none;padding:0;margin:0}
 }
 
 @media(min-width:641px){.person-name{font-size:22px}}
+
+/* Read the relationship and its interpretation as one picture. */
+.canvas{position:relative}
+.comparison-overview{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:min(42%,540px);padding:10px 16px;border:1px solid #ffffff14;border-radius:12px;background:#141414eb;backdrop-filter:blur(8px)}
+.comparison-overview .readout{display:block}
+.readout-number{font-size:11px;padding:0;margin:0 0 5px}
+.readout p{font-size:12px;line-height:1.55}
+.is-comparable #summary{display:none}
+@media(max-width:640px){
+ .comparison-overview{position:relative;left:auto;bottom:auto;transform:none;width:auto;margin:0 8px 10px;padding:12px;background:#191919;backdrop-filter:none}
+}

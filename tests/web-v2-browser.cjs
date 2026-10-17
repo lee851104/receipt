@@ -1,3 +1,4 @@
+const {refreshReport}=require('./web-v2-navigation.cjs');
 const {go:navigate,openCalculation,openReport}=require('./web-v2-navigation.cjs');
 /* Optional browser integration: run with Playwright available; API server on 127.0.0.1:8001. All data is fictional. */
 const {chromium}=require('playwright');
@@ -45,7 +46,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   await page.route('**/api/me/profile',r=>r.fulfill({json:profile}));
   await page.route('**/api/matches?*',r=>{const q=new URL(r.request().url()).searchParams;const district=q.get('scope')==='district';return r.fulfill({json:{...fixture.matches,kind:q.get('kind'),scope:q.get('scope'),within:district?0:6,people:district?[]:fixture.matches.people}});});
   await page.route('**/api/matches/7/explain',r=>r.fulfill({json:fixture.explanation}));
-  await go('profile');await page.locator('#refresh-profile').click();
+  await go('profile');await refreshReport(page);
   await page.locator('#profile-content').waitFor({state:'visible'});assert.equal(await page.locator('.trait-value').count(),0);
   await openReport(page);
   const report=page.frameLocator('#report-frame');await report.locator('#total').filter({hasText:'80'}).waitFor();
@@ -65,7 +66,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   await go('profile');await openReport(page);assert.equal(await report.locator('body').evaluate(el=>el.scrollWidth>innerWidth),false);
   await page.screenshot({path:'runtime/role4-profile-mobile.png',fullPage:true});
   profile={...profile,ready:false,item_count:0,months:{},traits:profile.traits.map(t=>({...t,value:null}))};
-  await page.locator('#refresh-profile').click();await page.locator('#report-empty').waitFor({state:'visible'});assert(await page.locator('#report-frame').isHidden());
+  await refreshReport(page);await page.locator('#report-empty').waitFor({state:'visible'});assert(await page.locator('#report-frame').isHidden());
   await page.locator('#settings-toggle').click();await page.locator('#switch-account').click();assert.equal(await page.locator('#report-frame').getAttribute('src'),null);assert.equal(await page.locator('#network-frame').getAttribute('src'),null);
   await page.locator('#demo-user').selectOption({index:1});await page.locator('#demo-submit').click();await page.locator('#workspace-view').waitFor({state:'visible'});await go('upload');assert(await page.locator('#upload-submit').isDisabled());
   assert.deepEqual(errors,[]);console.log('CONTRACT PASS: monthly home/empty states/matches/scopes/network/identity cleanup/mobile; no page errors or overflow.');

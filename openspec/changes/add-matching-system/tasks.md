@@ -37,7 +37,7 @@
 - [x] 3.6 （2026-10-17角色2分支整合/驗收通過，主產品尚待合併）用 BERT 實作 `src/ml/category.classify`，`CATEGORY_MODEL=bert` 時從 `CATEGORY_MODEL_DIR` 載入，並把 CPU 版的 `torch`、`transformers` 加進服務的套件清單；測試沒有模型檔時健康檢查顯示 `unavailable` 而不是猜一個類別，並記下用 CPU 分類 1000 個品名的時間
 - [x] 3.7 （既有同7筆保留集彙總重建，原test本輪未讀；57筆reference隱私audit命中0）依 model-evaluation 規格產出三個模型的比較表和混淆矩陣（同一份測試集；測試資料少於 5 筆的類別不計分並列出），寫成 `docs/results/classification.md`；掃描確認裡面沒有任何真實品名
 - [x] 3.8 在 `docs/team/concepts.md` 寫「邏輯迴歸」段落，用 1–2 個假品名說明從向量到機率的過程
-- [ ] 3.9 原「公開HF權重」依使用者Protected政策退休，不可擅自公開。Protected展示另已交付；2026-10-17完成白名單本機模型安裝、新venv與真HTTP健康檢查bert。受保護遠端自動取得/固定revision與全新電腦或Docker啟動仍待整合環境驗收，故不將原項目整項勾選；詳見docs/results/classification-service.md。
+- [x] 3.9 （2026-10-17角色2分支已驗收，待Claude審核/主分支整合）依使用者要求以受保護HF來源取代原公開權重方案；固定revision/SHA的認證下載、新volume Docker/Compose唯讀secret啟動、虛構HTTP分類/上傳/profile及去憑證斷網新容器啟動均通過，匿名來源401、無憑證新volume unavailable/503。未公開模型、未動原test；詳見docs/results/classification-remote.md。
 
 ## 4. 角色 3：LLM 屬性與假用戶
 

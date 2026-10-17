@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-17",
+  "implementation_commit": "8750154",
+  "image_id": "sha256:fa4feb7fc24da675bc8c398fefeac0e53a3b190018bed6a0aef392a8bdeba901",
+  "identity": {
+    "repo": "lee851104/receipt-model-lab",
+    "revision": "29b655b96b4ced268bb0c3994e901c72dfd65420",
+    "authenticated": true,
+    "resolved_revision": "29b655b96b4ced268bb0c3994e901c72dfd65420",
+    "private": true,
+    "protected": null,
+    "anonymous_status": 401,
+    "status": "passed"
+  },
+  "remote": {
+    "mode": "remote",
+    "name": "receipt-r2-remote-1792246266448231300",
+    "source_commit": "8750154",
+    "original_test_accessed": false,
+    "image_id": "sha256:fa4feb7fc24da675bc8c398fefeac0e53a3b190018bed6a0aef392a8bdeba901",
+    "http": {
+      "health": "bert",
+      "classify": 200,
+      "upload": 202,
+      "fictional_rows": 3,
+      "job": "done",
+      "profile": 200
+    },
+    "model": {
+      "sha256": "16997425a9b36629469d60f506d52c2771bab1e6f3a3ea1465c2c0a316fa3e79",
+      "torch": "2.8.0+cpu",
+      "cuda_build": null
+    },
+    "offline_http": {
+      "health": "bert",
+      "classify": 200,
+      "upload": 202,
+      "fictional_rows": 3,
+      "job": "done",
+      "profile": 200
+    },
+    "offline_network": "none",
+    "offline_without_token_mount": true,
+    "status": "passed"
+  },
+  "compose": {
+    "project": "receipt-r2-compose-1792246333306158200",
+    "image": "receipt-role2-acceptance:8750154",
+    "source_commit": "8750154",
+    "revision": "29b655b96b4ced268bb0c3994e901c72dfd65420",
+    "fresh_volumes_before_up": true,
+    "runtime_secret_readonly": true,
+    "http": {
+      "health": "bert",
+      "classify": 200,
+      "upload": 202,
+      "fictional_rows": 3,
+      "job": "done",
+      "profile": 200
+    },
+    "host_loopback_health": 200,
+    "model": {
+      "sha256": "16997425a9b36629469d60f506d52c2771bab1e6f3a3ea1465c2c0a316fa3e79",
+      "model_files": 7,
+      "hf_cache_token_exists": false
+    },
+    "status": "passed"
+  },
+  "credential_audit": {
+    "containers_checked": 3,
+    "token_matches_logs_inspect_history": 0,
+    "running_acceptance_containers": 0,
+    "remote_volume": {
+      "files": 7,
+      "only_verified_inference_files": true
+    },
+    "status": "passed"
+  },
+  "regression": {
+    "command": "python -m unittest discover -s tests",
+    "passed": 467,
+    "seconds": 28.168
+  },
+  "scope": {
+    "attributes_model": "fake",
+    "demo_mode": false,
+    "original_test_accessed": false,
+    "pushed": false,
+    "merged": false,
+    "claude_review": "pending"
+  }
+}

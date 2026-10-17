@@ -1,65 +1,91 @@
 # 受保護BERT下載與Docker驗收
 
-狀態（2026-10-17）：下載器及隔離測試完成；Docker Linux乾淨建置、無憑證拒絕、本機BERT的離線HTTP及新容器啟動已實測通過。HF認證遠端下載尚待使用者本機登入，整體3.9仍未完成。原test未讀。
+狀態（2026-10-17）：角色2分支已完成固定revision認證下載、Docker乾淨建置、新volume啟動、Compose runtime secret與無憑證離線重啟驗收。任務3.9依使用者指定的受保護發布方案完成；待Claude審核、未合併主分支。原test未讀取、hash、複製或重新評分。
 
-## 來源與憑證
+## 固定來源與憑證
 
-沿用Protected Space `lee851104/receipt-model-lab` 的 `models/bert/`。既有交付記錄revision為 `29b655b96b4ced268bb0c3994e901c72dfd65420`；本輪匿名API401，需登入後確認該revision可取。權重SHA256固定為 `16997425a9b36629469d60f506d52c2771bab1e6f3a3ea1465c2c0a316fa3e79`。
+沿用既有受保護Space `lee851104/receipt-model-lab`，沒有修改可見性或上傳內容。認證 `space_info` 實際取得revision `29b655b96b4ced268bb0c3994e901c72dfd65420`；同來源用 `token=False` 回401。API回報private=true（未由此區分Private與Protected UI模式），不宣稱公開模型庫。
 
-在本機執行 `hf auth login`，由使用者直接貼入只讀token。不要貼在聊天、CLI參數、README、.env或Git。也可用 `HF_TOKEN_FILE` 指向Git外的既有token檔。下載器不改寫token；Docker只掛載該檔案為唯讀runtime secret，沒有build ARG或token值環境變數。
+模型為 `bert-next25-20261016-v3`；`model.safetensors` SHA256固定為 `16997425a9b36629469d60f506d52c2771bab1e6f3a3ea1465c2c0a316fa3e79`。明確設定 `CATEGORY_MODEL_REPO_TYPE=space`；不得把Space ID當作public model repo。
 
-Protected Space必須明確用repo_type=space；不是public model repo。下載器只取得models/manifest.json，解析BERT白名單後個別下載；不下載整個Space、TF-IDF詞彙或原始資料。固定40位revision與64位模型hash，逐檔hash/標籤/完整model驗證通過後才發布新目錄。下載失敗清掉本次staging，既有不完整／不相關目錄不覆寫。
+使用者在本機 `hf auth login` 輸入Read token，輸入不經聊天。Docker以唯讀runtime secret檔案掛載到 `/run/secrets/hf_token`；程式只接收 `HF_TOKEN_FILE` 路徑，不把token值放在CLI參數、環境變數、build ARG、image或Git。下載器只讀models/manifest.json及BERT推論白名單，逐檔hash與完整模型驗證通過後才發布；不取TF-IDF詞彙、訓練資料或整個Space snapshot。
 
-官方介面說明：[HF下載指南](https://huggingface.co/docs/huggingface_hub/en/guides/download)、[Protected Spaces](https://huggingface.co/docs/hub/spaces-overview)。
+官方介面：[HF下載指南](https://huggingface.co/docs/huggingface_hub/en/guides/download)、[Protected Spaces](https://huggingface.co/docs/hub/spaces-overview)。
 
-## 本機直接下載
+## 實測結果
 
-在角色2repo根目錄，使用含requirements-docker.txt的CPU環境：
+受驗產品commit `8750154`，後續 `8604d9d` 僅新增驗收探針及文件，Docker所需src/configs/依賴/設定未變。image `receipt-role2-acceptance:8750154`，ID `sha256:fa4feb7fc24da675bc8c398fefeac0e53a3b190018bed6a0aef392a8bdeba901`，以 `--pull --no-cache` 建置，未push。Linux amd64、Docker Engine29.8.2、WSL2 kernel6.18.54.1、torch2.8.0+cpu，cuda_build=null。
+
+| 情境 | 健康檢查 | 分類 | 虛構CSV上傳 | 背景任務 | profile |
+|---|---|---|---|---|---|
+| 新volume、無HF token（上一階段） | unavailable | 503 model_unavailable | 202、3筆 | failed | 不檢查 |
+| 只讀本機BERT、network none（上一階段） | bert | 200 | 202、3筆 | done | 200 |
+| 認證遠端下載到全新model/data volume | bert | 200 | 202、3筆 | done | 200 |
+| 沿用下載volume，新容器network none且無token掛載 | bert | 200 | 202、3筆 | done | 200 |
+| 已提交Compose base+category secret，全新project/volume | bert | 200 | 202、3筆 | done | 200 |
+
+遠端與Compose兩次均從空volume下載，SHA256符合固定模型；分類結果通過10類、有限機率、機率加總及類別範圍檢查。離線案例是建立新的容器、保留下載模型及DB，完全不掛token且Docker網路模式為none；不是只設定離線旗標或沿用原行程的記憶體。Compose另外從Windows主機透過動態loopback埠取得health200/bert。
+
+Compose驗證實際使用repo的docker-compose.yml及docker-compose.category.yml，只有驗收override指定既有image、動態loopback埠、DEMO_MODE=0與fake屬性。config確認Space型別/revision/hash/secret傳入正確，inspect確認token掛載readonly。不是使用另一套模擬下載器。
+
+## 資料與憑證邊界
+
+- 建置context為56個已追蹤Dockerfile/依賴/configs/src檔案，排除src/web及資料檔，並非整個repo打包。image內/app54檔，禁止資料集/權重/憑證檔0；HF token檔不存在。
+- 下載後模型volume僅7個已驗證推論檔（含service manifest），沒有殘留暫存cache或額外檔案。Compose容器沒有/root/.cache/huggingface/token。
+- 在本機比對本次3個容器的stdout/stderr log、inspect和image history，token字串命中0；只輸出數字，不輸出token。此檢查範圍不等於整台電腦的秘密掃描。
+- 驗收只使用scripts/verify_category_http.py內3筆虛構資料；未掛載rawdata、data/private或原test。屬性fake、DEMO_MODE=0，不是Qwen/demo seed/前端/全隊整合，也不是分類準確率評估。
+- 本輪容器已停止，專用volume保留供查核；未停止其他角色服務、未用GPU。Docker曾在先前第一次build前退出，重開後實測成功；沒有宣稱長時間穩定性或壓測通過。
+
+## 重現入口
+
+在角色2repo根目錄使用CPU環境。Windows CLI下載入口如下（本輪實際認證下載由Linux容器正式入口執行，不另宣稱這條CLI本輪已實跑）：
 
 ```powershell
 & 'C:/Users/User/Desktop/AI_project/receipt/data/role2/service-runtime-20261017/Scripts/python.exe' -m scripts.download_category_model --repo lee851104/receipt-model-lab --revision 29b655b96b4ced268bb0c3994e901c72dfd65420 --sha256 16997425a9b36629469d60f506d52c2771bab1e6f3a3ea1465c2c0a316fa3e79 --destination C:/Users/User/Desktop/AI_project/receipt/data/role2/remote-category-NEW
 ```
 
-目的必須不存在，或已是完整且符合指定權重hash的模型。沒有憑證的新目錄下載會失敗；已驗證本機模型可以離線重用。不完整資料夾應換新的版本路徑，不要刪既有私人資料來重試。
+目的必須是新路徑，或已有完整且符合指定SHA的模型；不覆寫不完整或不相關資料夾。已驗證模型存在時可在無憑證及無網路下重用。
 
-## Docker Compose（認證下載仍待驗收）
-
-先完成Docker Desktop與WSL2安裝。原Dockerfile使用CPU套件，以下只啟動本專案隔離的Compose project；使用者原本的其他服務不變。若8000已占用，先用獨立override改成可用的loopback埠，勿停止別的角色服務。
+Compose需要設定以下環境變數；HF_TOKEN_FILE是路徑，不能填token值。如果HF_HOME有自訂，使用該登入環境的huggingface_hub.constants.HF_TOKEN_PATH。
 
 ```powershell
 $env:CATEGORY_MODEL_REPO = 'lee851104/receipt-model-lab'
 $env:CATEGORY_MODEL_REVISION = '29b655b96b4ced268bb0c3994e901c72dfd65420'
 $env:CATEGORY_MODEL_SHA256 = '16997425a9b36629469d60f506d52c2771bab1e6f3a3ea1465c2c0a316fa3e79'
 $env:HF_TOKEN_FILE = Join-Path $env:USERPROFILE '.cache/huggingface/token'
-docker compose -p receipt-role2-acceptance -f docker-compose.yml -f docker-compose.category.yml up --build
 ```
 
-`docker-compose.category.yml` 設CATEGORY_MODEL=bert、CATEGORY_MODEL_REPO_TYPE=space和HF_TOKEN_FILE=/run/secrets/hf_token；密鑰檔案不進image。CATEGORY_MODEL_SHA256也在category_backend啟動時驗證，錯的權重不會因為資料夾存在而啟用。原public model下載路徑仍供既有相容用途，這次Protected部署必須使用Space路徑。
+本次額外acceptance.yml內容如下；搭配空的empty.env避免讀主產品.env，使用不同的PROJECT名稱建立新volume：
 
-## 實際證據與尚待項目
-
-- 新增7項測試先RED、後PASS；完整467/467（28.498秒）。測試使用虛構權重與受控下載替身，不宣稱遠端成功。
-- 已驗證無效revision／SHA／repo於網路前拒絕；manifest path traversal/額外資料檔/錯類別/hash拒絕；中斷、無token、既有不相關檔保留；錯誤訊息不帶憑證。
-- Docker Desktop曾因安裝/啟動問題改為官方all-users安裝；啟用WSL功能要求重開。使用者重開後已實測Engine29.8.2、Linux amd64、WSL2 kernel6.18.54.1正常。首次建置前daemon曾退出；重新啟動後乾淨建置成功，退出原因未定，不視為長時間穩定性證明。
-- 使用者選擇本機Docker，未新建遠端Space。管理員安裝WSL曾被自動審查拒絕，改由使用者要求的一步一步操作；不繞過審查，不自動重新開機。
-- 尚待：HF實際登入／固定revision遠端下載到新volume、runtime secret實跑及下載後移除secret的斷網重啟；任務3.9保持未完成。
-
-## 2026-10-17 Docker實測階段
-
-受驗來源commit `8750154`；使用 `--pull --no-cache` 建置，image ID `sha256:fa4feb7fc24da675bc8c398fefeac0e53a3b190018bed6a0aef392a8bdeba901`。未push。最小context為56個已追蹤的Dockerfile、依賴、configs及src檔案，排除src/web與資料檔，並非整個repo打包。建置後 `/app` 54個檔案，禁止的資料集/權重/憑證檔數0；HF token檔不存在。CPU torch2.8.0+cpu，cuda_build=null。
-
-| 情境 | 健康檢查 | 分類 | 虛構CSV上傳 | 背景任務 | profile |
-|---|---|---|---|---|---|
-| 新資料/模型volume，無HF token | unavailable | 503 model_unavailable | 202、3筆 | failed | 不檢查 |
-| 只讀本機BERT、全新DB、network none | bert | 200、10類機率契約 | 202、3筆 | done | 200 |
-| 第二個容器、相同DB及只讀模型、network none | bert | 200、10類機率契約 | 202、3筆 | done | 200 |
-
-無憑證案例完成後模型volume檔案數0。兩個本機BERT容器都沒有token mount且網路為none；manifest與權重SHA符合上方固定值。這證明既有完整模型能在Linux容器離線載入，不能代替遠端認證下載、Compose secret或全隊整合驗收。屬性使用fake、DEMO_MODE=0；未驗Qwen、demo seed或前端。虛構資料全部寫入專用新volume；完成後只停止這次容器，保留volume供查核，未停止其他角色服務。沒有掛載或讀取rawdata、data/private或原test；這是部署驗收，不是準確率評估。
-
-HTTP探針已納入 `scripts/verify_category_http.py`；在已啟動的隔離容器中以標準輸入執行 `python - bert`（缺模型案例為 `python - unavailable`）。例如從角色2根目錄執行下面命令，`CONTAINER_NAME`改為本次隔離容器；探針會註冊虛構帳號及上傳3筆虛構CSV，不可指向正式資料庫：
+```yaml
+services:
+  app:
+    image: receipt-role2-acceptance:8750154
+    ports: !override
+      - "127.0.0.1::8000"
+    environment:
+      DEMO_MODE: "0"
+      ATTRIBUTES_MODEL: fake
+    labels:
+      receipt.role: 2-acceptance
+```
 
 ```powershell
+docker compose --env-file PATH/empty.env -p PROJECT -f docker-compose.yml -f docker-compose.category.yml -f PATH/acceptance.yml up -d --no-build --pull never
+# 只對本次新project取得容器名稱；probe會註冊虛構帳號並上傳3筆CSV，勿指向正式DB。
 python -c "from pathlib import Path; import subprocess; subprocess.run(['docker','exec','-i','CONTAINER_NAME','python','-','bert'],input=Path('scripts/verify_category_http.py').read_bytes(),check=True)"
 ```
 
-本機證據（主資料夾data/role2，Git忽略）：`docker-build-20261017-v2.log`、`receipt-r2-noauth-1792244442386688800.json`、`receipt-r2-local-1792244453183018600.json`。本輪 `python -m unittest discover -s tests` 重跑467/467通過（30.753秒），log為 `docker-stage-regression-20261017.log`；提交探針與實跑探針SHA256一致（41af58719209c962131c4a50163c55048a48b7ed67110afeb636e1ccf2a2fef9）。待Claude審核，未合併主分支。
+範例依賴前述已建置image；沒有該image時應先以不含私人資料的context建置，不能把--no-build當成已驗證build。完整本機實跑命令由data/role2/check_compose_remote.py與run_docker_acceptance.py保留；這兩份為本機輔助腳本，Git交付的探針為scripts/verify_category_http.py。
+
+## 證據與審核
+
+可進Git的彙總：[classification-remote-20261017.json](classification-remote-20261017.json)。本機主資料夾data/role2保留：
+
+- remote-identity-20261017.json：認證revision、匿名401。
+- receipt-r2-remote-1792246266448231300.json：遠端與新容器離線HTTP、固定權重hash。
+- receipt-r2-compose-1792246333306158200/result.json：真Compose、全新volume、唯讀secret、主機loopback。
+- remote-runtime-audit-20261017.json：token命中0、模型volume7個白名單檔、3個驗收容器皆停止。
+- remote-final-regression-20261017.log：本輪完整467/467，28.168秒。
+
+下載器原7項隔離測試涵蓋無效來源/revision/SHA、manifest路徑/檔案白名單、錯hash、無token/中斷及不覆寫既有檔。原產品8750154已做Codex獨立程式審查，未發現確認問題，非Claude審核。本輪OpenSpec strict及git diff --check通過，未改產品邏輯；角色2受保護遠端/Docker驗收完成，Claude正式審核與主分支整合仍待。

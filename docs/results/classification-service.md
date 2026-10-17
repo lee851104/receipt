@@ -68,7 +68,7 @@ $categoryTarget = 'C:/Users/User/Desktop/AI_project/receipt/data/role2/service-m
 
 使用真正選定BERT、fake屬性、臨時DB與自動釋放的loopback埠；不是全系統Qwen/300人/前端驗收。原test未開/hash/copy/評分。HTTP結果主data/role2/service-acceptance-20261017/result-v2.json；首次result-v1.json啟動9.5417秒、1000筆12.9486秒，兩輪皆通過。
 
-## 發布政策與未涵蓋範圍
+## 初期階段的發布政策與未涵蓋範圍（後續狀態見文末）
 
 使用者後來選擇Protected展示、程式/模型不公開，取代原3.9「公開模型庫」方案。已有Protected Space展示交付紀錄；本輪沒有改可見性、上傳或重新驗證HF線上狀態。受保護模型不可填成匿名public model repo下載來源。
 
@@ -82,4 +82,4 @@ Codex獨立審查adbb535..5c5d396未發現Critical/Important，指定25項測試
 
 ## 後續：受保護遠端取得
 
-2026-10-17後續已新增repo_type=space固定revision/模型hash下載器與runtime secret Compose override；詳見[classification-remote.md](classification-remote.md)。原先「Space ID不可直接填model repo」限制仍成立，但新程式可在明確CATEGORY_MODEL_REPO_TYPE=space時處理。實際認證下載和Docker驗收仍待登入與WSL，不因程式存在就當作完成。
+2026-10-17後續已新增repo_type=space固定revision/模型hash下載器與runtime secret Compose override；詳見[classification-remote.md](classification-remote.md)。原先「Space ID不可直接填model repo」限制仍成立，但新程式可在明確CATEGORY_MODEL_REPO_TYPE=space時處理。使用者完成WSL重開與HF本機登入後，已實際通過固定revision遠端下載、新volume正式容器入口、Compose唯讀runtime secret、虛構HTTP分類/上傳/profile，以及無憑證network none的新容器啟動；原test未動。角色2任務3.9依受保護方案完成，待Claude審核、未合併主分支；本文件較早階段的無Docker/未登入敘述僅為歷史紀錄。

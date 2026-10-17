@@ -38,9 +38,24 @@ async function poll(read,check){
   assert.equal(math.cells.length,18);assert.equal(math.cells.filter(c=>c.part===null).length,13);
   await page.goto(origin+'/web/');
   await page.locator('#demo-user').selectOption('1');await page.locator('#demo-submit').click();
-  await page.locator('#profile-panel').waitFor({timeout:3000});
-  assert.equal(new URL(page.url()).hash,'#profile');
-  assert.equal(await page.locator('.workspace-nav [data-workspace]').count(),2);
+  await page.locator('#home-panel').waitFor({timeout:3000});
+  assert.equal(new URL(page.url()).hash,'#home');
+  assert.equal(await page.locator('#home-panel button').count(),2);
+  assert(await page.locator('.workspace-nav').isHidden());
+  for(const size of [{width:1366,height:768},{width:1024,height:640},{width:390,height:844},{width:320,height:568},{width:320,height:453}]){
+   await page.setViewportSize(size);
+   const fit=await page.locator('#home-panel').evaluate(n=>{
+    const bounds=n.getBoundingClientRect();
+    return [...n.querySelectorAll('button')].every(b=>{const r=b.getBoundingClientRect();return r.top>=bounds.top&&r.bottom<=bounds.bottom&&r.left>=bounds.left&&r.right<=bounds.right;});
+   });assert(fit,'two choices fit '+JSON.stringify(size));
+  }
+  await page.setViewportSize({width:1440,height:1000});
+  await page.locator('[data-entry="profile"]').press('Enter');
+  await page.locator('#profile-panel').waitFor();
+  await page.locator('[data-workspace="home"]').click();
+  await page.locator('[data-entry="matches"]').click();
+  await page.locator('#matches-panel').waitFor();
+  assert.equal(await page.locator('.workspace-nav [data-workspace]').count(),3);
   assert(await page.locator('[data-workspace="upload"]').isHidden());
   await page.locator('#settings-toggle').click();
   assert(await page.locator('[data-workspace="upload"]').isVisible());
@@ -66,6 +81,7 @@ async function poll(read,check){
   const username='live_'+Date.now(),peer='peer_'+Date.now();
   await page.locator('#register-tab').click();await page.locator('#register-username').fill(username);await page.locator('#register-password').fill(password);await page.locator('#register-form button').click();await page.locator('#auth-notice').waitFor();
   await login(username,password);
+  await page.locator('#home-panel').waitFor();await go('profile');
   await page.locator('#profile-content').waitFor();
   assert(await page.locator('#report-empty').isVisible());
   assert.match(await page.locator('#report-empty').textContent(),/設定 → 上傳檔案/);

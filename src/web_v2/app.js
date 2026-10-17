@@ -39,7 +39,7 @@
     message('model-note',fake?'目前為示範模型，分類結果僅供流程體驗。':'');
     const viewChanged=lastView!==state.view;
     if(viewChanged){
-      history.replaceState(null,'',workspace?(['#upload','#profile','#matches','#settings'].includes(location.hash)?location.hash:'#profile'):'#'+state.view);
+      history.replaceState(null,'',workspace?(['#home','#upload','#profile','#matches','#settings'].includes(location.hash)?location.hash:'#home'):'#'+state.view);
       $('login-password').value='';$('register-password').value='';
       if(lastView!==undefined&&!workspace)$('auth-title').focus();
       lastView=state.view;

@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>消費配對系統 v2｜從日常，看見品味</title>
-<link rel="stylesheet" href="./styles.css?v=20261017-scale1">
+<link rel="stylesheet" href="./styles.css?v=20261017-entry1">
 <script defer src="./api.js"></script>
 <script defer src="./flow.js"></script>
 <script defer src="./view-adapters.js"></script>
-<script defer src="./workspace-flow.js?v=20261017-scale1"></script>
+<script defer src="./workspace-flow.js?v=20261017-entry1"></script>
 <script defer src="./explanation.js"></script>
 <script defer src="./account-flow.js"></script>
 <script defer src="./account-ui.js"></script>
-<script defer src="./workspace-ui.js?v=20261017-scale1"></script>
-<script defer src="./app.js?v=20261017-scale1"></script>
+<script defer src="./workspace-ui.js?v=20261017-entry1"></script>
+<script defer src="./app.js?v=20261017-entry1"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">跳到主要內容</a>
@@ -64,8 +64,20 @@
   </section>
   <section id="workspace-view" hidden aria-label="我的消費與品味">
     <nav class="workspace-nav" aria-label="功能導覽">
-<button type="button" data-workspace="profile" aria-current="page">我的月報</button><button type="button" data-workspace="matches">找到同好</button><button id="refresh-profile" class="quiet" type="button">重新載入</button>
+<button type="button" data-workspace="home" class="back-choice">← 返回選擇</button><button type="button" data-workspace="profile">我的月報</button><button type="button" data-workspace="matches">找到同好</button><button id="refresh-profile" class="quiet" type="button">重新載入</button>
 </nav>
+<section id="home-panel" hidden aria-labelledby="home-title">
+<div class="entry-intro"><p class="eyebrow">YOUR TASTE, YOUR WAY</p><h1 id="home-title" tabindex="-1">今天，想怎麼探索？</h1></div>
+<div class="entry-choices">
+<button class="entry-card entry-self" type="button" data-entry="profile" aria-label="看自己的品味">
+<svg class="entry-art" viewBox="0 0 200 160" aria-hidden="true"><circle class="art-halo" cx="100" cy="80" r="67"/><path class="art-line" d="M67 31H133V130L122 124 111 130 100 124 89 130 78 124 67 130Z"/><path class="art-line" d="M82 53H118M82 66H107"/><path class="art-bar" d="M84 105V91M100 105V81M116 105V73"/></svg>
+<span class="entry-copy"><strong>看自己的品味</strong><span>從每月消費，看見自己的日常。</span></span><span class="entry-arrow" aria-hidden="true">↗</span>
+</button>
+<button class="entry-card entry-connect" type="button" data-entry="matches" aria-label="跟陌生人配對品味">
+<svg class="entry-art" viewBox="0 0 200 160" aria-hidden="true"><circle class="art-halo" cx="100" cy="80" r="67"/><circle class="art-line art-pink" cx="70" cy="80" r="38"/><circle class="art-line art-blue" cx="130" cy="80" r="38"/><path class="art-bridge" d="M70 66H130M70 94H130"/><circle class="art-pink" cx="70" cy="66" r="5"/><circle class="art-blue" cx="130" cy="66" r="5"/><circle class="art-pink" cx="70" cy="94" r="5"/><circle class="art-blue" cx="130" cy="94" r="5"/></svg>
+<span class="entry-copy"><strong>跟陌生人<br>配對品味</strong><span>看看誰和你有相似的生活偏好。</span></span><span class="entry-arrow" aria-hidden="true">↗</span>
+</button>
+</div></section>
 <section id="upload-panel" hidden aria-labelledby="upload-title">
 <p class="eyebrow">02 / 發票變成線索</p><h1 id="upload-title" tabindex="-1">匯入一個月，<em>看見日常。</em></h1><p class="subtitle">選擇財政部電子發票 CSV，每份檔案只放一個月，最大 2 MB。</p>
 <div class="upload-layout"><section class="input-card"><form id="upload-form"><label for="invoice-file">發票 CSV</label><input id="invoice-file" type="file" accept=".csv,text/csv" required aria-describedby="upload-help"><p id="upload-help" class="small">重新上傳相同月份會取代該月舊資料。作廢、折扣、低於 10 元或小數金額明細不計入分析。</p><p id="upload-demo-note" class="message" hidden>示範帳號不能上傳；請切換成自己的帳號。</p><button id="upload-submit" class="primary" type="submit">上傳並分析</button></form></section>

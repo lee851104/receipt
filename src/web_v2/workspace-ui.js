@@ -5,7 +5,7 @@
   const $=id=>document.getElementById(id);
   let accountUI,credentialChange=false,resumeProfileAfterRotation=false;
   let selectedCard=null,listScroll=0;
-  let enabled=false,current='profile',lastProfile=null,lastNetwork=null,networkRenderError='',sessionVersion=-1;
+  let enabled=false,current='home',lastProfile=null,lastNetwork=null,networkRenderError='',sessionVersion=-1;
   const work=ReceiptWorkspace.createWorkspace({api,session,onChange:render});
   const make=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
   function clearFrame(id){const frame=$(id);frame.hidden=true;frame.removeAttribute('src');}
@@ -17,8 +17,8 @@
   function navigate(page,load=true){
    if(!enabled)return;
    if(credentialChange)page='settings';
-   current=['upload','profile','matches','settings'].includes(page)?page:'profile';
-   for(const name of ['upload','profile','matches','settings'])$(name+'-panel').hidden=name!==current;
+   current=['home','upload','profile','matches','settings'].includes(page)?page:'home';
+   for(const name of ['home','upload','profile','matches','settings'])$(name+'-panel').hidden=name!==current;
    for(const button of document.querySelectorAll('[data-workspace]')){
     if(button.dataset.workspace===current)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
    }
@@ -28,7 +28,7 @@
    if(load && current==='matches' && work.state().matches.status==='idle')work.loadMatches();
   }
   function render(state){
-   for(const button of document.querySelectorAll('[data-workspace]'))button.disabled=credentialChange;
+   for(const button of document.querySelectorAll('[data-workspace], [data-entry]'))button.disabled=credentialChange;
    $('refresh-profile').disabled=credentialChange;$('refresh-matches').disabled=credentialChange;
    const upload=state.upload,demo=session.get()?.isDemo||state.profile.data?.is_demo;
    const running=['sending','queued','running'].includes(upload.status);
@@ -137,6 +137,9 @@
   for(const button of document.querySelectorAll('[data-workspace]'))button.addEventListener('click',()=>{
    closeSettings();navigate(button.dataset.workspace);
    (current==='matches'&&!$('match-result').hidden?$('match-result-title'):$(current+'-title'))?.focus({preventScroll:true});
+  });
+  for(const button of document.querySelectorAll('[data-entry]'))button.addEventListener('click',()=>{
+   navigate(button.dataset.entry);$(current+'-title')?.focus({preventScroll:true});
   });
   $('upload-form').addEventListener('submit',async event=>{event.preventDefault();if(credentialChange)return;const file=$('invoice-file').files?.[0];await work.upload(file);if(work.state().upload.status==='done')$('invoice-file').value='';});
   $('retry-job').addEventListener('click',()=>work.resumeUpload());

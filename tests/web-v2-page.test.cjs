@@ -30,7 +30,7 @@ test('real page starts at login with demo hidden when disabled',async()=>{
 test('real page supports demo home, safe identity text and switching without classification DOM',async()=>{
   const x=page(p=>p.endsWith('/health')?[200,{demo_mode:true,models:{category:'fake',attributes:'fake'}}]:p.endsWith('/demo-users')?[200,[{user_id:2,display_name:'<b>示範</b>'}]]:p.endsWith('/demo-login')?[200,{access_token:'abc',expires_in:3600}]:[200,{ready:false,item_count:0,min_items:20,pending_attributes:0,months:{},traits:[]}]);
   await tick();x.nodes['demo-user'].value='2';await x.nodes['demo-form'].fire('submit');await tick();
-  assert.equal(x.nodes['workspace-view'].hidden,false);assert.equal(x.location.hash,'#profile');
+  assert.equal(x.nodes['workspace-view'].hidden,false);assert.equal(x.location.hash,'#home');assert.equal(x.calls.some(([p])=>p.endsWith('/me/profile')),false);
   assert.equal(x.nodes['identity-label'].textContent,'<b>示範</b>');assert.equal(x.nodes['classify-panel'],undefined);
   assert.equal(x.nodes['model-note'].hidden,false);
   await x.nodes['switch-account'].fire('click');
@@ -43,6 +43,7 @@ test('login error is Chinese, password is cleared and an API 401 clears prior re
   await x.nodes['login-form'].fire('submit');
   assert.equal(x.nodes['auth-error'].textContent,'帳號或密碼錯誤。');assert.equal(x.nodes['login-password'].value,'');
   authenticated=true;x.nodes['login-password'].value='good';await x.nodes['login-form'].fire('submit');
-  await tick();
+  assert.equal(x.location.hash,'#home');
+  x.location.hash='#profile';x.events.hashchange();await tick();
   assert.equal(x.nodes['workspace-view'].hidden,true);assert.match(x.nodes['auth-error'].textContent,/失效/);
 });

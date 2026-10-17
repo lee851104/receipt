@@ -170,3 +170,52 @@ body:has(#workspace-view:not([hidden])) .service-alert{flex-shrink:0;margin:6px 
 #match-result .explain-details>summary{padding:10px 0;font-size:11px}
 #match-result .explain-details>summary .small{font-size:10px}
 @media(max-width:640px){.match-result-header{gap:8px}.match-result-header h2{font-size:11px}.match-result-header .quiet{font-size:11px;padding:6px}}
+
+/* A two-choice entrance, as simple as choosing a dining mode. */
+#workspace-view:has(#home-panel:not([hidden]))>.workspace-nav{display:none}
+#workspace-view>#home-panel{height:100%;padding:24px 0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:32px;overflow:auto}
+.entry-intro{text-align:center;flex-shrink:0}.entry-intro .eyebrow{color:var(--accent);font-size:10px;letter-spacing:3px;margin:0 0 10px}
+.entry-intro h1{font-size:clamp(26px,3vw,36px);font-weight:500;margin:0}
+.entry-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:min(920px,100%);gap:24px;flex-shrink:0}
+.entry-card{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:clamp(280px,46vh,400px);padding:28px 32px 40px;border:1px solid #50403f;border-radius:24px;background:radial-gradient(ellipse at 50% 20%,#302124 0,transparent 65%),#181617;color:var(--ink);cursor:pointer;text-align:center;transition:border-color .2s,background-color .2s,transform .2s}
+.entry-connect{border-color:#3e454e;background:radial-gradient(ellipse at 50% 20%,#222b33 0,transparent 65%),#161819}
+.entry-card:hover{border-color:var(--accent);transform:translateY(-3px);background-color:#251d20}
+.entry-connect:hover{border-color:#9bbcff;background-color:#1e252e}
+.entry-card:focus-visible{outline:3px solid var(--accent);outline-offset:5px}
+.entry-art{width:160px;height:128px;flex-shrink:0;overflow:visible}
+.art-halo{fill:none;stroke:#ef85881c;stroke-width:1}
+.entry-connect .art-halo{stroke:#9bbcff1c}
+.art-line{fill:none;stroke:var(--accent);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.art-bar{stroke:var(--accent);stroke-width:6;stroke-linecap:round}
+.art-pink{stroke:#ef8588;fill:#ef8588}.art-blue{stroke:#9bbcff;fill:#9bbcff}
+.art-line.art-pink,.art-line.art-blue{fill:none}
+.art-bridge{fill:none;stroke:#79c9b4;stroke-width:1.6;opacity:.8}
+.entry-copy{display:flex;flex-direction:column;gap:12px}
+.entry-copy strong{font-size:clamp(24px,2.4vw,30px);font-weight:500;line-height:1.4;letter-spacing:1px}
+.entry-copy>span{color:var(--muted);font-size:13px;line-height:1.7}
+.entry-self .entry-copy strong{padding-block:21px}
+.entry-arrow{position:absolute;right:23px;bottom:19px;color:var(--muted);font-size:22px}
+.workspace-nav .back-choice{font-size:11px}
+@media(max-width:640px){
+ #workspace-view>#home-panel{gap:22px;padding:24px 0;justify-content:safe center}
+ .entry-intro h1{font-size:25px}.entry-intro .eyebrow{font-size:9px;letter-spacing:2px}
+ .entry-choices{grid-template-columns:1fr;gap:14px;max-width:420px}
+ .entry-card{flex-direction:row;justify-content:flex-start;gap:14px;min-height:156px;padding:22px 23px 22px 16px;border-radius:18px;text-align:left}
+ .entry-art{width:70px;height:80px}.entry-copy{gap:7px}.entry-copy strong{font-size:22px;letter-spacing:0}
+ .entry-copy>span{font-size:11px;max-width:17em}.entry-self .entry-copy strong{padding:0}
+ .entry-arrow{right:12px;bottom:10px;font-size:17px}
+ .workspace-nav{gap:16px}.workspace-nav .back-choice{font-size:10px}
+}
+@media(max-height:600px) and (min-width:641px){
+ #workspace-view>#home-panel{gap:15px;padding:12px 0}
+ .entry-card{min-height:250px;padding:16px 28px 28px;gap:4px}.entry-art{width:112px;height:90px}
+ .entry-copy{gap:6px}.entry-copy strong{font-size:24px}.entry-self .entry-copy strong{padding-block:17px}
+}
+@media(max-width:640px) and (max-height:600px){
+ #workspace-view>#home-panel{gap:14px;padding:12px 0}
+ .entry-intro h1{font-size:22px}.entry-intro .eyebrow{margin-bottom:6px;font-size:8px}
+ .entry-choices{gap:12px}.entry-card{min-height:130px;padding:16px 22px 16px 12px;gap:12px}
+ .entry-art{width:58px;height:70px}.entry-copy strong{font-size:20px}.entry-copy>span{font-size:10.5px}
+}
+#workspace-view>#home-panel{justify-content:safe center}
+.entry-intro h1:focus{outline:none}

@@ -11,7 +11,7 @@ const fixture=require('./web-v2-fixtures.cjs');
  });
  try{
   await page.goto(process.env.RECEIPT_TEST_URL+'/web/');
-  await page.locator('#demo-user').selectOption('1');await page.locator('#demo-submit').click();
+  await page.locator('#demo-user').selectOption('1');await page.locator('#demo-submit').click();await page.locator('[data-entry="profile"]').click();
   const report=page.frameLocator('#report-frame');await report.locator('#total').filter({hasText:'80'}).waitFor();await report.locator('#frame-status').waitFor({state:'hidden'});
   assert.equal(await page.locator('#taste-page,.trait-value,#report-dialog,#classify-panel').count(),0);
   assert.equal(await page.locator('[data-workspace="profile"]').textContent(),'我的月報');

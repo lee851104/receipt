@@ -1,6 +1,9 @@
 /* Navigate through the same visible controls used by a person. */
 async function go(page,name){
  await page.locator('#workspace-view').waitFor();
+ if(['profile','matches'].includes(name)&&await page.locator('#home-panel').isVisible()){
+  await page.locator('[data-entry="'+name+'"]').click();return;
+ }
  const target=page.locator('[data-workspace="'+name+'"]');
  if(['upload','settings'].includes(name)&&!(await target.isVisible()))await page.locator('#settings-toggle').click();
  await target.click();

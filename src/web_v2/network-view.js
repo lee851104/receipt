@@ -60,14 +60,15 @@ function renderSummary(result,both){
 // The taste network: signals fan out from each person's traits, and the middle lines are the score's cells.
 function drawTraits(svg,mobile,both){
  const graph=TraitNetwork.layout(network,both[0],both[1],mobile,apiResult),shape=TraitNetwork.SHAPES[mobile?'mobile':'desktop'],color={a:'#ff9aa7',b:'#9bbcff'},who=sideNames();
- // Room for every signal's purchases is kept from the start, so picking a signal never rescales the graph.
- svg.setAttribute('viewBox',TraitNetwork.viewBox(network,graph,both,mobile));
+ // Reserve purchase columns only while inspecting them, keeping the overview large.
+ const overviewBox=mobile?TraitNetwork.viewBox(network,graph,both,mobile):'0 0 '+graph.width+' '+graph.height;
+ svg.setAttribute('viewBox',overviewBox);
  const names=el('g',{'aria-hidden':'true'});
  for(const side of ['a','b']){
   const [cx]=shape.centers[side==='a'?0:1],x=mobile?cx:cx+(side==='a'?-130:130),y=mobile?(side==='a'?28:graph.height-14):30;
   names.append(el('text',{x,y,'text-anchor':'middle',class:'person-name'},chartName(keyFor(side),mobile)+(pair?(side==='a'?'':' · 配對對象'):' · '+(side==='a'?'你':'朋友'))));
  }
- const lines=el('g'),middles=el('g'),dots=el('g'),labels=el('g'),outer=el('g',{class:'t-outer','aria-hidden':'true'}),tips=el('g'),view={graph,links:[],cells:[],signals:[],traits:[],outer,tips,pinned:[],hover:null};
+ const lines=el('g'),middles=el('g'),dots=el('g'),labels=el('g'),outer=el('g',{class:'t-outer','aria-hidden':'true'}),tips=el('g'),view={graph,overviewBox,links:[],cells:[],signals:[],traits:[],outer,tips,pinned:[],hover:null};
  for(const link of graph.links){const zero=link.push===0,base=zero?.3:.85;const path=el('path',{d:link.d,class:'t-link',stroke:color[link.side],'stroke-width':zero?.6:(.8+6*Math.abs(link.push)).toFixed(2),'stroke-dasharray':link.push<0?'5 4':'none',opacity:base});lines.append(path);view.links.push({...link,el:path,base});}
  // The overall match sits between the fans: the score in a badge, over a glow as strong as the match.
  const mark=TraitNetwork.scoreMark(graph,mobile),tones={positive:'#5eeac7',negative:'#ffb65c',zero:'#77736c'};
@@ -140,7 +141,7 @@ function hoverable(group,item,text){
 }
 function pin(item,text,inward){const tip=tipText(item,text,inward);traitGraph.tips.append(tip);traitGraph.pinned.push(tip);}
 // Pinned names and the purchases of a picked signal both go when the choice changes.
-function clearPins(){if(!traitGraph)return;for(const tip of traitGraph.pinned)tip.remove();traitGraph.pinned=[];traitGraph.outer.replaceChildren();}
+function clearPins(){if(!traitGraph)return;for(const tip of traitGraph.pinned)tip.remove();traitGraph.pinned=[];traitGraph.outer.replaceChildren();$('network').setAttribute('viewBox',traitGraph.overviewBox);}
 // The purchases behind a picked signal: a short column of dots outside it on each side, each with a line in and its name.
 function showPurchases(id){
  const mobile=traitGraph.graph.width===TraitNetwork.SHAPES.mobile.width,color={a:'#ff9aa7',b:'#9bbcff'},sides=new Set();
@@ -151,6 +152,7 @@ function showPurchases(id){
    el('circle',{cx:item.x.toFixed(1),cy:item.y.toFixed(1),r:item.r.toFixed(1),class:'t-buy',fill:color[side.side],stroke:color[side.side]}),
    el('text',{x:item.labelX.toFixed(1),y:item.labelY.toFixed(1),'text-anchor':item.anchor,class:'t-tip','font-size':traitGraph.graph.font},item.text));
  }
+ if(sides.size)$('network').setAttribute('viewBox',TraitNetwork.viewBox(network,traitGraph.graph,traitPair(),mobile));
  return sides;
 }
 // Light the chosen traits and their signals; a chosen signal shows at full strength and the traits' other signals at half.

@@ -8,8 +8,15 @@
  let pending=0;
  function resize(){
   pending=0;
-  // Graph size follows the workspace, so content sizing cannot feed back on itself.
-  main.style.setProperty('--graph-height',Math.max(220,Math.min(680,panel.clientHeight-170))+'px');
+  // Measure all non-graph content, not the iframe viewport (which we resize).
+  const frame=window.frameElement,canvas=document.querySelector('.canvas');
+  const panelStyle=host.getComputedStyle(panel);
+  const below=panel.querySelector('#explain-details > summary');
+  const frameOffset=frame.getBoundingClientRect().top-panel.getBoundingClientRect().top+panel.scrollTop;
+  const reserved=below?below.getBoundingClientRect().height+10:0;
+  const chrome=main.getBoundingClientRect().height-canvas.getBoundingClientRect().height;
+  const available=panel.clientHeight-frameOffset-parseFloat(panelStyle.paddingBottom)-reserved-chrome-4;
+  main.style.setProperty('--graph-height',Math.max(220,Math.floor(available))+'px');
   const height=Math.ceil(main.getBoundingClientRect().height)+2;
   host.ReceiptV2Host?.resizeNetwork(height,payload);
  }

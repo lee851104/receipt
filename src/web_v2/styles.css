@@ -222,3 +222,9 @@ body:has(#workspace-view:not([hidden])) .service-alert{flex-shrink:0;margin:6px 
 
 body:has(#profile-panel[hidden]) #refresh-profile{display:none}
 .workspace-nav .back-choice{border-bottom:0}
+
+/* Keep the result header subordinate to the full-width relationship. */
+.match-result-header{margin-bottom:6px;gap:10px}
+#workspace-view>#matches-panel{padding-top:6px;padding-bottom:6px}
+#match-result .explain-details{margin-top:6px}
+#match-result .explain-details>summary{padding:6px 0}

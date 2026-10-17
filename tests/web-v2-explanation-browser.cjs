@@ -32,7 +32,7 @@ const fixture=require('./web-v2-fixtures.cjs');
    await page.setViewportSize(size);
    await page.waitForFunction(()=>{
     const f=document.getElementById('network-frame'),d=f.contentDocument;
-    return d&&parseFloat(d.querySelector('main').style.getPropertyValue('--graph-height'))===Math.max(220,Math.min(680,document.getElementById('matches-panel').clientHeight-170))&&d.documentElement.scrollHeight<=f.clientHeight+2&&d.documentElement.scrollWidth<=f.clientWidth+1;
+    return d&&parseFloat(d.querySelector('main').style.getPropertyValue('--graph-height'))>=220&&d.documentElement.scrollHeight<=f.clientHeight+2&&d.documentElement.scrollWidth<=f.clientWidth+1&&Math.abs(f.clientHeight-d.querySelector('main').getBoundingClientRect().height-2)<2&&(innerWidth<=640||document.querySelector('#explain-details > summary').getBoundingClientRect().bottom<=document.getElementById('matches-panel').getBoundingClientRect().bottom+1);
    });
    if(size.width>640){
     const fits=await page.locator('#network-frame').evaluate(f=>f.getBoundingClientRect().bottom<=document.getElementById('matches-panel').getBoundingClientRect().bottom);
@@ -45,17 +45,16 @@ const fixture=require('./web-v2-fixtures.cjs');
      return {font,spread:(Math.max(...nodes.map(n=>n.right))-Math.min(...nodes.map(n=>n.left)))/bounds.width,
       clipped:rects.some(r=>r.left<bounds.left||r.right>bounds.right||r.top<bounds.top||r.bottom>bounds.bottom)};
     });
-    assert(layout.font>=(size.width>1200?13:10.5),JSON.stringify(layout));
-    assert(layout.spread>.65,JSON.stringify(layout));
+    assert(layout.font>=(size.width>1200?15:11.5),JSON.stringify(layout));
+    assert(layout.spread>.74,JSON.stringify(layout));
     assert.equal(layout.clipped,false);
-    const overlay=await graph.locator('.comparison-overview').evaluate(n=>{
-     const r=n.getBoundingClientRect(),c=n.closest('.canvas').getBoundingClientRect();
-     return {inside:r.left>=c.left&&r.right<=c.right&&r.top>=c.top&&r.bottom<=c.bottom,
-      collisions:[...n.closest('.canvas').querySelectorAll('.t-label,.t-score')].filter(t=>{
-       const b=t.getBoundingClientRect();return b.left<r.right&&b.right>r.left&&b.top<r.bottom&&b.bottom>r.top;
-      }).map(t=>t.textContent)};
+    const summary=await graph.locator('.comparison-overview').evaluate(n=>{
+     const r=n.getBoundingClientRect(),c=document.querySelector('.canvas').getBoundingClientRect();
+     return {outside:!n.closest('.canvas'),above:r.bottom<=c.top};
     });
-    assert(overlay.inside);assert.deepEqual(overlay.collisions,[]);
+    assert(summary.outside&&summary.above);
+    const allFits=await page.locator('#explain-details > summary').evaluate(n=>n.getBoundingClientRect().bottom<=document.getElementById('matches-panel').getBoundingClientRect().bottom+1);
+    assert(allFits,'collapsed calculation also fits '+JSON.stringify(size));
    }
   }
   // Wheel over the embedded graph must reach the only scroll owner.
@@ -66,6 +65,19 @@ const fixture=require('./web-v2-fixtures.cjs');
   await graph.locator('.graph-help > summary').click();
   await page.waitForFunction(()=>{const f=document.getElementById('network-frame');return f.contentDocument.documentElement.scrollHeight<=f.clientHeight+2;});
   await graph.locator('.graph-help > summary').click();
+  const overviewBox=await graph.locator('#network').getAttribute('viewBox');
+  await graph.locator('.t-signal').first().click();
+  assert(await graph.locator('.t-buy').count()>0);
+  assert.notEqual(await graph.locator('#network').getAttribute('viewBox'),overviewBox);
+  const purchasesFit=await graph.locator('#network').evaluate(svg=>{
+   const box=svg.viewBox.baseVal;
+   return [...svg.querySelectorAll('.t-outer text')].every(n=>{
+    const r=n.getBBox();return r.x>=box.x&&r.x+r.width<=box.x+box.width&&r.y>=box.y&&r.y+r.height<=box.y+box.height;
+   });
+  });
+  assert(purchasesFit,'expanded purchase labels stay inside graph');
+  await graph.locator('#reset').click();
+  assert.equal(await graph.locator('#network').getAttribute('viewBox'),overviewBox);
   await page.locator('#match-back').click();
   assert(await page.locator('#match-browse').isVisible());
   assert.equal(await page.locator('.match-card').first().evaluate(n=>n===document.activeElement),true);

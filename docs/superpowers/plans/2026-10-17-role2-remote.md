@@ -14,7 +14,7 @@
 - [x] 下載器、Settings、容器接線和權重pin檢查；7項新測試先missing-module RED，後PASS，完整467/467（28.498s）。
 - [x] CLI與runtime secret Compose範例。
 - [ ] 本機HF登入、固定revision遠端可取與匿名拒絕。
-- [ ] Docker Desktop/WSL2安裝、daemon正常與乾淨image build。
+- [x] Docker Desktop/WSL2安裝、daemon正常與乾淨image build（2026-10-17使用者重開後實測）。
 - [ ] 全新volume下載和正式入口HTTP驗收、失敗/離線重啟驗證。
 - [ ] 最終回歸、獨立程式審查、分段commit、交接讀回。
 
@@ -31,3 +31,13 @@
 - 明確區分mock測試、Windows新環境、真正Docker和主分支整合；無test集存取。
 
 - 使用者要求一步一步帶領安裝，已開管理員終端並提供wsl --install --no-distribution --web-download；等待使用者回報，不自動執行被拒絕的管理員變更。
+
+
+## 2026-10-17 重開後執行紀錄
+- Docker Server29.8.2/Linux amd64已回應；曾在首次build前退出，重新開啟後成功以--pull --no-cache建置8750154，image fa4feb7fc24da675bc8c398fefeac0e53a3b190018bed6a0aef392a8bdeba901。
+- 56檔最小context；image /app 54檔，禁止的資料/權重/憑證檔0。未推送image。
+- 無憑證新volume：unavailable、分類503、虛構上傳202/3筆、job failed，沒有半模型檔。
+- 既有本機BERT只讀mount：network none下HTTP分類200、上傳202、job done、profile200；第二個新容器用同DB/model且無token再通過。CPU權重hash符合固定版本。
+- 新增可重用虛構HTTP探針scripts/verify_category_http.py；未修改產品邏輯。本輪沒有原test或真實品名存取，不能宣稱準確率提升。
+- 使用者尚未登入HF，正逐步建立Read token及在本機hf auth login輸入；不回傳token。新volume遠端認證下載、runtime secret及下載後離線啟動仍待，3.9不勾。
+- 本輪完整單元測試467/467通過（30.753秒），git diff --check通過；待Claude審核及主分支整合。詳細命令/證據見classification-remote.md。

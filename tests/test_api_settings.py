@@ -39,6 +39,14 @@ class SettingsTests(unittest.TestCase):
             with self.subTest(key=key), self.assertRaisesRegex(ValueError, key):
                 Settings.from_env({"JWT_SECRET": SECRET, key: "gpt"})
 
+    def test_a_database_other_than_plain_sqlite_stops_the_server(self):
+        for url in ("postgresql://localhost/app", "sqlite+pysqlite:///data/app.db", "sqlite://foo",
+                    "postgresql://amy:secret@localhost/app"):
+            with self.subTest(url=url), self.assertRaisesRegex(ValueError, "DATABASE_URL") as caught:
+                Settings.from_env({"JWT_SECRET": SECRET, "DATABASE_URL": url})
+            # A rejected URL may carry a password, so the message never repeats it.
+            self.assertNotIn(url, str(caught.exception))
+
     def test_blank_values_mean_the_default(self):
         settings = Settings.from_env({"JWT_SECRET": SECRET, "JWT_EXPIRE_MINUTES": "", "DATABASE_URL": "  ",
                                       "CATEGORY_MODEL": "", "CATEGORY_MIN_PROB": " "})
@@ -56,6 +64,19 @@ class SettingsTests(unittest.TestCase):
         for key, value in cases:
             with self.subTest(key=key, value=value), self.assertRaisesRegex(ValueError, key):
                 Settings.from_env({"JWT_SECRET": SECRET, key: value})
+
+    def test_the_category_model_folder_repo_and_revision_have_defaults(self):
+        settings = Settings.from_env({"JWT_SECRET": SECRET})
+        self.assertEqual((settings.category_model_dir, settings.category_model_repo, settings.category_model_revision),
+                         ("models/category", "", ""))
+
+    def test_a_repo_needs_a_fixed_revision(self):
+        with self.assertRaisesRegex(ValueError, "CATEGORY_MODEL_REVISION"):
+            Settings.from_env({"JWT_SECRET": SECRET, "CATEGORY_MODEL_REPO": "someone/receipt-bert"})
+        settings = Settings.from_env({"JWT_SECRET": SECRET, "CATEGORY_MODEL_REPO": " someone/receipt-bert ",
+                                      "CATEGORY_MODEL_REVISION": "abc123", "CATEGORY_MODEL_DIR": "/models/category"})
+        self.assertEqual((settings.category_model_repo, settings.category_model_revision, settings.category_model_dir),
+                         ("someone/receipt-bert", "abc123", "/models/category"))
 
     def test_the_secret_is_never_printed(self):
         self.assertNotIn(SECRET, repr(Settings.from_env({"JWT_SECRET": SECRET})))

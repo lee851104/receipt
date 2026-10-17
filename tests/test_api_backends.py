@@ -1,16 +1,27 @@
 """The server picks its models from the settings and probes the llama-server for GPU mode."""
+import dataclasses
 import os
 import socketserver
+import sys
+import tempfile
 import threading
+import types
 import unittest
 import urllib.request
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 from unittest import mock
 
-from src.api.backends import llama_probe, load_backends
+from fastapi.testclient import TestClient
+
+from src import ml as ml_package
+from src.api.app import create_app
+from src.api.backends import llama_probe, load_backends, model_dir
+from src.api.db import ROOT
 from src.api.settings import Settings
 from src.ml import fakes
+from tests.model_contract import check_describe
 
 SECRET = "s" * 32
 
@@ -59,10 +70,17 @@ class BackendTests(unittest.TestCase):
         self.assertIs(backends.classify, fakes.classify)
         self.assertIs(backends.describe_items, fakes.describe_items)
 
+    def test_the_fake_model_keeps_the_key_fake(self):
+        self.assertEqual(load_backends(Settings(jwt_secret=SECRET)).attributes_version, "fake")
+
     def test_asking_for_a_real_model_before_it_exists_stops_the_server(self):
-        for changes in ({"category_model": "bert"}, {"attributes_model": "qwen"}):
+        for changes in ({"category_model": "tfidf"}, {"category_model": "embedding"}):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 load_backends(Settings(jwt_secret=SECRET, **changes))
+
+    def test_an_attribute_model_it_does_not_know_stops_the_server(self):
+        with self.assertRaisesRegex(ValueError, "ATTRIBUTES_MODEL=gpt does not work; use fake or qwen"):
+            load_backends(Settings(jwt_secret=SECRET, attributes_model="gpt"))
 
     def test_the_probe_asks_the_llama_server_named_in_the_settings(self):
         with serving(Answer) as url:
@@ -92,6 +110,88 @@ class BackendTests(unittest.TestCase):
             self.assertTrue(fresh())
         self.assertTrue(remembered())
         self.assertFalse(fresh())
+
+
+class BertBackendTests(unittest.TestCase):
+    def settings(self, folder):
+        return Settings(jwt_secret=SECRET, category_model="bert", category_model_dir=str(folder))
+
+    def test_without_a_model_the_category_model_is_unavailable_and_the_server_still_starts(self):
+        folder = Path(tempfile.mkdtemp())
+        with self.assertLogs("src.api.backends", level="WARNING"):
+            backends = load_backends(self.settings(folder))
+        self.assertEqual(backends.category, "unavailable")
+        with self.assertRaises(RuntimeError):
+            backends.classify(["鮮奶茶"])
+
+    def test_the_health_check_says_unavailable_and_the_classify_box_is_503(self):
+        folder = Path(tempfile.mkdtemp())
+        with self.assertLogs("src.api.backends", level="WARNING"):
+            client = TestClient(create_app(Settings(jwt_secret=SECRET, database_url="sqlite://", category_model="bert",
+                                                    category_model_dir=str(folder))))
+        self.assertEqual(client.get("/api/health").json()["models"]["category"], "unavailable")
+        client.post("/api/auth/register", json={"username": "amy", "password": "password123"})
+        token = client.post("/api/auth/login", data={"username": "amy", "password": "password123"}).json()["access_token"]
+        response = client.post("/api/items/classify", json={"name": "鮮奶茶"}, headers={"Authorization": "Bearer " + token})
+        self.assertEqual((response.status_code, response.json()), (503, {"detail": "model_unavailable"}))
+
+    def test_a_relative_folder_starts_at_the_repository_root(self):
+        self.assertEqual(model_dir(Settings(jwt_secret=SECRET)), ROOT / "models" / "category")
+
+
+class QwenBackendTests(unittest.TestCase):
+    def stand_in(self):
+        """A module shaped like role 3's src/ml/attributes.py, with nothing behind it."""
+        module = types.ModuleType("src.ml.attributes")
+        module.MODEL_VERSION = "qwen-test:v1"
+        module.describe_items = lambda names, ask_model=True: [None] * len(names)
+        return module
+
+    def test_without_role_3s_module_qwen_stops_the_server_saying_to_merge_it(self):
+        # The import_module call in src/api/backends.py asks for the module named src.ml.attributes; None in
+        # sys.modules makes importing it fail, whether or not role 3's file is in the repository by then.
+        with mock.patch.dict(sys.modules, {"src.ml.attributes": None}):
+            with self.assertRaisesRegex(ValueError, "src/ml/attributes.py"):
+                load_backends(Settings(jwt_secret=SECRET, attributes_model="qwen"))
+
+    def test_a_module_the_package_still_holds_from_an_earlier_import_does_not_count_when_sys_modules_says_none(self):
+        # Once role 3's file is merged, another test may import it and leave it on the src.ml package as an attribute.
+        with mock.patch.object(ml_package, "attributes", self.stand_in(), create=True), \
+                mock.patch.dict(sys.modules, {"src.ml.attributes": None}):
+            with self.assertRaisesRegex(ValueError, "src/ml/attributes.py"):
+                load_backends(Settings(jwt_secret=SECRET, attributes_model="qwen"))
+
+    def test_a_module_that_is_there_but_cannot_import_something_shows_that_error_not_the_merge_message(self):
+        # Role 3's file merged, but a package it needs (say a typo in its requirements) is not installed: saying
+        # "merge role 3's branch first" would send whoever reads it the wrong way.
+        settings = Settings(jwt_secret=SECRET, attributes_model="qwen")
+        broken = ModuleNotFoundError("No module named 'some_dependency'", name="some_dependency")
+        with mock.patch("src.api.backends.importlib.import_module", side_effect=broken):
+            with self.assertRaises(ModuleNotFoundError) as caught:
+                load_backends(settings)
+        self.assertEqual(caught.exception.name, "some_dependency")
+
+    def test_with_the_module_qwen_answers_through_it_and_keys_the_cache_by_its_version(self):
+        module = self.stand_in()
+        with mock.patch.dict(sys.modules, {"src.ml.attributes": module}):
+            backends = load_backends(Settings(jwt_secret=SECRET, attributes_model="qwen"))
+        self.assertEqual((backends.attributes, backends.attributes_version), ("qwen", "qwen-test:v1"))
+        self.assertIs(backends.describe_items, module.describe_items)
+        check_describe(self, backends.describe_items)
+
+    def test_the_health_check_says_cache_only_without_the_gpu_and_qwen_with_it(self):
+        module = self.stand_in()
+        for answering, shown in ((False, "cache_only"), (True, "qwen")):
+            with self.subTest(gpu=answering), mock.patch.dict(sys.modules, {"src.ml.attributes": module}):
+                backends = load_backends(Settings(jwt_secret=SECRET, attributes_model="qwen"))
+                backends = dataclasses.replace(backends, gpu_probe=lambda: answering)
+                client = TestClient(create_app(Settings(jwt_secret=SECRET, database_url="sqlite://"), backends))
+                self.assertEqual(client.get("/api/health").json()["models"]["attributes"], shown)
+
+    def test_the_fake_attribute_model_never_imports_role_3s_module(self):
+        with mock.patch.dict(sys.modules, {"src.ml.attributes": None}):
+            backends = load_backends(Settings(jwt_secret=SECRET))
+        self.assertEqual((backends.attributes, backends.attributes_version), ("fake", "fake"))
 
 
 if __name__ == "__main__":

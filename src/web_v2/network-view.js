@@ -103,7 +103,7 @@ function drawTraits(svg,mobile,both){
   for(const signal of side.signals){
    const meta=network.signals[signal.order],value=signal.value===null?'':'（'+TraitNetwork.formatSignal(signal.value,meta.unit)+'）',item={...signal,side:side.side};
    const group=el('g',{class:'t-hit',tabindex:'0',role:'button','aria-label':`${MatchFilter.words(name,'的'+meta.label)}${value}，查看連線`});
-   group.append(el('circle',{cx:signal.x.toFixed(1),cy:signal.y.toFixed(1),r:mobile?12:8,fill:'transparent'}),el('circle',{cx:signal.x.toFixed(1),cy:signal.y.toFixed(1),r:mobile?4:3,class:'t-signal',fill:signal.value===null?'#101010':color[side.side],stroke:color[side.side]}),el('title',{},meta.label+value));
+   group.append(el('circle',{cx:signal.x.toFixed(1),cy:signal.y.toFixed(1),r:mobile?12:8,fill:'transparent'}),el('circle',{cx:signal.x.toFixed(1),cy:signal.y.toFixed(1),r:mobile?4:4.5,class:'t-signal',fill:signal.value===null?'#101010':color[side.side],stroke:color[side.side]}),el('title',{},meta.label+value));
    bind(group,()=>selectSignal(signal.id));hoverable(group,item,meta.label);
    dots.append(group);view.signals.push({...item,el:group});
   }

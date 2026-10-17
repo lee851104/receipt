@@ -9,7 +9,7 @@
  function resize(){
   pending=0;
   // Graph size follows the workspace, so content sizing cannot feed back on itself.
-  main.style.setProperty('--graph-height',Math.max(220,Math.min(680,panel.clientHeight-280))+'px');
+  main.style.setProperty('--graph-height',Math.max(220,Math.min(680,panel.clientHeight-260))+'px');
   const height=Math.ceil(main.getBoundingClientRect().height)+2;
   host.ReceiptV2Host?.resizeNetwork(height,payload);
  }

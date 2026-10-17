@@ -32,11 +32,22 @@ const fixture=require('./web-v2-fixtures.cjs');
    await page.setViewportSize(size);
    await page.waitForFunction(()=>{
     const f=document.getElementById('network-frame'),d=f.contentDocument;
-    return d&&parseFloat(d.querySelector('main').style.getPropertyValue('--graph-height'))===Math.max(220,Math.min(680,document.getElementById('matches-panel').clientHeight-280))&&d.documentElement.scrollHeight<=f.clientHeight+2&&d.documentElement.scrollWidth<=f.clientWidth+1;
+    return d&&parseFloat(d.querySelector('main').style.getPropertyValue('--graph-height'))===Math.max(220,Math.min(680,document.getElementById('matches-panel').clientHeight-260))&&d.documentElement.scrollHeight<=f.clientHeight+2&&d.documentElement.scrollWidth<=f.clientWidth+1;
    });
    if(size.width>640){
     const fits=await page.locator('#network-frame').evaluate(f=>f.getBoundingClientRect().bottom<=document.getElementById('matches-panel').getBoundingClientRect().bottom);
     assert(fits,'graph and summary fit '+JSON.stringify(size));
+    const layout=await graph.locator('#network').evaluate(svg=>{
+     const labels=[...svg.querySelectorAll('.t-label')],bounds=svg.getBoundingClientRect();
+     const rects=labels.map(n=>n.getBoundingClientRect());
+     const font=Math.min(...labels.map(n=>parseFloat(getComputedStyle(n).fontSize)*n.getScreenCTM().a));
+     const nodes=[...svg.querySelectorAll('.t-trait')].map(n=>n.getBoundingClientRect());
+     return {font,spread:(Math.max(...nodes.map(n=>n.right))-Math.min(...nodes.map(n=>n.left)))/bounds.width,
+      clipped:rects.some(r=>r.left<bounds.left||r.right>bounds.right||r.top<bounds.top||r.bottom>bounds.bottom)};
+    });
+    assert(layout.font>=(size.width>1200?13:10.5),JSON.stringify(layout));
+    assert(layout.spread>.65,JSON.stringify(layout));
+    assert.equal(layout.clipped,false);
    }
   }
   // Wheel over the embedded graph must reach the only scroll owner.

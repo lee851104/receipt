@@ -30,3 +30,17 @@
 Claude 請審核結果切換、取消／返回防護、同源 iframe 自動高度與可及性；使用者體驗後由 Codex 調整。正式審核需指定受審 commit。
 
 規格與邊界：openspec.cmd validate add-matching-system --strict 通過；git diff --quiet bc8d9ea -- src/web invoice-insights.html exit0。
+
+## 2026-10-17：放大圖形與標籤
+
+工作ID R4-GRAPH-SCALE-20261017；基準ce01241，待Claude審核。依使用者要求重新配置桌面圖形，使用1700×600的橫向畫布、較寬扇形與左右中心；桌面標籤由13提升為22 SVG單位，姓名22、節點半徑、圖中央分數及購買明細同步調整。保持等比例縮放，不拉伸中文字或圓形，標籤碰撞避讓與購買項目預留空間仍走原幾何規則。手機原幾何保持不變。外層圖面預算從可用高度減280改減260，多給20px，綜合解讀仍完整可見。
+
+本輪驗證：
+
+- 主.venv/Scripts/python.exe -X utf8 tests/run_web_v2_live.py tests/web-v2-explanation-browser.cjs 初驗通過，56476釋放。
+- 最終同runner執行 tests/web-v2-explanation-browser.cjs tests/web-v2-browser.cjs：2組通過，exit0，61885釋放。新增桌面文字實際螢幕字級1366px寬至少13px、1024px寬至少10.5px、節點橫向範圍超過畫布65%、所有顯示標籤不裁切；延續圖與解讀一頁、手機單一捲動、配對與返回、資料與401清理。
+- 前一次61770兩個瀏覽器腳本均通過，但Windows async連線關閉10054且runner關閉逾時；核對PID14700已不存在、61770無listener，重跑後上述最終exit0。未改測試伺服器／產品後端。
+- node --test "tests/*.test.cjs"：148/148；git diff --check通過；git diff --quiet ce01241 -- src/web invoice-insights.html exit0。
+- CUA原8001虛構配對，1366×768結果panel clientHeight=scrollHeight=666，圖／綜合解讀／計算入口同屏；圖標籤字框高度約18px。截圖本聊天visualizations/role4-match-larger.png；臨時尺寸已還原，原預覽保留。
+
+修改限v2圖形幾何、樣式、嵌入高度、資源版本與瀏覽器回歸／本文件。本輪未跑Python全套、真模型、Docker、CI，無GPU／資料庫／環境變更；未推送或合併。Claude請審核較大字級與扇形排列在密集資料下的可讀性、單屏比例及點選明細。

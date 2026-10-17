@@ -12,10 +12,10 @@
   // Desktop writes the two people's names along the top, above `top`; nothing a click adds goes higher.
   // `mark` is the score badge between the fans: its size, the label and number font sizes, and the glow's radii.
   const SHAPES = Object.freeze({
-    desktop: Object.freeze({ width: 1200, height: 640, centers: [[430, 325], [770, 325]], stretch: [1, 0.86],
-      near: 110, far: 270, none: 72, ring: 312, stagger: 14, dot: [3.5, 9], font: 13, top: 36,
-      item: Object.freeze({ across: 60, step: 20, dot: [2.5, 3.5] }),
-      mark: Object.freeze({ width: 176, height: 88, label: 14, number: 42, glow: [250, 250] }) }),
+    desktop: Object.freeze({ width: 1700, height: 600, centers: [[620, 300], [1080, 300]], stretch: [1.5, 0.8],
+      near: 110, far: 270, none: 72, ring: 312, stagger: 14, dot: [4.5, 13], font: 22, top: 36,
+      item: Object.freeze({ across: 72, step: 30, dot: [3.5, 4.5] }),
+      mark: Object.freeze({ width: 212, height: 100, label: 19, number: 48, glow: [400, 250] }) }),
     mobile: Object.freeze({ width: 600, height: 820, centers: [[300, 290], [300, 530]], stretch: [1, 0.9],
       near: 70, far: 190, none: 46, ring: 228, stagger: 12, dot: [5, 11], font: 18,
       item: Object.freeze({ beyond: 30, step: 26, dot: [3, 4] }),

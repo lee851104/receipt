@@ -1,3 +1,7 @@
-# Only in the Docker image: the container downloads the category model at start-up (design D14).
-# Role 2 adds the CPU builds of torch and transformers here with the BERT model (task 3.6).
+# Optional CPU model runtime; install with requirements.txt for a BERT service.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.8.0+cpu
+transformers==4.57.1
+tokenizers==0.22.1
+safetensors==0.6.2
 huggingface_hub==0.36.0

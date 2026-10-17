@@ -61,7 +61,7 @@
 - [x] 5.6 （10/17：首頁直接月報、類別／品項圖、五屏導覽與動態文字雲，見 role4-report-home 驗證紀錄。）把月報、品味關係圖和配對頁（從 `src/web/` 複製到 `src/web_v2/` 的版本）改成使用 API 資料（月報沿用 `months` 的現有格式，配對狀態文字用 `eligible` 和 `within`）；`src/web/` 不動，現有 82 個 JS 測試照樣通過；複製過去而有改動的 JS，要有對應的測試（可以餵假 API 資料）
 - [x] 5.7 實作計算過程面板，並用 `explain` 的 `network` 畫兩人的關係圖；JS 測試確認面板上的百分比和卡片上的一樣，逐格的數字也和 API 回傳的一致
 - [x] 5.8 撰寫 `docs/team/concepts.md` 的向量化、內積、餘弦和收縮項段落，用兩位假用戶舉例；確認文件裡的數字可以用計算過程 API 重現（10/16：文件、核心與隔離 DB 真 HTTP explain 數字重現通過；待 Claude 審核）
-- [ ] 5.9 更新 README：v1 連結標示為原型，放上 v2 的 demo 影片或動圖（在 `.gitignore` 為這些圖檔加上例外），並寫出 `docker compose up` 的使用方式；確認 GitHub 上的圖片和連結都能正常顯示（10/15：本機 README 與虛構契約展示 GIF 已完成；Docker 與 GitHub 驗收尚未完成）
+- [x] 5.9 更新 README：v1 連結標示為原型，放上 v2 的 demo 影片或動圖（在 `.gitignore` 為這些圖檔加上例外），並寫出 `docker compose up` 的使用方式；確認 GitHub 上的圖片和連結都能正常顯示（10/17：新版九幕GIF／README、隔離Docker真HTTP與重建保留、匿名GitHub圖片與連結、CI通過；詳見docs/results/role4-delivery.md，待Claude審核；不等同共同6.4）
 - [x] 5.10 實作帳號設定頁：修改顯示名稱、修改密碼、逐月刪除（先確認）、刪除帳號（輸入密碼確認）、登出，假用戶唯讀；JS 測試涵蓋 web-app 規格的帳號設定情境
 
 ## 6. 整合檢查（第 3 週結束到第 4 週，全隊）

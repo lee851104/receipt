@@ -26,8 +26,15 @@ Docker Engine29.8.2，Linux containers。只從Git追蹤的src、configs、Docke
 - 推送前追蹤檔與outgoing history路徑檢查：私人來源/權重/憑證檔類型0；現有追蹤文字的HF/GitHub/PEM/JWT憑證模式0。素材來源來自公開合成檔，不讀私人標註或原test。
 
 ## GitHub驗收
-待推送並確認固定commit的README、GIF、連結與CI；未以本機檔案存在當遠端通過。目的地為既有公開repo lee851104/receipt 的 codex/role4-web-foundation分支，不更改可見性、不合併main或更改Pages。
+- 已推送既有公開repo [角色4分支](https://github.com/lee851104/receipt/tree/codex/role4-web-foundation)，未更改可見性、main或Pages。
+- 受驗產品commit 63abd872adf61bcb39845ad463bf180242e9bb5d；[GitHub CI](https://github.com/lee851104/receipt/actions/runs/39043023447) 的tests與docker兩job均success，含Python/Node測試、映像建置／檔案檢查、Compose啟動／demo名單；沒有真模型下載。
+- 匿名GET固定commit的README及6個相對目標（GIF、delivery/integration/concepts/overview、v1預覽圖）均HTTP200且與git blob逐byte相同；第一次比對working-tree因Windows CRLF與Git LF不同失敗，改用正確的git blob比對通過。
+- 既有Pages invoice-insights.html HTTP200且與Git blob相同，沒有更新v1。
+- CUA未登入GitHub驗證README GIF載入1366×900，點Play後動畫img可見；截圖本聊天visualizations/role4-github-delivery.png。
+- 後續只整理README重複啟動段落、補驗收紀錄與任務勾選，不改受驗產品或GIF；最終HEAD／CI在共用交接記錄。
 
 ## 限制及審核
 角色1當前seed只建40個帳號，不建其品項／profile；實測demo_users=40、seed_profile_ready=false。README已明列，Docker測試另外透過正式上傳建立兩人的虛構資料。角色3完整300人seed及角色2受保護BERT仍未合併到本分支，未下載／公開模型。5.9的展示與使用說明不等於共同6.4的300人／真模型／全新實體電腦驗收；不代勾其他角色任務。
 請Claude審核角色4展示、README操作與本輪證據，以及合併後端相依；正式審核由Claude另寫。
+
+本輪專用Compose project已down（不帶-v），容器與network停止，db/models volume留存供覆核；原8000與8001服務未停止。OpenSpec strict、git diff --check及v1邊界檢查通過。角色4 5.1–5.10為10/10，仍待Claude正式審核。

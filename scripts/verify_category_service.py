@@ -6,6 +6,7 @@ import argparse
 from contextlib import contextmanager
 import hashlib
 import json
+import math
 from pathlib import Path
 import socket
 import sys
@@ -21,6 +22,28 @@ MODEL_SHA256 = "16997425a9b36629469d60f506d52c2771bab1e6f3a3ea1465c2c0a316fa3e79
 
 def probe_fingerprint():
     return hashlib.sha256(json.dumps(PROBES,ensure_ascii=False).encode()).hexdigest()
+
+def validate_reference(reference):
+    """Reject truncated or invalid reference values before any model inference."""
+    try:
+        if reference["model_sha256"] != MODEL_SHA256 or reference["probe_sha256"] != probe_fingerprint():
+            raise ValueError
+        rows, categories = reference["probabilities"], reference["categories"]
+        if not isinstance(rows, list) or not isinstance(categories, list):
+            raise ValueError
+        if len(rows) != len(PROBES) or len(categories) != len(PROBES):
+            raise ValueError
+        if any(type(c) is not int or not 0 <= c < 10 for c in categories):
+            raise ValueError
+        for row in rows:
+            if not isinstance(row, list) or len(row) != 10:
+                raise ValueError
+            if any(type(v) not in (int, float) or not math.isfinite(v) or not 0 <= v <= 1 for v in row):
+                raise ValueError
+            if abs(sum(row) - 1) > .001:
+                raise ValueError
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("invalid_synthetic_reference") from None
 
 @contextmanager
 def serving(app):
@@ -52,8 +75,7 @@ def run(model_dir, reference_path):
     model_dir=Path(model_dir).resolve()
     assert digest(model_dir/"model.safetensors")==MODEL_SHA256
     reference=json.loads(Path(reference_path).read_text(encoding="utf-8"))
-    assert reference["probe_sha256"]==probe_fingerprint()
-    assert reference["model_sha256"]==MODEL_SHA256
+    validate_reference(reference)
     result={"model_sha256":MODEL_SHA256,"synthetic_probes":len(PROBES),
             "torch":torch.__version__,"transformers":transformers.__version__,"cuda_build":torch.version.cuda}
     assert torch.version.cuda is None

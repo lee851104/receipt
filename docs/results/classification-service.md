@@ -58,15 +58,15 @@ $categoryTarget = 'C:/Users/User/Desktop/AI_project/receipt/data/role2/service-m
 |---|---|
 | 與原實驗載入器12筆虛構probe | 類別相同、機率最大差0 |
 | check_classify、批次/逆序/並行 | 通過 |
-| CPU 1000筆（10種虛構名稱輪流，batch16） | 12.9486秒 |
-| 暖機後單筆 | 0.0335秒 |
-| 啟動（含權重完整性檢查） | 9.5417秒 |
+| CPU 1000筆（10種虛構名稱輪流，batch16） | 13.1849秒 |
+| 暖機後單筆 | 0.0306秒 |
+| 啟動（含權重完整性檢查） | 1.9476秒（重跑，檔案快取可能已暖） |
 | 真HTTP健康檢查/登入/分類 | bert / 200 |
 | 真HTTP虛構CSV上傳/工作/profile | 202 / done / 200 |
 | 缺模型健康檢查/分類/上傳工作 | unavailable / 503 / failed |
 | 私人資料開啟/外部連線嘗試 | 0 / 0 |
 
-使用真正選定BERT、fake屬性、臨時DB與自動釋放的loopback埠；不是全系統Qwen/300人/前端驗收。原test未開/hash/copy/評分。HTTP結果主data/role2/service-acceptance-20261017/result-v1.json。
+使用真正選定BERT、fake屬性、臨時DB與自動釋放的loopback埠；不是全系統Qwen/300人/前端驗收。原test未開/hash/copy/評分。HTTP結果主data/role2/service-acceptance-20261017/result-v2.json；首次result-v1.json啟動9.5417秒、1000筆12.9486秒，兩輪皆通過。
 
 ## 發布政策與未涵蓋範圍
 
@@ -76,4 +76,6 @@ $categoryTarget = 'C:/Users/User/Desktop/AI_project/receipt/data/role2/service-m
 
 本機沒有Docker命令。本輪完成全新venv＋全新模型目錄的Windows CPU真HTTP驗收，不宣稱全新實體電腦、Docker建置、Linux執行、遠端自動下載或主分支正式上線完成。這些應由角色1/整合環境接續；角色2提供可重現的模型/載入契約與證據。
 
-本輪回歸：主環境457/457通過；新增安裝工具後，新CPU環境459/459通過。Linux x86_64 Python3.12依賴解析成功（非Linux實跑）。OpenSpec strict通過。三份新/重建文件用audit_synthetic.py對既有57筆私人reference僅本機比對，public_text_private_matches=0、synthetic exact matches=0；不是所有私人來源的全面掃描。
+本輪回歸：主環境457/457通過；新增安裝工具後，新CPU環境459/459通過；審查建議補上參考檔完整10維／有限值檢查後，最終460/460通過（30.132秒）。Linux x86_64 Python3.12依賴解析成功（非Linux實跑）。OpenSpec strict通過。三份新/重建文件用audit_synthetic.py對既有57筆私人reference僅本機比對，public_text_private_matches=0、synthetic exact matches=0；不是所有私人來源的全面掃描。
+
+Codex獨立審查adbb535..5c5d396未發現Critical/Important，指定25項測試通過；非Claude正式審核。後續已修正參考檔截短可能漏比的Minor，新增測試先RED後PASS，重跑全套及真模型驗收。366筆歷史彙總與最終小修待Claude一併審核。

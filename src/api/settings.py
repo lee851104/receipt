@@ -32,6 +32,9 @@ class Settings:
     category_model: str = "fake"
     attributes_model: str = "fake"
     category_min_prob: float = 0.5
+    category_model_dir: str = "models/category"  # where CATEGORY_MODEL=bert reads its model; relative to the repo
+    category_model_repo: str = ""                # the public Hugging Face repo a missing model comes from
+    category_model_revision: str = ""            # the fixed commit of that repo
 
     @classmethod
     def from_env(cls, env):
@@ -49,6 +52,9 @@ class Settings:
             category_model=text(env, "CATEGORY_MODEL", cls.category_model),
             attributes_model=text(env, "ATTRIBUTES_MODEL", cls.attributes_model),
             category_min_prob=number(env, "CATEGORY_MIN_PROB", cls.category_min_prob, float),
+            category_model_dir=text(env, "CATEGORY_MODEL_DIR", cls.category_model_dir),
+            category_model_repo=text(env, "CATEGORY_MODEL_REPO", cls.category_model_repo),
+            category_model_revision=text(env, "CATEGORY_MODEL_REVISION", cls.category_model_revision),
         )
         if settings.jwt_expire_minutes <= 0:
             raise ValueError(f"JWT_EXPIRE_MINUTES must be above 0, got {settings.jwt_expire_minutes}")
@@ -59,6 +65,8 @@ class Settings:
             raise ValueError(f"CATEGORY_MODEL must be one of {', '.join(CATEGORY_MODELS)}; got {settings.category_model!r}")
         if settings.attributes_model not in ATTRIBUTE_MODELS:
             raise ValueError(f"ATTRIBUTES_MODEL must be one of {', '.join(ATTRIBUTE_MODELS)}; got {settings.attributes_model!r}")
+        if settings.category_model_repo and not settings.category_model_revision:
+            raise ValueError("CATEGORY_MODEL_REVISION must name a fixed commit whenever CATEGORY_MODEL_REPO is set")
         # Only plain SQLite URLs get the root-relative path, foreign keys and write-ahead logging (db.make_engine).
         # The message leaves the value out: a rejected URL may carry a password.
         if settings.database_url != "sqlite://" and not settings.database_url.startswith("sqlite:///"):

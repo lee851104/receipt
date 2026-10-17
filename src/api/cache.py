@@ -1,4 +1,4 @@
-"""Attributes through the item_cache table, so each product name is judged once per attribute model."""
+"""Attributes through the item_cache table, so each product name is judged once per attribute model version."""
 import json
 import logging
 import threading
@@ -19,7 +19,7 @@ def model_ready(backends):
 def cached(session, backends, names):
     """{name: its 23 attribute fields} for the names the current attribute model has already answered; the others are
     left out. Reads only item_cache: no model is asked and nothing is written."""
-    rows = session.exec(select(ItemCache).where(ItemCache.model == backends.attributes,
+    rows = session.exec(select(ItemCache).where(ItemCache.model == backends.attributes_version,
                                                 col(ItemCache.name).in_(list(names)))).all()
     return {row.name: json.loads(row.fields) for row in rows}
 
@@ -35,7 +35,7 @@ def describe(session, backends, names, ask_model):
         answers = backends.describe_items(missing, ask_model=ask_model and model_ready(backends))
         found = {name: fields for name, fields in zip(missing, answers, strict=True) if fields is not None}
         if found:
-            rows = [{"name": name, "model": backends.attributes, "fields": json.dumps(fields)}
+            rows = [{"name": name, "model": backends.attributes_version, "fields": json.dumps(fields)}
                     for name, fields in found.items()]
             # Another upload may store the same name at the same moment: the first answer stays and nothing fails.
             session.exec(insert(ItemCache).values(rows).on_conflict_do_nothing())

@@ -1,0 +1,3 @@
+# Only in the Docker image: the container downloads the category model at start-up (design D14).
+# Role 2 adds the CPU builds of torch and transformers here with the BERT model (task 3.6).
+huggingface_hub==0.36.0

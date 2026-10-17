@@ -46,7 +46,7 @@
     clearFrame('report-frame');
     const hasMonths=Object.keys(profile.data?.months||{}).length>0;
     $('report-empty').hidden=hasMonths;
-    if(hasMonths){$('report-frame').src='report.html?v=20261017-report2';$('report-frame').hidden=false;}
+    if(hasMonths){$('report-frame').src='report.html?v=20261017-layout2';$('report-frame').hidden=false;}
     lastProfile=profile.data;
    }
    const matches=state.matches;

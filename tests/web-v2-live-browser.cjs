@@ -47,7 +47,7 @@ async function poll(read,check){
   await page.locator('#settings-toggle').press('Escape');
   assert.equal(await page.locator('#settings-toggle').getAttribute('aria-expanded'),'false');
   await page.locator('#settings-toggle').press('Enter');
-  await page.locator('#profile-title').click();
+  await page.locator('.workspace-nav').click();
   assert(await page.locator('#settings-options').isHidden());
   await go('matches');
   await page.locator('.match-card').first().click();

@@ -155,7 +155,7 @@ function renderInsights(key, autoplay = false) {
   render(); updatePlay(); requestAnimationFrame(tick);
 
   const largestFrequency = Math.max(1, ...frequency.map(category => category.count));
-  $('category-cloud').innerHTML = frequency.map((category,position) => '<button class="cloud-word" data-category="' + category.index + '" style="--word-color:' + category.color + ';--float-delay:-' + (position * 1.3) + 's;--float-duration:' + (8 + position * .6) + 's;--word-size:' + (20 + 52 * category.count / largestFrequency) + '" aria-pressed="false" aria-label="' + category.name + '，' + category.count + ' 次消費"><span class="cloud-float">' + category.name + '<small>' + category.count + ' 次</small></span></button>').join('');
+  $('category-cloud').innerHTML = frequency.map((category,position) => '<button class="cloud-word" data-category="' + category.index + '" style="--word-color:' + category.color + ';--float-delay:-' + (position * .85) + 's;--float-duration:' + (4.8 + position * .15) + 's;--word-size:' + (20 + 52 * category.count / largestFrequency) + '" aria-pressed="false" aria-label="' + category.name + '，' + category.count + ' 次消費"><span class="cloud-float">' + category.name + '<small>' + category.count + ' 次</small></span></button>').join('');
   function showCategory(index) {
     const category = frequency.find(item => item.index === index);
     if (!category) return;

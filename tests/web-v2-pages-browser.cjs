@@ -26,6 +26,22 @@ const fixture=require('./web-v2-fixtures.cjs');
    });
    assert.equal(fit.overflow,false,JSON.stringify(size));assert(fit.chartBottom<=fit.viewBottom+2,JSON.stringify({size,fit}));
   }
+  // Every default chapter must fit the same viewport, not just the first chart.
+  const fitIssues=[];
+  for(const size of [{width:1366,height:768},{width:1024,height:640},{width:558,height:510},{width:390,height:844}]){
+   await page.setViewportSize(size);
+   for(const id of ['items','insights','cloud-page','rhythm-page','compare']){
+    await report.locator('.flow-links a[href="#'+id+'"]').click();
+    const fit=await report.locator('#'+id).evaluate(n=>{
+     const area=n.parentElement.getBoundingClientRect(),box=n.getBoundingClientRect();
+     return {height:box.height,available:area.height,overflow:n.scrollWidth>n.clientWidth+1};
+    });
+    assert.equal(fit.overflow,false,JSON.stringify({size,id,fit}));
+    if(fit.height>fit.available+2)fitIssues.push({size,id,fit});
+   }
+  }
+  assert.deepEqual(fitIssues,[]);
+  await report.locator('.flow-links a[href="#items"]').click();
   await page.setViewportSize({width:1366,height:768});await page.emulateMedia({reducedMotion:'no-preference'});
   await report.locator('#report-pages').hover();await page.mouse.wheel(0,120);
   await page.waitForFunction(()=>{const d=document.getElementById('report-frame').contentDocument;return Math.abs(d.getElementById('insights').getBoundingClientRect().top-d.getElementById('report-pages').getBoundingClientRect().top)<2&&!d.getElementById('report-pages').classList.contains('is-turning');});
@@ -40,11 +56,14 @@ const fixture=require('./web-v2-fixtures.cjs');
   await report.locator('.flow-links a[href="#cloud-page"][aria-current]').waitFor();
   assert.equal(await report.locator('#cloud-motion').getAttribute('aria-pressed'),'false');
   await report.locator('#cloud-motion').click();
-  await page.locator('#profile-title').hover();
+  await page.locator('.workspace-nav').hover();
   await report.locator('.cloud-in-view').waitFor();
-  const read=()=>report.locator('.cloud-float').first().evaluate(n=>({name:getComputedStyle(n).animationName,state:getComputedStyle(n).animationPlayState,transform:getComputedStyle(n).transform}));
+  const read=()=>report.locator('.cloud-float').first().evaluate(n=>({duration:parseFloat(getComputedStyle(n).animationDuration),name:getComputedStyle(n).animationName,state:getComputedStyle(n).animationPlayState,transform:getComputedStyle(n).transform}));
   const a=await read();await page.waitForTimeout(350);const b=await read();
-  assert.equal(a.name,'cloud-drift');assert.equal(a.state,'running');assert.notEqual(a.transform,b.transform);
+  assert(a.duration>=4&&a.duration<=6.5);assert.equal(a.name,'cloud-drift');assert.equal(a.state,'running');assert.notEqual(a.transform,b.transform);
+  await report.locator('.cloud-word').first().hover();
+  assert.equal(await report.locator('.cloud-float').first().evaluate(n=>getComputedStyle(n).animationPlayState),'paused');
+  assert.equal(await report.locator('.cloud-float').nth(1).evaluate(n=>getComputedStyle(n).animationPlayState),'running');
   await report.locator('.cloud-word').first().click();assert.match(await report.locator('#cloud-detail').textContent(),/次.*NT\$/);
   await report.locator('#cloud-motion').click();assert.equal(await report.locator('#cloud-motion').getAttribute('aria-pressed'),'false');
   await report.locator('#insights-month').selectOption('2026-06');assert.equal(await report.locator('.cloud-word').count(),1);
@@ -57,8 +76,21 @@ const fixture=require('./web-v2-fixtures.cjs');
   await page.setViewportSize({width:320,height:568});
   await report.locator('.flow-links a[href="#compare"]').click();await report.locator('#compare-title').waitFor();
   assert.equal(await report.locator('body').evaluate(n=>n.scrollWidth>n.ownerDocument.defaultView.innerWidth),false);
+  // A dense month can grow, but every word and count must remain inside its stage.
+  profile.months['2026-06'].rows=Array.from({length:11},(_,i)=>({day:2,invoice:'dense-'+i,merchant:'虛構店',name:'虛構品項'+i,amount:20,quantity:1,category:i}));
+  await page.locator('#refresh-profile').click();await report.locator('#total').filter({hasText:'220'}).waitFor();
+  for(const size of [{width:1366,height:768},{width:558,height:510},{width:390,height:844},{width:320,height:568}]){
+   await page.setViewportSize(size);await report.locator('.flow-links a[href="#cloud-page"]').click();
+   assert.equal(await report.locator('.cloud-word').count(),11);
+   const clipped=await report.locator('#category-cloud').evaluate(n=>{
+    const b=n.getBoundingClientRect();return n.ownerDocument.documentElement.scrollWidth>n.ownerDocument.defaultView.innerWidth||n.parentElement.scrollWidth>n.parentElement.clientWidth+1||[...n.querySelectorAll('.cloud-word')].some(w=>{const r=w.getBoundingClientRect();return r.top<b.top||r.bottom>b.bottom||r.left<b.left||r.right>b.right;});
+   });assert.equal(clipped,false,JSON.stringify(size));
+   await report.locator('.chapter-details summary').filter({hasText:'查看次數'}).click();
+   await report.locator('.chapter-details[open] .card-footnote').waitFor();
+   await report.locator('.chapter-details summary').filter({hasText:'查看次數'}).click();
+  }
   profile={...profile,months:{}};await page.locator('#refresh-profile').click();await page.locator('#report-empty').waitFor();
   assert.equal(await page.locator('#report-frame').getAttribute('src'),null);
-  assert.deepEqual(errors,[]);console.log('REPORT HOME PASS: direct monthly entry, item/category totals, four viewport charts, five chapters, cloud animation/pause/reduced-motion, item disclosure/XSS and empty cleanup.');
+  assert.deepEqual(errors,[]);console.log('REPORT HOME PASS: direct monthly entry, item/category totals, four viewport proportions, five chapters, eleven-category cloud bounds, cloud animation/pause/reduced-motion, item disclosure/XSS and empty cleanup.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

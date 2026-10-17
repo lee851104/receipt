@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>消費配對系統 v2｜從日常，看見品味</title>
-<link rel="stylesheet" href="./styles.css?v=20261017-report2">
+<link rel="stylesheet" href="./styles.css?v=20261017-layout2">
 <script defer src="./api.js"></script>
 <script defer src="./flow.js"></script>
 <script defer src="./view-adapters.js"></script>
@@ -13,8 +13,8 @@
 <script defer src="./explanation.js"></script>
 <script defer src="./account-flow.js"></script>
 <script defer src="./account-ui.js"></script>
-<script defer src="./workspace-ui.js?v=20261017-report2"></script>
-<script defer src="./app.js?v=20261017-report2"></script>
+<script defer src="./workspace-ui.js?v=20261017-layout2"></script>
+<script defer src="./app.js?v=20261017-layout2"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">跳到主要內容</a>
@@ -64,7 +64,7 @@
   </section>
   <section id="workspace-view" hidden aria-label="我的消費與品味">
     <nav class="workspace-nav" aria-label="功能導覽">
-<button type="button" data-workspace="profile" aria-current="page">我的月報</button><button type="button" data-workspace="matches">找到同好</button>
+<button type="button" data-workspace="profile" aria-current="page">我的月報</button><button type="button" data-workspace="matches">找到同好</button><button id="refresh-profile" class="quiet" type="button">重新載入</button>
 </nav>
 <section id="upload-panel" hidden aria-labelledby="upload-title">
 <p class="eyebrow">02 / 發票變成線索</p><h1 id="upload-title" tabindex="-1">匯入一個月，<em>看見日常。</em></h1><p class="subtitle">選擇財政部電子發票 CSV，每份檔案只放一個月，最大 2 MB。</p>
@@ -72,7 +72,7 @@
 <section class="result-card" aria-label="上傳處理進度"><p class="eyebrow">PROGRESS / 處理進度</p><h2 id="upload-state">等待上傳</h2><p id="upload-message" role="status" aria-live="polite">選擇 CSV 後開始分析。</p><progress id="upload-progress" max="1" value="0" hidden aria-label="發票分析進度"></progress><p id="upload-count" class="small"></p><button id="retry-job" class="secondary" type="button" hidden>重新查詢進度</button><button id="open-profile" class="primary" type="button" hidden>查看月報</button></section></div>
 </section>
 <section id="profile-panel" hidden aria-labelledby="profile-title">
-<div class="section-header profile-header"><h1 id="profile-title" tabindex="-1">我的<em>月報</em></h1><button id="refresh-profile" class="quiet" type="button">重新載入</button></div>
+<div class="section-header profile-header"><h1 id="profile-title" tabindex="-1">我的<em>月報</em></h1></div>
 <p id="profile-message" role="status" aria-live="polite"></p>
 <p id="model-note" class="small" hidden></p>
 <div id="profile-content" hidden>

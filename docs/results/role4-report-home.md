@@ -32,3 +32,24 @@
 本輪未執行 Python 全套、真模型、Docker、CI 或完整300人seed。歷史GIF保持10/15版本並註明舊版，錄製腳本已配合首頁同步但未重新錄製；OpenSpec 5.9 不因此結案。原8001保留，無GPU、私人資料或.env變更。
 
 請 Claude 審核本次提交相對226d2c7的首頁替換、品項聚合、動態偏好與iframe清理。使用者可於原預覽體驗速度與畫面；Codex依回饋調整。
+
+
+## 2026-10-17：各頁比例與動態速度修正
+
+基準 cebc1c3，工作ID R4-REPORT-PROPORTION-20261017，依使用者「每頁比例怪、動態不明顯，稍微快一點」調整；仍在原角色4 worktree。
+
+- 移除重複的視覺月報標題列（保留可及性標題），重新載入移到功能導覽右側，增加內容高度。
+- 新增 report-layout.css，依月報可用容器高度控制圖表比例及斷點，限制桌機閱讀寬度；五章預設同屏高。節奏解讀、雲計數說明與完整月比較表改為可展開，資料未刪除。
+- 短視窗日曆保留足夠圖高，所有圓以相同比例縮放；文字雲／日期圖旁放小型讀值區，手機改上下排列。密集類別自動長高並原生捲動，避免裁切或撐開橫向寬度。
+- 漂浮週期由8–14秒改4.8–6.3秒；水平／垂直幅度約加倍，新增5.5秒柔光框呼吸。滑鼠或鍵盤只暫停當前詞，其他詞與光暈繼續；整區離開可視範圍及手動暫停維持有效，首次仍尊重減少動態偏好。
+- 新增失敗後修復的四尺寸 × 五章完整高度回歸、11類文字雲邊界與手機橫向溢出檢查、動畫時長／單詞hover暫停檢查。實際畫面另找出舊手機折行與日曆過扁問題，已修正後重驗。
+
+本次最終驗證（2026-10-17）：
+
+1. 主.venv/Scripts/python.exe -X utf8 tests/run_web_v2_live.py tests/web-v2-pages-browser.cjs tests/web-v2-live-browser.cjs：2組通過，port49607釋放。包括1366×768、1024×640、558×510、390×844五章單屏，320×568密集資料可讀；實際fake後端上傳、月報、配對、帳號修改／刪除與401清理。
+2. node --test "tests/*.test.cjs"：147/147通過。
+3. openspec.cmd validate add-matching-system --strict、git diff --check通過；git diff --quiet cebc1c3 -- src/web invoice-insights.html exit0。
+4. CUA檢查原尺寸及桌機／手機；最終視窗可用高度522px，五個預設章節皆約522px，文字雲4.8秒及cloud-light生效。圖存本聊天visualizations/role4-report-proportions.png，預覽留在文字雲播放中，臨時尺寸覆寫已復原。
+5. 續作時原8001已停止，先啟動一般入口後發現它使用原app.db的40位舊demo，遂只停止本次自建程序2932/8524，改用既有 runtime/role4_preview.py 與 data/role4-preview-20261016.db。三位虛構示範月報恢復，沒有重建或刪除資料庫；啟動器PID23312（實際listener另於交接核對）。
+
+限制：本輪未跑Python全套、真模型、Docker、CI或重錄GIF；僅前端比例與動態調整，無GPU、依賴、後端或v1變更。待Claude正式審核，未推送／未合併。

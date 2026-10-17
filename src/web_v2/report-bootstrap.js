@@ -7,7 +7,7 @@
   window.expenseReportData=ReceiptViewData.reportData(profile);
   if(!Object.keys(expenseReportData.months).length)throw Error('尚未上傳發票，沒有可顯示的月份。');
   for(const source of ['report-overview.js','report-motion.js','report-paging.js','report-insights.js','legacy-monthly.js','report-comparison.js']){
-   await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=source+'?v=20261017-report2';script.onload=resolve;script.onerror=()=>reject(Error('月報載入失敗，請重新載入。'));document.body.append(script);});
+   await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=source+'?v=20261017-layout2';script.onload=resolve;script.onerror=()=>reject(Error('月報載入失敗，請重新載入。'));document.body.append(script);});
   }
   const requested=new URLSearchParams(location.search).get('month');
   const select=document.getElementById('insights-month');

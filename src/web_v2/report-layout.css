@@ -1,0 +1,213 @@
+/* Proportions follow the report viewport, not the outer browser height. */
+body>main{width:100%;max-width:1160px;margin-inline:auto}
+#report-pages{container-type:size}
+#report-pages>.flow-region{padding:clamp(12px,3cqh,24px) 16px;gap:clamp(8px,2cqh,16px)}
+.flow-heading h2,.flow-region h2,#compare .compare-intro h2{font-size:clamp(18px,3.8cqh,26px);line-height:1.3}
+.flow-heading .eyebrow,#cloud-page .card-kicker,#rhythm-page .card-kicker,.compare-intro .card-kicker{font-size:9px;letter-spacing:1.5px}
+.chapter-details,.rhythm-table{flex:none;border-top:1px solid var(--line);font-size:11px;margin:0}
+.chapter-details summary,.rhythm-table summary{padding:6px 0;cursor:pointer;color:var(--muted)}
+.chapter-details[open],.rhythm-table[open]{padding-bottom:12px}
+.chapter-details .card-footnote{padding:8px 0}
+#items .stats{grid-template-columns:1.2fr 1fr 1fr 1.1fr}
+#items .stat-label{margin-bottom:4px}
+#items .item-overview{align-content:center;min-height:150px}
+#item-category-chart{gap:8px}
+.category-bar{min-height:34px;font-size:12px}
+#item-chart{gap:14px}
+.item-bar-row,.item-bar-row strong{font-size:12px}
+.item-bar-track{height:7px}
+#items .audit{margin-top:auto}
+/* Player: one dominant chart; the full interpretation stays one click away. */
+#insights .report{flex:none;display:flex;flex-direction:column}
+#insights .report-top{padding:0 14px;gap:12px}
+#insights .chapters{gap:20px}
+#insights .chapter{min-height:34px;padding:9px 0;font-size:11px}
+#insights .chapter span{margin-right:4px;font-size:9px}
+#insights .full-result{min-height:28px;padding:4px 10px;font-size:10px}
+#insights .workspace{display:block;padding:0}
+#insights .visual{padding:12px 16px}
+#insights .visual-heading{gap:10px;align-items:center}
+#insights .visual-heading h2{font-size:14px;margin:0}
+#insights .visual-heading p{font-size:10px;line-height:1.4;margin-top:3px}
+#insights .date-badge{padding:4px 8px}
+#insights .scene{height:clamp(130px,calc(100cqh - 337px),360px);margin-top:10px}
+#insights .legend{margin-top:7px;font-size:10px;gap:5px 12px}
+#insights .chart-note{margin-top:3px;font-size:9px;line-height:1.35}
+#insights .controls{padding:7px 14px;gap:10px}
+#insights .play,#insights .replay{width:28px;height:28px;min-width:28px}
+#insights .insight{display:grid;grid-template-columns:100px 1fr;gap:5px 16px;padding:14px;border:0;border-radius:10px}
+#insights .insight-overline{grid-column:1/-1}
+#insights .insight-number{grid-column:1;grid-row:2/4;font-size:40px;margin:0}
+#insights .insight h3{font-size:16px;margin:0}
+#insights .insight p{margin:0;line-height:1.7}
+#insights .insight-bottom{grid-column:1/-1;padding-top:8px;margin:4px 0 0}
+/* The cloud has a stage and a small, separate reading area. */
+.cloud-layout{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:20px;align-items:center;flex:1;min-height:0}
+#category-cloud{height:auto;min-height:clamp(180px,calc(100cqh - 175px),500px);padding:24px;grid-template-columns:repeat(3,minmax(0,1fr));align-content:space-evenly;gap:12px}
+#category-cloud .cloud-word{font-size:clamp(16px,calc(var(--word-size)*.65px),46px);line-height:1.25;padding:10px 0}
+#cloud-detail{border-top:0;border-left:1px solid var(--line);padding:18px;min-height:0;line-height:1.6}
+#cloud-detail strong{font-size:15px}
+#cloud-detail .date-chips{white-space:normal;flex-wrap:wrap;max-height:150px;overflow:auto}
+.cloud-moving:before,.cloud-moving:after{animation:cloud-light 5.5s ease-in-out infinite;animation-play-state:paused}
+.cloud-moving:after{animation-delay:-2.75s}
+.cloud-moving.cloud-in-view:before,.cloud-moving.cloud-in-view:after{animation-play-state:running}
+@keyframes cloud-light{0%,100%{opacity:.35;transform:rotate(-8deg) scale(.94);filter:brightness(.8)}50%{opacity:1;transform:rotate(3deg) scale(1.07);filter:brightness(1.8)}}
+/* The date wheel and its reading use the same visual band. */
+.rhythm-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,.55fr);align-items:center;gap:28px;flex:1;min-height:0}
+#rhythm-page .radial-wrap{width:100%;max-width:none;min-height:0;margin:0}
+#rhythm-chart{width:clamp(180px,calc(100cqh - 225px),400px);max-width:100%;height:auto;max-height:none}
+.rhythm-reading{border-left:1px solid var(--line);padding:20px}
+#rhythm-page .radial-detail{font-size:15px;line-height:1.8;margin-top:16px}
+#rhythm-page .weekend-key{font-size:10px;line-height:1.7}
+/* Month comparison: equal-sized cards, immediate conclusion, expandable ledger. */
+#compare .compare-intro{max-width:none}
+#compare .compare-intro h2{margin:3px 0}
+#compare .compare-intro p{font-size:11px}
+#compare .compare-tools{flex-wrap:nowrap;margin:0;gap:12px;align-items:center}
+#compare .compare-select{display:flex;align-items:center;gap:12px;max-width:500px;flex-basis:auto}
+#compare .compare-select label{font-size:10px;margin:0;white-space:nowrap}
+#compare .compare-select select{font-size:12px;padding:6px 12px;border-radius:8px}
+#compare .segmented button{font-size:10px;padding:6px 10px}
+#compare .month-pair{gap:16px}
+#compare .month-card{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 12px;text-align:left;padding:16px 20px;border-radius:14px;min-height:clamp(150px,30cqh,240px)}
+#compare .month-tag{justify-self:start;padding:2px 8px;font-size:9px}
+#compare .month-card h3{grid-column:1;font-size:23px;margin:0}
+#compare .month-caption{grid-column:1;font-size:10px}
+#compare .month-emblem{grid-column:2;grid-row:1/4;margin:0;width:58px;height:58px;border-width:6px;font-size:20px}
+#compare .month-amount{grid-column:1/-1;font-size:clamp(24px,5cqh,38px);margin-top:6px}
+#compare .month-days{grid-column:1/-1;height:32px;margin:5px 0 0}
+#compare .month-days+.month-caption{grid-column:1/-1}
+#compare .month-empty{grid-column:1/-1;height:36px}
+#compare .compare-takeaway{padding:12px 16px;margin:0;border-color:#5b4144;background:#21191b}
+#compare .compare-takeaway strong{font-size:14px}
+#compare .compare-takeaway p{font-size:11px;line-height:1.5;margin:4px 0 0}
+#compare .comparison-details{margin-top:auto}
+#compare .compare-source,#compare .compare-note{margin:8px 0}
+@media(max-width:760px){
+ .cloud-layout{grid-template-columns:minmax(0,1fr);gap:8px}
+ #category-cloud{min-height:clamp(180px,calc(100cqh - 225px),400px);grid-template-columns:repeat(2,minmax(0,1fr));padding:18px}
+ #cloud-detail{border-left:0;border-top:1px solid var(--line);padding:8px 0}
+ #cloud-detail .date-chips{flex-wrap:nowrap;max-height:none}
+ #items .stats{grid-template-columns:1.2fr 1fr 1fr}#items .stat:last-child{display:none}
+ #compare .compare-select label{display:none}
+ #compare .month-card{padding:12px;gap:2px 8px}
+ .rhythm-layout{gap:12px;grid-template-columns:minmax(0,1fr) minmax(100px,.6fr)}
+ .rhythm-reading{padding:12px}
+ #rhythm-page .radial-detail{font-size:12px}
+ #insights .chapters{gap:12px}
+}
+@container (max-height:480px){
+ #report-pages>.flow-region{padding:8px 8px 10px;gap:7px}
+ .flow-heading .eyebrow,.flow-heading p,#cloud-page .card-kicker,#rhythm-page .card-kicker,.compare-intro .card-kicker{display:none}
+ .flow-heading h2,.flow-region h2,#compare .compare-intro h2{font-size:18px}
+ #items .stats{gap:8px}#items .stat{padding:2px 0}
+ #items .stat-label{font-size:9px;margin-bottom:1px}#items .stat-value{font-size:23px;margin-top:2px}
+ #items .stat-note{display:none}
+ #items .item-overview{min-height:110px;gap:14px}
+ #item-category-chart{gap:4px}.category-bar{min-height:24px;padding:3px 6px;font-size:10px}
+ #item-chart{gap:8px}.item-bar-row,.item-bar-row strong{font-size:10px}
+ #insights .visual{padding:6px 10px}
+ #insights .visual-heading h2{font-size:12px}
+ #insights .scene{height:clamp(110px,calc(100cqh - 190px),210px);margin-top:5px}
+ #insights .chapter{min-height:28px;padding:5px 0;font-size:10px}
+ #insights .full-result{padding:3px 6px;min-height:24px;font-size:9px}
+ #insights .controls{padding:4px 10px}
+ #insights .legend{margin-top:4px}
+ #insights .chart-note{display:none}
+ #category-cloud{min-height:clamp(125px,calc(100cqh - 160px),240px);padding:14px;gap:4px}
+ #category-cloud .cloud-word{font-size:clamp(15px,calc(var(--word-size)*.44px),32px);padding:5px 0}
+ .cloud-layout{gap:4px}
+ #cloud-detail{padding:4px 0}
+ #cloud-detail strong{font-size:12px}
+ #cloud-detail p{font-size:9px}
+ #cloud-detail .date-chips{margin-top:4px}
+ #rhythm-chart{width:clamp(150px,calc(100cqh - 120px),280px)}
+ #rhythm-page .chart-toolbar{gap:6px}
+ #compare .compare-intro p{display:none}
+ #compare .month-card{min-height:0;padding:8px 12px}
+ #compare .month-card h3{font-size:18px}
+ #compare .month-emblem{width:42px;height:42px;font-size:15px;border-width:4px}
+ #compare .month-amount{font-size:24px;margin-top:1px}
+ #compare .month-days{height:20px;margin:0}
+ #compare .month-days span{max-height:20px}
+ #compare .month-days+.month-caption{display:none}
+ #compare .compare-takeaway{padding:6px 10px}
+ #compare .compare-takeaway strong{font-size:12px}
+ #compare .compare-takeaway p{font-size:10px;line-height:1.4}
+}
+@media(max-width:380px){
+ #report-pages>.flow-region{padding-inline:4px}
+ #insights .chapter span{display:none}
+ #insights .chapters{gap:8px}
+ #insights .full-result{max-width:88px;white-space:normal;line-height:1.3}
+ .rhythm-layout{grid-template-columns:1fr;gap:8px}
+ .rhythm-reading{border:0;padding:4px}
+ #compare .month-card{padding:8px}
+ #compare .month-emblem{width:38px;height:38px;font-size:14px}
+}
+
+#rhythm-page .rhythm-table{padding-top:0}
+#insights .replay{min-height:28px}
+#insights .speed{min-height:28px;padding:3px 8px}
+@container(max-height:480px){
+ #report-pages>.flow-region{gap:5px;padding-block:6px}
+ #insights .scene{height:clamp(100px,calc(100cqh - 205px),210px)}
+ #category-cloud{min-height:clamp(110px,calc(100cqh - 185px),220px)}
+ #rhythm-chart{width:clamp(145px,calc(100cqh - 155px),265px)}
+ #compare .month-card>.month-caption:first-of-type{font-size:9px}
+ #compare .month-caption{line-height:1.3}
+ #compare .month-days{height:16px}#compare .month-days span{max-height:16px}
+}
+
+@container(max-height:480px){
+ .chapter-details summary,.rhythm-table summary{padding-block:3px}
+ #report-pages>.flow-region{gap:4px}
+ #insights .scene{height:clamp(95px,calc(100cqh - 215px),210px)}
+ #compare .month-card{padding-block:6px}
+}
+@container (max-height:480px) and (min-width:450px){
+ .cloud-layout{grid-template-columns:minmax(0,1fr) 155px;gap:12px}
+ #category-cloud{min-height:max(170px,calc(100cqh - 112px));grid-template-columns:repeat(2,minmax(0,1fr))}
+ #category-cloud .cloud-word{font-size:clamp(16px,calc(var(--word-size)*.37px),27px)}
+ #cloud-detail{border-left:1px solid var(--line);border-top:0;padding-left:12px}
+ #cloud-detail .date-chips{flex-wrap:wrap;max-height:105px;overflow:auto}
+}
+
+#cloud-detail .date-chips span{flex:none;white-space:nowrap}
+#insights .report-top{flex-wrap:nowrap}
+#insights .chapters{width:auto;flex:1}
+#insights .visual-heading{flex-wrap:nowrap}
+.cloud-title{flex-wrap:nowrap}.cloud-title h2{min-width:0}
+@media(max-width:760px){
+ #category-cloud{min-height:clamp(190px,calc(100cqh - 325px),340px)}
+ .cloud-title h2{font-size:19px}
+ #rhythm-chart{width:min(100%,280px)}
+}
+@container(max-height:480px){
+ #insights .scene{height:clamp(90px,calc(100cqh - 222px),210px)}
+ #compare .month-card{row-gap:0;padding-block:4px}
+ #compare .month-caption{font-size:9px}
+}
+
+@container(max-height:480px){
+ #rhythm-chart{width:clamp(140px,calc(100cqh - 155px),265px)}
+}
+
+#insights .scene{overflow:auto}
+
+.cloud-layout,#category-cloud,#cloud-detail{min-width:0;max-width:100%}
+@media(max-width:760px){
+ #category-cloud .cloud-word{font-size:clamp(15px,calc(var(--word-size)*.43px),32px)}
+}
+@container(max-height:480px) and (min-width:450px){
+ #category-cloud .cloud-word{font-size:clamp(15px,calc(var(--word-size)*.37px),27px)}
+}
+
+@container(max-height:480px){
+ #insights .visual-heading h2{display:none}
+ #insights .visual-heading p{margin:0}
+ #insights .scene{height:clamp(130px,calc(100cqh - 210px),250px)}
+ #insights .bubble{scale:.65}
+}
+
+@media(max-width:760px){.flow-heading h2,.flow-region h2{font-size:19px}}

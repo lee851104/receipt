@@ -725,3 +725,12 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 - 本機 API 在 `http://127.0.0.1:8000`，文件在 `/docs`。錯誤一律是 `{"detail": "<代碼>"}`；422 的 `detail` 是清單；程式出錯回 500 `internal_error`；401 時回登入畫面
 - 要不要顯示 demo 快速切換，看 `GET /api/health` 的 `demo_mode`；名單用 `GET /api/auth/demo-users`
 - 即時分類框：第 1 週 `attributes_status` 為 `pending` 時不會自己變成 `ready`，先顯示「待分析」
+
+
+### 13.11 角色2分類介面交付（2026-10-17）
+
+角色2已合入role-1/models d1ed44a，採13.10建議的src/ml/category.load(model_dir)->classify，啟動載一次；回傳category/probs，CPU離線、批次16、鎖保護。角色2分支亦完成category_backend窄幅接線，未更動屬性cache或主工作目錄。模型完整性/標籤/分類head檢查失敗回unavailable；不啟動下載或隨機猜測。
+
+使用者選用next25-v3；推論依賴在requirements-docker.txt（torch2.8.0+cpu等），fake仍不用ML依賴。真正BERT＋fake屬性＋臨時DB的loopback HTTP分類/上傳/profile與缺模型情境已驗證，詳見docs/results/classification-service.md。原test未讀。這不是Qwen/300人/前端或Docker全系統驗收。
+
+公開權重原計畫由使用者Protected政策取代；CATEGORY_MODEL_REPO/REVISION維持空值，現階段用可信本機白名單安裝。遠端受保護下載/新電腦或Docker另待角色1整合環境；不要把Space ID填成public model repo。Claude請審核角色2提交後再決定主分支合併，概念文件合併需保留角色4既有內容。

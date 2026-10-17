@@ -35,3 +35,10 @@ Interfaces: accepts explicit model dir and private output; no dataset arguments 
 - Ruling: existing specification and user's explicit instruction authorize bounded implementation directly; no redundant design approval.
 - Ruling: importing role1 commits preserves authoritative backend; only category wiring modified on role2, main remains untouched.
 - Preflight: adapter load return callable is consumed by category_backend and acceptance; existing full-model manifest is consumed directly, no format migration.
+
+## Execution evidence
+- Task1 complete: merge adbb535; adapter1789e96; missing-module RED, contract23pass, full457pass after restoring legacy log sentence.
+- Task2 complete: installer missing-module RED then2pass; fresh CPU venv full459pass; real HTTP/synthetic acceptance result-v1.json, model reference maxdiff0, 1000=12.9486s, single=.0335s, test/private JSONL attempts0, external connect0. No GPU.
+- Task3 in review: numeric-only historical matrices rebuilt and 3-doc privacy audit57 references gives0; concepts and deployment guide written; task3.9 remains unchecked for authenticated remote and physical new-machine/Docker acceptance.
+- Ruling: local Windows newvenv plus local model delivery is fully verified; no Docker executable, no authorized credential/public model publication. Do not claim these external acceptance items complete.
+- Dependencies: initial uv first-index failed on old idna in CPU index; explicit unsafe-best-match across PyPI/official CPU resolved. Linux requirements resolution also passed, not execution.

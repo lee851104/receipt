@@ -29,22 +29,20 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 @keyframes taste-breathe{0%,100%{opacity:.42;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
 @keyframes taste-flow{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
 </style>
+<link rel="stylesheet" href="network-layout.css?v=20261017-focus1">
 </head>
 <body>
-<header><a class="brand" href="/web/#matches" target="_top"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>You are what you buy.</a><span class="tag" id="comparison-tag">虛構示範 · 品味連線</span></header>
 <main>
-<a id="return-report" class="return-report" href="#report" hidden>← 返回消費洞察</a>
-<div class="intro"><div><p class="eyebrow"><span>TASTE CONNECTIONS</span> 從消費，看見彼此</p><h1>把你的喜歡，<em>和我的連起來。</em></h1><p class="subtitle">每個點是一個消費訊號或品味特質。看看你們的品味，怎麼連起來。</p></div></div>
-<section class="comparison-overview" aria-label="評分與綜合解讀"><div class="overall"><div class="overall-label">品味相似度</div><div class="score"><span id="overall-score">—</span><small id="score-unit">%</small></div><div class="overall-note" id="overall-note">等待另一人匯入</div></div><div class="readout"><span class="readout-number">綜合解讀</span><div><p id="summary"></p><p class="summary-case"><strong class="summary-best-label">臭味相投</strong><span id="summary-best"></span></p><p class="summary-case"><strong class="summary-worst-label">背道而馳</strong><span id="summary-worst"></span></p><small id="summary-note">這是消費偏好的相似指數，不代表同樣比例的喜好完全相同，也不是關係契合度。</small></div></div>
-</section>
 <section class="graph-card" aria-label="兩人的品味特質連線圖">
-<div class="toolbar"><button id="network-motion" class="reset" type="button" aria-pressed="false">播放動態效果</button><div class="scope" id="scope" role="status" aria-live="polite"></div></div>
-<div class="legend" id="trait-legend"><span class="legend-item">訊號線：實線往右端推、虛線往左端推</span><span class="legend-item positive-label">中間：綠線加分</span><span class="legend-item negative-label">橘虛線扣分</span><span class="legend-item">越粗影響越大</span><span class="legend-item">空心：資料不足</span><span class="legend-item">外圈：常買的品項（點小點出現）</span><span class="legend-hint">點選查看連線，點空白處取消</span></div>
+<div class="toolbar"><button id="network-motion" class="reset" type="button" aria-pressed="false">播放動態效果</button><details class="graph-help"><summary>圖例與讀法</summary><div class="legend" id="trait-legend"><span class="legend-item">訊號線：實線往右端推、虛線往左端推</span><span class="legend-item positive-label">中間：綠線加分</span><span class="legend-item negative-label">橘虛線扣分</span><span class="legend-item">越粗影響越大</span><span class="legend-item">空心：資料不足</span><span class="legend-item">外圈：常買的品項（點小點出現）</span><span class="legend-hint">點選查看連線，點空白處取消</span></div></details><div class="scope" id="scope" role="status" aria-live="polite"></div></div>
+
 <div class="canvas"><p class="views-note" id="views-note" hidden></p><svg id="network" viewBox="0 0 1200 570" role="group" aria-label="左側粉紅是你的資料，右側藍色是朋友的資料；可點選圓點或連線"></svg></div>
-<div class="detail"><span class="detail-icon" aria-hidden="true">↔</span><div class="detail-text" id="detail" role="status" aria-live="polite">點一個訊號或特質，看看它怎麼一路連到分數。</div><button class="reset" id="reset" type="button">顯示全部連線</button></div>
+<div class="detail" hidden><span class="detail-icon" aria-hidden="true">↔</span><div class="detail-text" id="detail" role="status" aria-live="polite">點一個訊號或特質，看看它怎麼一路連到分數。</div><button class="reset" id="reset" type="button">顯示全部連線</button></div>
+</section>
+<section class="comparison-overview" aria-label="綜合解讀"><div class="readout"><span class="readout-number">綜合解讀</span><div><p id="summary"></p><p class="summary-case"><strong class="summary-best-label">臭味相投</strong><span id="summary-best"></span></p><p class="summary-case"><strong class="summary-worst-label">背道而馳</strong><span id="summary-worst"></span></p><small id="summary-note">這是消費偏好的相似指數，不代表同樣比例的喜好完全相同，也不是關係契合度。</small></div></div>
 </section>
 <details class="method"><summary>資料來源與相似百分比怎麼算？</summary><div id="link-method" hidden><p id="link-method-text"></p></div><div id="trait-method" hidden><p id="trait-method-text"></p><p id="trait-graph-method"></p></div></details>
-</main><footer><span>品味特質比較 · 資料由配對服務提供</span><span>You are what you buy. / TASTE CONNECTIONS</span></footer>
+</main>
 <noscript><p>請開啟 JavaScript 以查看點線圖。</p></noscript>
 
-<script src="legacy-similarity.js"></script><script src="legacy-match-filter.js"></script><script src="legacy-network.js"></script><script src="view-adapters.js"></script><script src="network-view.js?v=20261016-glow"></script></body></html>
+<script src="legacy-similarity.js"></script><script src="legacy-match-filter.js"></script><script src="legacy-network.js"></script><script src="view-adapters.js"></script><script src="network-view.js?v=20261017-focus1"></script><script src="network-embed.js?v=20261017-focus1"></script></body></html>

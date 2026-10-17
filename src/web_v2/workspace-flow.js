@@ -57,6 +57,7 @@
   }
   return {
    state:()=>data,
+   dismissNetwork(){channels.network?.abort();data={...data,network:empty()};emit();},
    invalidateViews(){for(const key of ['profile','matches','network'])channels[key]?.abort();data={...data,profile:empty(),matches:empty(),network:empty()};emit();},
    reset(){Object.values(channels).forEach(c=>c.abort());data=initial();emit();},
    async upload(file){

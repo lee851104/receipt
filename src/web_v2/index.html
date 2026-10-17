@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>消費配對系統 v2｜從日常，看見品味</title>
-<link rel="stylesheet" href="./styles.css?v=20261017-organic1">
+<link rel="stylesheet" href="./styles.css?v=20261017-focus1">
 <script defer src="./api.js"></script>
 <script defer src="./flow.js"></script>
 <script defer src="./view-adapters.js"></script>
-<script defer src="./workspace-flow.js"></script>
+<script defer src="./workspace-flow.js?v=20261017-focus1"></script>
 <script defer src="./explanation.js"></script>
 <script defer src="./account-flow.js"></script>
 <script defer src="./account-ui.js"></script>
-<script defer src="./workspace-ui.js?v=20261017-organic1"></script>
-<script defer src="./app.js?v=20261017-organic1"></script>
+<script defer src="./workspace-ui.js?v=20261017-focus1"></script>
+<script defer src="./app.js?v=20261017-focus1"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">跳到主要內容</a>
@@ -80,9 +80,9 @@
 <iframe id="report-frame" title="我的消費月報" referrerpolicy="no-referrer" hidden></iframe>
 </div>
 </section>
-<section id="matches-panel" hidden aria-labelledby="matches-title"><div class="section-header"><div><p class="eyebrow">CONNECTIONS / 找到同好</p><h1 id="matches-title" tabindex="-1">從消費習慣，<em>找到合拍的人。</em></h1></div><button id="refresh-matches" class="quiet" type="button">重新查詢</button></div>
+<section id="matches-panel" hidden aria-labelledby="matches-title"><div id="match-browse"><div class="section-header"><div><p class="eyebrow">CONNECTIONS / 找到同好</p><h1 id="matches-title" tabindex="-1">從消費習慣，<em>找到合拍的人。</em></h1></div><button id="refresh-matches" class="quiet" type="button">重新查詢</button></div>
 <div class="match-controls"><div role="group" aria-label="配對類型"><button type="button" data-match-kind="similar" aria-pressed="true">相近</button><button type="button" data-match-kind="opposite" aria-pressed="false">互補</button></div><label for="match-scope">範圍 <select id="match-scope"><option value="all">不限</option><option value="district">同一區</option><option value="city">同縣市</option><option value="region">同地區</option></select></label></div>
-<p id="match-areas" class="small"></p><p id="match-status" role="status" aria-live="polite"></p><div id="match-list" class="match-list"></div><p id="network-status" role="status"></p><iframe id="network-frame" title="你與配對對象的品味關係圖" referrerpolicy="no-referrer" hidden></iframe><details id="explain-details" class="explain-details" hidden><summary>查看計算過程<span class="small">分數與 18 格計算明細</span></summary><section id="explain-panel" class="explain-panel" aria-labelledby="explain-title" hidden></section></details>
+<p id="match-areas" class="small"></p><p id="match-status" role="status" aria-live="polite"></p><div id="match-list" class="match-list"></div></div><div id="match-result" hidden><div class="match-result-header"><button id="match-back" class="quiet" type="button">← 返回配對列表</button><h2 id="match-result-title" tabindex="-1">品味連線</h2></div><p id="network-status" role="status"></p><iframe id="network-frame" title="你與配對對象的品味關係圖" referrerpolicy="no-referrer" hidden></iframe><details id="explain-details" class="explain-details" hidden><summary>查看計算過程<span class="small">分數與 18 格計算明細</span></summary><section id="explain-panel" class="explain-panel" aria-labelledby="explain-title" hidden></section></details></div>
 </section>
 <section id="settings-panel" hidden aria-labelledby="settings-title">
 <div class="section-header"><div><p class="eyebrow">05 / 帳號與資料</p><h1 id="settings-title" tabindex="-1">你的帳號，<em>由你管理。</em></h1></div><button id="account-refresh" class="quiet" type="button">重新載入</button></div>

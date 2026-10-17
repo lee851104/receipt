@@ -158,3 +158,15 @@ body:has(#workspace-view:not([hidden])) .service-alert{flex-shrink:0;margin:6px 
 .profile-header h1{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .workspace-nav #refresh-profile{margin-left:auto;align-self:center;font-size:11px;padding:4px 10px;border:1px solid var(--line);border-radius:8px}
 #workspace-view:has(#profile-panel[hidden]) #refresh-profile{display:none}
+
+/* A person opens a focused result screen; only the parent panel scrolls. */
+#workspace-view>#matches-panel{padding:12px 0;scrollbar-width:thin;overflow-x:hidden}
+.match-result-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px}
+.match-result-header h2{font-size:14px;font-weight:500;color:var(--muted);margin:0;overflow-wrap:anywhere;text-align:right}
+.match-result-header .quiet{flex-shrink:0;font-size:12px;padding:6px 10px}
+#match-result #network-frame{height:550px;margin:0;border:0;border-radius:0;display:block}
+#network-status:empty{display:none}
+#match-result .explain-details{margin-top:10px}
+#match-result .explain-details>summary{padding:10px 0;font-size:11px}
+#match-result .explain-details>summary .small{font-size:10px}
+@media(max-width:640px){.match-result-header{gap:8px}.match-result-header h2{font-size:11px}.match-result-header .quiet{font-size:11px;padding:6px}}

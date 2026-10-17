@@ -16,7 +16,7 @@ function keyFor(side){return side==='a'?leftKey:rightKey;}
 function hasBoth(){return leftKey!==null&&rightKey!==null;}
 function loadedSides(){return ['a','b'].filter(side=>keyFor(side)!==null);}
 function el(tag,attrs={},text){const n=document.createElementNS(svgNS,tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;return n;}
-function clearSelection(){selected=null;if(!traitGraph)return;clearPins();hideHover();for(const item of [...traitGraph.links,...traitGraph.cells])item.el.style.opacity=String(item.base);for(const item of [...traitGraph.signals,...traitGraph.traits]){item.el.style.opacity='1';if(item.labelEl)item.labelEl.style.opacity='1';}$('detail').textContent='點一個訊號或特質，看看它怎麼一路連到分數。';}
+function clearSelection(){document.querySelector('.detail').hidden=true;selected=null;if(!traitGraph)return;clearPins();hideHover();for(const item of [...traitGraph.links,...traitGraph.cells])item.el.style.opacity=String(item.base);for(const item of [...traitGraph.signals,...traitGraph.traits]){item.el.style.opacity='1';if(item.labelEl)item.labelEl.style.opacity='1';}$('detail').textContent='點一個訊號或特質，看看它怎麼一路連到分數。';}
 function bind(group,callback){group.addEventListener('click',callback);group.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();callback();}});}
 function traitsOf(side){const key=keyFor(side);return key===null?null:profiles[key].traits||null;}
 function traitPair(){const a=traitsOf('a'),b=traitsOf('b');return a&&b?[a,b]:null;}
@@ -39,12 +39,12 @@ function prepareView(){
  const available=Boolean(traitPair());
  // Without taste traits on both sides the graph's place says why, and there is nothing to pick.
  $('views-note').hidden=available;$('views-note').textContent=traitNote();
- for(const part of [$('trait-legend'),document.querySelector('.toolbar'),document.querySelector('.detail')])part.hidden=!available;
+ for(const part of [$('trait-legend'),document.querySelector('.toolbar')])part.hidden=!available;
  $('link-method').hidden=!loadedSides().some(side=>keyFor(side).startsWith('import-'));
  // How the score works is worth reading whenever the page has the trait data; an empty box is not.
  $('trait-method').hidden=!network;document.querySelector('.method').hidden=$('link-method').hidden&&$('trait-method').hidden;
  const loaded=loadedSides(),demo=loaded.length&&loaded.every(side=>isDemoProfile(keyFor(side)));
- $('comparison-tag').textContent='API 資料 · 品味連線';
+
 }
 // The readout always explains the big number, the taste similarity.
 function renderSummary(result,both){
@@ -71,7 +71,7 @@ function drawTraits(svg,mobile,both){
  for(const link of graph.links){const zero=link.push===0,base=zero?.3:.85;const path=el('path',{d:link.d,class:'t-link',stroke:color[link.side],'stroke-width':zero?.6:(.8+6*Math.abs(link.push)).toFixed(2),'stroke-dasharray':link.push<0?'5 4':'none',opacity:base});lines.append(path);view.links.push({...link,el:path,base});}
  // The overall match sits between the fans: the score in a badge, over a glow as strong as the match.
  const mark=TraitNetwork.scoreMark(graph,mobile),tones={positive:'#5eeac7',negative:'#ffb65c',zero:'#77736c'};
- const glow=el('g',{class:'t-glow','aria-hidden':'true'}),badge=el('g',{class:'t-score','aria-hidden':'true'});
+ const glow=el('g',{class:'t-glow','aria-hidden':'true'}),badge=el('g',{class:'t-score',role:'img','aria-label':apiResult.comparable?'品味相似度 '+ReceiptViewData.signedPercent(apiResult.percent):'資料不足，無法比較'});
  if(mark){
   const tone=tones[mark.tone],defs=el('defs'),gradient=el('radialGradient',{id:'score-glow'});
   gradient.append(el('stop',{offset:'0','stop-color':tone,'stop-opacity':mark.glow.toFixed(2)}),el('stop',{offset:'1','stop-color':tone,'stop-opacity':'0'}));
@@ -162,6 +162,7 @@ function lightTraits(indexes,focus){
  for(const trait of traitGraph.traits){const on=lit.has(trait.index);trait.el.style.opacity=on?'1':'.2';if(trait.labelEl)trait.labelEl.style.opacity=on?'1':'.2';}
 }
 function selectSignal(id){
+ document.querySelector('.detail').hidden=false;
  clearPins();hideHover();selected='signal:'+id;
  const feeds=network.traits.map((trait,index)=>(trait.signals.includes(id)?index:-1)).filter(index=>index>=0);
  lightTraits(feeds,id);
@@ -173,6 +174,7 @@ function selectSignal(id){
   ...feeds.map(index=>TraitNetwork.cellSentence(network,index,left,right,names,parts?parts[index]:null))].join('\n');
 }
 function selectTrait(index){
+ document.querySelector('.detail').hidden=false;
  clearPins();selected='trait:'+index;lightTraits([index],null);
  for(const trait of traitGraph.traits)if(trait.index===index&&!trait.labelShown)pin(trait,trait.label);
  const [left,right]=traitPair(),parts=traitGraph.graph.result.parts;
@@ -183,9 +185,6 @@ function draw(){
  const mobile=matchMedia('(max-width:640px)').matches,svg=$('network');svg.replaceChildren();selected=null;traitGraph=null;
  // One big number everywhere: the taste similarity of the two people's trait vectors.
  const both=traitPair(),result=both?apiResult:null,scored=Boolean(result&&result.comparable);
- $('overall-score').textContent=scored?ReceiptViewData.signedPercent(result.percent).slice(0,-1):'—';$('score-unit').hidden=!scored;$('overall-score').parentElement.classList.toggle('waiting',!scored);
- $('overall-note').textContent=scored?'依 '+TraitNetwork.traitCount(network.traits)+' 項品味特質計算'+(allDemo()?' · 虛構示範':''):!network?'請從報告開啟這一頁，才算得出品味相似度':hasBoth()?(both?'兩人共同的特質太少，無法計算品味相似度':missingReason()==='thin'?'這份連結的資料還不夠，無法計算品味相似度':'舊版連結沒有品味特質，無法計算品味相似度'):loadedSides().length?'等待另一人匯入':'先匯入偏好資料';
- if(!both&&Object.values(missing).some(Boolean))$('overall-note').textContent=traitNote();
  renderSummary(result,both);
  // Without taste traits on both sides there is no graph; its place says why.
  if(both){svg.removeAttribute('hidden');$('scope').textContent=TraitNetwork.traitCount(network.traits)+' 項品味特質 · '+network.signals.length+' 個訊號';drawTraits(svg,mobile,both);}

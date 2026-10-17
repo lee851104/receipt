@@ -131,3 +131,18 @@ test('known recomputation blocks stale match and graph queries until the new pro
  assert.equal(x.calls.length,1);
  release();await call;await x.work.loadMatches();assert.equal(x.calls.length,3);
 });
+
+test('returning to matches cancels explanation and preserves list/filter even if abort is ignored',async()=>{
+ let finish;
+ const list={ready:true,people:[{user_id:9,percent:62}],scope:'city'};
+ const x=setup(path=>path.includes('/explain')?new Promise(resolve=>finish=resolve):list);
+ await x.work.loadMatches('similar','city');
+ const request=x.work.loadNetwork({user_id:9,percent:62});
+ x.work.dismissNetwork();
+ assert.equal(x.calls.at(-1)[1].signal.aborted,true);
+ finish({comparable:true,percent:62,network:{}});await request;
+ assert.equal(x.work.state().network.status,'idle');
+ assert.equal(x.work.state().network.data,null);
+ assert.equal(x.work.state().matches.data,list);
+ assert.equal(x.work.state().scope,'city');
+});

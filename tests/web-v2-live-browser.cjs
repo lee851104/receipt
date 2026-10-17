@@ -95,7 +95,7 @@ async function poll(read,check){
   await openCalculation(page);assert.equal(await page.locator('#explain-percent').textContent(),await peerCard.locator('strong').textContent());
   assert.equal(await page.locator('#explain-panel tbody tr').count(),18);
   const graph=page.frameLocator('#network-frame');await graph.locator('#network .t-signal').first().waitFor();
-  assert.equal(await graph.locator('#overall-score').textContent(),(card.percent>0?'+':'')+card.percent);
+  assert.equal(await graph.locator('.t-score-number').textContent(),(card.percent>0?'+':'')+card.percent+'%');
   const explanation=(await request('/matches/'+card.user_id+'/explain',{token:second})).data;
   assert.equal(explanation.percent,card.percent);
   await page.locator('#explain-precision').selectOption('full');

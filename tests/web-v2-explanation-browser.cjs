@@ -17,12 +17,40 @@ const fixture=require('./web-v2-fixtures.cjs');
    path.endsWith('/me/profile')?fixture.profile:path.endsWith('/explain')?explanation:matches;
   return route.fulfill({status:path.endsWith('/explain')?status:200,json:body});
  });
- const select=async()=>{await page.locator('#refresh-matches').click();await page.locator('.match-card').first().click();};
+ const back=async()=>{if(await page.locator('#match-back').isVisible())await page.locator('#match-back').click();};
+ const select=async()=>{await back();await page.locator('#refresh-matches').click();await page.locator('.match-card').first().click();};
  try{
   await page.goto((process.env.RECEIPT_TEST_URL||'http://127.0.0.1:8001')+'/web/');
   await page.locator('#demo-user').selectOption('1');await page.locator('#demo-submit').click();
   await navigate(page,'matches');await page.locator('.match-card').first().click();
-  await page.waitForFunction(()=>{const p=document.getElementById('matches-panel'),f=document.getElementById('network-frame');return !f.hidden&&p.scrollTop>0&&Math.abs(f.getBoundingClientRect().top-p.getBoundingClientRect().top-12)<3;});
+  await page.locator('#match-result').waitFor();assert(await page.locator('#match-browse').isHidden());assert.equal(await page.locator('#matches-panel').evaluate(n=>n.scrollTop),0);
+  const graph=page.frameLocator('#network-frame');
+  await graph.locator('#network .t-score-number').waitFor();
+  assert.equal(await graph.locator('#overall-score').count(),0);
+  assert.equal(await page.locator('#explain-details').getAttribute('open'),null);
+  for(const size of [{width:1366,height:768},{width:1024,height:640},{width:390,height:844},{width:320,height:568}]){
+   await page.setViewportSize(size);
+   await page.waitForFunction(()=>{
+    const f=document.getElementById('network-frame'),d=f.contentDocument;
+    return d&&parseFloat(d.querySelector('main').style.getPropertyValue('--graph-height'))===Math.max(220,Math.min(680,document.getElementById('matches-panel').clientHeight-280))&&d.documentElement.scrollHeight<=f.clientHeight+2&&d.documentElement.scrollWidth<=f.clientWidth+1;
+   });
+   if(size.width>640){
+    const fits=await page.locator('#network-frame').evaluate(f=>f.getBoundingClientRect().bottom<=document.getElementById('matches-panel').getBoundingClientRect().bottom);
+    assert(fits,'graph and summary fit '+JSON.stringify(size));
+   }
+  }
+  // Wheel over the embedded graph must reach the only scroll owner.
+  await graph.locator('.toolbar').hover();await page.mouse.wheel(0,240);
+  await page.waitForFunction(()=>document.getElementById('matches-panel').scrollTop>0);
+  assert.equal(await graph.locator('html').evaluate(n=>n.scrollTop),0);
+  await page.setViewportSize({width:1440,height:1000});
+  await graph.locator('.graph-help > summary').click();
+  await page.waitForFunction(()=>{const f=document.getElementById('network-frame');return f.contentDocument.documentElement.scrollHeight<=f.clientHeight+2;});
+  await graph.locator('.graph-help > summary').click();
+  await page.locator('#match-back').click();
+  assert(await page.locator('#match-browse').isVisible());
+  assert.equal(await page.locator('.match-card').first().evaluate(n=>n===document.activeElement),true);
+  await page.locator('.match-card').first().click();
   await openCalculation(page);
   assert.equal(await page.locator('#explain-percent').textContent(),await page.locator('.match-card strong').first().textContent());
   assert.equal(await page.locator('#explain-panel tbody tr').count(),18);
@@ -32,8 +60,8 @@ const fixture=require('./web-v2-fixtures.cjs');
    for(const key of ['mine','theirs','weight','product','part'])assert.equal(await row.locator('[data-field="'+key+'"]').textContent(),cell[key]===null?(key==='mine'||key==='theirs'?'未知':'不計入'):String(cell[key]));
   }
   for(const key of ['dot','norm_mine','norm_theirs','shrink','denominator','score'])assert.equal(await page.locator('.explain-summary [data-field="'+key+'"]').first().textContent(),String(explanation[key]));
-  const graph=page.frameLocator('#network-frame');await graph.locator('#overall-score').waitFor();
-  assert.equal((await graph.locator('#overall-score').textContent()).replace('+',''),String(explanation.percent));
+  await graph.locator('.t-score-number').waitFor();
+  assert.equal((await graph.locator('.t-score-number').textContent()).replace('+','').replace('%',''),String(explanation.percent));
   await page.locator('#explain-precision').selectOption('compact');
   fs.mkdirSync('runtime',{recursive:true});await page.locator('#explain-panel').evaluate(el=>el.scrollIntoView());await page.screenshot({path:'runtime/role4-explanation-desktop.png'});
   await page.setViewportSize({width:390,height:844});await page.locator('#explain-panel').evaluate(el=>el.scrollIntoView());await page.screenshot({path:'runtime/role4-explanation-mobile.png'});
@@ -57,12 +85,12 @@ const fixture=require('./web-v2-fixtures.cjs');
   assert.match(await page.locator('#network-status').textContent(),/格式不正確/);
   explanation=structuredClone(fixture.explanation);matches=structuredClone(fixture.matches);await select();await openCalculation(page);
   // Changing a filter clears all detail before the next selection.
-  await page.locator('#match-scope').selectOption('city');assert(await page.locator('#explain-panel').isHidden());assert.equal(await page.locator('#explain-panel').textContent(),'');
+  await back();await page.locator('#match-scope').selectOption('city');assert(await page.locator('#explain-panel').isHidden());assert.equal(await page.locator('#explain-panel').textContent(),'');
   await page.locator('.match-card').first().click();await openCalculation(page);
   // A delayed result must not pull the user back after they leave matches.
   let release;delayExplain=new Promise(resolve=>release=resolve);
   const started=new Promise(resolve=>explainStarted=resolve);
-  await page.locator('.match-card').first().click();await started;
+  await back();await page.locator('.match-card').first().click();await started;
   await navigate(page,'profile');
   const before=await page.locator('#matches-panel').evaluate(n=>n.scrollTop);
   const response=page.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/explain'));
@@ -70,11 +98,11 @@ const fixture=require('./web-v2-fixtures.cjs');
   await page.waitForTimeout(300);
   assert.equal(new URL(page.url()).hash,'#profile');
   assert.equal(await page.locator('#matches-panel').evaluate(n=>n.scrollTop),before);
-  await navigate(page,'matches');await page.emulateMedia({reducedMotion:'reduce'});
+  await navigate(page,'matches');await back();await page.emulateMedia({reducedMotion:'reduce'});
   await page.locator('.match-card').first().click();
-  await page.waitForFunction(()=>{const p=document.getElementById('matches-panel'),f=document.getElementById('network-frame');return !f.hidden&&p.scrollTop>0&&Math.abs(f.getBoundingClientRect().top-p.getBoundingClientRect().top-12)<3;});
-  status=401;explanation={detail:'not_authenticated'};await page.locator('.match-card').first().click();
+  await page.locator('#match-result').waitFor();assert(await page.locator('#match-browse').isHidden());assert.equal(await page.locator('#matches-panel').evaluate(n=>n.scrollTop),0);
+  status=401;explanation={detail:'not_authenticated'};await back();await page.locator('.match-card').first().click();
   await page.locator('#auth-view').waitFor({state:'visible'});assert.equal(await page.locator('#explain-panel').textContent(),'');assert.equal(await page.locator('#network-frame').getAttribute('src'),null);
-  assert.deepEqual(errors,[]);console.log('EXPLANATION PASS: 18 exact cells, summary, precision, card/graph percentage, negative scores, both insufficient-data reasons, invalid response, filter/401 cleanup, automatic result scroll, desktop/mobile.');
+  assert.deepEqual(errors,[]);console.log('EXPLANATION PASS: 18 exact cells, summary, precision, card/graph percentage, negative scores, both insufficient-data reasons, invalid response, filter/401 cleanup, focused result, back/focus restoration, responsive single scroll, desktop/mobile.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

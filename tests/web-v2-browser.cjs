@@ -56,7 +56,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   await page.locator('#match-scope').selectOption('district');await page.getByText('這個距離內沒有符合條件的人，試試放寬距離。',{exact:true}).waitFor();assert.equal(await page.locator('.match-card').count(),0);
   await page.locator('#match-scope').selectOption('all');await page.locator('.match-card').click();
   const graph=page.frameLocator('#network-frame');await graph.locator('#network .t-hit').first().waitFor();
-  assert.equal((await graph.locator('#overall-score').textContent()).replace('−','-').replace('+',''),String(fixture.explanation.percent));
+  assert.equal((await graph.locator('.t-score-number').textContent()).replace('−','-').replace('+','').replace('%',''),String(fixture.explanation.percent));
   await graph.locator('#network .t-hit').first().press('Enter');
   await graph.locator('#network .t-signal').first().click();assert.notEqual(await graph.locator('#detail').textContent(),'點一個訊號或特質，看看它怎麼一路連到分數。');
   await page.screenshot({path:'runtime/role4-matches-desktop.png',fullPage:true});

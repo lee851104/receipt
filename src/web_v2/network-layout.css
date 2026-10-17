@@ -1,0 +1,29 @@
+/* Embedded result: graph first, one summary, no nested scrolling surface. */
+html,body{margin:0;padding:0;overflow:hidden}
+main{max-width:none;padding:0;margin:0}
+.graph-card{border-radius:14px;background:#141414;border-color:#2d2b2a}
+.toolbar{padding:8px 14px;gap:12px;justify-content:flex-end;align-items:start;border:0;min-height:44px}
+.toolbar .reset{font-size:10px;padding:4px 9px;min-height:28px}
+.scope{display:none}
+.graph-help{font-size:11px;color:var(--muted);margin-right:auto;order:-1;padding:4px 0;max-width:70%}
+.graph-help>summary{width:fit-content}
+.graph-help .legend{padding:10px 0 2px;font-size:11px;gap:6px 14px}
+.canvas{padding:0 12px;height:var(--graph-height,380px)}
+.canvas>svg{height:100%;width:100%;overflow:visible}
+.detail{padding:10px 14px;min-height:0;font-size:11px}
+.comparison-overview{display:block;background:transparent;border:0;border-radius:0;padding:12px 4px 0;margin:0}
+.comparison-overview .readout{display:grid;grid-template-columns:82px minmax(0,1fr);gap:12px;padding:0}
+.readout-number{font-size:12px;color:var(--pink);margin:0;padding-top:2px}
+.readout #summary{font-size:13px}
+.readout p{font-size:12px;line-height:1.65}
+.readout .summary-case{margin-top:4px}
+.readout .summary-case strong{font-size:11px}
+.method{display:none}
+.views-note{padding:70px 20px}
+@media(max-width:640px){
+ .canvas{height:auto;padding:0 5px}.canvas>svg{height:auto}
+ .toolbar{padding:8px 10px;gap:8px}.graph-help{max-width:65%}
+ .comparison-overview{padding:12px 2px 0}.comparison-overview .readout{display:block}
+ .readout-number{margin-bottom:5px}.readout #summary{font-size:12px}
+ .detail .reset{margin-left:0}
+}

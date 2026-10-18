@@ -1,8 +1,8 @@
 /* Runs only inside the current user's report frame; no token or private data is embedded in the HTML. */
 (async function(){
  'use strict';
+ const host=window.parent!==window?window.parent.ReceiptV2Host:null,profile=host?.profile(),ticket=new URLSearchParams(location.search).get('view');
  try{
-  const profile=window.parent!==window?window.parent.ReceiptV2Host?.profile():null;
   if(!profile)throw Error('請先登入，再從「我的月報」查看報告。');
   window.expenseReportData=ReceiptViewData.reportData(profile);
   if(!Object.keys(expenseReportData.months).length)throw Error('尚未上傳發票，沒有可顯示的月份。');
@@ -15,5 +15,6 @@
    select.value=requested;select.dispatchEvent(new Event('change',{bubbles:true}));
   }
   document.getElementById('frame-status').hidden=true;
- }catch(error){const note=document.createElement('p');note.textContent=error.message;document.body.replaceChildren(note);}
+  host?.viewReady?.('report',profile,ticket);
+ }catch(error){host?.viewReady?.('report',profile,ticket,error.message);const note=document.createElement('p');note.textContent=error.message;document.body.replaceChildren(note);}
 })();

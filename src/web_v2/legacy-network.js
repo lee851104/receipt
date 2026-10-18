@@ -102,7 +102,7 @@
     const [cx, cy] = shape.centers[side === 'a' ? 0 : 1];
     const [sx, sy] = shape.stretch;
     const out = d * Math.cos(e), across = d * Math.sin(e);
-    if (shape === SHAPES.mobile) return { x: cx - across * sx, y: side === 'a' ? cy - out * sy : cy + out * sy };
+    if (shape === SHAPES.mobile || shape.mobile) return { x: cx - across * sx, y: side === 'a' ? cy - out * sy : cy + out * sy };
     return { x: side === 'a' ? cx - out * sx : cx + out * sx, y: cy - across * sy };
   }
 
@@ -119,8 +119,8 @@
         const at = place(shape, side, trait.distance + step * shape.font * 1.2, trait.angle);
         let box;
         // Phones hang a label away from the middle of the fan, so moving it outwards never lands it on its own dot.
-        if (shape === SHAPES.mobile && trait.angle > 0) box = { x: at.x - trait.r - 4, y: at.y + shape.font * 0.35, anchor: 'end' };
-        else if (shape === SHAPES.mobile) box = { x: at.x + trait.r + 4, y: at.y + shape.font * 0.35, anchor: 'start' };
+        if ((shape === SHAPES.mobile || shape.mobile) && trait.angle > 0) box = { x: at.x - trait.r - 4, y: at.y + shape.font * 0.35, anchor: 'end' };
+        else if (shape === SHAPES.mobile || shape.mobile) box = { x: at.x + trait.r + 4, y: at.y + shape.font * 0.35, anchor: 'start' };
         else if (side === 'a') box = { x: at.x - trait.r - 4, y: at.y - 6, anchor: 'end' };
         else box = { x: at.x + trait.r + 4, y: at.y - 6, anchor: 'start' };
         const rect = labelRect(trait.label, shape.font, box.x, box.y, box.anchor);
@@ -134,8 +134,15 @@
   const fixed = number => number.toFixed(1);
 
   // Every dot and line of the graph for two people, from the trait order in data and each person's values.
-  function layout(data, left, right, mobile, result) {
-    const shape = mobile ? SHAPES.mobile : SHAPES.desktop;
+  function layout(data, left, right, mobile, result, viewport) {
+    // Reposition geometry to fit the stage; never stretch text or circle shapes.
+    const base = mobile ? SHAPES.mobile : SHAPES.desktop;
+    const height = viewport && viewport.width > 0
+      ? Math.max(base.height, base.width * viewport.height / viewport.width) : base.height;
+    const shape = mobile ? { ...base, mobile: true, height,
+      centers: [[300, 290], [300, height - 290]] } : { ...base, height,
+      centers: base.centers.map(([x]) => [x, height / 2]),
+      stretch: [base.stretch[0], base.stretch[1] * (height - 60) / (base.height - 60)] };
     const count = data.traits.length;
     // A signal sits beside the first trait that lists it; later traits only get another line.
     const home = new Map();
@@ -181,7 +188,7 @@
         : `M${fixed(a.x)} ${fixed(a.y)} C${fixed(middle)} ${fixed(a.y)} ${fixed(middle)} ${fixed(b.y)} ${fixed(b.x)} ${fixed(b.y)}`;
       cells.push({ trait: index, part, d });
     });
-    return { width: shape.width, height: shape.height, font: shape.font, sides, links, cells, result };
+    return { width: shape.width, height: shape.height, font: shape.font, shape, sides, links, cells, result };
   }
 
   // A purchase name the graph can fit: ten letters at most, cut with an ellipsis; the detail line keeps it whole.
@@ -252,7 +259,7 @@
   function scoreMark(graph, mobile) {
     const { result } = graph;
     if (!result || !result.comparable) return null;
-    const shape = mobile ? SHAPES.mobile : SHAPES.desktop, { mark } = shape, [[ax, ay], [bx, by]] = shape.centers;
+    const shape = graph.shape || (mobile ? SHAPES.mobile : SHAPES.desktop), { mark } = shape, [[ax, ay], [bx, by]] = shape.centers;
     const x = (ax + bx) / 2, y = (ay + by) / 2, points = result.percent;
     return { x, y, width: mark.width, height: mark.height, label: mark.label, number: mark.number, radii: mark.glow,
       labelY: y - mark.height / 2 + 24, numberY: y + mark.height / 2 - 16, text: (points > 0 ? '+' : points < 0 ? '−' : '') + Math.abs(points) + '%',

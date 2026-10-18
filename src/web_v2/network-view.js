@@ -6,6 +6,8 @@ const payload=pageHost?.ReceiptV2Host?.network();
 if(!payload)throw Error('請從配對清單開啟關係圖。');
 const {network,missing,result:apiResult}=ReceiptViewData.networkData(payload);
 const $=id=>document.getElementById(id),svgNS='http://www.w3.org/2000/svg';
+function showReadout(open){$('insight-content').hidden=!open;$('insight-toggle').setAttribute('aria-expanded',String(open));$('insight-toggle').textContent=open?'收起解讀 ↓':'綜合解讀與線段說明 ↑';}
+$('insight-toggle').addEventListener('click',()=>showReadout($('insight-content').hidden));
 let traitGraph=null,leftKey='me',rightKey='match',selected=null;
 const profiles={me:{name:'你',traits:missing.mine?null:TraitNetwork.validate(network.mine,network)},match:{name:payload.display_name,traits:missing.theirs?null:TraitNetwork.validate(network.theirs,network)}};
 const pair={left:{name:'你'},right:{name:payload.display_name}};
@@ -16,7 +18,8 @@ function keyFor(side){return side==='a'?leftKey:rightKey;}
 function hasBoth(){return leftKey!==null&&rightKey!==null;}
 function loadedSides(){return ['a','b'].filter(side=>keyFor(side)!==null);}
 function el(tag,attrs={},text){const n=document.createElementNS(svgNS,tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;return n;}
-function clearSelection(){document.querySelector('.detail').hidden=true;selected=null;if(!traitGraph)return;clearPins();hideHover();for(const item of [...traitGraph.links,...traitGraph.cells])item.el.style.opacity=String(item.base);for(const item of [...traitGraph.signals,...traitGraph.traits]){item.el.style.opacity='1';if(item.labelEl)item.labelEl.style.opacity='1';}$('detail').textContent='點一個訊號或特質，看看它怎麼一路連到分數。';}
+function announceSelection(){$('selection-live').textContent=$('detail').textContent;}
+function clearSelection(){$('selection-live').textContent='';document.querySelector('.detail').hidden=true;$('selection-hint').hidden=false;$('reset').hidden=true;selected=null;if(!traitGraph)return;clearPins();hideHover();for(const item of [...traitGraph.links,...traitGraph.cells])item.el.style.opacity=String(item.base);for(const item of [...traitGraph.signals,...traitGraph.traits]){item.el.style.opacity='1';if(item.labelEl)item.labelEl.style.opacity='1';}$('detail').textContent='點一個訊號或特質，看看它怎麼一路連到分數。';}
 function bind(group,callback){group.addEventListener('click',callback);group.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();callback();}});}
 function traitsOf(side){const key=keyFor(side);return key===null?null:profiles[key].traits||null;}
 function traitPair(){const a=traitsOf('a'),b=traitsOf('b');return a&&b?[a,b]:null;}
@@ -59,9 +62,9 @@ function renderSummary(result,both){
 }
 // The taste network: signals fan out from each person's traits, and the middle lines are the score's cells.
 function drawTraits(svg,mobile,both){
- const graph=TraitNetwork.layout(network,both[0],both[1],mobile,apiResult),shape=TraitNetwork.SHAPES[mobile?'mobile':'desktop'],color={a:'#ff9aa7',b:'#9bbcff'},who=sideNames();
- // Reserve purchase columns only while inspecting them, keeping the overview large.
- const overviewBox=mobile?TraitNetwork.viewBox(network,graph,both,mobile):'0 0 '+graph.width+' '+graph.height;
+ const graph=TraitNetwork.layout(network,both[0],both[1],mobile,apiResult,{width:svg.clientWidth,height:svg.clientHeight}),shape=graph.shape,color={a:'#ff9aa7',b:'#9bbcff'},who=sideNames();
+ // Purchases stay in the external readout; selecting never changes the drawing bounds.
+ const overviewBox='0 0 '+graph.width+' '+graph.height;
  svg.setAttribute('viewBox',overviewBox);
  const names=el('g',{'aria-hidden':'true'});
  for(const side of ['a','b']){
@@ -142,19 +145,6 @@ function hoverable(group,item,text){
 function pin(item,text,inward){const tip=tipText(item,text,inward);traitGraph.tips.append(tip);traitGraph.pinned.push(tip);}
 // Pinned names and the purchases of a picked signal both go when the choice changes.
 function clearPins(){if(!traitGraph)return;for(const tip of traitGraph.pinned)tip.remove();traitGraph.pinned=[];traitGraph.outer.replaceChildren();$('network').setAttribute('viewBox',traitGraph.overviewBox);}
-// The purchases behind a picked signal: a short column of dots outside it on each side, each with a line in and its name.
-function showPurchases(id){
- const mobile=traitGraph.graph.width===TraitNetwork.SHAPES.mobile.width,color={a:'#ff9aa7',b:'#9bbcff'},sides=new Set();
- for(const side of TraitNetwork.purchases(network,traitGraph.graph,traitPair(),id,mobile)){
-  sides.add(side.side);
-  for(const item of side.items)traitGraph.outer.append(
-   el('path',{d:`M${item.x.toFixed(1)} ${item.y.toFixed(1)} L${side.signal.x.toFixed(1)} ${side.signal.y.toFixed(1)}`,class:'t-buy-line',stroke:color[side.side],'stroke-width':item.width.toFixed(2)}),
-   el('circle',{cx:item.x.toFixed(1),cy:item.y.toFixed(1),r:item.r.toFixed(1),class:'t-buy',fill:color[side.side],stroke:color[side.side]}),
-   el('text',{x:item.labelX.toFixed(1),y:item.labelY.toFixed(1),'text-anchor':item.anchor,class:'t-tip','font-size':traitGraph.graph.font},item.text));
- }
- if(sides.size)$('network').setAttribute('viewBox',TraitNetwork.viewBox(network,traitGraph.graph,traitPair(),mobile));
- return sides;
-}
 // Light the chosen traits and their signals; a chosen signal shows at full strength and the traits' other signals at half.
 function lightTraits(indexes,focus){
  const lit=new Set(indexes),feeds=new Set(traitGraph.links.filter(link=>lit.has(link.trait)).map(link=>link.signal));
@@ -164,23 +154,23 @@ function lightTraits(indexes,focus){
  for(const trait of traitGraph.traits){const on=lit.has(trait.index);trait.el.style.opacity=on?'1':'.2';if(trait.labelEl)trait.labelEl.style.opacity=on?'1':'.2';}
 }
 function selectSignal(id){
- document.querySelector('.detail').hidden=false;
+ showReadout(true);
+ document.querySelector('.detail').hidden=false;$('selection-hint').hidden=true;$('reset').hidden=false;
  clearPins();hideHover();selected='signal:'+id;
  const feeds=network.traits.map((trait,index)=>(trait.signals.includes(id)?index:-1)).filter(index=>index>=0);
  lightTraits(feeds,id);
  const label=network.signals.find(signal=>signal.id===id).label,[left,right]=traitPair(),names=sideNames(),parts=traitGraph.graph.result.parts;
- const bought=showPurchases(id),mobile=traitGraph.graph.width===TraitNetwork.SHAPES.mobile.width;
- // On desktop a side's purchases take the outside of its signal, so the signal's name moves to the inside.
- for(const signal of traitGraph.signals)if(signal.id===id)pin(signal,label,!mobile&&bought.has(signal.side));
+ for(const signal of traitGraph.signals)if(signal.id===id)pin(signal,label,true);
  $('detail').textContent=[TraitNetwork.signalSentence(network,left,names[0],id),TraitNetwork.signalSentence(network,right,names[1],id),
-  ...feeds.map(index=>TraitNetwork.cellSentence(network,index,left,right,names,parts?parts[index]:null))].join('\n');
+  ...feeds.map(index=>TraitNetwork.cellSentence(network,index,left,right,names,parts?parts[index]:null))].join('\n');announceSelection();
 }
 function selectTrait(index){
- document.querySelector('.detail').hidden=false;
+ showReadout(true);
+ document.querySelector('.detail').hidden=false;$('selection-hint').hidden=true;$('reset').hidden=false;
  clearPins();selected='trait:'+index;lightTraits([index],null);
  for(const trait of traitGraph.traits)if(trait.index===index&&!trait.labelShown)pin(trait,trait.label);
  const [left,right]=traitPair(),parts=traitGraph.graph.result.parts;
- $('detail').textContent=TraitNetwork.cellSentence(network,index,left,right,sideNames(),parts?parts[index]:null);
+ $('detail').textContent=TraitNetwork.cellSentence(network,index,left,right,sideNames(),parts?parts[index]:null);announceSelection();
 }
 function draw(){
  prepareView();
@@ -195,14 +185,14 @@ function draw(){
 }
 // Clicking the surrounding page clears the graph selection; controls and details remain usable.
 document.addEventListener('click',event=>{
- if(selected && !event.target.closest('#network [role="button"], button, a, summary, input, .import-card, .detail')) clearSelection();
+ if(selected && !event.target.closest('#network [role="button"], button, a, summary, input, .import-card, .insight-dock')) clearSelection();
 });
 if(network){
  // How the score is worked out, and what the lines and the purchases on the graph mean.
  const unlisted=network.signals.filter(signal=>signal.list_items===false).map(signal=>signal.label);
  $('trait-method-text').textContent='品味相似度是 '+TraitNetwork.traitCount(network.traits)+' 項品味特質（'+network.traits.length+' 格）的餘弦相似度，範圍 '+TraitSimilarity.signed(-1)+'～'+TraitSimilarity.signed(1)+'。';
- $('trait-graph-method').textContent='每項特質由幾個消費訊號加權而成，訊號線越粗，代表這個訊號推得越多；中間每條線是那一格對分數的加減，全部加起來就是品味相似度。點一個訊號，外圈會出現最常買的品項（最多 3 個，×N 是整段期間的次數）；'+unlisted.join('、')+'這 '+unlisted.length+' 個訊號不列品項。';
-}$('reset').addEventListener('click',clearSelection);$('network').addEventListener('keydown',event=>{if(event.key==='Escape')clearSelection();});matchMedia('(max-width:640px)').addEventListener('change',draw);
+ $('trait-graph-method').textContent='每項特質由幾個消費訊號加權而成，訊號線越粗，代表這個訊號推得越多；中間每條線是那一格對分數的加減，全部加起來就是品味相似度。點一個訊號，下方說明會列出最常買的品項（最多 3 個，×N 是整段期間的次數）；'+unlisted.join('、')+'這 '+unlisted.length+' 個訊號不列品項。';
+}$('reset').addEventListener('click',clearSelection);matchMedia('(max-width:640px)').addEventListener('change',draw);
 // Respect the system preference until the user explicitly chooses for this session.
 const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
 let motionChoice=null;
@@ -220,6 +210,32 @@ $('network-motion').addEventListener('click',()=>{
 });
 motionPreference.addEventListener('change',()=>{if(motionChoice===null)setMotion(!motionPreference.matches);});
 draw();
+pageHost?.ReceiptV2Host?.viewReady?.('network',payload,new URLSearchParams(location.search).get('view'));
+// The host assigns available height after the first render. Reflow geometry only when
+// that space changes; selecting a line must leave both the canvas and viewBox stable.
+let graphSize='';
+const canvasObserver=new ResizeObserver(()=>{
+ const svg=$('network'),canvas=document.querySelector('.canvas');
+ if(!svg.clientWidth||!canvas.clientHeight)return;
+ const size=svg.clientWidth+':'+canvas.clientHeight;
+ if(size===graphSize)return;
+ graphSize=size;
+ const previous=selected,readoutOpen=!$('insight-content').hidden;
+ draw();
+ if(previous?.startsWith('signal:'))selectSignal(previous.slice(7));
+ else if(previous?.startsWith('trait:'))selectTrait(Number(previous.slice(6)));
+ showReadout(readoutOpen);
+});
+document.addEventListener('keydown',event=>{
+ if(event.key!=='Escape')return;
+ if(event.target.closest('#network')){
+  clearSelection();showReadout(false);event.preventDefault();
+ }else if(event.target.closest('.insight-dock')&&!$('insight-content').hidden){
+  showReadout(false);$('insight-toggle').focus();event.preventDefault();
+ }
+});
+canvasObserver.observe(document.querySelector('.canvas'));
+window.addEventListener('pagehide',()=>canvasObserver.disconnect(),{once:true});
 
-}catch(error){const notice=document.createElement('p');notice.textContent='無法顯示關係圖，請回配對清單重新載入。';document.body.replaceChildren(notice);}
+}catch(error){window.parent.ReceiptV2Host?.viewReady?.('network',window.parent.ReceiptV2Host?.network(),new URLSearchParams(location.search).get('view'),'無法顯示關係圖，請重新查詢配對。');const notice=document.createElement('p');notice.textContent='無法顯示關係圖，請回配對清單重新載入。';document.body.replaceChildren(notice);}
 })();

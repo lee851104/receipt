@@ -5,22 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>消費配對系統 v2｜從日常，看見品味</title>
-<link rel="stylesheet" href="./styles.css?v=20261017-space1">
+<link rel="stylesheet" href="./styles.css?v=20261018-ux1">
+<script defer src="./feedback.js?v=20261018-ux1"></script>
 <script defer src="./api.js"></script>
-<script defer src="./flow.js"></script>
+<script defer src="./flow.js?v=20261018-ux1"></script>
 <script defer src="./view-adapters.js"></script>
 <script defer src="./workspace-flow.js?v=20261017-space1"></script>
 <script defer src="./explanation.js"></script>
-<script defer src="./account-flow.js"></script>
-<script defer src="./account-ui.js"></script>
-<script defer src="./workspace-ui.js?v=20261017-space1"></script>
-<script defer src="./app.js?v=20261017-space1"></script>
+<script defer src="./account-flow.js?v=20261018-ux1"></script>
+<script defer src="./account-ui.js?v=20261018-ux1"></script>
+<script defer src="./workspace-ui.js?v=20261018-review2"></script>
+<script defer src="./app.js?v=20261018-ux1"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">跳到主要內容</a>
 <header>
   <a class="brand" href="/web/" aria-label="消費配對系統首頁"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>消費配對<span class="edition">TASTE LINK / V2</span></a>
-  <div class="header-actions"><span id="service-status" class="service-status" role="status">連線中</span><div id="settings-menu" class="settings-menu" hidden>
+  <div class="header-actions"><span id="service-status" class="service-status" role="status">連線中</span><button id="upload-background" class="quiet" type="button" hidden>檔案分析中</button><div id="settings-menu" class="settings-menu" hidden>
     <button id="settings-toggle" class="quiet" type="button" aria-expanded="false" aria-controls="settings-options">設定 <span aria-hidden="true">⌄</span></button>
     <div id="settings-options" class="settings-options" hidden>
       <span id="identity-label" class="menu-identity"></span>
@@ -42,17 +43,17 @@
     <div class="auth-card">
       <div class="auth-tabs" aria-label="選擇登入或註冊"><button id="login-tab" type="button" aria-pressed="true">登入</button><button id="register-tab" type="button" aria-pressed="false">建立帳號</button></div>
       <h2 id="auth-title" tabindex="-1">歡迎回來</h2><p id="auth-subtitle" class="muted">登入後，開始探索你的日常選擇。</p>
-      <p id="auth-error" class="message error" role="alert" hidden></p><p id="auth-notice" class="message success" role="status" hidden></p>
+      <p id="auth-status" role="status" aria-live="polite" hidden></p><p id="auth-error" class="message error" role="alert" hidden></p><p id="auth-notice" class="message success" role="status" hidden></p>
       <form id="login-form">
         <label for="login-username">帳號</label><input id="login-username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="輸入帳號">
         <label for="login-password">密碼</label><input id="login-password" name="password" type="password" autocomplete="current-password" required maxlength="512" placeholder="輸入密碼">
-        <button class="primary" type="submit">登入並開始</button>
+        <button id="login-submit" class="primary" type="submit">登入並開始</button>
       </form>
       <form id="register-form" hidden>
         <label for="register-username">帳號</label><input id="register-username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="32" pattern="[A-Za-z0-9_]{3,32}" aria-describedby="username-help" placeholder="例如 taste_amy"><small id="username-help">3–32 個英數字或底線；不能以 demo_ 開頭。</small>
         <label for="register-display">顯示名稱 <span class="optional">選填</span></label><input id="register-display" name="display_name" autocomplete="nickname" maxlength="20" placeholder="你希望大家怎麼稱呼你">
         <label for="register-password">密碼</label><input id="register-password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" aria-describedby="password-help" placeholder="設定密碼"><small id="password-help">8–128 個字元。</small>
-        <button class="primary" type="submit">建立帳號</button>
+        <button id="register-submit" class="primary" type="submit">建立帳號</button>
       </form>
       <section id="demo-panel" class="demo-panel" aria-labelledby="demo-title" hidden>
         <div class="divider"><span>或先體驗看看</span></div>
@@ -85,7 +86,7 @@
 </section>
 <section id="profile-panel" hidden aria-labelledby="profile-title">
 <div class="section-header profile-header"><h1 id="profile-title" tabindex="-1">我的<em>月報</em></h1></div>
-<p id="profile-message" role="status" aria-live="polite"></p>
+<div id="profile-feedback" class="view-feedback" hidden><p id="profile-message" role="status" aria-live="polite"></p><button id="profile-retry" class="quiet" type="button" hidden>重新載入月報</button></div>
 <p id="profile-pending" class="small" role="status" aria-live="polite" hidden></p>
 <p id="model-note" class="small" hidden></p>
 <div id="profile-content" hidden>
@@ -95,7 +96,7 @@
 </section>
 <section id="matches-panel" hidden aria-labelledby="matches-title"><div id="match-browse"><div class="section-header"><div><p class="eyebrow">CONNECTIONS / 找到同好</p><h1 id="matches-title" tabindex="-1">從消費習慣，<em>找到合拍的人。</em></h1></div><button id="refresh-matches" class="quiet" type="button">重新查詢</button></div>
 <div class="match-controls"><div role="group" aria-label="配對類型"><button type="button" data-match-kind="similar" aria-pressed="true">相近</button><button type="button" data-match-kind="opposite" aria-pressed="false">互補</button></div><label for="match-scope">範圍 <select id="match-scope"><option value="all">不限</option><option value="district">同一區</option><option value="city">同縣市</option><option value="region">同地區</option></select></label></div>
-<p id="match-areas" class="small"></p><p id="match-status" role="status" aria-live="polite"></p><div id="match-list" class="match-list"></div></div><div id="match-result" hidden><div class="match-result-header"><button id="match-back" class="quiet" type="button">← 返回配對列表</button><h2 id="match-result-title" tabindex="-1">品味連線</h2></div><p id="network-status" role="status"></p><iframe id="network-frame" title="你與配對對象的品味關係圖" referrerpolicy="no-referrer" hidden></iframe><details id="explain-details" class="explain-details" hidden><summary>查看計算過程<span class="small">分數與 18 格計算明細</span></summary><section id="explain-panel" class="explain-panel" aria-labelledby="explain-title" hidden></section></details></div>
+<p id="match-areas" class="small"></p><p id="match-status" role="status" aria-live="polite"></p><div id="match-loading" class="match-skeletons" aria-hidden="true" hidden><div><i></i><i></i></div><div><i></i><i></i></div></div><div id="match-list" class="match-list"></div></div><div id="match-result" hidden><div class="match-result-header"><button id="match-back" class="quiet" type="button">← 返回配對列表</button><h2 id="match-result-title" tabindex="-1">品味連線</h2></div><div id="network-feedback" class="view-feedback" hidden><p id="network-status" role="status" aria-live="polite"></p><button id="network-retry" class="quiet" type="button" hidden>重新查詢配對</button></div><iframe id="network-frame" title="你與配對對象的品味關係圖" referrerpolicy="no-referrer" hidden></iframe><details id="explain-details" class="explain-details" hidden><summary>查看計算過程<span class="small">分數與 18 格計算明細</span></summary><section id="explain-panel" class="explain-panel" aria-labelledby="explain-title" hidden></section></details></div>
 </section>
 <section id="settings-panel" hidden aria-labelledby="settings-title">
 <div class="section-header"><div><p class="eyebrow">05 / 帳號與資料</p><h1 id="settings-title" tabindex="-1">你的帳號，<em>由你管理。</em></h1></div><button id="account-refresh" class="quiet" type="button">重新載入</button></div>
@@ -105,9 +106,9 @@
 <section class="input-card"><h2>修改密碼</h2><p class="small">修改成功後，本分頁保留登入；其他裝置需重新登入。</p><p id="password-upload-note" class="small" hidden>發票仍在處理或進度尚未確認，請完成或重新查詢進度後再修改密碼。</p><form id="account-password-form"><label for="current-password">目前密碼</label><input id="current-password" type="password" autocomplete="current-password" required maxlength="512"><label for="new-password">新密碼（8–128 字元）</label><input id="new-password" type="password" autocomplete="new-password" required minlength="8" maxlength="128"><button id="password-submit" class="primary" type="submit">更新密碼</button></form></section>
 <section class="input-card"><h2>已上傳月份</h2><p class="small">刪除後無法復原，品味與配對結果也會更新。</p><div id="account-months"></div></section>
 <section class="input-card account-danger"><h2>刪除帳號</h2><p class="small">永久移除帳號與所有發票資料，操作前需再輸入密碼。</p><button id="delete-account" class="secondary" type="button">刪除我的帳號</button></section>
-</div></div><div class="account-logout"><p class="small">登出會讓這個帳號在所有裝置上的登入失效。</p><button id="logout-submit" class="secondary" type="button">登出所有裝置</button></div>
+</div></div><div class="account-logout"><p id="logout-note" class="small">登出會讓這個帳號在所有裝置上的登入失效。</p><button id="logout-submit" class="secondary" type="button">登出所有裝置</button></div>
 </section>
-<dialog id="account-confirm" aria-labelledby="confirm-title" aria-describedby="confirm-description"><form id="account-confirm-form"><h2 id="confirm-title"></h2><p id="confirm-description"></p><p id="confirm-error" class="message error" role="alert" hidden></p><div id="delete-password-row" hidden><label for="delete-password">帳號密碼</label><input id="delete-password" type="password" autocomplete="current-password" maxlength="512"></div><div class="confirm-actions"><button id="confirm-cancel" class="secondary" type="button">取消</button><button id="confirm-submit" class="primary" type="submit">確認刪除</button></div></form></dialog>
+<dialog id="account-confirm" aria-labelledby="confirm-title" aria-describedby="confirm-description"><form id="account-confirm-form"><h2 id="confirm-title"></h2><p id="confirm-description"></p><p id="confirm-progress" role="status" aria-live="polite" hidden></p><p id="confirm-error" class="message error" role="alert" hidden></p><div id="delete-password-row" hidden><label for="delete-password">帳號密碼</label><input id="delete-password" type="password" autocomplete="current-password" maxlength="512"></div><div class="confirm-actions"><button id="confirm-cancel" class="secondary" type="button">取消</button><button id="confirm-submit" class="primary" type="submit">確認刪除</button></div></form></dialog>
   </section>
   <noscript><p class="message error">請開啟 JavaScript，才能使用登入與月報功能。</p></noscript>
 </main>

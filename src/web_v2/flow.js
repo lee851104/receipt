@@ -19,28 +19,28 @@
     });
   }
   function createFlow({api,session,onChange=()=>{},sleep=wait}){
-    let data={view:session.get()?'workspace':'login',busy:false,error:'',notice:'',health:null,serviceError:'',demoVisible:false,demoUsers:[],classification:emptyClassification()};
+    let data={view:session.get()?'workspace':'login',busy:false,authAction:'',healthLoading:true,error:'',notice:'',health:null,serviceError:'',demoVisible:false,demoUsers:[],classification:emptyClassification()};
     let operation=0, classificationId=0, healthId=0, authController, classificationController;
     const emit=()=>onChange(data);
     function cancel(){operation++; classificationId++; authController?.abort(); classificationController?.abort();}
     function reset(view,message=''){
-      cancel(); data={...data,view,busy:false,error:message,notice:'',classification:emptyClassification()}; emit();
+      cancel(); data={...data,view,busy:false,authAction:'',error:message,notice:'',classification:emptyClassification()}; emit();
     }
     async function authenticate(path, options, label, isDemo=false){
       const id=++operation; authController?.abort(); authController=new AbortController();
-      data={...data,busy:true,error:'',notice:''}; emit();
+      data={...data,busy:true,authAction:path.endsWith('demo-login')?'demo':'login',error:'',notice:''}; emit();
       try{
         const answer=await api.request(path,{...options,auth:false,signal:authController.signal});
         if(id!==operation)return;
         session.set(answer,label,{isDemo}); data={...data,view:'workspace',classification:emptyClassification()};
       }catch(error){if(id===operation && error.name!=='AbortError')data={...data,error:error.message};}
-      finally{if(id===operation){data={...data,busy:false};emit();}}
+      finally{if(id===operation){data={...data,busy:false,authAction:''};emit();}}
     }
     return {
       state:()=>data,
       async init(){
         const id=++healthId;
-        data={...data,serviceError:'',demoVisible:false,demoUsers:[],health:null};emit();
+        data={...data,healthLoading:true,serviceError:'',demoVisible:false,demoUsers:[],health:null};emit();
         try{
           const health=await api.request('/health',{auth:false});
           if(id!==healthId)return;
@@ -52,7 +52,7 @@
             data={...data,demoVisible:true,demoUsers:users};
           }
         }catch(error){if(id===healthId && error.name!=='AbortError')data={...data,serviceError:error.message};}
-        if(id===healthId)emit();
+        if(id===healthId){data={...data,healthLoading:false};emit();}
       },
       showAuth(view){reset(view==='register'?'register':'login');},
       identityChanged(){cancel();data={...data,classification:emptyClassification()};emit();},
@@ -61,7 +61,7 @@
       login(username,password){return authenticate('/auth/login',{method:'POST',body:new URLSearchParams({username:username.trim(),password})},username.trim());},
       async register(username,password,displayName){
         const id=++operation;authController?.abort();authController=new AbortController();
-        data={...data,busy:true,error:'',notice:''};emit();
+        data={...data,busy:true,authAction:'register',error:'',notice:''};emit();
         const json={username:username.trim(),password};
         if(displayName.trim())json.display_name=displayName.trim();
         try{
@@ -69,7 +69,7 @@
           if(id!==operation)return;
           data={...data,view:'login',notice:'註冊成功，請使用新帳號登入。'};
         }catch(error){if(id===operation && error.name!=='AbortError')data={...data,error:error.message};}
-        finally{if(id===operation){data={...data,busy:false};emit();}}
+        finally{if(id===operation){data={...data,busy:false,authAction:''};emit();}}
       },
       async demoLogin(value){
         const user=data.demoVisible && data.demoUsers.find(x=>String(x.user_id)===value && Number.isSafeInteger(x.user_id));

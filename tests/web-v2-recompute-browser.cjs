@@ -29,10 +29,10 @@ const fixture=require('./web-v2-fixtures.cjs');
   await page.locator('#login-username').fill('synthetic');await page.locator('#login-password').fill('synthetic-password');await page.locator('#login-form button').click();
   await navigate(page,'settings');await page.locator('#account-content').waitFor();
   await page.getByRole('button',{name:'刪除 2026-05',exact:true}).click();await page.locator('#confirm-submit').click();await page.locator('#account-confirm').waitFor({state:'hidden'});
-  await navigate(page,'profile');await page.locator('#profile-message').filter({hasText:'重新計算中'}).waitFor();
+  await navigate(page,'profile');await page.locator('#profile-message').filter({hasText:'更新品味資料'}).waitFor();
   assert(await page.locator('#profile-content').isHidden());assert(await page.locator('#report-frame').isHidden());
   await navigate(page,'matches');await page.locator('#match-status').filter({hasText:'重新計算中'}).waitFor();
-  await page.locator('#refresh-matches').click();assert.equal(matches,0);
+  assert(await page.locator('#refresh-matches').isDisabled());assert.equal(matches,0);
   // 改名不能中斷已知的背景重算，或重新開放舊配對查詢。
   await navigate(page,'settings');
   await page.locator('#account-name').fill('虛構新名稱');await page.locator('#account-name-submit').click();

@@ -5,6 +5,7 @@ async function go(page,name){
   if(!(await page.locator('#home-panel').isVisible()))await page.locator('[data-workspace="home"]').click();
   await page.locator('[data-entry="'+name+'"]').click();return;
  }
+ if(['upload','settings'].includes(name)&&await page.locator('body').evaluate(n=>n.classList.contains('network-fullscreen')))await page.locator('[data-workspace="home"]').click();
  const target=page.locator('[data-workspace="'+name+'"]');
  if(['upload','settings'].includes(name)&&!(await target.isVisible()))await page.locator('#settings-toggle').click();
  await target.click();

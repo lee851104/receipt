@@ -1,7 +1,7 @@
 """What the Docker container runs (design D14): the secret, the category model when one is to be downloaded, the
-300 demo users with their purchases and profiles (the seed runs on every start and writes nothing once they are
-complete), then the server on all of the container's interfaces (docker-compose.yml publishes the port on the host's
-127.0.0.1 only).
+jobs a stop left unfinished (failed, so the seed does not refuse over them), the 300 demo users with their purchases
+and profiles (the seed runs on every start and writes nothing once they are complete), then the server on all of the
+container's interfaces (docker-compose.yml publishes the port on the host's 127.0.0.1 only).
 
     python -m src.api.container
 """
@@ -14,6 +14,7 @@ from pathlib import Path
 
 from .backends import model_dir
 from .db import ROOT, init_db, make_engine
+from .jobs import fail_unfinished
 from .settings import Settings
 
 DATA = Path("/data")  # the database volume
@@ -98,6 +99,8 @@ def seed_demo(engine, demo_mode):
     starting, as in launch.main: it is one log line, and the server starts with the demo users it has."""
     if not demo_mode:
         return None
+    # The first start is silent for as long as the seed takes and the server is not up yet: say what is going on.
+    log.info("demo users: checking them; the first start puts them in, about 20 seconds when timed outside Docker")
     try:
         from ..receipt.personas import build_personas
         from ..receipt.traits import load_context
@@ -105,7 +108,8 @@ def seed_demo(engine, demo_mode):
         context = load_context(ROOT)
         return seed_demo_population(engine, build_personas(context["calendar"], total=300), context)
     except Exception as error:  # a clash, a differing cache, an unfinished job, a full disk: start anyway
-        log.warning("demo users not updated: %s", " ".join(str(error).split()))
+        from .launch import reason_for  # one short line: the seed's clash list has one entry per demo user
+        log.warning("demo users not updated: %s", reason_for(error))
         return None
 
 
@@ -119,10 +123,15 @@ def main():
     ensure_category_model(settings)
     engine = make_engine(settings.database_url)
     init_db(engine)
+    # The container is the only process on its volume, and create_app fails the same jobs a few seconds later. It is
+    # done here first because the seed refuses to run over a demo job left queued or running: a stop during the first
+    # (long, silent) seed would make the next start's seed refuse, and the demo would stay half filled until a third.
+    fail_unfinished(engine)
     summary = seed_demo(engine, settings.demo_mode)
     if isinstance(summary, dict):
+        # "0 added" alone reads as no write: a repair (a new MODEL_VERSION, an interrupted seed) adds no account.
         log.info("demo users: %d in all, %d added%s", summary["users"], summary["added_users"],
-                 " (already complete)" if summary["skipped"] else "")
+                 " (already complete)" if summary["skipped"] else ", purchases and profiles rewritten")
     engine.dispose()
     import uvicorn
     uvicorn.run("src.api.main:app", host="0.0.0.0", port=8000)

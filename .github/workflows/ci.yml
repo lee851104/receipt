@@ -82,11 +82,19 @@ jobs:
           assert health["models"]["attributes"] == "cache_only", health
           users = call("/api/auth/demo-users")
           assert len(users) == 300, len(users)
-          token = call("/api/auth/demo-login", body={"user_id": users[0]["user_id"]})["access_token"]
-          profile = call("/api/me/profile", token)
-          assert profile["ready"] is True, ("ready", profile["ready"])
-          assert profile["pending_attributes"] == 0, ("pending_attributes", profile["pending_attributes"])
-          print("300 demo users; the first one's profile is ready with no attribute pending")
+
+
+          def check_profile(which, user):
+              token = call("/api/auth/demo-login", body={"user_id": user["user_id"]})["access_token"]
+              profile = call("/api/me/profile", token)
+              assert profile["ready"] is True, (which, "ready", profile["ready"])
+              assert profile["pending_attributes"] == 0, (which, "pending_attributes", profile["pending_attributes"])
+
+
+          # The seed works in order, so one that died part-way has finished the first users and none of the last.
+          check_profile("first", users[0])
+          check_profile("last", users[-1])
+          print("300 demo users; the first and the last one's profile is ready with no attribute pending")
           EOF
           then
             echo "the demo users or their profiles are not as expected"

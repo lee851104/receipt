@@ -76,6 +76,13 @@ class WorkflowTests(unittest.TestCase):
             with self.subTest(needed=needed):
                 self.assertIn(needed, text)
 
+    def test_ci_checks_the_first_and_the_last_demo_user_because_the_seed_works_in_order(self):
+        # A seed that died part-way has finished the first users and none of the last: a first-user-only check passes.
+        text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        for needed in ("users[0]", "users[-1]"):
+            with self.subTest(needed=needed):
+                self.assertIn(needed, text)
+
     def test_ci_always_tears_the_demo_down_and_cannot_hang_or_write(self):
         text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
         self.assertRegex(text, r"if: always\(\)\s+run: docker compose down -v")

@@ -20,7 +20,7 @@
 | 品味向量 | 46 個訊號算成 18 格，少於 20 個品項就不算 | `src/receipt/signals.py`、`traits.py`、`configs/traits.json` |
 | 相似度 | 加權內積 ÷（向量長度相乘 + 0.25），只算兩人都有的格子，至少要 5 格雙向格 | `src/receipt/similarity.py`，JS 版 `src/web/trait-similarity.js`，共用案例 `tests/fixtures/similarity-cases.json` |
 | 配對頁 | +30% 以上算相近、−10% 以下算互補，各取前 5；可依同區、同縣市、同地區篩選 | `src/web/match.html`、`match-filter.js`、`src/receipt/places.py`、`configs/regions.json` |
-| 假用戶 | 8 種類型 × 5 人 = 40 人，2026 年 3–4 月的假發票 | `src/receipt/personas.py` |
+| 假用戶 | 8 種類型 × 5 人 = 40 人，2026 年 3–4 月的假發票（10/18 補上：`role-1/role3-integration` 分支的 demo 是 300 位，每位都有購買紀錄和 profile，見 13.13；`personas.py` 沒傳 `total` 時預設仍是 40 人） | `src/receipt/personas.py` |
 | 網頁 | 單一 HTML 檔，JS 全部內嵌，GitHub Pages 公開中 | `scripts/build_report.py` → `invoice-insights.html` |
 | 後端骨架 | FastAPI + SQLite：註冊、登入、demo 快速切換、品名即時分類、健康檢查，模型先用假替身；v2 網頁從 `/web/` 提供（10/15 完成角色 1 第 1 週） | `src/api/`、`src/ml/`、`src/web_v2/` |
 | 測試 | Python（unittest）和 JS（node:test）都全部通過 | `tests/` |
@@ -544,15 +544,19 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 **行為有什麼不同（給所有角色）**
 - 預設：`docker-compose.yml` 的 `ATTRIBUTES_MODEL` 預設和 `.env.example` 的值都是 `qwen`；`Settings` 自己的預設仍是 `fake`（沒設這個變數就是 `fake`）。已經存在的 `.env` 不會被改（`start.bat` 只在沒有 `.env` 時才建立它）：要看到假用戶的屬性，在那個 `.env` 裡寫 `ATTRIBUTES_MODEL=qwen`；`fake` 讀不到 seed 放進去的答案（鍵是 `MODEL_VERSION`），假用戶的品名都顯示待分析。
-- 沒有 llama-server：`qwen` 時 `/api/health` 的 `models.attributes` 是 `cache_only`，只用快取裡 107 筆審核過的虛構答案，新的品名是待分析。
+- 沒有 llama-server：`qwen` 時 `/api/health` 的 `models.attributes` 是 `cache_only`，只用快取裡 107 筆審核過的虛構答案，新的品名是待分析。（10/18 補上：有 llama-server 回應時，`qwen` 會把上傳和分類輸入框裡的新品名一個一個送到 `LLAMA_SERVER_URL`（Docker 是 `DOCKER_LLAMA_SERVER_URL`）的本機服務判斷，只接受本機位址；分類輸入框先回待分析，背景判斷完下次才有答案。沒有服務回應時，新品名維持待分析。）
 - 位址：後端用 `attributes.AttributeDescriber(server_url=settings.llama_server_url)` 建立實例，`Settings` 是位址的唯一來源（以前模組層級的 `describe_items` 自己從環境變數讀 `LLAMA_SERVER_URL`）；快取的鍵取 describer 的 `model_version`（`batch_size` 是預設的 1 時，和 `MODEL_VERSION` 相同，也就是 seed 寫入的鍵）。位址不是 `http://` 的 `localhost`、`127.0.0.1`、`[::1]`、`host.docker.internal`，或帶了路徑和密碼時，伺服器載入時用一行停下來：`error: ATTRIBUTES_MODEL=qwen needs LLAMA_SERVER_URL (DOCKER_LLAMA_SERVER_URL in Docker) to be http:// on localhost, 127.0.0.1, [::1] or host.docker.internal, with no path or password`，訊息不印位址本身。以前這樣的位址只會讓每個新品名一直是待分析，`gpu_mode` 卻可能是 true（13.10 給角色 3 的疑慮；角色 3 保留允許清單並寫在 13.11，角色 1 照 13.11 的建議用 `Settings` 建立並在啟動時檢查）。
-- Docker 的假用戶：demo 模式下，容器每次啟動都跑角色 3 的 `seed_demo_population`（`build_personas(calendar, total=300)`），取代只在資料庫是空的才匯入 40 位的 `seed_if_empty`。人口已經完整就跳過（約 5 秒）；過期的會補（例如 `MODEL_VERSION` 改了，或舊映像檔留下只有 40 位假用戶的 volume：實測補了 260 位）；第一次啟動約 20 秒，伺服器在這之後才開始服務。seed 拒絕（帳號衝突、快取答案不同、未完成的 demo 工作）時只印一行警告 `demo users not updated: ...`，伺服器照樣啟動（和 `start.bat` 的做法一樣）。`DEMO_MODE=0` 時什麼都不放。
-- 映像檔：`Dockerfile` 多 COPY `datasets/synthetic/attribute-cache.jsonl`（107 筆審核過的虛構答案，沒有真實品名），`.dockerignore` 第一行的說明也跟著改。CI 的 compose 步驟最多等 90 次，確認 health 的 `demo_mode` 是 true、`models.attributes` 是 `cache_only`、假用戶有 300 位，而且一位假用戶登入後 `/api/me/profile` 是 `ready`、`pending_attributes` 是 0。
-- `MODEL_VERSION` 改了之後（換模型或 prompt；先依 13.11 更新並確認合成快取）：容器的下一次啟動、`start.bat` 的下一次執行就會重放，13.10 清單第 7 項現在是自動的；手動執行 `python -m src.api.seed` 仍要先停掉服務。
+- Docker 的假用戶：demo 模式下，容器每次啟動都跑角色 3 的 `seed_demo_population`（`build_personas(calendar, total=300)`），取代只在資料庫是空的才匯入 40 位的 `seed_if_empty`。人口已經完整就跳過（約 5 秒）；過期的會補（例如 `MODEL_VERSION` 改了，或舊映像檔留下只有 40 位假用戶的 volume：實測補了 260 位）；第一次啟動約 20 秒，伺服器在這之後才開始服務。seed 拒絕（帳號衝突、快取答案不同、未完成的 demo 工作）時只印一行警告 `demo users not updated: ...`，伺服器照樣啟動（和 `start.bat` 的做法一樣）。`DEMO_MODE=0` 時什麼都不放。（10/18 補上：約 5 秒和約 20 秒是 seed 在暫存資料庫、沒有 Docker 的電腦上量的，容器啟動還沒有量過。審查後的修正見下面的幾項。）
+- 映像檔：`Dockerfile` 多 COPY `datasets/synthetic/attribute-cache.jsonl`（107 筆審核過的虛構答案，沒有真實品名），`.dockerignore` 第一行的說明也跟著改。CI 的 compose 步驟最多等 90 次，確認 health 的 `demo_mode` 是 true、`models.attributes` 是 `cache_only`、假用戶有 300 位，而且一位假用戶登入後 `/api/me/profile` 是 `ready`、`pending_attributes` 是 0。（10/18 補上，審查後修正：現在第一位和最後一位假用戶都要通過；seed 照順序做，做到一半停下的 seed 會讓只查第一位的檢查通過。）
+- `MODEL_VERSION` 改了之後（換模型或 prompt；先依 13.11 更新並確認合成快取）：容器的下一次啟動、`start.bat` 的下一次執行就會重放，13.10 清單第 7 項現在是自動的；手動執行 `python -m src.api.seed` 仍要先停掉服務。（10/18 補上：「自動」的前提是角色 3 已經把合成快取重新審核成新版本；還沒審核時，每次啟動都只印 seed 的拒絕警告，不會重放，假用戶的品名顯示待分析。）
 - `start.bat`（`launch.main`）本來就先跑 `seed.main()`，現在它放入的是 300 位假用戶連同購買紀錄和 profile，完整就跳過；這次沒有改它。
+- 審查後修正（10/18 補上）：第一次啟動被中斷。容器的 `main` 現在在 seed 之前先呼叫 `fail_unfinished`，把上次停止時留下的 queued／running 工作標成失敗。`create_app` 幾秒後也會做這件事，而且容器是這個 volume 上唯一的行程。以前在第一次（又長又沒有訊息的）seed 中途停下來，會留下一個 running 的 demo 工作。下一次的 seed 因為「Stop unfinished demo jobs before seeding」拒絕，假用戶要到第三次啟動才補完。現在下一次啟動就補完。
+- 審查後修正（10/18 補上）：訊息。seed 之前多一行 INFO，說明正在檢查假用戶。seed 沒有跳過時，摘要寫「purchases and profiles rewritten」，因為補修時「0 added」不代表沒有寫入。警告改用 `launch.reason_for`：維持一行，超過 160 字從中間截斷（留下最後的處理說明），空訊息也寫出例外類型。
+- seed 的訊息說「Delete the database file and run the seed again」時，在 Docker 裡指的是 `docker compose down -v`。它會一起刪掉所有帳號、容器產生的 `JWT_SECRET` 和下載的模型。（10/18 補上）
+- `start.bat` 的路徑沒有「先把未完成的工作標成失敗」這一步，這次沒有改：`launch.main` 先跑 seed，`create_app` 才標。所以第一次執行被中斷後，`start.bat` 也可能留下同樣的拒絕。（10/18 補上）
 
 **驗證（本機，沒有 GPU、沒有 Docker）**
-- Python 全套 528 項通過（角色 3 合併後原本 506 項有 1 項失敗，就是 13.10 清單第 4 項的 `test_api_main` 子案例，現在換了觸發方式）。
+- Python 全套 528 項通過（角色 3 合併後原本 506 項有 1 項失敗，就是 13.10 清單第 4 項的 `test_api_main` 子案例，現在換了觸發方式）。（10/18 補上：審查後修正新增 7 項測試，全套 535 項通過；中途沒有跑 Docker，第一次啟動被中斷的修復只用真的資料庫和 `fail_unfinished` 驗過，seed 的人口寫入換成記錄用的替身。）
 - 容器的 seed 用暫存資料庫實測：放入 300 位約 19.0 秒，再跑一次跳過約 4.6 秒；CI 的檢查腳本對本機的 uvicorn（`qwen`、沒有 llama-server）通過：`cache_only`、300 位、profile `ready`、0 個待分析。
 - 真的模組用 `check_describe` 驗過契約，只把 `_request` 換成替身，沒有連 llama-server。
 
@@ -600,11 +604,11 @@ $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-r
 
 **給角色 3**
 - 後端用 `src/ml/attributes.MODEL_VERSION` 當屬性快取（`item_cache.model`）的鍵，fake 模式照舊是 `"fake"`。你的 seed（任務 4.7）把 Qwen 的答案寫進 `item_cache` 時，`model` 欄位請用 `src.ml.attributes.MODEL_VERSION`（也就是 qwen 模式下後端用的鍵），不要用設定名稱 `qwen`，也不要用 `load_backends(settings).attributes_version`：預設 `ATTRIBUTES_MODEL=fake` 時它是 `"fake"`，Qwen 的答案會被記成假模型的答案
-- 合併之後 `Backends` 有一個必填的 `attributes_version`（屬性快取的鍵，沒有預設值）。你的 `src/api/seed.py` 自己建的 `Backends(...)`（第 152 行附近，現在只傳 `category`、`classify`、`attributes`、`describe_items`、`gpu_probe`）要多傳 `attributes_version=`，值和 seed 寫進 `item_cache.model` 的是同一個，也就是 `src.ml.attributes.MODEL_VERSION`，不是設定名稱。沒傳的話每次呼叫 seed 都會 `TypeError`（`python -m src.api.seed` 會直接出錯；`start.bat` 的 seed 比 uvicorn 先跑，10/18 起它接住這個錯誤，只印一行「示範帳號沒有更新」，繼續啟動伺服器，但假用戶不會更新）
+- 合併之後 `Backends` 有一個必填的 `attributes_version`（屬性快取的鍵，沒有預設值）。你的 `src/api/seed.py` 自己建的 `Backends(...)`（第 152 行附近，現在只傳 `category`、`classify`、`attributes`、`describe_items`、`gpu_probe`）要多傳 `attributes_version=`，值和 seed 寫進 `item_cache.model` 的是同一個，也就是 `src.ml.attributes.MODEL_VERSION`，不是設定名稱。沒傳的話每次呼叫 seed 都會 `TypeError`（`python -m src.api.seed` 會直接出錯；`start.bat` 的 seed 比 uvicorn 先跑，10/18 起它接住這個錯誤，只印一行「示範帳號沒有更新」，繼續啟動伺服器，但假用戶不會更新）（10/18 補上：角色 3 已在 6065c8c 補上 `attributes_version=`，這個錯誤不會再發生，見下面清單第 2 項）
 - 回覆你分支 13.7 的提議（seed 用目前後端的屬性模式當 `item_cache.model`，預設 `fake`，也可 `qwen`）：角色 1 維持 `MODEL_VERSION`，不照設定名稱。item-attributes 規格要求快取記錄是哪一個模型版本產生的（MUST），`fake`／`qwen` 這兩個名稱記不了版本，換了模型或 prompt 也不會讓舊答案失效；而且合併之後 demo 是在 qwen（沒有 GPU 時 `cache_only`）模式下讀這些答案，那時的鍵就是 `MODEL_VERSION`。所以 seed 不管 `ATTRIBUTES_MODEL` 設成什麼，都用 `MODEL_VERSION` 當鍵，包括查有沒有衝突答案的那個 `where`
 - 服務只有在 `ATTRIBUTES_MODEL=qwen` 時才讀得到上面那些答案（沒有 GPU 時顯示 `cache_only`）；預設的 `fake` 只讀 `model` 是 `"fake"` 的資料。所以你的分支合併之後，demo（`start.bat` 或 compose）要設 `ATTRIBUTES_MODEL=qwen`，才看得到 seed 放進去的屬性
 - 要在容器或 `start.bat` 用 qwen：你的分支合併進來之後，設 `ATTRIBUTES_MODEL=qwen`。容器預設就連主機的 `http://host.docker.internal:8080`，只有要用別的位址時才設 `DOCKER_LLAMA_SERVER_URL`。沒有 GPU 時健康檢查顯示 `cache_only`，只用快取裡的答案
-- 你的 `AttributeDescriber` 只接受 `localhost`、`127.0.0.1`、`::1`、`host.docker.internal` 當 llama-server 的主機；容器設了別的 `DOCKER_LLAMA_SERVER_URL` 時，已經在 `item_cache` 的品名照樣有答案，新的品名一直是待分析（`None`），健康檢查卻仍顯示 `gpu_mode` 為 true。請放寬這個檢查，或把限制寫進文件
+- 你的 `AttributeDescriber` 只接受 `localhost`、`127.0.0.1`、`::1`、`host.docker.internal` 當 llama-server 的主機；容器設了別的 `DOCKER_LLAMA_SERVER_URL` 時，已經在 `item_cache` 的品名照樣有答案，新的品名一直是待分析（`None`），健康檢查卻仍顯示 `gpu_mode` 為 true。請放寬這個檢查，或把限制寫進文件（10/18 補上：角色 3 保留了這個主機允許清單，沒有放寬，並寫在 13.11；角色 1 照 13.11 的建議用 `Settings` 建立實例，不合的位址在伺服器載入時就停下來，見 13.13）
 - 合併之後角色 1 會用 `tests/model_contract.check_describe` 對真的模組再驗一次
 
 **給角色 2**
@@ -612,7 +616,7 @@ $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-r
 - 交出時請附 `tests/model_contract.check_classify` 的測試，並把 CPU 版 `torch`、`transformers` 加進 `requirements-docker.txt`（見 13.9）
 
 **給合併角色 3 分支的人（角色 1）**
-- 合併之後 `Backends.attributes_version` 是必填：角色 3 的 `src/api/seed.py` 自己建的 `Backends(...)`（第 152 行附近）沒有傳它，不補的話每次呼叫 seed 都會 `TypeError`（`python -m src.api.seed` 會直接出錯；`start.bat` 10/18 起只印一行「示範帳號沒有更新」，繼續啟動伺服器，但假用戶不會更新）。其他要改的照下面的清單做
+- 合併之後 `Backends.attributes_version` 是必填：角色 3 的 `src/api/seed.py` 自己建的 `Backends(...)`（第 152 行附近）沒有傳它，不補的話每次呼叫 seed 都會 `TypeError`（`python -m src.api.seed` 會直接出錯；`start.bat` 10/18 起只印一行「示範帳號沒有更新」，繼續啟動伺服器，但假用戶不會更新）。其他要改的照下面的清單做（10/18 補上：角色 3 已在 6065c8c 補上 `attributes_version=`，這一項已經沒有事要做）
 
 **合併當天的清單（角色 1 負責）**
 1. 把預設換成 `ATTRIBUTES_MODEL=qwen`：`docker-compose.yml` 改成 `${ATTRIBUTES_MODEL:-qwen}`，`.env.example` 的值和註解也跟著改。原因是 seed 的答案以 `MODEL_VERSION` 為鍵，只有 qwen 的服務讀得到；沒有 GPU 時健康檢查顯示 `cache_only`，也就是 service-runtime 規格「無 GPU 模式」情境要的畫面。這兩處在合併之前維持 `fake`，因為沒有角色 3 的模組時，`qwen` 會讓伺服器停下來（10/18 完成：在 `role-1/role3-integration`，見 13.13）

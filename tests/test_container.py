@@ -7,12 +7,13 @@ from pathlib import Path
 from unittest import mock
 
 from sqlalchemy import inspect
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from src.api import container
 from src.api.db import MEMORY, ROOT, init_db, make_engine
+from src.api.jobs import fail_unfinished
 from src.api.settings import Settings
-from src.api.tables import User
+from src.api.tables import Job, User
 from src.receipt.traits import load_context
 
 
@@ -189,7 +190,8 @@ class SeedTests(unittest.TestCase):
         init_db(self.engine)
         self.addCleanup(self.engine.dispose)
         # Patched where the seed lives: container.seed_demo imports it when it runs, so the patch is what it finds.
-        patch = mock.patch("src.api.seed.seed_demo_population", return_value=dict(self.SUMMARY))
+        # autospec: a call that no longer fits the seed's signature fails here instead of passing against a bare mock.
+        patch = mock.patch("src.api.seed.seed_demo_population", autospec=True, return_value=dict(self.SUMMARY))
         self.seed = patch.start()
         self.addCleanup(patch.stop)
 
@@ -232,10 +234,85 @@ class SeedTests(unittest.TestCase):
         self.assertNotIn("\n", logs.records[0].getMessage())
         self.assertIn("disk full", logs.records[0].getMessage())
 
+    def test_a_refusal_as_long_as_one_clash_per_demo_user_is_cut_but_keeps_what_to_do(self):
+        # The seed's real message lists a clash per demo user and ends with what to do; the log keeps head and tail.
+        long_text = ("username demo_001 is held by someone else; " * 60
+                     + "Delete the database file and run the seed again.")
+        self.assertGreater(len(long_text), 2000)
+        self.seed.side_effect = ValueError(long_text)
+        with self.assertLogs("src.api.container", "WARNING") as logs:
+            self.assertIsNone(container.seed_demo(self.engine, demo_mode=True))
+        self.assertEqual(len(logs.records), 1)
+        message = logs.records[0].getMessage()
+        self.assertNotIn("\n", message)
+        self.assertLessEqual(len(message), len("demo users not updated: ") + 160)
+        self.assertIn("ValueError: username demo_001", message)  # the head, with the exception's type
+        self.assertTrue(message.endswith("run the seed again."), message)  # the tail
+
+    def test_a_refusal_without_a_message_still_names_what_went_wrong(self):
+        self.seed.side_effect = ValueError()
+        with self.assertLogs("src.api.container", "WARNING") as logs:
+            self.assertIsNone(container.seed_demo(self.engine, demo_mode=True))
+        self.assertEqual(len(logs.records), 1)
+        self.assertEqual(logs.records[0].getMessage(), "demo users not updated: ValueError")
+
+    def test_demo_mode_says_one_info_line_before_the_seed_starts_and_off_says_nothing(self):
+        # The first start seeds 300 people before it serves and used to be silent for that whole time.
+        lines_when_the_seed_ran = []
+
+        def seed(engine, people, context):
+            lines_when_the_seed_ran.append([record.getMessage() for record in logs.records])
+            return dict(self.SUMMARY)
+        self.seed.side_effect = seed
+        with self.assertLogs("src.api.container", "INFO") as logs:
+            container.seed_demo(self.engine, demo_mode=True)
+        self.assertEqual(len(logs.records), 1)
+        self.assertIn("demo users", logs.records[0].getMessage())
+        self.assertEqual(lines_when_the_seed_ran, [[logs.records[0].getMessage()]])  # said before, not after
+        with self.assertNoLogs("src.api.container", "INFO"):
+            container.seed_demo(self.engine, demo_mode=False)
+
+
+class InterruptedFirstStartTests(unittest.TestCase):
+    """The two steps main runs before serving, with the real job clean-up and a real database: a first start stopped
+    during the seed leaves a demo job `running`, and the seed refuses while one exists. Only the seed's population
+    work is replaced (it would write 300 people); it records what the database held when it was called."""
+
+    def setUp(self):
+        self.engine = make_engine(MEMORY)
+        init_db(self.engine)
+        self.addCleanup(self.engine.dispose)
+        with Session(self.engine) as session:
+            user = User(username="demo_001", display_name="示範一號", is_demo=True)
+            session.add(user)
+            session.commit()
+            session.add(Job(user_id=user.id, month="2026-01", status="running", message="分析中"))
+            session.commit()
+        self.unfinished_at_call = []
+
+        def seed(engine, people, context):
+            with Session(engine) as session:
+                self.unfinished_at_call.append(
+                    len(session.exec(select(Job).where(col(Job.status).in_(("queued", "running")))).all()))
+            return {"users": 300, "added_users": 0, "skipped": False}
+        patch = mock.patch("src.api.seed.seed_demo_population", autospec=True, side_effect=seed)
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def test_the_seed_is_not_called_over_a_job_the_stopped_start_left_running(self):
+        container.seed_demo(self.engine, True)
+        self.assertEqual(self.unfinished_at_call, [1])  # without the clean-up the real seed refuses here
+        fail_unfinished(self.engine)
+        container.seed_demo(self.engine, True)
+        self.assertEqual(self.unfinished_at_call, [1, 0])  # as main runs them: the clean-up first, then the seed
+        with Session(self.engine) as session:
+            job = session.exec(select(Job)).one()
+            self.assertEqual(job.status, "failed")
+
 
 class MainTests(unittest.TestCase):
-    """container.main() with nothing real: a temp folder for /data, an in-memory database, and no download, seeding
-    or server (each replaced by a recorder). os.environ is restored afterwards."""
+    """container.main() with nothing real: a temp folder for /data, an in-memory database, and no download, job
+    clean-up, seeding or server (each replaced by a recorder). os.environ is restored afterwards."""
     SETTINGS = ("JWT_SECRET", "JWT_EXPIRE_MINUTES", "DEMO_MODE", "DATABASE_URL", "LLAMA_SERVER_URL", "CATEGORY_MODEL",
                 "ATTRIBUTES_MODEL", "CATEGORY_MIN_PROB", "CATEGORY_MODEL_DIR", "CATEGORY_MODEL_REPO",
                 "CATEGORY_MODEL_REVISION")
@@ -250,6 +327,7 @@ class MainTests(unittest.TestCase):
                     "CATEGORY_MODEL_REVISION": "abc123"}
         for patch in (mock.patch.object(container, "DATA", self.data),
                       mock.patch.object(container, "ensure_category_model", side_effect=self.ensure),
+                      mock.patch.object(container, "fail_unfinished", side_effect=self.fail_unfinished),
                       mock.patch.object(container, "seed_demo", side_effect=self.seed),
                       mock.patch.object(container.logging, "basicConfig"),
                       mock.patch("uvicorn.run", side_effect=self.serve)):
@@ -259,6 +337,9 @@ class MainTests(unittest.TestCase):
     def ensure(self, settings):
         self.events.append(("model", os.environ["JWT_SECRET"], settings.category_model_repo))
         return "downloaded"
+
+    def fail_unfinished(self, engine):
+        self.events.append(("fail_unfinished", inspect(engine).has_table("jobs")))
 
     def seed(self, engine, demo_mode):
         self.events.append(("seed", demo_mode, inspect(engine).has_table("users")))
@@ -278,31 +359,48 @@ class MainTests(unittest.TestCase):
         self.assertGreaterEqual(len(secret), 32)
         self.assertEqual(self.events, [
             ("model", secret, "someone/receipt-bert"),  # the secret is already in the environment
+            ("fail_unfinished", True),                  # the tables exist; before the seed, which refuses on a job
             ("seed", True, True),                       # demo mode, and the tables exist
             ("serve", "src.api.main:app", {"host": "0.0.0.0", "port": 8000}, secret)])
 
     def test_a_secret_in_the_environment_is_used_and_nothing_is_kept(self):
         self.run_main(JWT_SECRET="e" * 40)
         self.assertEqual([(event[0], event[1]) for event in self.events[:1]], [("model", "e" * 40)])
-        self.assertEqual([event[0] for event in self.events], ["model", "seed", "serve"])
+        self.assertEqual([event[0] for event in self.events], ["model", "fail_unfinished", "seed", "serve"])
         self.assertEqual(self.events[-1][3], "e" * 40)
         self.assertFalse((self.data / "jwt-secret").exists())
 
     def test_what_the_seed_did_is_one_info_line(self):
         with self.assertLogs("src.api.container", "INFO") as logs:
             self.run_main()
-        self.assertEqual([record.getMessage() for record in logs.records], ["demo users: 300 in all, 300 added"])
+        self.assertEqual([record.getMessage() for record in logs.records],
+                         ["demo users: 300 in all, 300 added, purchases and profiles rewritten"])
         self.summary = {"users": 300, "added_users": 0, "skipped": True}
         with self.assertLogs("src.api.container", "INFO") as logs:
             self.run_main()
         self.assertEqual([record.getMessage() for record in logs.records],
                          ["demo users: 300 in all, 0 added (already complete)"])
 
+    def test_a_repair_that_adds_no_user_still_says_it_rewrote_the_purchases_and_profiles(self):
+        # A stale population (a new MODEL_VERSION, an interrupted seed) is rewritten without a new account: "0 added"
+        # alone would read as if nothing had been written.
+        self.summary = {"users": 300, "added_users": 0, "skipped": False}
+        with self.assertLogs("src.api.container", "INFO") as logs:
+            self.run_main()
+        self.assertEqual([record.getMessage() for record in logs.records],
+                         ["demo users: 300 in all, 0 added, purchases and profiles rewritten"])
+
     def test_a_seed_that_did_not_run_leaves_no_summary_line_and_the_server_still_starts(self):
         self.summary = None  # demo mode off, or the seed refused (which seed_demo already logged as a warning)
         with self.assertNoLogs("src.api.container", "INFO"):
             self.run_main()
-        self.assertEqual([event[0] for event in self.events], ["model", "seed", "serve"])
+        self.assertEqual([event[0] for event in self.events], ["model", "fail_unfinished", "seed", "serve"])
+
+    def test_the_leftover_jobs_are_failed_even_when_demo_mode_is_off(self):
+        # A real user's upload cut short by a stop is as unfinished as a demo job: create_app would fail it a few
+        # seconds later anyway, and the container is the only process on its volume.
+        self.run_main(DEMO_MODE="0")
+        self.assertEqual([event[0] for event in self.events], ["model", "fail_unfinished", "seed", "serve"])
 
     def test_a_bad_setting_stops_it_with_one_line_and_nothing_else_runs(self):
         for name, value in (("JWT_SECRET", "too short"), ("CATEGORY_MODEL", "nope"),

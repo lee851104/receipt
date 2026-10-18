@@ -8,7 +8,7 @@
 |---|---|
 | 1 空白品名契約 | overview第6節明列非空白字串；保留BERT的ValueError。上傳略過空白明細由角色1 followups處理，角色2沒有改invoices.py。 |
 | 2 BERT遠端model來源 | Settings.from_env對bert＋非空repo＋type=model明確拒絕，容器在下載前一行退出；有效Space及無repo本機設定仍可用。test_container只更新MainTests舊環境fixture，不改原本啟動順序斷言。 |
-| 3 過期文件 | 更新overview第4節、第5.10節、第6節與公開範圍決定；第13.11節改寫並移至13.10前。design/proposal歸角色1，替換文字見下方。 |
+| 3 過期文件 | 更新overview第4節、第5.10節、第6節與公開範圍決定；第13.11節改寫並移至13.10前；角色2交付、第10節隱私及舊交接的公開權重敘述也一併更正。design/proposal歸角色1，替換文字見下方。 |
 | 4 鎖範圍 | 改為逐批取得與釋放鎖；測試5筆／batch2，釋放時已完成批次數為1、2、3。不保證鎖排程公平或即時延遲上限。 |
 | 5 內部原因碼 | 本輪未實作。保留對外固定category_model_unavailable；固定、去識別的內部原因碼可另案加入並驗證不含路徑、輸入或秘密。 |
 | 6 真ML小測試 | 新增隨機小型BERT與虛構tokenizer的離線CPU實載測試，檢查並行、長文字截斷、缺分類head拒絕；缺少ML套件時跳過。無網路下載，沒有真實品名。 |

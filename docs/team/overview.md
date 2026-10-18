@@ -415,7 +415,7 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
 ### 角色 2：分類模型
 
 - **負責：** 生成假品名、分配真實品名的複核、TF-IDF / embedding / BERT 三個模型的訓練與比較
-- **交出：** `src/ml/category.py` 的 `classify()`；比較表（macro-F1、準確率、模型大小、速度）；混淆矩陣；概念說明的「迴歸」段落；第 3 週把 BERT 模型公開到 Hugging Face（固定版本，附模型卡）
+- **交出：** `src/ml/category.py` 的 `classify()`；比較表（macro-F1、準確率、模型大小、速度）；混淆矩陣；概念說明的「迴歸」段落；BERT維持受保護Hugging Face來源（固定revision與SHA256，附模型說明；10/18依使用者決定更新）
 - **先讀：** `experiments/category-models/README.md`、`RESULTS.md`、`RESULTS-B.md`、`LABELING.md`、`docs/category-models-brief.md`、`configs/report.json`
 - **每週：**
   1. 稀少類別生成假品名，每類補到至少 50 個，存成 `datasets/synthetic/item-names.jsonl`（`name`、`category`、`source="synthetic"`）；整理真實品名測試集（只留在本機）
@@ -479,7 +479,7 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
 - 真實品名只能用本機模型處理，不可以貼到雲端 AI 或線上服務；假品名可以
 - 評估報告只放數字，逐筆結果留在本機
 - 配對時，對方會看到你每個訊號買最多次的品名（去掉地名後，見 5.8），但看不到店家、日期和每一筆的金額（連線圖的花費彙總值除外，見 5.8）
-- BERT 分類模型的權重會公開在 Hugging Face。模型卡要寫明訓練資料包含真實品名，但資料本身不公開
+- BERT分類模型權重維持受保護Hugging Face來源，不公開。模型說明須寫明訓練資料包含真實品名，但資料本身不公開（10/18依使用者決定更新）
 
 ## 11. 評估要交出的東西
 
@@ -594,7 +594,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 **給角色 2**
 - 交出 BERT（任務 3.6）時：把 CPU 版的 `torch`、`transformers` 加進 `requirements-docker.txt`（用 PyTorch 的 CPU index），模型存成 `save_pretrained` 的格式（資料夾裡要有 `config.json`）。`CATEGORY_MODEL=bert` 在接上之前一律回報 `unavailable`
-- 公開模型（任務 3.9）後，把 repo 和 revision 給角色 1，填進 `.env.example` 和 `docker-compose.yml` 的預設值
+- 原10/16的公開模型計畫已由受保護來源政策取代（任務3.9；10/18更正）：把repo、完整revision與SHA256交給角色1，採CATEGORY_MODEL_REPO_TYPE=space及runtime唯讀secret；預設fake與空repo保留，真BERT按第13.11節顯式設定
 
 **給角色 3**
 - 容器啟動時，資料庫是空的而且 `DEMO_MODE=1` 才匯入假用戶（`container.seed_if_empty`，用的是 `seed.seed_demo_users`）。任務 4.7 擴充 seed 之後，請讓容器也走同一個函式，品項和 profile 才會一起進去

@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-18",
+  "base_commit": "4c5bdb10d225d4e3a4a00676b524d68dd592b4c8",
+  "changed_names": 3,
+  "unchanged_names": 597,
+  "synthetic_total": 600,
+  "per_category": {
+    "0": 60,
+    "1": 60,
+    "2": 60,
+    "3": 60,
+    "4": 60,
+    "5": 60,
+    "6": 60,
+    "7": 60,
+    "8": 60,
+    "9": 60
+  },
+  "changed_subtypes": [
+    {
+      "category": 2,
+      "subtype": "麵包",
+      "style": "descriptive"
+    },
+    {
+      "category": 3,
+      "subtype": "肉蛋豆魚",
+      "style": "descriptive"
+    },
+    {
+      "category": 6,
+      "subtype": "汽油柴油",
+      "style": "descriptive"
+    }
+  ],
+  "receipt_style_per_category": 18,
+  "subtypes_per_category": 6,
+  "names_per_subtype": 10,
+  "generator_byte_reproduction": true,
+  "before_sha256": "792c7fb100079ae3f46d333493b4036abf3425d5a4d8f70bd4e2e982b85df61d",
+  "after_sha256": "8c25b4de341ea1a24422af77caeb04a815aa0c7cdc847f38854896dbd92b186a",
+  "audit": {
+    "invoice_files": 14,
+    "raw_reference_strings": 833,
+    "normalized_reference_strings": 832,
+    "minimum_reference_length": 4,
+    "exclude_demo_prefix": true,
+    "normalized_exact_matches_before": 0,
+    "normalized_exact_matches_after": 0,
+    "public_text_matches_before": 6,
+    "public_text_matches_after": 0,
+    "public_text_files": 2
+  },
+  "tests": {
+    "synthetic_names": 5,
+    "audit_synthetic": 4,
+    "dataset_split": 11,
+    "passed": 20
+  },
+  "model_retrained": false,
+  "test_split_accessed": false,
+  "existing_split_files_modified": false
+}

@@ -253,3 +253,10 @@ Where the cover lives (matters for CI)
 仍然沒有紀錄的：service-runtime「沒有顯示卡的電腦」「乾淨的電腦」（要另一台電腦）、「連到主機的模型服務」（容器連主機的 llama-server：這台電腦的 llama-server 只開在 127.0.0.1，今天只在虛擬環境驗過 GPU 模式）、model-evaluation 只在 `experiments/` 測試裡的三個情境（CI 不跑）。
 
 另外：上傳兩個月份的 CSV 時，API 的 `message` 是英文的 `Expected one month per CSV`，網頁顯示「發票檔案格式不符。」後面接這句英文。這是 overview 13.3 給角色 4 的轉告（「400 `invalid_csv` 顯示 `message`（英文…）」）與第 5.4 節定下的做法，符合 web-app 規格「這類系統訊息」；要改成全中文得一起改契約、v1 的命令列訊息和測試，目前不改。
+
+## 2026-10-19 補上的自動測試與發現
+
+- service-runtime「打開文件頁」：`tests/test_api_pages.py::test_the_docs_list_every_endpoint_overview_section_5_names`（demo 模式的 `/openapi.json` 正好是第 5 節的 17 個路由）
+- service-runtime「不認得的模型名稱」：`tests/test_api_settings.py::test_the_message_lists_the_model_names_that_work`（訊息列出 fake, tfidf, embedding, bert 與 fake, qwen，而且只有一行）
+- web-app「建置 v2」：`tests/test_v1_unchanged.py`（`invoice-insights.html` 與 `src/web/` 的內容和檔案清單都要和 `tests/fixtures/v1-files.json` 一致；故意改 v1 時要同一個提交更新它）
+- service-runtime「面試官第一次啟動」：`tests/test_demo_first_start.py` 用容器的 `seed_demo` 放入 300 位示範帳號，相近清單通過；**互補清單不符規格**：300 位中有 125 位（第一位「省錢上班族 A」也是）沒有 −10% 以下的人，互補清單是空的，所以那個測試標成 expectedFailure。要修得改角色 3 的示範人物（讓每一型都有相反的人）或配對門檻，待使用者與角色 3 決定

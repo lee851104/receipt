@@ -39,6 +39,14 @@ class SettingsTests(unittest.TestCase):
             with self.subTest(key=key), self.assertRaisesRegex(ValueError, key):
                 Settings.from_env({"JWT_SECRET": SECRET, key: "gpt"})
 
+    def test_the_message_lists_the_model_names_that_work(self):
+        # service-runtime 「不認得的模型名稱」: the one line says which values are accepted, not only that one is wrong.
+        for key, names in (("CATEGORY_MODEL", "fake, tfidf, embedding, bert"), ("ATTRIBUTES_MODEL", "fake, qwen")):
+            with self.subTest(key=key), self.assertRaises(ValueError) as caught:
+                Settings.from_env({"JWT_SECRET": SECRET, key: "gpt"})
+            self.assertIn(names, str(caught.exception))
+            self.assertNotIn("\n", str(caught.exception))
+
     def test_a_database_other_than_plain_sqlite_stops_the_server(self):
         for url in ("postgresql://localhost/app", "sqlite+pysqlite:///data/app.db", "sqlite://foo",
                     "postgresql://amy:secret@localhost/app"):

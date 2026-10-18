@@ -183,6 +183,7 @@
   document.addEventListener('click',event=>{if(!$('settings-menu').contains(event.target))closeSettings();});
   document.addEventListener('keydown',event=>{if(event.key==='Escape')closeSettings(true);});
   $('settings-menu').addEventListener('focusout',event=>{if(!$('settings-menu').contains(event.relatedTarget))closeSettings();});
+  for(const button of document.querySelectorAll('[data-months-open]'))button.addEventListener('click',()=>closeSettings());
   $('switch-account').addEventListener('click',()=>closeSettings());
   $('explain-details').addEventListener('toggle',()=>{
    if($('explain-details').open&&!$('explain-details').hidden){

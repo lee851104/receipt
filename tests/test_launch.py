@@ -1,4 +1,6 @@
 """What start.bat runs: a .env when there is none, the demo users, the pages opened once the server answers."""
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -60,6 +62,62 @@ class MainTests(unittest.TestCase):
                 mock.patch("uvicorn.run", lambda app, **options: calls.append(("serve", app, options))):
             launch.main(root)
         self.assertEqual(calls, ["env", "seed", "open", ("serve", "src.api.main:app", {"host": "127.0.0.1", "port": 8000})])
+
+
+class DemoSeedRefusesTests(unittest.TestCase):
+    """Demo users are optional: a seed that stops must not keep a person's own accounts and data from starting."""
+
+    def launch(self, seed):
+        """What main did, in order, and what it printed, when the demo seed is the given function."""
+        calls, printed = [], io.StringIO()
+        with mock.patch.object(launch, "ensure_env", lambda path: calls.append("env") or False), \
+                mock.patch.object(launch, "seed_demo", seed), \
+                mock.patch.object(launch, "open_in_background", lambda: calls.append("open")), \
+                mock.patch("uvicorn.run", lambda app, **options: calls.append("serve")), \
+                contextlib.redirect_stdout(printed):
+            launch.main(Path(tempfile.mkdtemp()))
+        return calls, printed.getvalue()
+
+    def seed_raising(self, error):
+        def seed():
+            raise error
+        return seed
+
+    def test_a_seed_that_exits_with_a_message_prints_one_line_and_the_server_still_starts(self):
+        calls, printed = self.launch(self.seed_raising(SystemExit("error: demo_001 is 'x' in the database")))
+        self.assertEqual(calls, ["env", "open", "serve"])
+        self.assertEqual(printed, "示範帳號沒有更新：error: demo_001 is 'x' in the database；伺服器照常啟動\n")
+
+    def test_a_seed_that_fails_otherwise_prints_its_type_and_message_and_the_server_still_starts(self):
+        calls, printed = self.launch(self.seed_raising(RuntimeError("a later seed broke")))
+        self.assertEqual(calls, ["env", "open", "serve"])
+        self.assertEqual(printed, "示範帳號沒有更新：RuntimeError: a later seed broke；伺服器照常啟動\n")
+
+    def test_the_reason_is_one_short_line_without_a_traceback(self):
+        reasons = [SystemExit(1), SystemExit(), RuntimeError(), ValueError("first\nsecond\n  third"),
+                   SystemExit("error: " + "demo_001 is not who it should be; " * 40)]
+        for error in reasons:
+            with self.subTest(error=repr(error)[:40]):
+                _, printed = self.launch(self.seed_raising(error))
+                self.assertEqual(len(printed.splitlines()), 1)
+                self.assertTrue(printed.startswith("示範帳號沒有更新：") and printed.endswith("；伺服器照常啟動\n"))
+                self.assertLess(len(printed), 300)
+                self.assertNotIn("Traceback", printed)
+        self.assertIn("ValueError: first second third；", self.launch(self.seed_raising(reasons[3]))[1])
+
+    def test_ctrl_c_during_the_seed_still_stops_the_launch(self):
+        calls = []
+        with mock.patch.object(launch, "ensure_env", lambda path: False), \
+                mock.patch.object(launch, "seed_demo", self.seed_raising(KeyboardInterrupt())), \
+                mock.patch.object(launch, "open_in_background", lambda: calls.append("open")), \
+                mock.patch("uvicorn.run", lambda app, **options: calls.append("serve")), \
+                self.assertRaises(KeyboardInterrupt):
+            launch.main(Path(tempfile.mkdtemp()))
+        self.assertEqual(calls, [])
+
+    def test_a_seed_that_works_prints_no_warning(self):
+        calls, printed = self.launch(lambda: None)
+        self.assertEqual((calls, printed), (["env", "open", "serve"], ""))
 
 
 if __name__ == "__main__":

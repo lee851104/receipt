@@ -1,5 +1,6 @@
-"""What start.bat runs: a .env with a fresh secret when there is none, the demo users, the v2 pages opened in the
-browser once the server answers, and the server itself on this computer only. Run from the repository root:
+"""What start.bat runs: a .env with a fresh secret when there is none, the demo users (when they cannot be put in, a
+one-line warning and the server starts anyway), the v2 pages opened in the browser once the server answers, and the
+server itself on this computer only. Run from the repository root:
 
     .venv/Scripts/python.exe -m src.api.launch
 """
@@ -59,10 +60,27 @@ def seed_demo():
     seed.main()
 
 
+def reason_for(error, limit=160):
+    """One short line on why a seed stopped: SystemExit's message (seed.main's "error: ..."), else the exception's
+    type and message. No traceback; a long message (one clash per demo user) is cut."""
+    if isinstance(error, SystemExit):
+        text = error.code if isinstance(error.code, str) else "the seed stopped"
+    else:
+        text = f"{type(error).__name__}: {error}" if str(error) else type(error).__name__
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[:limit - 1] + "…"
+
+
 def main(root=ROOT):
     if ensure_env(root):
         print("已建立 .env（含一組新的 JWT_SECRET）；要改設定請編輯 .env 後重新啟動")
-    seed_demo()
+    # The demo users are optional: a seed that refuses (a bad setting, a database that no longer matches the demo list)
+    # or breaks must not keep a person's own accounts and data from starting. A bad setting stops the server itself,
+    # when the app loads it. SystemExit is no Exception, so it is named; Ctrl+C (KeyboardInterrupt) still stops here.
+    try:
+        seed_demo()
+    except (SystemExit, Exception) as error:
+        print(f"示範帳號沒有更新：{reason_for(error)}；伺服器照常啟動")
     open_in_background()
     import uvicorn
     uvicorn.run("src.api.main:app", host=HOST, port=PORT)

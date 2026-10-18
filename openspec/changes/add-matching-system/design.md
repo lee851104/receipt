@@ -60,7 +60,7 @@
 
 ### D3. 配對在每次查詢時即時計算
 
-拿 `profiles` 裡所有人的向量逐一跑 `similarity.compare`（300 人 × 18 格不到 1 秒），再套用 `configs/traits.json` 的門檻和 `places` 的距離。計算過程直接使用 `compare` 回傳的 `parts`，另外補上分母的各項，所以「貢獻加總 = 分數」一定成立；關係圖的資料用現有的 `build.trait_network_data`，品名經過 `items.label` 去掉地名（overview 5.8）。前端只負責顯示，不再自己算分數。門檻用整數百分比判斷，和 v1 的 `src/web/match-filter.js` 同一套；清單的排名在 `src/api/matching.py`（`entries` 打分數、`pick` 判斷門檻、距離、排序和前 5 名），配對驗證（任務 4.9）也用它，不另寫一份。（10/16 補上）
+拿 `profiles` 裡所有人的向量逐一跑 `similarity.compare`（300 人 × 18 格不到 1 秒），再套用 `configs/traits.json` 的門檻和 `places` 的距離。計算過程直接使用 `compare` 回傳的 `parts`，另外補上分母的各項，所以「貢獻加總 = 分數」一定成立；關係圖的資料用現有的 `build.trait_network_data`，品名經過 `items.label` 去掉地名（overview 5.8）。前端只負責顯示，不再自己算分數。門檻用整數百分比判斷，和 v1 的 `src/web/match-filter.js` 同一套；清單的排名在 `src/api/matching.py`（`entries` 打分數、`pick` 判斷門檻、距離、排序和前 5 名），配對驗證（任務 4.9）也用它，不另寫一份。（10/16 補上）計算過程的關係圖資料在查詢時用兩人存著的品項和屬性快取當場算（`profiles.history` + `traits.explain`，不問模型、不寫入），關係圖整個用查詢時算出的品味（向量、push、訊號、品名），所以 push 加起來等於向量；`cells` 和分數用存起來的向量，和配對清單一致，兩者只在重算還沒跑的時候暫時不同。（10/16 補上）
 
 - 替代方案：預先算好所有配對並存起來。否決，因為 300 × 300 約 9 萬筆，每次有人上傳就要全部重算。
 
@@ -74,11 +74,11 @@
 3. 用這個人所有月份的資料重算 18 格，存進 `profiles`
 4. 工作改成 `done`
 
-待分析的品名，在 GPU 恢復後重新上傳同一個月份就會補算；GPU 模式下即時分類遇到新品名，會另外排一個背景分析（用 `BackgroundTasks`，不經過上傳的工作執行緒，免得等一整個上傳），同一個品名還在分析時再問不會重複排。服務重啟時，還在跑的工作標成 `failed`，請使用者重傳。
+待分析的品名，在 GPU 恢復後重新上傳同一個月份就會補算；GPU 模式下即時分類遇到新品名，會另外排一個背景分析（用 `BackgroundTasks`，不經過上傳的工作執行緒，免得等一整個上傳），同一個品名還在分析時再問不會重複排。服務重啟時，還在跑的工作標成 `failed`，請使用者重傳；每個真實使用者的 profile 也排進同一條背景執行緒重算一次（只讀品項和屬性快取，不問模型；假用戶不能刪月份，所以不算），因為刪月份之後排隊的重算只存在記憶體裡，重啟就不見了（10/16 補上）。
 
 一次只跑一個工作：每個行程有一條專用的工作執行緒，從佇列依上傳順序（先進先出）一個一個跑，不使用回應請求的執行緒池，所以排隊的工作再多，其他 API 照常回應。上傳的請求在 commit 之後只把工作編號放進佇列；等待中的工作只是佇列裡的編號，保持 `queued`，不佔資料庫連線，也不佔執行緒。這條執行緒是 daemon：停止服務時行程不等它跑完，還在跑的工作在下次啟動時標成 `failed`。只跑一個是因為只有一個 llama-server、SQLite 只有一個寫入者，第 3 步重算品味向量也需要不被打斷；因此伺服器只能開一個行程。請求的資料庫連線在路由結束時就關閉，不會陪著背景工作。為了讓工作的時間有上限，請求本體在讀取之前就依 `Content-Length` 檢查大小（超過回 413，沒有長度回 411），一個月最多 2000 筆明細；工作裡任何例外都把工作標成 `failed`，工作已經被刪掉（帳號刪除）時直接結束。
 
-- 替代方案：服務啟動時自動補算所有待分析品名。否決，因為重新上傳就能做到同樣的事，不必在每次啟動時另外排一批工作。
+- 替代方案：服務啟動時自動問模型，補算所有待分析的品名。否決，因為重新上傳同一個月份就能做到同樣的事，不必在每次啟動時替所有人排一批會呼叫模型的工作。啟動時的重算和這個方案不同：它只讀已存的品項和屬性快取，不問模型（10/16 補上）
 - 替代方案：用 FastAPI 的 `BackgroundTasks` 執行工作，再用一把鎖讓工作一個一個跑。否決，因為等鎖的工作各佔一條回應請求的執行緒（預設共 40 條），排隊的上傳一多，整個 API 就停住；鎖也不保證先上傳的先跑，停止服務時還要等所有排隊的工作。
 
 - 替代方案：Celery + Redis。否決，因為多一個服務要裝，在 Windows 上支援又差。
@@ -93,7 +93,7 @@
 
 ### D6. 屬性來源的接法
 
-`src/ml/attributes.describe_items(names)` 回傳 23 個欄位，或 `None`（待分析）。屬性接入以角色 1 的 `attributes.from_model` 為準（10/16 使用者決定；角色 3 分支上的 `attributes.describe(external=...)` 會移除）。品味計算（`signals.gather`／`measure`、`traits.explain`）多一個 `attributes` 參數，內容是 `{品名: 23 個欄位或 None}`；給了就用 `attributes.from_model(row, channel, fields, vocabulary)` 把它換成 `describe` 同樣的 17 個答案，不給就照舊用 `describe`。重算 profile 時屬性只讀 `item_cache`（目前的屬性模型），不問模型，快取裡沒有的品名就是待分析。換算規則（10/15 決定）：
+`src/ml/attributes.describe_items(names)` 回傳 23 個欄位，或 `None`（待分析）。屬性接入以角色 1 的 `attributes.from_model` 為準（10/16 使用者決定；角色 3 分支上的 `attributes.describe(external=...)` 會移除）。品味計算（`signals.gather`／`measure`、`traits.explain`）多一個 `attributes` 參數，內容是 `{品名: 23 個欄位或 None}`；給了就用 `attributes.from_model(row, channel, fields, vocabulary)` 把它換成 `describe` 同樣的 17 個答案，不給就照舊用 `describe`。重算 profile 時屬性只讀 `item_cache`（目前的屬性模型），不問模型，快取裡沒有的品名就是待分析。快取的鍵是屬性模型的版本（`src/ml/attributes.MODEL_VERSION`；fake 模式是 `"fake"`），換版本後舊答案不再使用，在 `fake` 和 `qwen` 之間切換也一樣：服務啟動時的重算會用新的鍵底下（大多是空的）的快取重做真實使用者的 profile，他們的屬性特徵變成待分析，要等有 GPU 時重新上傳才補得回來；假用戶要重跑 seed（10/16 補上）。換算規則（10/15 決定）：
 
 - 店家通路 `channel_of` 照舊用規則，不交給 LLM；7 個基本旗標先不用，類別仍然來自分類模型
 - **類別是已知的事實**：問題只在自己的類別門檻內才用模型的值，門檻外一律是 `False`（不適用），模型的 `null` 在門檻內保持 `null`。門檻照舊：`clearance` 只看食物、`quick` 只看正餐、`cooking` 只看生鮮、`kitchen` 只看生鮮和日用品、`sport_gear`／`car_care`／`home`／`stationery` 只看非食物（已確認的類別 4–9）
@@ -142,14 +142,14 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 - 錯誤一律是 `{"detail": "<代碼>"}`，由 `ApiError` 統一產生；422 保留 FastAPI 的格式但不回傳被拒絕的輸入（可能是密碼），程式出錯回 500 `internal_error`，細節只留在伺服器的紀錄
 - `DEMO_MODE=1` 時才有 demo 名單和快速切換，而且只能切換成假用戶；`user_id` 只接受 1 到 2^63−1 的 JSON 整數；`DEMO_MODE` 關掉之後，假用戶的權杖立刻失效
 - `token_key` 在建立帳號時產生。驗證權杖時，帳號必須存在，權杖裡的 `key` 必須等於帳號現在的 `token_key`。第 1 週就為了一件事用到它：帳號刪除後 SQLite 會把同一個 id 給新帳號，但新帳號的 `token_key` 不同，舊帳號的權杖不會變成新帳號的
-- 帳號管理上線時，登出和改密碼都只做一件事：換掉這個帳號的 `token_key`，所以這個帳號所有裝置上的舊權杖都會一起失效。改密碼的回應附上用新 key 簽發的權杖
+- 帳號管理上線時，登出和改密碼都只做一件事：換掉這個帳號的 `token_key`，所以這個帳號所有裝置上的舊權杖都會一起失效。改密碼的回應附上用新 key 簽發的權杖。假用戶例外：它是切換成它的所有人共用的，登出不換 key，只由瀏覽器丟掉自己的權杖，免得一個人登出就把其他人都登出（10/16 補上）
 
 - 替代方案：用 session cookie 或第三方登入。否決，因為前者要另外處理 CSRF，後者要在外部服務設定帳號。
 - 登出的替代方案：只讓前端丟掉權杖（舊權杖在 1 天內仍然有效），或另開一張表記錄撤銷的權杖（多一張表，也要定期清理），或權杖帶 `iat`、`users` 加 `tokens_valid_after` 欄位再比較簽發時間（多一個欄位，而且 `iat` 只到秒，同一秒內簽發的新舊權杖分不出來）。都否決，改用 `token_key`：它已經存在，不加表也不加欄位，就能真正從伺服器端登出，代價是會登出所有裝置。
 
 ### D8a. 設定項目
 
-名稱和預設值見 overview 5.10：`JWT_SECRET`、`JWT_EXPIRE_MINUTES`、`DEMO_MODE`、`DATABASE_URL`、`LLAMA_SERVER_URL`、`CATEGORY_MODEL`、`ATTRIBUTES_MODEL`、`CATEGORY_MIN_PROB`，以及 10/15 為 Docker 補上的 `CATEGORY_MODEL_DIR`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`。由 `src/api/settings.py` 的 `Settings.from_env()` 讀取並檢查：留空等於預設值；密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不認得時，服務啟動時停下來，用一行訊息指出變數名稱。`src/ml/` 還沒有真的模型之前，`CATEGORY_MODEL` 和 `ATTRIBUTES_MODEL` 只有 `fake` 能用（`backends.load_backends` 會擋下其他值），接上真的模型時它要一起改。
+名稱和預設值見 overview 5.10：`JWT_SECRET`、`JWT_EXPIRE_MINUTES`、`DEMO_MODE`、`DATABASE_URL`、`LLAMA_SERVER_URL`、`CATEGORY_MODEL`、`ATTRIBUTES_MODEL`、`CATEGORY_MIN_PROB`，以及 10/15 為 Docker 補上的 `CATEGORY_MODEL_DIR`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`。由 `src/api/settings.py` 的 `Settings.from_env()` 讀取並檢查：留空等於預設值；密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不認得時，服務啟動時停下來，用一行訊息指出變數名稱。能啟動的值：`CATEGORY_MODEL` 是 `fake` 或 `bert`（`bert` 還沒接上，模型一律是 `unavailable`），`ATTRIBUTES_MODEL` 是 `fake` 或 `qwen`（`qwen` 要有角色 3 的 `src/ml/attributes.py`，沒有時用一行訊息停下來）；`backends.load_backends` 會擋下其他值（10/16 改寫）。
 
 ### D9. 前端
 
@@ -175,7 +175,7 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 
 - Python 測試沿用 unittest（`python -m unittest discover -s tests`），JS 測試用 `node --test "tests/*.test.cjs"`
 - API 測試用 Starlette 的 TestClient（需要 `httpx2`）加上記憶體 SQLite，模型一律用 `src/ml/fakes.py`（`CATEGORY_MODEL=fake`、`ATTRIBUTES_MODEL=fake`），不需要 GPU
-- GitHub Actions 在 push 和 PR 時，用 Python 3.12 和 Node 24 執行全部測試，再執行一次 `docker build`（只建置，不下載模型）
+- GitHub Actions 在 push 和 PR 時，用 Python 3.12 和 Node 24 執行全部測試，再執行一次 `docker build`、檢查映像檔裡沒有私人檔案，並用 `docker compose up` 啟動一次，確認健康檢查回報 demo 模式、假用戶名單不是空的（compose 預設是 `fake`，不下載模型）
 
 - 替代方案：改用 pytest。否決，因為現有 77 個測試和第 1 週計畫都是 unittest，不需要多一套工具。
 
@@ -191,23 +191,23 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 
 端點和錯誤代碼見 overview 5.11（`/api/me`、`/api/me/password`、`/api/me/months/{month}`、`/api/auth/logout`）。資料表和欄位都不增加：`users.token_key` 第 1 週就有了，登出和改密碼靠它（見 D8）。
 
-- **刪除帳號**在一個交易裡依序刪除：`items` → `jobs` → `profiles` → `users`，最後刪掉 `item_cache` 裡已經沒有任何 `items` 用到的品名。帳號刪除後，權杖查不到使用者，自然回應 401 `not_authenticated`。這個人還有 `queued` 或 `running` 的工作時回 409 `job_in_progress`，和刪除月份一樣，免得執行中的工作在刪除之後又把品名寫進快取
-- **刪除月份**：先確認那個月份沒有 `queued` 或 `running` 的工作，再刪除那個月的 `items` 和 `jobs`，然後重算品味向量；快取的清理方式和刪除帳號相同
+- **刪除帳號**在一個交易裡依序刪除：`items` → `jobs` → `profiles` → `users`，最後刪掉 `item_cache` 裡這個人的品項用過、而且已經沒有任何 `items` 用到的品名（只在即時分類框查過的品名沒有記錄是誰查的，不會被刪）。帳號刪除後，權杖查不到使用者，自然回應 401 `not_authenticated`。這個人還有 `queued` 或 `running` 的工作時回 409 `job_in_progress`，和刪除月份一樣，免得執行中的工作在刪除之後又把品名寫進快取。檢查之前先換掉 `token_key` 並寫進資料庫，取得 SQLite 的寫入鎖，上傳就無法在檢查和刪除之間插進來；回 409 時整個交易撤回，舊權杖照常可用。每條資料庫連線都開著 `secure_delete`，刪掉的資料會在檔案裡被覆寫，不只是標成空位。WAL 檔（`app.db-wal`）裡的舊頁要等被覆寫或 checkpoint 之後才消失（10/16 補上）
+- **刪除月份**：先刪除那個月的 `items`（這一步取得 SQLite 的寫入鎖，上傳就無法在檢查和刪除之間插進來），再確認那個月份沒有 `queued` 或 `running` 的工作（有的話整個交易撤回，回 409），然後刪除那個月的 `jobs`，再重算品味向量；快取的清理方式和刪除帳號相同。重算不在請求裡做，而是用 `jobs.Worker.call` 排進上傳任務的同一條背景執行緒，排在已經排隊的上傳後面，所以同一個人的 profile 不會同時被兩個地方寫；重算還在排隊時帳號被刪掉，重算就什麼都不做。刪除規則集中在 `src/api/accounts.py`。重算跑完之前 `/api/me/profile` 的 `recomputing` 是 true；服務在重算跑之前重啟的話，啟動時會再排一次（見 D4）。（10/16 補上）
 - **假用戶**（`is_demo`）的修改、刪除和上傳發票一律回 403 `demo_user_read_only`，而且這個檢查要在比對密碼之前；登出照常可用
 
 - 替代方案：資料表加 `deleted_at`，只做「軟刪除」。否決，因為使用者要求刪除時就應該真的刪掉，軟刪除還得另外處理「刪除後的資料不能出現」的所有查詢。
 
 ### D14. Docker
 
-- 一個映像檔，以 `python:3.12-slim` 為基底，只裝服務需要的套件（含 CPU 版 torch）
+- 一個映像檔，以 `python:3.12-slim` 為基底，只裝服務需要的套件：目前只裝 `requirements.txt` 和 `requirements-docker.txt`（`huggingface_hub`）；CPU 版 `torch`、`transformers` 等角色 2 交出 BERT（任務 3.6）時才加（10/16 改寫）
 - `docker-compose.yml` 只有一個服務，兩個 volume：一個放 SQLite 資料庫，一個放下載的模型
 - 啟動流程：
-  1. 讀設定
-  2. `CATEGORY_MODEL=bert` 而且 `CATEGORY_MODEL_DIR`（在模型 volume 裡）沒有模型時，用 `huggingface_hub` 下載 `CATEGORY_MODEL_REPO` 在 `CATEGORY_MODEL_REVISION` 的版本
+  1. 讀設定（`JWT_SECRET` 沒設時用資料 volume 裡的 `/data/jwt-secret`，第一次啟動時產生）（10/16 補上）
+  2. `CATEGORY_MODEL=bert` 而且 `CATEGORY_MODEL_DIR`（在模型 volume 裡）沒有模型時，用 `huggingface_hub` 下載 `CATEGORY_MODEL_REPO` 在 `CATEGORY_MODEL_REVISION` 的版本（只有容器下載；`start.bat` 和直接跑 `uvicorn` 都不下載）（下載到暫存資料夾，完整之後才改名；失敗時服務照樣啟動，健康檢查顯示 `unavailable`）（10/16 補上）
   3. 資料庫是空的且 `DEMO_MODE=1` 時，執行和 `python -m src.api.seed` 相同的匯入
   4. 用 uvicorn 啟動 `src.api.main:app`
-- 容器預設是無 GPU 模式；`LLAMA_SERVER_URL` 設成 `http://host.docker.internal:8080` 時，就連到主機上的 `llama-server`
-- `.dockerignore` 排除 `rawdata/`、`data/`、`*.csv`、壓縮檔、`.env`、`models/`、`experiments/*/private`、`results`、`outputs`
+- 容器預設是無 GPU 模式；容器的 `LLAMA_SERVER_URL` 預設是 `http://host.docker.internal:8080`，主機上有開 `llama-server` 時就連得到，要連別的位址設 `DOCKER_LLAMA_SERVER_URL`；compose 會把 `ATTRIBUTES_MODEL` 傳進容器（預設 `fake`，10/16 改寫），預設時這個位址只改變 `gpu_mode`；設成 `qwen` 要等角色 3 的 `src/ml/attributes.py`（任務 4.3）合併，沒有時容器用一行訊息停下來，有了之後容器就透過這個位址向主機的 llama-server 問新品名。不直接用 `.env` 的 `LLAMA_SERVER_URL`：compose 會讀根目錄的 `.env`，而 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己（10/16 補上）
+- `.dockerignore` 排除 `.git/`、`.venv/`、`rawdata/`、`data/`、`models/`、`runtime/`、`experiments/`、`prototypes/`、`*.csv`／`*.tsv`／`*.xls`／`*.xlsx`、壓縮檔（`rar`、`zip`、`7z`）、資料庫檔 `*.db`、任何資料夾裡的 `.env` 和 `.env.*`、`results/`、`outputs/`、`src/web/`、`*-data.js`、`invoice-insights-private.html`、`__pycache__/`；映像檔只 COPY `configs/` 和 `src/`，所以即使 `.dockerignore` 漏了什麼，根目錄的私人檔案也進不去（10/16 補上）
 - 組員開發時仍以 `start.bat` 為主；Docker 是給面試官和「乾淨環境驗證」用的
 
 - 替代方案：不做 Docker。否決，因為面試官用一個指令就能跑起來，是作品集很重要的一環。

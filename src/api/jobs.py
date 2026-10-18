@@ -3,12 +3,14 @@ job is done."""
 import logging
 import queue
 import threading
+from functools import partial
 
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, col, select
 from sqlmodel import update as update_rows
 
 from . import cache, profiles
-from .tables import Item, Job
+from .tables import Item, Job, Profile, User
 
 PENDING = 10   # 待確認: the model was not sure enough, so the item stays out of the taste vector
 BATCH = 20     # names judged between two progress updates
@@ -86,31 +88,77 @@ def run_job(engine, backends, settings, context, job_id):
             mark_failed(session, job_id)
 
 
+def exists(session, user_id):
+    return session.exec(select(User.id).where(User.id == user_id)).first() is not None
+
+
+def run_recompute(engine, backends, context, user_id):
+    """Work a user's profile out again on the worker, as after a month of theirs was deleted or at start-up. An account
+    deleted while this waited has nothing left to recompute, and one deleted while it ran leaves its profile nobody to
+    belong to: either way it ends quietly."""
+    with Session(engine) as session:
+        if not exists(session, user_id):
+            return
+        try:
+            profiles.recompute(session, backends, context, user_id)
+        except IntegrityError:
+            session.rollback()
+            if exists(session, user_id):
+                raise
+
+
 class Worker:
     """The app's one thread for upload jobs, which runs them one at a time in the order they were queued: there is a
     single llama-server, SQLite has a single writer, and the next batch updates a profile at the end of a job. A
-    waiting job is only an id in the queue, so it holds no connection or request thread and honestly stays "queued".
-    A daemon thread, so stopping the server never waits for a running job; the next start-up fails it instead."""
+    waiting job is only a label and a callable in the queue, holding no connection or request thread, so it honestly
+    stays "queued". A daemon thread, so stopping the server never waits for a running job; the next start-up fails it
+    instead. Besides uploads, profile recomputes are queued here too: after a month is deleted, and at start-up."""
 
     def __init__(self, run):
         self.run = run  # run(job_id) does one job
         self.queue = queue.Queue()
+        self.lock = threading.Lock()  # requests read the counts below while the worker changes them
+        self.waiting = {}  # user id → work of theirs passed to call() with it and queued or running, never 0
         self.thread = threading.Thread(target=self.loop, name="upload-jobs", daemon=True)
         self.thread.start()
 
     def add(self, job_id):
-        self.queue.put(job_id)
+        """Queue an upload's job. It is not counted for recomputing(): GET /api/jobs/{id} tells how it is doing."""
+        self.call(f"upload job {job_id}", partial(self.run, job_id))
+
+    def call(self, label, task, user_id=None):
+        """Queue other work that writes profiles, such as the recompute after a month is deleted. It waits behind the
+        uploads queued before it, so two writes of one profile never overlap; label names it in the log. With a
+        user_id, recomputing(user_id) is true until it has run."""
+        if user_id is not None:
+            with self.lock:
+                self.waiting[user_id] = self.waiting.get(user_id, 0) + 1
+        self.queue.put((label, task, user_id))
+
+    def recomputing(self, user_id):
+        """Whether work passed to call() with this user_id is still queued or running."""
+        with self.lock:
+            return user_id in self.waiting
+
+    def done(self, user_id):
+        with self.lock:
+            self.waiting[user_id] -= 1
+            if not self.waiting[user_id]:
+                del self.waiting[user_id]
 
     def loop(self):
         while True:
-            job_id = self.queue.get()
+            label, task, user_id = self.queue.get()
             try:
-                self.run(job_id)
+                task()
             # run_job already fails a job that crashes; this keeps anything else from ending the loop, which would
             # leave every later job queued until a restart.
             except Exception:
-                log.exception("upload job %s failed", job_id)
+                log.exception("%s failed", label)
             finally:
+                # Before task_done, so whoever waits for the queue to empty finds nobody recomputing.
+                if user_id is not None:
+                    self.done(user_id)
                 self.queue.task_done()
 
 
@@ -122,3 +170,15 @@ def fail_unfinished(engine):
             job.status, job.message = "failed", "服務重新啟動，請重新上傳"
             session.add(job)
         session.commit()
+
+
+def recompute_profiles(engine, worker, backends, context):
+    """At start-up, queue a recompute of every real user's profile: one queued after a month was deleted lived only in
+    the stopped server's queue, so the stored profile may still count that month. A recompute reads only the items
+    and the attribute cache, never a model. Demo users cannot delete a month, so their profiles stay as stored."""
+    with Session(engine) as session:
+        user_ids = session.exec(select(Profile.user_id).join(User, col(User.id) == Profile.user_id)
+                                .where(col(User.is_demo).is_(False)).order_by(col(Profile.user_id))).all()
+    for user_id in user_ids:
+        worker.call(f"recompute for user {user_id}", partial(run_recompute, engine, backends, context, user_id),
+                    user_id=user_id)

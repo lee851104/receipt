@@ -23,11 +23,11 @@
 | 假用戶 | 8 種類型 × 5 人 = 40 人，2026 年 3–4 月的假發票 | `src/receipt/personas.py` |
 | 網頁 | 單一 HTML 檔，JS 全部內嵌，GitHub Pages 公開中 | `scripts/build_report.py` → `invoice-insights.html` |
 | 後端骨架 | FastAPI + SQLite：註冊、登入、demo 快速切換、品名即時分類、健康檢查，模型先用假替身；v2 網頁從 `/web/` 提供（10/15 完成角色 1 第 1 週） | `src/api/`、`src/ml/`、`src/web_v2/` |
-| 測試 | Python 295 個（unittest）、JS 82 個（node:test），全部通過 | `tests/` |
+| 測試 | Python（unittest）和 JS（node:test）都全部通過 | `tests/` |
 | 分類實驗 | 品名 → 10 類。A：TF-IDF + 邏輯迴歸，macro-F1 0.62；B：bge-small-zh（512 維）+ 邏輯迴歸，macro-F1 0.66。只有 57 個人工確認品名，只能驗證 4 類 | `experiments/category-models/`、`docs/category-models-brief.md` |
 | 屬性實驗 | Qwen3-4B（Q4_K_M，2.4 GB）判斷 16 個屬性。真實資料上模型單獨 F1 44%，加規則 94%（事後回測，不是獨立驗證） | `experiments/receipt-attributes/` |
 
-**還沒有的：** 配對的 API、帳號管理、真的分類和屬性模型、CI、BERT。上傳與背景任務（5.4）已經有了（10/15 完成角色 1 第 2 週第一批，分支 `role-1/uploads`，PR #8）；任務最後的品味向量重算和 `GET /api/me/profile`（5.6）也有了（第 2 週第二批，分支 `role-1/profiles`）。
+**還沒有的：** 真的分類和屬性模型（BERT 還沒接上，任務 2.15、3.6；Qwen 在後端這邊已經接好，`ATTRIBUTES_MODEL=qwen` 要等角色 3 的 `src/ml/attributes.py`（任務 4.3）合併才能用，10/16 更新）。上傳與背景任務（5.4）已經有了（10/15 完成角色 1 第 2 週第一批，分支 `role-1/uploads`，PR #8）；任務最後的品味向量重算和 `GET /api/me/profile`（5.6）也有了（第 2 週第二批，分支 `role-1/profiles`）；配對的 API（5.7）、帳號管理（5.11）和 CI（`.github/workflows/ci.yml`）也都有了（10/16 更新）。
 
 ### 18 格品味向量
 
@@ -56,7 +56,7 @@ clearance、sugar、quick、cooking、kitchen、sport_supply、sport_gear、car_
 | 8 | 資料輸入 | 上傳電子發票 CSV，另加「輸入品名馬上看分類」的小框 |
 | 9 | 假用戶 | 約 300 人，產生假發票後跑完整管線 |
 | 10 | 前端 | 沿用現有網頁，改成向 FastAPI 要資料 |
-| 11 | 登入 | 帳號密碼 + JWT，另外保留 demo 用的快速切換。10/15 補上帳號管理：查看與修改個人資料、修改密碼、刪除帳號（含所有資料）、刪除單一月份、登出（所有裝置一起登出），見 5.11 |
+| 11 | 登入 | 帳號密碼 + JWT，另外保留 demo 用的快速切換。10/15 補上帳號管理：查看與修改個人資料、修改密碼、刪除帳號（含所有資料）、刪除單一月份、登出（所有裝置一起登出，假用戶除外），見 5.11（10/16 補上） |
 | 12 | 訓練資料不足 | 先用 AI 生成假品名把稀少類別補到每類 50 個；不夠再請組員提供發票 |
 | 13 | 相似度公式 | 保留現有公式（含 0.25 收縮項） |
 | 14 | Qwen 執行 | 背景處理 + 快取。改用約 5 GB 的模型，要重跑選型。RTX 4060 8G 從 10/14 起可用 |
@@ -109,7 +109,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 
 預設套件：`fastapi`、`uvicorn`、`sqlmodel`、`python-multipart`、`pyjwt`、`pwdlib[argon2]`（密碼雜湊）、`scikit-learn`、`torch`、`transformers`。Qwen 用 llama.cpp 的 `llama-server`，後端用 HTTP 呼叫它。Python 統一用 3.12。
 
-**Docker（10/15 補上）：** 根目錄的 `Dockerfile` 和 `docker-compose.yml` 用無 GPU 模式包起整個服務。執行 `docker compose up` 後：第一次啟動會從 Hugging Face 下載固定版本的分類模型；`DEMO_MODE=1` 而且資料庫是空的時，會自動匯入假用戶。資料庫和模型放在 volume 裡，重建容器也不會不見。容器裡不跑 Qwen；有設定 `LLAMA_SERVER_URL` 時，就連到主機上的 llama-server。組員開發時仍以虛擬環境為主，Docker 是給面試官和乾淨環境驗證用的。
+**Docker（10/15 補上）：** 根目錄的 `Dockerfile` 和 `docker-compose.yml` 用無 GPU 模式包起整個服務。執行 `docker compose up` 後：`CATEGORY_MODEL=bert` 又設了 repo 和 revision 時，第一次啟動會從 Hugging Face 下載固定版本的分類模型（compose 預設是 `fake`，不下載；而且真的 BERT 還沒接上，下載了 `bert` 也是 `unavailable`，10/16 改寫）；`DEMO_MODE=1` 而且資料庫是空的時，會自動匯入假用戶。資料庫和模型放在 volume 裡，重建容器也不會不見。容器裡不跑 Qwen；容器預設連到主機上的 llama-server（`http://host.docker.internal:8080`），要連別的位址設 `DOCKER_LLAMA_SERVER_URL`（10/16 改寫：容器不用 `.env` 的 `LLAMA_SERVER_URL`）。compose 會把 `ATTRIBUTES_MODEL` 傳進容器（預設 `fake`，10/16 改寫）：預設用假屬性模型，這時那個位址只改變 `/api/health` 的 `gpu_mode`；設成 `qwen` 要等角色 3 的 `src/ml/attributes.py` 合併（沒有時容器用一行訊息停下來），之後容器透過那個位址向主機的 llama-server 問新品名，連不到時 `models.attributes` 顯示 `cache_only`（10/16 補上）。組員開發時仍以虛擬環境為主，Docker 是給面試官和乾淨環境驗證用的。（10/16 補上）埠只開在主機的 `127.0.0.1`（`DEMO_MODE=1` 時任何連得到伺服器的人都能用假用戶登入）；`JWT_SECRET` 沒設時，用資料 volume 裡的 `/data/jwt-secret`，第一次啟動時產生；映像檔只 COPY `configs/` 和 `src/`，不含 `data/`、`rawdata/`、CSV 和 `.env`。下載分類模型只發生在 `CATEGORY_MODEL=bert`、模型資料夾沒有 `config.json`，而且設了 `CATEGORY_MODEL_REPO` 和 `CATEGORY_MODEL_REVISION` 的時候，而且只在容器裡（`python -m src.api.container`）；`start.bat` 和直接跑 `uvicorn` 都不下載，`huggingface_hub` 只裝在 `requirements-docker.txt`。`docker-compose.yml` 會讀專案根目錄的 `.env` 來填 `CATEGORY_MODEL`、`ATTRIBUTES_MODEL`（10/16 補上）、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`（也可以從執行 `docker compose` 的環境變數給），但 `LLAMA_SERVER_URL` 不用 `.env` 的，因為 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己。
 
 ## 5. API 規格（2026-10-14 定案）
 
@@ -218,7 +218,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 - `attributes`：16 個屬性加 7 個基本旗標，欄位名見 `src/ml/fields.py`。每個欄位都可能是 `null`
 - 分類框不會在請求裡等 Qwen，只查快取（`describe_items(names, ask_model=False)`）。快取裡有 → `ready`。沒有 → `attributes` 為 `null`、`attributes_status` 為 `pending`
 - 屬性先查後端的 `item_cache`，沒有才問 `describe_items(..., ask_model=False)`。GPU 模式下（假模型也算），pending 的品名在回應送出之後排進背景分析，結果寫進 `item_cache`，下次查詢就是 `ready`；前端每 2 秒再問一次，最多 5 次。同一個品名還在分析時再問，不會再排一次（10/15 補上）。無 GPU 模式下不排程，pending 不會自己變成 ready，顯示「待分析」就好（10/15 實作）
-- 現在用的假屬性模型一次就答完每個品名，所以分類框從來不會是 `pending`；`ATTRIBUTES_MODEL=qwen` 要等角色 3 的模型接上（任務 2.15）才能用，在那之前看不到 pending 變成 ready（10/16 補上）
+- 現在用的假屬性模型一次就答完每個品名，所以分類框從來不會是 `pending`；`ATTRIBUTES_MODEL=qwen` 後端已經接好，要等角色 3 的 `src/ml/attributes.py` 合併才能用，在那之前看不到 pending 變成 ready（10/16 補上）
 - 錯誤：401、422、503 `model_unavailable`（分類模型沒有載入，見 5.9）
 
 ### 5.6 我的品味向量與月報
@@ -227,7 +227,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 - 回傳：
   ```json
   {"user_id": 301, "display_name": "Amy", "is_demo": false,
-   "ready": true, "item_count": 57, "min_items": 20, "pending_attributes": 3,
+   "ready": true, "recomputing": false, "item_count": 57, "min_items": 20, "pending_attributes": 3,
    "areas": ["臺北市大安區", "新北市板橋區"],
    "traits": [
      {"id": "spend", "name": "省錢 ↔ 享受", "kind": "two_sided", "ends": ["省錢", "享受"], "value": 0.42},
@@ -237,13 +237,15 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
   ```
 - `traits` 一定有 18 筆。`ready` 為 false 時 18 格的 `value` 全是 `null`；`ready` 為 true 時，某一格資料不夠（沒到 `configs/traits.json` 為那一格設的最低需求，或那一格的訊號都量不到）還是 `null`，其他格有數值
 - `ready`：只有存起來的品味向量存在時才是 true。有效品項（已略過的明細和類別 10 待確認的品項都不算）少於 `min_items`、還沒上傳過、第一個上傳的任務還沒做完，都是 false
+- `recomputing`（10/16 補上）：這個人的 profile 有一次重算還在背景執行緒排隊或正在跑時是 true（刪了一個月之後，或服務剛啟動時），這時 `ready`、`item_count`、`areas`、`traits` 可能還是重算之前的；變回 false 之後就是重算好的結果。上傳的任務不算在內，上傳的進度照 5.4 問 `/api/jobs/{job_id}`
 - `item_count`：有效品項數，判斷 `ready` 用的就是它。有效品項是金額大於 0、類別不是 10 的品項，而且同一張發票上同一個品名只算一次，所以不能拿 `months` 的列數自己數（10/16 補上）
-- `pending_attributes`（10/15 補上）：這個人所有品項裡，`item_cache` 沒有（以目前的屬性模型）的不重複品名數；每次查詢當場數，不問模型，也不會寫入。品名一進快取就不再算（例如 GPU 恢復後重新上傳同一個月份補算，或即時分類框在背景分析了這個品名），但 profile 要等下一次上傳的任務重算才會用到新的答案（10/16 補上）。用假模型時，任務判斷完每個品名都有答案（全是 `null`），所以任務結束後是 0；換上真的 Qwen 之後，沒有 GPU 時新品名都算
+- `pending_attributes`（10/15 補上）：這個人所有品項裡，`item_cache` 沒有（以目前的屬性模型）的不重複品名數；每次查詢當場數，不問模型，也不會寫入。品名一進快取就不再算（例如 GPU 恢復後重新上傳同一個月份補算，或即時分類框在背景分析了這個品名），但 profile 要等下一次重算（上傳的任務、刪月份，或伺服器重新啟動）才會用到新的答案（10/16 補上）。用假模型時，任務判斷完每個品名都有答案（全是 `null`），所以任務結束後是 0；換上真的 Qwen 之後，沒有 GPU 時新品名都算
 - `areas`：生活圈，最多 2 個行政區（`places.areas_of`），可能是空陣列
 - `categories`：11 類的名稱和顏色（`configs/report.json`），給現有月報畫面用
-- `months`：由存起來的品項當場整理，格式同月報（10/15 補上：類別 10 待確認的品項也在裡面，`provisional` 一律是 `false`）。上傳一被接受就有了，所以 `months` 不是空的不代表 profile 做好了；`ready`、`item_count`、`areas`、`traits` 是任務最後存起來的 profile，只在任務結束時才變，要先照 5.4 問任務到 `done`
-- profile 在每次上傳的任務最後重算一次（用這個人所有月份），這個端點只讀存好的結果，從不重算
-- 存起來的品味向量是 `configs/traits.json` 的每個 trait 一個值。新增或刪掉 trait 之後，每個人的 profile 都要重算（重新上傳），否則存著舊長度的 profile 查詢時會回 500（10/16 補上）
+- `months`：由存起來的品項當場整理，格式同月報（10/15 補上：類別 10 待確認的品項也在裡面，`provisional` 一律是 `false`）。上傳一被接受就有了，所以 `months` 不是空的不代表 profile 做好了；`ready`、`item_count`、`areas`、`traits` 是最後一次重算存起來的 profile，只在上傳的任務結束、刪月份的重算跑完，或伺服器重新啟動時的重算跑完才變，剛上傳時要先照 5.4 問任務到 `done`（10/16 補上）
+- profile 在每次上傳的任務最後重算一次（用這個人所有月份），這個端點只讀存好的結果，從不重算。另外服務每次啟動時，都把每個真實使用者（有 profile 的）的 profile 排進背景執行緒重算一次，只讀存著的品項和屬性快取，不問模型；假用戶不算，因為他們不能刪月份。這是因為刪月份之後排隊的重算只在記憶體裡，服務在它跑之前重新啟動就不見了（10/16 補上）
+- 存起來的品味向量是 `configs/traits.json` 的每個 trait 一個值。新增或刪掉 trait 之後，每個人的 profile 都要重算（重新上傳），否則存著舊長度的 profile 查詢時會回 500（10/16 補上）。真實使用者在伺服器重新啟動時會自動重算；假用戶要重跑 seed（10/16 補上）
+- 啟動時的重算只讀資料庫裡的品項和屬性快取，所以重新啟動之後，有兩種情況會讓 profile 和重啟之前不同：上傳失敗的月份（品項在上傳被接受時就存了，任務失敗時 profile 沒有重算）會算進去；換了屬性模型（例如 `fake` 換成 `qwen`），profile 會改用目前模型的屬性答案。這是預期的行為，不是錯誤。`MODEL_VERSION` 一變、或在 `fake` 和 `qwen` 之間切換之後也一樣：新的鍵底下的快取大多是空的，真實使用者的屬性特徵會變成待分析，要等有 GPU 時重新上傳才補得回來；假用戶要重跑 seed（10/16 補上，見 13.10）（10/16 補上）
 - 還沒上傳過的人：`ready` 為 false，`item_count` 為 0，`months` 為 `{}`。假用戶的品項和 profile 要等 seed 擴充時才放入（任務 4.7），在那之前查假用戶一樣是 `ready` 為 false
 - 休假日和連假看 `configs/calendar-2026.json`：它目前只列了 2026 年 3–4 月的補假（檔案的 `covers`）。其他月份（包括其他年份）只有週末算休假日，沒有國定假日、補班和連假：`days` 格只用週末算，整個期間沒有任何一段連續三天以上的休假日時，`holiday` 格是 `null`
 
@@ -286,17 +288,17 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
   - `norm` = √(Σ weight × 值²)，只算 shared 的格子
   - `denominator` = norm_mine × norm_theirs + shrink；`score` = dot ÷ denominator
   - `part` = product ÷ denominator，是每格對分數的貢獻，全部加起來等於 `score`
-- `comparable` 為 false 時，`reason` 是 `not_enough_items`（任一方有效品項不夠）或 `too_few_shared`（共同的雙向格少於 5 格），`dot` 以下的欄位全部是 `null`
+- 分數和清單一致：`cells` 的 `mine`／`theirs` 是存起來的向量，`score`、`percent` 和配對清單上的完全一樣；`part` 依序加總剛好等於 `score`（10/16 補上）
+- `comparable` 為 false 時，`reason` 是 `not_enough_items`（任一方沒有存起來的品味向量：有效品項不夠，或還沒上傳）或 `too_few_shared`（共同的雙向格少於 5 格），`dot` 以下的欄位全部是 `null`；每一格的 `product` 和 `part` 也是 `null`；`mine`、`theirs`、`weight`、`shared` 照實給，`shared_two_sided` 照實數（任一方沒有向量時是 0）（10/16 補上）
 - 另外有一個 `network` 欄位，給連線圖用，格式和 v1 的 `traitNetworkData` 相同（`build.trait_network_data`），只是 `friends` 換成 `mine` 和 `theirs` 兩個人：
   ```json
   "network": {"model": {"…": "同 similarity_model"}, "traits": ["…"], "signals": ["…"], "readout": {"…": "…"},
               "mine":   {"vector": ["…18 格"], "pushes": ["…"], "signals": ["…46 個訊號"], "items": [[["鮮奶茶", 6], ["美式咖啡", 2]], null]},
               "theirs": {"vector": ["…"], "pushes": ["…"], "signals": ["…"], "items": ["…"]}}
   ```
-  `src/web/trait-network.js`（複製到 `src/web_v2/` 之後）可以直接拿來畫。資料不夠的人，四個欄位都是 `null`
+  `src/web/trait-network.js`（複製到 `src/web_v2/` 之後）可以直接拿來畫。資料不夠的人，四個欄位都是 `null`；`vector` 和 `pushes`、`signals`、`items` 一樣是查詢時算出的，所以 push 加起來一定等於 `vector`；通常和 `cells` 的值一樣，只有上次重算之後品項或屬性答案變了的時候（例如刪了一個月、重算還在排隊）會暫時不同，重算跑完就一樣（10/16 補上）。四個欄位都是用那個人存著的品項和屬性快取當場算的，不問模型、不寫入。沒有存起來的向量，或品項現在已經算不出品味（例如剛刪掉一個月、重算還在排隊）時，那一邊四個欄位都是 `null`。上次重算之後才有答案的品名，`vector`、`pushes`、`signals` 會先反映，`cells` 和分數要等下一次重算（上傳或刪月份的任務）才跟上（10/16 補上）。連線圖和 v1 一樣會顯示對方兩個花費的彙總值（`meal_cost` 每餐花費的中位數、`tech_spend` 每月 3C 花費），每個特質的 pushes 加起來等於 vector，可以直接用 `trait-network.js` 的檢查（10/16 補上）
 - `items` 是每個訊號買最多次的 3 個品名和出現的發票張數，品名一律經過 5.8 的處理
-- 錯誤：404（沒有這個人）、400 `self`（查自己）
-- demo 用戶查真實使用者的計算過程，回 404，當作沒有這個人，和清單同一條規則（任務 2.7 要照這樣做）（10/16 補上）
+- 錯誤：404 `not_found`（沒有這個人，或我是假用戶而對方不是）、400 `self`（查自己）、422（`user_id` 不是 1 到 2^63−1 的整數）。我是假用戶而對方不是時，當作沒有這個人，回應內容和真的沒有這個人完全一樣，和配對清單同一條規則（10/16 補上）
 
 ### 5.8 品名隱私
 
@@ -306,7 +308,8 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 - 住宿一律顯示「旅館住宿」；長途交通只顯示票種，不顯示站名
 - 跟地點有關的 4 個訊號（`list_items` 為 false）不列品名
 - 每個訊號最多 3 個品名，最長 20 字。去掉地名後只剩數字或符號的，改顯示類別名稱
-- 不回店家名稱、發票號碼、日期、金額
+- 不回店家名稱、發票號碼、日期
+- 不回任何一筆消費或一張發票的金額。連線圖的兩個花費彙總值（每餐花費中位數、每月 3C 花費）會顯示，它們本來就算在 18 格裡。已知風險：某段期間只有一筆 3C 消費時，每月 3C 花費乘以月數就是那一筆的價格（要不要再收緊，由組長決定）（10/16 補上）
 - 漏網的地名（商圈、地標、分店名）加進 `place_words`，不要在 API 裡另寫一套規則
 
 2026-10-14 用 3–8 月真實發票檢查（只看數量）：245 種商品中，2 種改顯示通用名稱、1 種去掉了地名。處理後還有 2 種含「店」字，都是 0 元明細，照 5.4 的金額規則會被略過，不會顯示
@@ -316,7 +319,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 **`GET /api/health`**
 - 回傳：`{"status": "ok", "gpu_mode": false, "demo_mode": true, "models": {"category": "fake", "attributes": "cache_only"}}`
 - `gpu_mode`：連得到 `LLAMA_SERVER_URL` 的 llama-server 就是 true
-- `models.category`：fake / tfidf / embedding / bert，設定的模型檔不存在或下載失敗時是 `unavailable`（10/15 補上，這時即時分類回 503 `model_unavailable`，上傳的背景任務變成 failed）；`models.attributes`：fake / qwen / cache_only（無 GPU 模式）
+- `models.category`：fake / tfidf / embedding / bert，設定的模型檔不存在或下載失敗時是 `unavailable`（10/15 補上，這時即時分類回 503 `model_unavailable`，上傳的背景任務變成 failed）；`CATEGORY_MODEL=bert` 而模型資料夾沒有 `config.json`，或 `src/ml/category.py` 還沒合併時，也是 `unavailable`（10/16 補上）；`models.attributes`：fake / qwen / cache_only（無 GPU 模式）；`qwen` 或 `cache_only` 時，答案來自角色 3 的 `describe_items`（`cache_only` 是設了 `ATTRIBUTES_MODEL=qwen` 但連不到 llama-server，只用快取裡的答案，10/16 補上）
 
 ### 5.10 設定（`.env`，repo 只放 `.env.example`）
 
@@ -327,14 +330,14 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `DEMO_MODE` | 0 | 1 = 開放 `demo-users` 和 `demo-login` |
 | `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git。相對路徑一律從 repo 根目錄算起，不管在哪個資料夾啟動。只接受 `sqlite:///…`（檔案）和 `sqlite://`（記憶體，測試用），錯誤訊息不會印出設定的值 |
 | `LLAMA_SERVER_URL` | `http://127.0.0.1:8080` | Qwen 的 llama-server |
-| `CATEGORY_MODEL` | fake | fake / tfidf / embedding / bert |
-| `ATTRIBUTES_MODEL` | fake | fake / qwen |
+| `CATEGORY_MODEL` | fake | `fake` 和 `bert` 可以設；`bert` 在真模型接上（任務 2.15）之前一律是 `unavailable`，模型資料夾裡已經有模型也一樣（10/16 補上） |
+| `ATTRIBUTES_MODEL` | fake | fake / qwen。`qwen` 要有角色 3 的 `src/ml/attributes.py`（合併它的分支之後）；沒有時伺服器用一行訊息停下來 |
 | `CATEGORY_MIN_PROB` | 0.5 | 低於這個機率的品名歸到 10 待確認 |
-| `CATEGORY_MODEL_DIR` | `models/category` | `CATEGORY_MODEL=bert` 時讀模型的資料夾（`/models/` 不進 git）。10/15 補上 |
-| `CATEGORY_MODEL_REPO` | 空 | Hugging Face 上公開的分類模型庫；資料夾裡沒有模型時從這裡下載。10/15 補上 |
-| `CATEGORY_MODEL_REVISION` | 空 | 要下載的固定版本（commit），和 `CATEGORY_MODEL_REPO` 一起設定。10/15 補上 |
+| `CATEGORY_MODEL_DIR` | `models/category` | `CATEGORY_MODEL=bert` 時讀模型的資料夾（`/models/` 不進 git）；`start.bat` 和 `uvicorn` 只讀這個資料夾，不下載。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`（10/16 補上） |
+| `CATEGORY_MODEL_REPO` | 空 | Hugging Face 上公開的分類模型庫；只有 Docker 容器（`python -m src.api.container`）會在 `CATEGORY_MODEL=bert`、資料夾裡沒有模型時從這裡下載，`start.bat`／`launch` 和直接跑 `uvicorn` 都不下載（`huggingface_hub` 只裝在 `requirements-docker.txt`）。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`，沒設的話伺服器啟動時停下來（10/16 補上） |
+| `CATEGORY_MODEL_REVISION` | 空 | 要下載的固定版本（commit），和 `CATEGORY_MODEL_REPO` 一起設定；同樣只有容器會用它下載。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`（10/16 補上） |
 
-設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。伺服器只能開**一個行程**：不要加 `--workers`，也不要兩個伺服器共用同一個資料庫，因為啟動時會把還沒做完的任務標成 failed，「一次只跑一個任務」的背景執行緒也只管得到同一個行程裡的任務。`src/ml/` 有真的模型之前，`CATEGORY_MODEL` 和 `ATTRIBUTES_MODEL` 只有 `fake` 能用，設成別的值同樣會停下來。
+設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。伺服器只能開**一個行程**：不要加 `--workers`，也不要兩個伺服器共用同一個資料庫，因為啟動時會把還沒做完的任務標成 failed，「一次只跑一個任務」的背景執行緒也只管得到同一個行程裡的任務。能啟動的值：`CATEGORY_MODEL` 是 `fake` 或 `bert`，`ATTRIBUTES_MODEL` 是 `fake` 或 `qwen`；設成別的值（包括還沒接上的 `tfidf`、`embedding`）同樣會停下來。`CATEGORY_MODEL=bert` 能啟動，但模型一律是 `unavailable`；`ATTRIBUTES_MODEL=qwen` 要有角色 3 的 `src/ml/attributes.py`，沒有時伺服器用一行訊息停下來（10/16 改寫）。
 
 ### 5.11 帳號管理（2026-10-15 補上）
 
@@ -342,26 +345,32 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 
 **`GET /api/me`**
 - 回傳：`{"user_id": 301, "username": "amy", "display_name": "Amy", "is_demo": false, "months": ["2026-07", "2026-08"]}`
-- `months`：已上傳的月份，由舊到新
+- `months`：有品項或有上傳任務的月份，由舊到新（只有任務、沒有留下品項的月份也算）（10/16 補上）
 
 **`PATCH /api/me`**：JSON `{"display_name": "愛喝咖啡的人"}`，1–20 字元
 - 回傳：同 `GET /api/me`。`username` 不能改
+- 規則和註冊一樣：去掉前後空白後 1–20 字元，不能有看不見的字元或換行，否則 422，名稱不變；`username` 帶了也不理（10/16 補上）
 
 **`POST /api/me/password`**：JSON `{"current_password": "…", "new_password": "…"}`，新密碼 8–128 字元
 - 回傳：同 login（一個新的 token）。改完之後，這個帳號的 `token_key` 換成新的，舊的 token 全部失效，回傳的新 token 帶著新的 key
 - 錯誤：403 `wrong_password`
+- 新密碼不合格回 422，不回傳送出的值（10/16 補上）
 
 **`DELETE /api/me`**：JSON `{"password": "…"}`
-- 回傳 204。依序刪掉這個人的 `items`、`jobs`、`profiles`、`users`，再刪掉 `item_cache` 裡已經沒有任何 `items` 用到的品名。品名的屬性結果只存在後端的 `item_cache`（`describe_items` 最多只在記憶體裡留快取，不寫到磁碟），所以清掉這裡就清乾淨了（10/16 補上，見 13.3）
+- 回傳 204。依序刪掉這個人的 `items`、`jobs`、`profiles`、`users`，再刪掉 `item_cache` 裡這個人用過、而且已經沒有任何 `items` 用到的品名。品名的屬性結果只存在後端的 `item_cache`（`describe_items` 最多只在記憶體裡留快取，不寫到磁碟），所以清掉這裡就清乾淨了（10/16 補上，見 13.3）
+- 品名的屬性快取只刪「這個人的品項用過、刪完後已經沒有任何品項用到」的品名（每個屬性模型的答案都刪）。只在即時分類框查過、從沒上傳過的品名沒有記錄是誰查的，不會被刪（10/16 補上）
 - 錯誤：403 `wrong_password`、409 `job_in_progress`（還有 queued 或 running 的上傳任務，等它做完再刪；不然那個任務會在刪除之後又把品名寫進快取）（10/15 補上）
 
 **`DELETE /api/me/months/{month}`**：`month` 是 `YYYY-MM`
 - 回傳 204。刪掉那個月的 `items` 和 `jobs`，重算 18 格；`item_cache` 的清理方式同上
 - 錯誤：404 `month_not_found`、409 `job_in_progress`（那個月還有 queued 或 running 的任務）
+- `month` 不是 `YYYY-MM`（月份 01–12）回 422；那個月沒有品項也沒有任務回 404；只有那個月的任務才擋（409），別的月份的任務不擋。重算排進背景執行緒，排在已經排隊的上傳任務後面，不在請求裡算：重算跑完之前，`/api/me/profile` 的 `ready`、`item_count`、`areas`、`traits` 還是舊的（`months` 立刻是新的）。前面有上傳任務在排隊時，要等它們做完（10/16 補上）
+- 重算跑完之前，`/api/me/profile` 的 `recomputing` 是 true，跑完變回 false。服務在重算跑之前重新啟動的話，啟動時會再排一次（見 5.6），`recomputing` 一樣會是 true 直到它跑完（10/16 補上）
 
 **`POST /api/auth/logout`**
-- 回傳 204。換掉這個人的 `token_key`，這個帳號在**所有裝置**上的 token 都會失效
+- 回傳 204。真實使用者登出時換掉這個人的 `token_key`，這個帳號在**所有裝置**上的 token 都會失效
 - `users.token_key` 第 1 週就有了，不必再加欄位。登出後馬上重新登入，新拿到的 token 可以用
+- 假用戶是共用的：用假用戶登出不換掉共用的 `token_key`，只結束這個瀏覽器的登入（前端丟掉自己的 token），切換成同一個假用戶的其他人照常登入著（10/16 補上）
 
 ## 6. 模型介面（角色 2、3 交給角色 1）
 
@@ -380,6 +389,8 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
 `src/ml/fakes.py` 提供同樣介面的假替身，回傳固定結果。後端和 CI 一開始全部用假替身，模型好了再換成真的。
 
 回傳值一律用一般的 Python 型別（numpy 的結果先 `.tolist()`），否則 API 會回 500。在自己的測試裡呼叫 `tests/model_contract.py` 的 `check_classify(self, classify)` 和 `check_describe(self, describe_items)`，就能確認格式對不對。`probs` 不要四捨五入（至少保留 4 位小數），檢查允許的加總誤差是 0.001。
+
+`src/ml/attributes.py` 也要有 `MODEL_VERSION`（字串；換模型或 prompt 就要變）。後端用它當屬性快取（`item_cache.model`）的鍵，換了版本，舊版本的答案就不再使用；fake 模式的鍵照舊是 `"fake"`（10/16 補上）。`src/ml/category.py` 建議提供 `load(model_dir) -> classify`，`classify` 的格式同上，後端在啟動時用 `CATEGORY_MODEL_DIR` 載入一次（角色 1 的提議，等角色 2 回覆，10/16 補上）。
 
 `describe_items` 連不到 llama-server 時回 `None`，不要丟例外；呼叫 Qwen 要設 timeout。兩個函式會被不同的執行緒同時呼叫（FastAPI 用執行緒跑 `def` 路由），PyTorch 模型和 tokenizer 要自己加鎖。
 
@@ -463,7 +474,7 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
   - README 要用的圖，要在 `.gitignore` 加 `!` 例外
 - 真實品名只能用本機模型處理，不可以貼到雲端 AI 或線上服務；假品名可以
 - 評估報告只放數字，逐筆結果留在本機
-- 配對時，對方會看到你每個訊號買最多次的品名（去掉地名後，見 5.8），但看不到店家、日期和金額
+- 配對時，對方會看到你每個訊號買最多次的品名（去掉地名後，見 5.8），但看不到店家、日期和每一筆的金額（連線圖的花費彙總值除外，見 5.8）
 - BERT 分類模型的權重會公開在 Hugging Face。模型卡要寫明訓練資料包含真實品名，但資料本身不公開
 
 ## 11. 評估要交出的東西
@@ -502,11 +513,12 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
    .venv/Scripts/python.exe -m unittest discover -s tests -v
    node --test "tests/*.test.cjs"
    ```
-   預期結果：Python 295 個、JS 82 個全部通過
+   預期結果：Python 和 JS 的測試全部通過
 3. 後端（角色 1 的第一週成果）：
    - 複製 `.env.example` 成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼：`.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"`
    - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人；名單只能往後加，資料庫裡的帳號和名單對不上時會停下來並說明，這時刪掉 `data/app.db*` 再重來）
    - 啟動：`.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload`，打開 `http://127.0.0.1:8000/docs`。v2 網頁在 `http://127.0.0.1:8000/web/`，角色 4 做好之前只有一個預留頁
+   - 或者直接雙擊 `start.bat`（沒有 `.env` 會自動建立）：它一次做完上面三項，建立 `.env`（含新的 `JWT_SECRET`）、放入 demo 用戶、啟動在 `http://127.0.0.1:8000` 並打開 `/web/`；已經有 `.env` 的人不受影響（10/16 補上）
    - 改了 `.env` 要手動重啟伺服器（`--reload` 只看 `.py` 檔）
    - `src/api/tables.py` 多了新的資料表時不用動，伺服器或 seed 啟動時會自動建立；已經存在的資料表改了欄位或索引時，才要刪掉 `data/app.db*`（資料庫和它的 `-wal`、`-shm` 檔）再重新放入 demo 用戶
    - `DEMO_MODE=1` 時不要加 `--host 0.0.0.0`，啟動時會印出提醒
@@ -525,17 +537,22 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
-### 13.7 角色 3 接入與審查修正（2026-10-16 更新，來源：角色 3 worktree、原 role3-handoff 與使用者合併指示）
+### 13.11 角色 3 接入與審查修正（2026-10-18 更新，來源：角色 3 worktree、Claude 審核 ab1d353 與使用者續作授權）
 
 **給角色 1**
+- 2026-10-18 修正驗證：Python 506 項中 505 通過；唯一失敗為角色 1 的 test_api_main 舊測試仍假設 Qwen 模組不存在，依 13.10 清單第 4 項由角色 1 更新。Node 82/82、OpenSpec strict、diff check 通過。新增 9 項回歸測試，先重現再修正（另調整既有版本鍵測試）。暫存 SQLite 的正式 seed 連跑兩次約 16.4／5.1 秒，第二次 skipped=true、600 個工作 ID 與 profile 時間不變；合法 null 向量也能跳過。配對報告與有效快取重建後 5 檔雜湊一致。內部程式複查已處理 null 向量問題，仍待 Claude 正式複核，未 push。
 - 2026-10-16 完成 4.7／4.9（來源：角色 3；合併 `role-1/matches` 的 `ee7f055`）：擴充 `src/api/seed.py`（非端點）。`seed_demo_population` 把合成 CSV 送進 `build_month(for_upload=True)`，重播假品名的既定類別，透過原有 `jobs.process` → `cache` → `profiles.recompute` 產生資料；不問 GPU，也不宣稱驗證真實分類模型。記憶體資料庫實測 300 人、21,316 筆品項、107 筆快取、600 個已完成月份工作與 300 份 profile，逐人重算及與核心向量比較一致。
-- seed 用目前後端的屬性模式作 `item_cache.model`（預設 `fake`，也可 `qwen`），只載入公開、人工確認的 107 個「示範」品名，並核對確認者、日期、來源與屬性 SHA256；核准後改過欄位會拒絕。這是無 GPU 展示用的錄製答案；完整 Qwen `model_version` 和人工修正仍以 JSONL 為準，不能把 `fake` 這個資料庫鍵解讀成 Qwen 模型版本。**給角色 1 的 2.15：目前資料庫以 `backends.attributes` 的模式名稱選快取；日後改成模型版本鍵時，seed 的 `attribute_model` 也要傳同一個鍵，換版本需清理或遷移舊快取，不可默默混用。**
-- 執行 seed 前先停止 API 服務。`python -m src.api.seed` 現在補齊完整假用戶，會保留原帳號 id／token，只重建指定假用戶的品項與工作；重跑不增加重複品項，不改其他帳號及其他模型鍵。帳號衝突、相同模型鍵的既有答案不同、或假用戶有未完成工作時會停止，不覆寫這些資料。舊版本只有 demo 帳號的資料庫可直接補齊。執行中若發生可捕捉錯誤，沿用 `jobs.mark_failed` 記錄失敗後重拋，下次 seed 可重建；硬中斷留下的未完成工作仍需先處理，不會自動抹除。此次驗證僅用暫存／記憶體資料庫，未讀或寫既有私人資料庫，未讀 data、rawdata、根目錄 CSV 或 .env。
+- 2026-10-18 修正（回覆 Claude 審核，合入固定 role-1/models 的 d1ed44a）：seed 不受 ATTRIBUTES_MODEL 設定影響，查衝突、寫入 item_cache.model、建立 Backends(attributes="qwen", attributes_version=MODEL_VERSION) 全部使用 src.ml.attributes.MODEL_VERSION。快取檔的版本必須完全相符，換模型／prompt 後應先更新並人工確認合成快取，不能把舊答案改標為新版本。107 筆含 46 筆人工修正，JSONL 保留模型原答及使用者確認雜湊，不宣稱全是原始模型答案。fake 模式不讀這些 Qwen 版本答案；展示服務應設 ATTRIBUTES_MODEL=qwen，無 GPU 時讀版本快取。
+- 完整且目前版本的 seed 會回 skipped=true，不寫資料、不新增工作；先核對全份版本快取、每位 demo 的品項內容與類別、完成月份工作、依目前規則算出的向量與生活圈。缺漏或過期仍走原管線重建，帳號／快取衝突及未完成工作照舊拒絕。只計筆數不足以證明完整。
+- Qwen 傳輸 OSError／HTTPException（含逾時）會停止該次呼叫後續請求；已成功或快取命中的答案保留，其餘回 None，下次仍可重試。單筆 JSON／欄位格式錯誤繼續下一筆。全快取命中不等推論鎖；記憶體 LRU 預設 4,096 筆，可由 max_cache_size 設定，淘汰不影響當次回傳結果。
+- 回覆 13.10 主機限制：保留本機模型邊界，只接受 HTTP 的 localhost、127.0.0.1、::1、host.docker.internal，不接受憑證、額外路徑、query 或 fragment；若用其他本機模型主機，先以本機隧道轉接到允許位址。DOCKER_LLAMA_SERVER_URL 也受此限制，health probe 成功不代表此 adapter 接受該位址。角色 1 後續請以 Settings 建立實例並在啟動時檢查，避免 probe 與推論來源不一致。
+- 舊錄製 fixture 明記 wire_format_only（舊 prompt、batch 3），只驗解析與格式；model-v2 的 107 筆補齊 source="synthetic"，不改模型預測。啟動器遇 seed 拒絕後繼續啟動、Docker 改接 300 人並 COPY 合成快取、qwen 預設與 test_api_main 舊模組缺失測試由角色 1 處理；本角色未修改這些端點／啟動／容器檔案。
+- 執行 seed 前先停止 API 服務。`python -m src.api.seed` 現在補齊完整假用戶，會保留原帳號 id／token，僅在資料缺漏或過期時重建指定假用戶的品項與工作；完整版本重跑直接跳過，不改其他帳號及其他模型鍵。帳號衝突、相同模型鍵的既有答案不同、或假用戶有未完成工作時會停止，不覆寫這些資料。舊版本只有 demo 帳號的資料庫可直接補齊。執行中若發生可捕捉錯誤，沿用 `jobs.mark_failed` 記錄失敗後重拋，下次 seed 可重建；硬中斷留下的未完成工作仍需先處理，不會自動抹除。此次驗證僅用暫存／記憶體資料庫，未讀或寫既有私人資料庫，未讀 data、rawdata、根目錄 CSV 或 .env。
 - 4.9 現在直接用 `matching.entries`／`pick`，以整數百分比判門檻，同分按顯示名稱再按 id；不篩距離。本次同類 P@5 100%、互相命中 91%；相反 P@5 由 10.67% 變 11.40%（160 → 171），互補名額 684 → 707，其他整體指標不變。API 測試確認 demo 的非空清單與計數只包含假用戶，一般帳號仍可看到假用戶；所有測試帳號及品項均為虛構。
-- 2.15：以 `AttributeDescriber(server_url=settings.llama_server_url)` 提供 `backends.describe_items`；`ATTRIBUTES_MODEL=qwen` 的正式啟用由角色 1 接入 `src/api/backends.py`。本次審查修正沒有修改角色 1 的 API 檔案。
+- 2.15：以 `AttributeDescriber(server_url=settings.llama_server_url)` 提供 `backends.describe_items`；`ATTRIBUTES_MODEL=qwen` 的正式啟用由角色 1 接入 `src/api/backends.py`。本次角色 3 只修改獲授權的 src/api/seed.py，未修改 API 端點或 backends.py。
 - 2026-10-15 使用者決定：接入以角色 1 的 `from_model` 為準；呼叫 `measure/explain/build_vector(rows, period, context, attributes={品名: 23 欄 dict 或 None})`，字典裡沒有的品名也算待分析；不傳 `attributes` 參數才走 v1。每列不再放屬性，也不再使用舊的 external 介面。7 個基本旗標只供儲存/API 回傳，現有訊號仍由類別決定；類別閘門、待分析飲品甜度預設、娛樂店家與未知寵物造訪依 13.5。
 - `ask_model=True` 會等同一實例的前一筆推論完成，不再因等鎖超過 60 秒而偽裝成待分析；60 秒僅限制單次 HTTP。角色 1 請由上傳背景工作呼叫，兩份上傳會排隊；即時查詢用 `ask_model=False`，不等推論鎖。預設函式的 `LLAMA_SERVER_URL` 僅在首次非空呼叫建立時檢查；無效會記錄一次不含網址／品名的錯誤並回全 `None`，修正設定後須重啟程序。直接建構實例仍會立即檢查設定。
-- `(model_version, name)` mapping 是程序內快取，不是資料庫；持久化 `item_cache` 與版本清理由 2.3/2.4 負責。4.7 已接入既有後端管線，詳見本節上方的 seed 驗證紀錄。
+- `(model_version, name)` LRU mapping 是程序內快取，不是資料庫；持久化 `item_cache` 與版本清理由 2.3/2.4 負責。4.7 已接入既有後端管線，詳見本節上方的 seed 驗證紀錄。
 - 介面只有 names，merchant 固定空字串、quantity=1；品項數量的 bulk 補位只在計算副本。新版採單筆推論、輸入只去開頭「示範」、保留原名快取鍵；prompt hash 與 input-v2:batch1 已進 model_version。換版本須重算舊屬性，不能沿用舊版本 cache。
 - `build_personas(calendar, total=300)` 尾端擴充、保留原 40 人順序；v1 未指定 total 仍是 40 人。本次合併已確認 seed 入口仍為 `total=300`。
 - 107 筆假品名逐筆對照見 `docs/results/synthetic-cache-review.md`，舊／新模型輸出分存 `datasets/synthetic/attribute-cache.model-v1.jsonl`、`attribute-cache.model-v2.jsonl`；有效快取保留每欄 corrections。2026-10-15 使用者檢查並確認全部 107 筆：46 筆為 `human_corrected`、61 筆為 `human_confirmed`，保留助理準備與使用者確認的來源，並用屬性雜湊避免重建或後續修改誤用核准；此確認僅涵蓋公開假品名。配對數字見 `docs/results/matching.md`；seed 另驗證合成資料的解析／錄製分類答案／API／DB 管線，並不代表真實模型準確率。
@@ -550,6 +567,84 @@ $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-r
 ```
 
 - 工作區為 `codex/role-3/attributes` worktree；共用主資料夾 Python 與 llama.cpp，不升級共用套件。本角色此次只修改自身檔案與 `src/receipt/` 新增的外部屬性邏輯。
+### 13.10 角色 1 轉告（2026-10-16，第 3 週第七批，分支 `role-1/models`）
+
+任務 2.15 能做的部分做完了：`ATTRIBUTES_MODEL=qwen` 接上角色 3 的 `describe_items`，`CATEGORY_MODEL=bert` 還在等角色 2。
+
+**給角色 3**
+- 後端用 `src/ml/attributes.MODEL_VERSION` 當屬性快取（`item_cache.model`）的鍵，fake 模式照舊是 `"fake"`。你的 seed（任務 4.7）把 Qwen 的答案寫進 `item_cache` 時，`model` 欄位請用 `src.ml.attributes.MODEL_VERSION`（也就是 qwen 模式下後端用的鍵），不要用設定名稱 `qwen`，也不要用 `load_backends(settings).attributes_version`：預設 `ATTRIBUTES_MODEL=fake` 時它是 `"fake"`，Qwen 的答案會被記成假模型的答案
+- 合併之後 `Backends` 有一個必填的 `attributes_version`（屬性快取的鍵，沒有預設值）。你的 `src/api/seed.py` 自己建的 `Backends(...)`（第 152 行附近，現在只傳 `category`、`classify`、`attributes`、`describe_items`、`gpu_probe`）要多傳 `attributes_version=`，值和 seed 寫進 `item_cache.model` 的是同一個，也就是 `src.ml.attributes.MODEL_VERSION`，不是設定名稱。沒傳的話每次呼叫 seed 都會 `TypeError`，`start.bat` 在伺服器啟動之前（seed 比 uvicorn 先跑）就停下來
+- 回覆你分支 13.7 的提議（seed 用目前後端的屬性模式當 `item_cache.model`，預設 `fake`，也可 `qwen`）：角色 1 維持 `MODEL_VERSION`，不照設定名稱。item-attributes 規格要求快取記錄是哪一個模型版本產生的（MUST），`fake`／`qwen` 這兩個名稱記不了版本，換了模型或 prompt 也不會讓舊答案失效；而且合併之後 demo 是在 qwen（沒有 GPU 時 `cache_only`）模式下讀這些答案，那時的鍵就是 `MODEL_VERSION`。所以 seed 不管 `ATTRIBUTES_MODEL` 設成什麼，都用 `MODEL_VERSION` 當鍵，包括查有沒有衝突答案的那個 `where`
+- 服務只有在 `ATTRIBUTES_MODEL=qwen` 時才讀得到上面那些答案（沒有 GPU 時顯示 `cache_only`）；預設的 `fake` 只讀 `model` 是 `"fake"` 的資料。所以你的分支合併之後，demo（`start.bat` 或 compose）要設 `ATTRIBUTES_MODEL=qwen`，才看得到 seed 放進去的屬性
+- 要在容器或 `start.bat` 用 qwen：你的分支合併進來之後，設 `ATTRIBUTES_MODEL=qwen`。容器預設就連主機的 `http://host.docker.internal:8080`，只有要用別的位址時才設 `DOCKER_LLAMA_SERVER_URL`。沒有 GPU 時健康檢查顯示 `cache_only`，只用快取裡的答案
+- 你的 `AttributeDescriber` 只接受 `localhost`、`127.0.0.1`、`::1`、`host.docker.internal` 當 llama-server 的主機；容器設了別的 `DOCKER_LLAMA_SERVER_URL` 時，已經在 `item_cache` 的品名照樣有答案，新的品名一直是待分析（`None`），健康檢查卻仍顯示 `gpu_mode` 為 true。請放寬這個檢查，或把限制寫進文件
+- 合併之後角色 1 會用 `tests/model_contract.check_describe` 對真的模組再驗一次
+
+**給角色 2**
+- 後端還沒接 BERT：`CATEGORY_MODEL=bert` 一律 `unavailable`。建議 `src/ml/category.py` 提供 `load(model_dir) -> classify`（`classify(names) -> [{"category", "probs"}]`，同第 6 節），後端在啟動時用 `CATEGORY_MODEL_DIR` 載入一次；如果你想用別的形式，在這裡回覆
+- 交出時請附 `tests/model_contract.check_classify` 的測試，並把 CPU 版 `torch`、`transformers` 加進 `requirements-docker.txt`（見 13.9）
+
+**給合併角色 3 分支的人（角色 1）**
+- 合併之後 `Backends.attributes_version` 是必填：角色 3 的 `src/api/seed.py` 自己建的 `Backends(...)`（第 152 行附近）沒有傳它，不補的話每次呼叫 seed 都會 `TypeError`，`start.bat` 在伺服器啟動之前就停下來。其他要改的照下面的清單做
+
+**合併當天的清單（角色 1 負責）**
+1. 把預設換成 `ATTRIBUTES_MODEL=qwen`：`docker-compose.yml` 改成 `${ATTRIBUTES_MODEL:-qwen}`，`.env.example` 的值和註解也跟著改。原因是 seed 的答案以 `MODEL_VERSION` 為鍵，只有 qwen 的服務讀得到；沒有 GPU 時健康檢查顯示 `cache_only`，也就是 service-runtime 規格「無 GPU 模式」情境要的畫面。這兩處在合併之前維持 `fake`，因為沒有角色 3 的模組時，`qwen` 會讓伺服器停下來
+2. seed 自己建的 `Backends(...)` 傳 `attributes_version=`，值是 seed 寫進 `item_cache.model` 的鍵（`src.ml.attributes.MODEL_VERSION`，見上面給角色 3 的說明）
+3. 角色 3 的測試裡，預期種子假用戶 `pending_attributes == 0` 的那一個，要用以 `MODEL_VERSION` 為鍵的 qwen 用戶端（`attributes="qwen"`、`attributes_version` 是 `MODEL_VERSION` 的 `Backends`）；用預設的 fake 會去讀 `"fake"` 的鍵，讀不到 seed 的答案
+4. `tests/test_api_main.py` 裡「`ATTRIBUTES_MODEL=qwen` 要讓伺服器停下來」的子行程測試會變成啟動成功（模組已經存在了）：換掉它的觸發方式，例如讓子行程在匯入 app 之前，先把 `None` 放進 `sys.modules["src.ml.attributes"]`
+5. 用 `tests/model_contract.check_describe` 對真的 `describe_items` 再驗一次
+6. 考慮在 `attribute_backend` 裡自己建 `attributes.AttributeDescriber(server_url=settings.llama_server_url)`，不用模組層級的 `describe_items`：後者自己從環境變數讀 `LLAMA_SERVER_URL`，網址有兩個來源。自己建之後 Settings 是網址的唯一來源，不是本機的位址（`AttributeDescriber` 只接受 `localhost`、`127.0.0.1`、`::1`、`host.docker.internal`）在啟動時就用一行訊息停下來，不會等到每個新品名都問不到答案才發現；快取的鍵改取 describer 的 `model_version`（`batch_size` 是預設的 1 時，和 `MODEL_VERSION` 相同）
+7. `MODEL_VERSION` 一改（換模型或 prompt）就重跑 seed：假用戶的答案還記在舊的鍵底下，新版本的服務讀不到。跑 seed 之前先停掉服務。真實使用者的 profile 怎麼變見 5.6
+
+**目前的前提**
+- `docker-compose.yml` 現在會傳 `ATTRIBUTES_MODEL`（預設 `fake`），第六批（13.9）寫的「容器一律用假屬性模型」已經改掉。service-runtime 規格的「連到主機的模型服務」情境（容器以 GPU 模式運作、新品名的屬性可以被判斷）要等角色 3 的分支合併、**而且**預設換成 `qwen`（上面清單的第 1 項，或自己設 `ATTRIBUTES_MODEL=qwen`）之後才成立；在那之前容器預設是 `fake`，設成 `qwen` 會用一行訊息停下來。proposal 第 19 行（分類模型第一次啟動自動下載）另外要等角色 2 的 BERT 接上。這兩處規格不用改，條件滿足之後就成立。用替身驗證過，還沒有用真的模組驗過
+
+### 13.9 角色 1 轉告（2026-10-16，第 3 週第六批，分支 `role-1/deploy`）
+
+`start.bat`、GitHub Actions、`Dockerfile`／`docker-compose.yml` 都有了。這台電腦沒有 Docker，映像檔要等 push 之後在 CI 上建置才算驗證過。
+
+**給所有人**
+- 雙擊 `start.bat` 就能啟動：沒有 `.env` 會自動建立（含新的 `JWT_SECRET`），會放入假用戶並打開 `http://127.0.0.1:8000/web/`。已經有 `.env` 的人不受影響
+- 用 Docker 時，容器連主機上 llama-server 的位址從 `DOCKER_LLAMA_SERVER_URL` 來（預設 `http://host.docker.internal:8080`），不看 `.env` 的 `LLAMA_SERVER_URL`；compose 會傳 `ATTRIBUTES_MODEL`（預設 `fake`，10/16 改寫：第七批接上），預設時這個位址只改變 `gpu_mode`，設成 `qwen` 要等角色 3 的程式合併（見 13.10）；`CATEGORY_MODEL`、`ATTRIBUTES_MODEL`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION` 從 shell 的環境變數或根目錄的 `.env` 來（compose 會讀它）
+- CI 在每次 push 和 PR 跑兩套測試（模型一律 fake），再建一次映像檔、檢查裡面沒有私人檔案，並用 `docker compose up` 啟動一次，確認健康檢查回報 demo 模式、假用戶名單不是空的。測試不要依賴 Windows 才有的行為
+
+**給角色 2**
+- 交出 BERT（任務 3.6）時：把 CPU 版的 `torch`、`transformers` 加進 `requirements-docker.txt`（用 PyTorch 的 CPU index），模型存成 `save_pretrained` 的格式（資料夾裡要有 `config.json`）。`CATEGORY_MODEL=bert` 在接上之前一律回報 `unavailable`
+- 公開模型（任務 3.9）後，把 repo 和 revision 給角色 1，填進 `.env.example` 和 `docker-compose.yml` 的預設值
+
+**給角色 3**
+- 容器啟動時，資料庫是空的而且 `DEMO_MODE=1` 才匯入假用戶（`container.seed_if_empty`，用的是 `seed.seed_demo_users`）。任務 4.7 擴充 seed 之後，請讓容器也走同一個函式，品項和 profile 才會一起進去
+
+### 13.8 角色 1 轉告（2026-10-16，第 3 週第五批，分支 `role-1/account`）
+
+帳號管理（5.11）都可以用了：`GET`／`PATCH /api/me`、`POST /api/me/password`、`DELETE /api/me`、`DELETE /api/me/months/{month}`、`POST /api/auth/logout`。
+
+**給角色 4**（任務 5.10 帳號設定頁）
+- 改密碼成功會回一個新的 token（和登入一樣的格式），請換成它；舊的 token（包括其他裝置的）都失效了
+- 登出回 204。真實使用者登出後，所有裝置的 token 都是 401。用假用戶登出只結束這個瀏覽器的登入：前端自己丟掉 token，同一個假用戶的其他人不會被登出（10/16 補上）
+- `DELETE /api/me` 和改密碼要使用者再輸入密碼，密碼錯是 403 `wrong_password`。還有上傳在處理時，刪帳號回 409 `job_in_progress`（請使用者等上傳做完）；改密碼沒有這個限制（10/16 補上）
+- 刪月份回 204 之後，品味向量在背景重算：`months` 立刻少了那個月，`ready`、`item_count`、`areas`、`traits` 這四個要等重算跑完才變（前面有上傳在排隊時要等更久）。畫面先顯示「重新計算中」，每 2 秒查一次 `/api/me/profile`，直到 `recomputing` 變回 false，再用那次的回應更新畫面（10/16 補上）
+- 設定頁的月份清單（要刪哪個月）用 `GET /api/me` 的 `months`（有品項或有上傳任務的月份），不要用 `/api/me/profile` 的 `months`（只有留下品項的月份）：整個月的明細都被略過的月份只在前者，也要能刪（10/16 補上）
+- 假用戶改名、改密碼、刪帳號、刪月份都是 403 `demo_user_read_only`，設定頁對假用戶唯讀
+- 計算過程（13.7 補充）：關係圖用 `network`，逐格的面板用 `cells`。`network` 的向量現在是查詢時算的，push 加起來一定等於它；刪了一個月、重算還沒跑完時，圖上的點可能和 `cells` 的值暫時不同，重算跑完就一樣。上次重算之後才有屬性答案的品名也會讓兩者暫時不同（見 5.7），要等下一次重算才一樣（10/16 補上）
+
+**給角色 3**
+- seed 寫入的假用戶不能被這些端點修改或刪除（403），重建假用戶請照舊刪掉資料庫重跑 seed
+
+### 13.7 角色 1 轉告（2026-10-16，第 3 週第四批，分支 `role-1/matches`）
+
+計算過程 `GET /api/matches/{user_id}/explain`（5.7）可以用了。
+
+**給角色 4**
+- 計算過程面板（任務 5.7）：`cells` 一定 18 筆，順序同 `configs/traits.json`；`part` 加起來就是 `score`，`percent` 和配對清單卡片上的一樣，面板直接顯示 API 的數字，不要自己算
+- `comparable` 為 false 時看 `reason`：`not_enough_items`（任一方沒有存起來的品味向量）或 `too_few_shared`（共同的雙向格不到 `min_shared_two_sided`，`shared_two_sided` 是實際格數）；這時總數和每格的 `product`、`part` 都是 `null`
+- 關係圖：`network` 的格式同 v1 的 `traitNetworkData`，只是 `friends` 換成 `mine` 和 `theirs` 兩個人，`src/web/trait-network.js` 複製到 `src/web_v2/` 後可以直接畫。沒有存起來的向量時（那一邊的 `cells` 也是 `null`），那一邊的 `vector`、`pushes`、`signals`、`items` 都是 `null`，要畫成「資料不夠」
+- 任何人都能查，不限清單前 5 名；查自己是 400 `self`，沒有這個人是 404 `not_found`。用假用戶登入時查真實使用者也是 404
+- 品名已經去掉地名（5.8），回應裡沒有店家、發票號碼、日期，也沒有任何一筆消費的金額，前端不用再處理
+- 對方的兩個花費彙總值（`meal_cost` 每餐花費、`tech_spend` 每月 3C 花費）和 v1 一樣照常顯示；每個特質的 `pushes` 加起來等於 `vector`，所以 `trait-network.js` 的 `validate` 兩邊都會通過
+- 只要某一邊的 `cells` 有值、圖的四個欄位卻全部是 `null`（不管 `comparable` 是不是 true），就是存起來的向量還在，可是現在的品項已經算不出品味（例如剛刪掉一個月、重算還沒跑完）。`cells` 和分數照常顯示，那一邊的圖畫成「重新計算中」，不要畫成「資料不夠」；那一邊的 `cells` 也是 `null`（沒有向量）才畫成「資料不夠」。自己這一邊的重算什麼時候跑完，看 `/api/me/profile` 的 `recomputing` 變回 false（13.8，10/16 補上）
+- `not_enough_items` 時，沒有向量的那一邊，每一格的 `mine` 或 `theirs` 都是 `null`
+- 使用者打開某個人的面板時才呼叫 `explain`，不要為清單上的 5 張卡片事先全部呼叫：每次呼叫都要從品項當場算兩個人的品味，一般的人大約 0.3–0.6 秒
 
 ### 13.6 角色 1 轉告（2026-10-16，第 2–3 週第三批，分支 `role-1/matches`）
 
@@ -629,7 +724,7 @@ $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-r
 **給角色 4**
 - 上傳：`POST /api/invoices`（multipart，欄位名 `file`）回 202 的 `job_id` 之後，每 2 秒問 `GET /api/jobs/{job_id}`，直到 `done` 或 `failed`；進度條用 `done / total`，文字用 `message`。別人的任務在跑時會停在 `queued` 一陣子，是正常的
 - 錯誤：400 `invalid_csv` 顯示 `message`（英文，例如缺哪個欄位，或 `Line 3: 消費明細_金額 is not a number` 這樣的第幾行、哪一欄）；413「檔案超過 2 MB」；403 `demo_user_read_only`「示範帳號不能上傳」
-- 即時分類框：GPU 模式下 `pending` 會自己變成 `ready`，照 5.5 每 2 秒再問、最多 5 次；503 `model_unavailable` 顯示「分類模型暫時無法使用」。現在的假屬性模型一次就答完每個品名，分類框從來不會是 `pending`；`ATTRIBUTES_MODEL=qwen` 要等角色 3 的模型接上（任務 2.15）才能用，所以目前還看不到 pending 變成 ready，這段先照 5.5 寫好（10/16 補上）
+- 即時分類框：GPU 模式下 `pending` 會自己變成 `ready`，照 5.5 每 2 秒再問、最多 5 次；503 `model_unavailable` 顯示「分類模型暫時無法使用」。現在的假屬性模型一次就答完每個品名，分類框從來不會是 `pending`；`ATTRIBUTES_MODEL=qwen` 後端已經接好，要等角色 3 的 `src/ml/attributes.py` 合併才能用，所以目前還看不到 pending 變成 ready，這段先照 5.5 寫好（10/16 補上）
 
 ### 13.1 同一台電腦用 worktree 分開做（2026-10-15）
 

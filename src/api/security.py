@@ -7,16 +7,18 @@ import jwt
 from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
+from pydantic import Field
 
 from .db import SessionDep
 from .errors import ApiError
-from .tables import User
+from .tables import User, new_token_key
 
 HASHER = PasswordHash.recommended()  # argon2
 # Checked when there is no password to check, so a wrong username takes as long as a wrong password.
 DUMMY_HASH = HASHER.hash("no account has this password")
 ALGORITHM = "HS256"
 MAX_PASSWORD = 128  # characters register accepts
+Password = Annotated[str, Field(min_length=8, max_length=MAX_PASSWORD)]  # a new password, at register or a change
 # The most of a login password that is ever normalised: room for any registered password typed decomposed
 # (é as e plus an accent doubles its length), while NFKC on 100,000 characters would stall the server.
 MAX_LOGIN_TEXT = 4 * MAX_PASSWORD
@@ -80,3 +82,9 @@ def current_user(request: Request, token: Annotated[str | None, Depends(bearer)]
 
 # The logged-in user, for any endpoint that needs one.
 UserDep = Annotated[User, Depends(current_user)]
+
+
+def end_sessions(user):
+    """Give the account a new token key, so every token issued before stops working on every device. The caller
+    commits."""
+    user.token_key = new_token_key()

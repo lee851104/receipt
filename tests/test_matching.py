@@ -1,11 +1,15 @@
 """Who the match list shows: comparable people scored against me, past the bar on one side, within a distance."""
+import json
+import math
 import unittest
+from pathlib import Path
 
 from src.api import matching
 from src.api.db import ROOT
 from src.receipt import similarity
+from src.receipt.build import drawing_of, trait_network_data
 from src.receipt.places import load_regions
-from src.receipt.traits import load_context, similarity_model
+from src.receipt.traits import load_context, signal_ids, similarity_model
 
 CONTEXT = load_context(ROOT)
 MODEL = similarity_model(CONTEXT["traits"])
@@ -133,6 +137,123 @@ class PickTests(unittest.TestCase):
     def test_the_chosen_entries_come_back_unchanged(self):
         chosen = entry(2, 0.5, distance=1)
         self.assertEqual(self.pick([dict(chosen)])["people"], [chosen])
+
+
+FIXTURE = json.loads((Path(__file__).resolve().parent / "fixtures" / "similarity-cases.json").read_text(encoding="utf-8"))
+TOTALS = ("dot", "norm_mine", "norm_theirs", "shrink", "denominator", "score", "percent")
+
+
+class BreakdownTests(unittest.TestCase):
+    def test_every_shared_case_takes_the_score_apart_as_compare_does(self):
+        for case in FIXTURE["cases"]:
+            with self.subTest(case=case["name"]):
+                result = matching.breakdown(case["mine"], case["theirs"], case.get("model", FIXTURE["model"]))
+                self.assertEqual(result["comparable"], case["comparable"])
+                if not case["comparable"]:
+                    continue
+                self.assertAlmostEqual(result["score"], case["score"], places=9)
+                for cell, part in zip(result["cells"], case["parts"], strict=True):
+                    if part is None:
+                        self.assertIsNone(cell["part"])
+                    else:
+                        self.assertAlmostEqual(cell["part"], part, places=9)
+
+    def test_the_parts_add_up_to_the_score_exactly_and_the_score_is_compares(self):
+        for case in FIXTURE["cases"]:
+            model = case.get("model", FIXTURE["model"])
+            result = matching.breakdown(case["mine"], case["theirs"], model)
+            if result["comparable"]:
+                with self.subTest(case=case["name"]):
+                    self.assertEqual(sum(cell["part"] for cell in result["cells"] if cell["part"] is not None),
+                                     result["score"])
+                    self.assertEqual(result["score"], similarity.compare(case["mine"], case["theirs"], model)["score"])
+                    self.assertEqual(result["percent"], similarity.percent(result["score"]))
+
+    def test_each_number_follows_the_formula(self):
+        mine, theirs = [0.6, None, 0.2, 0.8, -0.2, 0.5, 0.3], [0.5, 0.9, 0.1, 0.7, -0.1, 0.4, 0.0]
+        result = matching.breakdown(mine, theirs, FIXTURE["model"])
+        shared = [0, 2, 3, 4, 5, 6]
+        self.assertEqual([cell["shared"] for cell in result["cells"]], [True, False, True, True, True, True, True])
+        self.assertEqual([cell["product"] for cell in result["cells"]],
+                         [None if index not in shared else mine[index] * theirs[index] for index in range(7)])
+        self.assertEqual(result["dot"], sum(mine[index] * theirs[index] for index in shared))
+        self.assertEqual(result["norm_mine"], math.sqrt(sum(mine[index] ** 2 for index in shared)))
+        self.assertEqual(result["norm_theirs"], math.sqrt(sum(theirs[index] ** 2 for index in shared)))
+        self.assertEqual(result["shrink"], 0.25)
+        self.assertEqual(result["denominator"], result["norm_mine"] * result["norm_theirs"] + 0.25)
+        self.assertAlmostEqual(result["score"], result["dot"] / result["denominator"], places=12)
+        self.assertEqual((result["shared_two_sided"], result["min_shared_two_sided"]), (5, 5))
+        self.assertIsNone(result["reason"])
+
+    def test_each_cell_shows_its_values_weight_and_share_and_nothing_else(self):
+        [cell] = matching.breakdown(ME, scoring(0.6), MODEL)["cells"][:1]
+        self.assertEqual(set(cell), {"id", "kind", "mine", "theirs", "weight", "shared", "product", "part"})
+        self.assertEqual((cell["id"], cell["kind"], cell["weight"]), (MODEL["cells"][0]["id"], MODEL["cells"][0]["kind"], 1))
+
+    def test_too_few_shared_two_sided_cells_give_no_numbers_at_all(self):
+        four = scoring(0.6)
+        four[FIVE[4]] = None
+        result = matching.breakdown(ME, four, MODEL)
+        self.assertEqual((result["comparable"], result["reason"], result["shared_two_sided"]), (False, "too_few_shared", 4))
+        self.assertEqual({key: result[key] for key in TOTALS}, dict.fromkeys(TOTALS))
+        self.assertTrue(all(cell["product"] is None and cell["part"] is None for cell in result["cells"]))
+        self.assertEqual([cell["shared"] for cell in result["cells"]].count(True), 4)
+
+    def test_without_a_vector_on_either_side_there_is_not_enough_data(self):
+        for mine, theirs in ((None, scoring(0.6)), (ME, None), (None, None)):
+            with self.subTest(mine=mine is None, theirs=theirs is None):
+                result = matching.breakdown(mine, theirs, MODEL)
+                self.assertEqual((result["comparable"], result["reason"], result["shared_two_sided"]),
+                                 (False, "not_enough_items", 0))
+                self.assertEqual({key: result[key] for key in TOTALS}, dict.fromkeys(TOTALS))
+                self.assertEqual(len(result["cells"]), SIZE)
+                self.assertFalse(any(cell["shared"] for cell in result["cells"]))
+                if mine is None:
+                    self.assertTrue(all(cell["mine"] is None for cell in result["cells"]))
+
+
+class NetworkTests(unittest.TestCase):
+    def explained(self):
+        """A made-up traits.explain answer: every push 0.1, every signal 1, no purchases listed."""
+        settings = CONTEXT["traits"]
+        return {"vector": scoring(0.6), "pushes": [[0.1] * len(trait["signals"]) for trait in settings["traits"]],
+                "signals": dict.fromkeys(signal_ids(settings), 1.0), "items": dict.fromkeys(signal_ids(settings))}
+
+    def test_it_is_the_v1_network_data_with_mine_and_theirs_instead_of_friends(self):
+        settings = CONTEXT["traits"]
+        data = matching.network(settings, {"mine": (ME, self.explained()), "theirs": (None, None)})
+        v1 = trait_network_data(settings, {}, [])
+        self.assertEqual(set(data), set(v1) - {"friends"} | {"mine", "theirs"})
+        self.assertEqual({key: data[key] for key in v1 if key != "friends"}, {key: v1[key] for key in v1 if key != "friends"})
+
+    def test_a_side_shows_the_vector_worked_out_now_with_its_drawing_not_the_stored_one(self):
+        settings = CONTEXT["traits"]
+        explained = self.explained()
+        self.assertNotEqual(explained["vector"], ME)  # the stored vector and the one worked out now tell apart
+        data = matching.network(settings, {"mine": (ME, explained), "theirs": (None, None)})
+        self.assertEqual(data["mine"], {"vector": explained["vector"], **drawing_of(explained, signal_ids(settings))})
+
+    def test_a_side_without_a_stored_vector_or_a_taste_now_is_all_null(self):
+        settings = CONTEXT["traits"]
+        empty = {"vector": None, "pushes": None, "signals": None, "items": None}
+        for side in ((None, None), (None, self.explained()), (ME, None)):
+            with self.subTest(vector=side[0] is not None, explained=side[1] is not None):
+                self.assertEqual(matching.network(settings, {"mine": side, "theirs": side})["theirs"], empty)
+
+    def test_theirs_is_drawn_exactly_like_mine_with_nothing_left_out(self):
+        settings = CONTEXT["traits"]
+        order = signal_ids(settings)
+        # Every signal and every push has a value of its own, so anything left out or moved shows.
+        explained = self.explained()
+        explained["signals"] = {key: float(number) for number, key in enumerate(order, 1)}
+        count = iter(range(1, 1000))
+        explained["pushes"] = [[next(count) / 1000 for _ in trait["signals"]] for trait in settings["traits"]]
+        data = matching.network(settings, {"mine": (ME, explained), "theirs": (ME, explained)})
+        drawn = {"vector": explained["vector"], **drawing_of(explained, order)}
+        self.assertEqual(data["theirs"], drawn)
+        self.assertEqual(data["mine"], drawn)
+        self.assertFalse(any(value is None for value in data["theirs"]["signals"]))
+        self.assertFalse(any(value is None for pushes in data["theirs"]["pushes"] for value in pushes))
 
 
 if __name__ == "__main__":

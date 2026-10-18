@@ -17,15 +17,15 @@
 - [x] 2.4 實作背景任務：分類（最高機率低於 `CATEGORY_MIN_PROB` 存成 10）、查 `item_cache`、無 GPU 時記成待分析、重算 `profiles`；GPU 模式下即時分類遇到新品名要排進背景分析；用假模型測試 item-classification 和 item-attributes 規格的情境，包含分類模型 `unavailable` 時即時分類回 503、背景工作變成 `failed`（10/15 完成：重算 `profiles` 在 `role-1/profiles`，其他在 `role-1/uploads`）
 - [x] 2.5 實作 `GET /api/me/profile`；測試 taste-profile 規格的情境（還沒上傳、`ready` 為 false 時 18 格都是 `null`、兩個月合併、`pending_attributes`、類別 10 不計入）（10/15 完成，在 `role-1/profiles`）
 - [x] 2.6 實作 `GET /api/matches`；測試 taste-matching 規格的門檻、排序和同分規則、只取前 5、`eligible` 和 `within`、四種範圍、`no_home_area`、自己資料不足，以及 0.295 這個邊界值（10/16 完成，在 `role-1/matches`）
-- [ ] 2.7 實作 `GET /api/matches/{user_id}/explain`；測試固定 18 格、各格貢獻加總等於分數、與 `tests/fixtures/similarity-cases.json` 一致、`not_enough_items` 和 `too_few_shared`、查自己回 400 `self`、不存在回 404，以及 `network` 裡的品名已經去掉地名、沒有店家、日期和金額
-- [ ] 2.8 實作 overview 5.11 的帳號管理（`GET`／`PATCH /api/me`、`POST /api/me/password`、`DELETE /api/me`、`POST /api/auth/logout`），改密碼和登出都換掉 `users.token_key`（權杖本來就帶著它，第 1 週已有，不加欄位、不比較簽發時間）；測試涵蓋 user-account 規格的全部情境（改名長度、`wrong_password`、改密碼後舊權杖 401 而新權杖可用、登出讓所有裝置失效、登出後重新登入可用、刪帳號時的快取清理、還有上傳工作時刪帳號回 409 `job_in_progress`、`demo_user_read_only`）
-- [ ] 2.9 實作 `DELETE /api/me/months/{month}`；測試刪除後品味向量重算、`month_not_found`、`job_in_progress`
-- [ ] 2.10 新增 `start.bat`：檢查 `.env`、執行 seed、啟動 uvicorn、打開 `/web/`；在沒有 GPU 的電腦上手動確認，點兩下就能打開 `/docs` 和 v2 網頁
-- [ ] 2.11 新增 GitHub Actions，用 Python 3.12 和 Node 24 執行 `python -m unittest discover -s tests` 和 `node --test "tests/*.test.cjs"`，模型設定為 fake；確認 PR 上是綠燈，執行紀錄裡也沒有下載任何模型
-- [ ] 2.12 新增 `Dockerfile`、`docker-compose.yml`、`.dockerignore`，並在 CI 加上 `docker build`；確認映像檔裡找不到 `rawdata/`、`data/`、CSV、壓縮檔和 `.env`，CI 上建置成功
-- [ ] 2.13 實作容器的啟動流程：`CATEGORY_MODEL=bert` 而且沒有模型時，從 `CATEGORY_MODEL_REPO` 下載 `CATEGORY_MODEL_REVISION`；`DEMO_MODE=1` 而且資料庫是空的時，自動執行 seed；用無效的模型庫名稱測試下載失敗時服務照樣啟動、健康檢查顯示 `unavailable`
-- [ ] 2.14 README 補上架構圖、啟動步驟（虛擬環境和 Docker 兩種），以及沒有採用 pgvector 的原因；請另一位組員照著文件從零啟動成功
-- [ ] 2.15 角色 2、3 交出真模型後（3.6、4.3），在 `src/api/backends.py` 的 `load_backends` 接上 `CATEGORY_MODEL`、`ATTRIBUTES_MODEL` 的真實作（目前只接受 `fake`）；用 `tests/model_contract.py` 的 `check_classify`、`check_describe` 確認回傳格式，健康檢查顯示實際的模型名稱
+- [x] 2.7 實作 `GET /api/matches/{user_id}/explain`；測試固定 18 格、各格貢獻加總等於分數、與 `tests/fixtures/similarity-cases.json` 一致、`not_enough_items` 和 `too_few_shared`、查自己回 400 `self`、不存在回 404，以及 `network` 裡的品名已經去掉地名、沒有店家、日期和任何一筆的金額（10/16 完成，在 `role-1/matches`；另外測試假用戶查真實使用者回 404）
+- [x] 2.8 實作 overview 5.11 的帳號管理（`GET`／`PATCH /api/me`、`POST /api/me/password`、`DELETE /api/me`、`POST /api/auth/logout`），改密碼和登出都換掉 `users.token_key`（假用戶登出不換）（權杖本來就帶著它，第 1 週已有，不加欄位、不比較簽發時間）；測試涵蓋 user-account 規格的全部情境（改名長度、`wrong_password`、改密碼後舊權杖 401 而新權杖可用、登出讓所有裝置失效、登出後重新登入可用、刪帳號時的快取清理、還有上傳工作時刪帳號回 409 `job_in_progress`、`demo_user_read_only`）（10/16 完成，在 `role-1/account`）
+- [x] 2.9 實作 `DELETE /api/me/months/{month}`；測試刪除後品味向量重算、`month_not_found`、`job_in_progress`（10/16 完成，在 `role-1/account`）
+- [ ] 2.10 新增 `start.bat`：檢查 `.env`、執行 seed、啟動 uvicorn、打開 `/web/`；在沒有 GPU 的電腦上手動確認，點兩下就能打開 `/docs` 和 v2 網頁（10/16：程式和文件在 `role-1/deploy`；還差：在沒有 GPU 的電腦上雙擊確認）
+- [ ] 2.11 新增 GitHub Actions，用 Python 3.12 和 Node 24 執行 `python -m unittest discover -s tests` 和 `node --test "tests/*.test.cjs"`，模型設定為 fake；確認 PR 上是綠燈，執行紀錄裡也沒有下載任何模型（10/16：程式和文件在 `role-1/deploy`；還差：push 後 PR 上的綠燈）
+- [ ] 2.12 新增 `Dockerfile`、`docker-compose.yml`、`.dockerignore`，並在 CI 加上 `docker build`；確認映像檔裡找不到 `rawdata/`、`data/`、CSV、壓縮檔和 `.env`，CI 上建置成功（10/16：程式和文件在 `role-1/deploy`；還差：push 後 CI 的 docker build、映像檔檢查和 `docker compose up` 啟動）
+- [x] 2.13 實作容器的啟動流程：`CATEGORY_MODEL=bert` 而且沒有模型時，從 `CATEGORY_MODEL_REPO` 下載 `CATEGORY_MODEL_REVISION`；`DEMO_MODE=1` 而且資料庫是空的時，自動執行 seed；用無效的模型庫名稱測試下載失敗時服務照樣啟動、健康檢查顯示 `unavailable`（10/16 完成，在 `role-1/deploy`）
+- [ ] 2.14 README 補上架構圖、啟動步驟（虛擬環境和 Docker 兩種），以及沒有採用 pgvector 的原因；請另一位組員照著文件從零啟動成功（10/16：程式和文件在 `role-1/deploy`；還差：請另一位組員從零照 README 啟動）
+- [ ] 2.15 角色 2、3 交出真模型後（3.6、4.3），在 `src/api/backends.py` 的 `load_backends` 接上 `CATEGORY_MODEL`、`ATTRIBUTES_MODEL` 的真實作（原本只接受 `fake`）；用 `tests/model_contract.py` 的 `check_classify`、`check_describe` 確認回傳格式，健康檢查顯示實際的模型名稱（10/16：屬性已接上，`docker-compose.yml` 也傳 `ATTRIBUTES_MODEL`，在 `role-1/models`，用替身驗證，角色 3 的分支合併後再用真的模組驗；分類受阻於任務 3.6）
 
 ## 3. 角色 2：分類模型
 
@@ -47,7 +47,7 @@
 - [x] 4.4 讓品味計算透過 `attributes` 品名對照字典讀取模型屬性，`channel_of` 照舊；現有與模型屬性測試通過（由角色 1 的 `from_model` 實作，2026-10-15 使用者決定；見 design D6）
 - [x] 4.5 在品味計算中加入甜度預設補位；測試沒寫甜度的手搖奶茶，屬性回傳的 `sugar` 是 `null`，但 sweet 格把它當成全糖（由角色 1 的 `from_model` 實作，2026-10-15 使用者決定；待分析飲品也套用預設）
 - [x] 4.6 把 `personas.py` 擴充到約 300 人；測試 8 種類型的人數相差不超過 1 人、同一個種子產生的結果完全相同，而且 seed 之後 `/api/auth/demo-users` 列出約 300 人
-- [x] 4.7 擴充 seed：假發票寫進 `items`，假品名的屬性結果存成 `datasets/synthetic/attribute-cache.jsonl` 並載入 `item_cache`，再走一般的管線算出品味向量；在無 GPU 模式下執行，確認每位假用戶都有品項紀錄，重新計算也得到相同的向量（2026-10-16：300 人、21,316 筆品項、107 筆快取、300 份 profile；記憶體資料庫無 GPU 重算一致，demo 登入配對隔離已測）
+- [x] 4.7 擴充 seed：假發票寫進 `items`，假品名的屬性結果存成 `datasets/synthetic/attribute-cache.jsonl` 並載入 `item_cache`，再走一般的管線算出品味向量；在無 GPU 模式下執行，確認每位假用戶都有品項紀錄，重新計算也得到相同的向量（2026-10-16：300 人、21,316 筆品項、107 筆快取、300 份 profile；記憶體資料庫無 GPU 重算一致，demo 登入配對隔離已測；2026-10-18 審查修正：MODEL_VERSION 快取鍵、完整資料重跑不寫入，待 Claude 複核）
 - [x] 4.8 組織 4 人人工複核 100 個品名，產出 23 個欄位的 precision、recall、F1 和 `null` 比例，寫成 `docs/results/attributes.md`（只放彙總數字）；掃描確認裡面沒有任何真實品名（10/15 使用者改採本機模型預標後由本人審核，分四份各 25 筆；100 筆已由使用者逐筆看完並確認，保留 1 筆／1 欄修正；23 欄指標與隱私掃描完成）
 - [x] 4.9 訂出「相反類型」對照表，執行配對驗證（整體和 8 種類型各自的同類型命中率，以及相反類型命中率），寫成 `docs/results/matching.md`（2026-10-16：改共用角色 1 `matching.entries`／`pick`；門檻、排序與 API 一致）
 

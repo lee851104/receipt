@@ -21,11 +21,13 @@ def file_url(url):
 
 def pragmas(write_ahead):
     """What each new connection turns on. Foreign keys, so a row for a missing user fails at once instead of waiting
-    for the next account that gets the same id; and for a file, write-ahead logging, so readers do not wait for a
-    background upload's writes. (Python's sqlite3 already waits up to 5 seconds for a busy database.)"""
+    for the next account that gets the same id; secure delete, so a deleted row is overwritten in the file rather
+    than left in free pages (D13: deleting really deletes); and for a file, write-ahead logging, so readers do not
+    wait for a background upload's writes. (Python's sqlite3 already waits up to 5 seconds for a busy database.)"""
     def run(connection, record):
         cursor = connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA secure_delete=ON")
         if write_ahead:
             cursor.execute("PRAGMA journal_mode=WAL")
         cursor.close()

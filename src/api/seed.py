@@ -3,8 +3,8 @@
     .venv/Scripts/python.exe -m src.api.seed
 
 Stop the API server before seeding. No GPU or live model is used.
-The list of fictional people may only grow at the end. After reordering or renaming people, delete the database
-files (data/app.db*: the database and its -wal and -shm files) and run the seed again.
+The list of fictional people may only grow at the end. Identity or cache conflicts stop the seed;
+resolve the conflicting fixtures or use a separate demo database, never delete a database holding real accounts.
 """
 import csv
 import hashlib
@@ -21,14 +21,17 @@ from sqlalchemy.dialects.sqlite import insert
 from sqlmodel import Session, col, delete, select
 
 from ..ml.fields import FIELDS
+from ..ml.attributes import MODEL_VERSION
 from ..receipt.invoices import REQUIRED, build_month
+from ..receipt import places, traits
+from .profiles import months_of
 from ..receipt.personas import build_personas
 from ..receipt.traits import load_context
 from .backends import Backends
 from .db import ROOT, init_db, make_engine
 from .jobs import UNFINISHED, mark_failed, process
 from .settings import Settings
-from .tables import Item, ItemCache, Job, User
+from .tables import Item, ItemCache, Job, Profile, User
 
 
 def clash(username, user, person):
@@ -68,7 +71,7 @@ def synthetic_cache(path):
         fields = record.get("attributes")
         if (record.get("source") != "synthetic" or record.get("human_confirmed") is not True
                 or record.get("review_status") not in ("human_confirmed", "human_corrected")
-                or not record.get("model_version") or not isinstance(fields, dict) or set(fields) != set(FIELDS)
+                or record.get("model_version") != MODEL_VERSION or not isinstance(fields, dict) or set(fields) != set(FIELDS)
                 or not record.get("name", "").startswith("示範") or record["name"] in cache):
             raise ValueError("Seed requires unique, human-reviewed synthetic attribute records")
         boolean = set(FIELDS) - {"sugar", "fun", "species"}
@@ -110,12 +113,59 @@ def synthetic_months(person):
     return months
 
 
-def seed_demo_population(engine, people, context, *, attribute_model="fake", cache_path=None):
+ITEM_FIELDS = ("month", "day", "invoice", "merchant", "district", "name", "quantity", "amount", "category")
+
+
+def population_complete(session, usernames, people, months, categories, cache, context):
+    """Read-only comparison with current fixtures and taste rules; never trust counts alone."""
+    users = {u.username: u for u in session.exec(select(User).where(col(User.username).in_(usernames)))}
+    if len(users) != len(usernames):
+        return False
+    if any(clash(name, users[name], person) for name, person in zip(usernames, people, strict=True)):
+        return False  # seed_demo_users will report the identity conflict before writing
+    ids = [user.id for user in users.values()]
+    items, jobs = defaultdict(list), defaultdict(list)
+    for item in session.exec(select(Item).where(col(Item.user_id).in_(ids)).order_by(Item.id)):
+        items[item.user_id].append(item)
+    for job in session.exec(select(Job).where(col(Job.user_id).in_(ids))):
+        jobs[job.user_id].append(job)
+    profiles = {p.user_id: p for p in session.exec(select(Profile).where(col(Profile.user_id).in_(ids)))}
+    for username, person_months in zip(usernames, months, strict=True):
+        user = users[username]
+        expected = [(month, *(row[key] for key in ITEM_FIELDS[1:-1]), categories[row["name"]])
+                    for month, rows in person_months.items() for row in rows]
+        actual = [tuple(getattr(item, key) for key in ITEM_FIELDS) for item in items[user.id]]
+        if actual != expected:
+            return False
+        counts = {month: len({row["name"] for row in rows}) for month, rows in person_months.items()}
+        finished = jobs[user.id]
+        if (len(finished) != len(counts) or {j.month for j in finished} != set(counts)
+                or any(j.status != "done" or j.done != counts[j.month] or j.total != counts[j.month]
+                       for j in finished)):
+            return False
+        profile = profiles.get(user.id)
+        if profile is None or profile.item_count != len(expected):
+            return False
+        rows, period = traits.dated(months_of(items[user.id]))
+        try:
+            vector = None if profile.vector is None else json.loads(profile.vector)
+            if (vector != traits.build_vector(rows, period, context, attributes=cache)
+                    or json.loads(profile.areas) != places.areas_of(rows, context)):
+                return False
+        except (ValueError, TypeError):
+            return False
+    return True
+
+
+def seed_demo_population(engine, people, context, *, cache_path=None):
     """Backfill demo purchases and profiles through the normal upload job, without querying any live model.
 
     Run with the server stopped. Account ids/tokens remain stable; each requested demo's receipts and finished
-    jobs are replaced, so reruns cannot duplicate purchases. Other accounts and other model caches are untouched.
-    The backend currently keys item_cache by mode (fake/qwen); the reviewed JSONL retains the full model version.
+    jobs are replaced when incomplete or stale. A complete current population skips all writes and jobs;
+    items, completed month jobs, versioned cache and profiles are compared first. Other accounts and other
+    model caches are untouched.
+    The cache always uses MODEL_VERSION, regardless of ATTRIBUTES_MODEL. These are human-reviewed Qwen
+    fixtures (46 of 107 corrected), not untouched model output; the JSONL retains predictions and provenance.
     """
     cache = synthetic_cache(cache_path or ROOT / "datasets/synthetic/attribute-cache.jsonl")
     categories = {}
@@ -131,15 +181,20 @@ def seed_demo_population(engine, people, context, *, attribute_model="fake", cac
             categories[name] = category
     months = [synthetic_months(person) for person in people]
     usernames = [f"demo_{i:03}" for i in range(1, len(people) + 1)]
+    summary = {"users": len(people), "profiles": len(people), "cache_items": len(cache),
+               "items": sum(len(rows) for person in months for rows in person.values())}
     with Session(engine) as session:
         # Refuse a conflicting cache rather than replace a value another account may already use.
-        existing = session.exec(select(ItemCache).where(ItemCache.model == attribute_model,
+        existing = session.exec(select(ItemCache).where(ItemCache.model == MODEL_VERSION,
                                                         col(ItemCache.name).in_(list(cache)))).all()
         if any(json.loads(entry.fields) != cache[entry.name] for entry in existing):
             raise ValueError("Synthetic cache differs from stored answers; review the cache model before seeding")
         ids = session.exec(select(User.id).where(col(User.username).in_(usernames))).all()
         if session.exec(select(Job).where(col(Job.user_id).in_(ids), col(Job.status).in_(UNFINISHED))).first():
             raise ValueError("Stop unfinished demo jobs before seeding")
+        if len(existing) == len(cache) and population_complete(
+                session, usernames, people, months, categories, cache, context):
+            return {**summary, "added_users": 0, "skipped": True}
     added = seed_demo_users(engine, people)  # checks every account collision before adding any user
 
     def classify(names):
@@ -149,12 +204,12 @@ def seed_demo_population(engine, people, context, *, attribute_model="fake", cac
     def no_model(*args, **kwargs):
         raise AssertionError("Synthetic seed must be fully cached")
 
-    backend = Backends(category="synthetic-recorded", classify=classify, attributes=attribute_model,
+    backend = Backends(category="synthetic-recorded", classify=classify, attributes="qwen", attributes_version=MODEL_VERSION,
                        describe_items=no_model, gpu_probe=lambda: False)
     settings = SimpleNamespace(category_min_prob=0.5)
     with Session(engine) as session:
         if cache:
-            session.exec(insert(ItemCache).values([{"name": name, "model": attribute_model,
+            session.exec(insert(ItemCache).values([{"name": name, "model": MODEL_VERSION,
                                                    "fields": json.dumps(fields, ensure_ascii=False)}
                                                   for name, fields in cache.items()]).on_conflict_do_nothing())
         session.commit()
@@ -176,8 +231,7 @@ def seed_demo_population(engine, people, context, *, attribute_model="fake", cac
                 except Exception:
                     mark_failed(session, job_id)
                     raise
-    return {"added_users": added, "users": len(people), "profiles": len(people), "cache_items": len(cache),
-            "items": sum(len(rows) for person in months for rows in person.values())}
+    return {**summary, "added_users": added, "skipped": False}
 
 
 def main():
@@ -189,7 +243,7 @@ def main():
         init_db(engine)
         context = load_context(ROOT)
         people = build_personas(context["calendar"], total=300)
-        result = seed_demo_population(engine, people, context, attribute_model=settings.attributes_model)
+        result = seed_demo_population(engine, people, context)
     except ValueError as error:  # a bad setting, or a database that no longer matches the list
         sys.exit(f"error: {error}")
     finally:

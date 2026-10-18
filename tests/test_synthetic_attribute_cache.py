@@ -55,3 +55,11 @@ class SyntheticCacheTests(unittest.TestCase):
         metadata = review_script.review_metadata({"attributes": {"food": True}}, corrected=True)
         self.assertFalse(metadata["human_confirmed"])
         self.assertEqual(metadata["review_status"], "assistant_corrected")
+
+    def test_every_public_cache_archive_marks_synthetic_source(self):
+        paths = list((ROOT / "datasets/synthetic").glob("attribute-cache*.jsonl"))
+        self.assertEqual(len(paths), 3)
+        for path in paths:
+            rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(len(rows), 107)
+            self.assertTrue(all(row.get("source") == "synthetic" for row in rows), path.name)

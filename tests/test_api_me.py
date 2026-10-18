@@ -50,9 +50,10 @@ class MyProfileTests(unittest.TestCase):
     def test_someone_who_has_not_uploaded_yet_is_not_ready(self):
         body = self.profile()
         self.assertEqual({key: body[key] for key in ("user_id", "display_name", "is_demo", "ready", "item_count",
-                                                     "min_items", "pending_attributes", "areas", "months")},
+                                                     "min_items", "pending_attributes", "areas", "months",
+                                                     "recomputing")},
                          {"user_id": 1, "display_name": "Amy", "is_demo": False, "ready": False, "item_count": 0,
-                          "min_items": 20, "pending_attributes": 0, "areas": [], "months": {}})
+                          "min_items": 20, "pending_attributes": 0, "areas": [], "months": {}, "recomputing": False})
         self.assertEqual([trait["value"] for trait in body["traits"]], [None] * 18)
 
     def test_the_traits_are_the_18_of_the_match_page_in_order_each_with_a_value(self):
@@ -192,6 +193,20 @@ class PendingAttributesTests(unittest.TestCase):
                              ItemCache(name="衛生紙", model="fake", fields=fields)])
             session.commit()
         self.assertEqual(self.pending(), 2)
+
+    def test_answers_of_another_version_are_not_used(self):
+        client = make_client(attributes="qwen", attributes_version="v2", gpu_probe=lambda: False,
+                             describe_items=lambda names, ask_model=True: [None] * len(names))
+        register(client)
+        headers = login(client)
+        fields = json.dumps(dict.fromkeys(FIELDS))
+        with Session(client.app.state.engine) as session:
+            # One name answered by an older version, one by the current version: only the second counts as judged.
+            session.add_all([ItemCache(name="測試奶茶", model="v1", fields=fields),
+                             ItemCache(name="測試新品", model="v2", fields=fields)])
+            session.commit()
+        upload(client, headers, invoice_csv(month_of(5, ["測試奶茶", "測試新品"])))
+        self.assertEqual(client.get("/api/me/profile", headers=headers).json()["pending_attributes"], 1)
 
     def test_the_request_never_asks_the_model_even_when_it_could_answer(self):
         asked, answering = [], []

@@ -1,20 +1,24 @@
 """The upload job classifies, judges attributes through the cache, and never stays running when something fails."""
+import json
+import sqlite3
 import tempfile
 import threading
 import unittest
+from functools import partial
 from pathlib import Path
 from unittest import mock
 
 from fastapi.testclient import TestClient
 from sqlalchemy import event
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from src.api import cache, jobs
+from src.api import accounts, cache, jobs, profiles
 from src.api.app import create_app
 from src.api.db import MEMORY, ROOT, init_db, make_engine
-from src.api.jobs import classify_items, fail_unfinished, run_job
+from src.api.jobs import classify_items, fail_unfinished, run_job, run_recompute
 from src.api.settings import Settings
-from src.api.tables import Item, ItemCache, Job, User
+from src.api.tables import Item, ItemCache, Job, Profile, User
 from src.ml import fakes
 from src.ml.fields import FIELDS
 from src.receipt.traits import load_context
@@ -83,6 +87,14 @@ class JobTests(unittest.TestCase):
         upload(client, headers, invoice_csv(MAY))
         self.assertEqual(sorted(row.name for row in self.rows(client, ItemCache)), ["滷肉飯", "衛生紙", "鮮奶茶"])
         self.assertEqual({row.model for row in self.rows(client, ItemCache)}, {"qwen"})
+
+    def test_the_cache_key_is_the_attribute_models_version(self):
+        # A stand-in model whose version is "v2" stores its answers under "v2", not under the setting name.
+        client, headers = self.client(
+            attributes="qwen", attributes_version="v2", gpu_probe=lambda: True,
+            describe_items=lambda names, ask_model=True: [dict.fromkeys(FIELDS) for _ in names])
+        upload(client, headers, invoice_csv(MAY))
+        self.assertEqual({row.model for row in self.rows(client, ItemCache)}, {"v2"})
 
     def test_an_unavailable_classifier_fails_the_job_and_says_why(self):
         client, headers = self.client(category="unavailable")
@@ -225,6 +237,46 @@ class WorkerLoopTests(unittest.TestCase):
         self.assertTrue(worker.thread.daemon)  # a stop never waits for a running job
 
 
+class WorkerCallTests(unittest.TestCase):
+    def test_other_work_waits_behind_the_uploads_queued_before_it(self):
+        ran = []
+        worker = jobs.Worker(ran.append)
+        worker.add(1)
+        worker.call("other work", lambda: ran.append("other"))
+        worker.add(2)
+        worker.queue.join()
+        self.assertEqual(ran, [1, "other", 2])
+
+    def test_failing_work_is_logged_by_its_label_and_the_next_still_runs(self):
+        ran = []
+        worker = jobs.Worker(ran.append)
+        with self.assertLogs("src.api.jobs", level="ERROR") as logs:
+            worker.call("recompute for user 7", lambda: 1 / 0)
+            worker.add(3)
+            worker.queue.join()
+        self.assertEqual(ran, [3])
+        self.assertIn("recompute for user 7 failed", "\n".join(logs.output))
+
+    def test_a_user_is_recomputing_while_work_of_theirs_is_queued_or_running(self):
+        started, release = threading.Event(), threading.Event()
+        self.addCleanup(release.set)  # never leave the worker held, whatever the test does
+
+        def held():
+            started.set()
+            release.wait(timeout=30)
+        worker = jobs.Worker(lambda job_id: None)
+        self.assertFalse(worker.recomputing(7))
+        worker.call("recompute for user 7", held, user_id=7)
+        worker.call("recompute for user 7", lambda: 1 / 0, user_id=7)  # fails, and still counts as run
+        worker.add(1)  # an upload job keeps its own status, so it is not counted
+        self.assertTrue(started.wait(timeout=5))
+        self.assertEqual((worker.recomputing(7), worker.recomputing(1)), (True, False))
+        with self.assertLogs("src.api.jobs", level="ERROR"):
+            release.set()
+            worker.queue.join()
+        self.assertFalse(worker.recomputing(7))
+
+
 class RunJobTests(unittest.TestCase):
     def setUp(self):
         self.engine = make_engine(MEMORY)
@@ -295,6 +347,57 @@ class RunJobTests(unittest.TestCase):
         self.assertEqual(sorted((item.name, item.category) for item in items), [("測試新品", 10), ("衛生紙", 8)])
 
 
+class RunRecomputeTests(unittest.TestCase):
+    def setUp(self):
+        self.engine = make_engine(MEMORY)
+        init_db(self.engine)
+
+    def add_amy_with_items(self):
+        with Session(self.engine) as session:
+            session.add(User(username="amy", display_name="Amy", password_hash="x"))
+            session.commit()  # foreign keys are enforced, so the user must exist before its rows
+            session.add_all([Item(user_id=1, month="2026-05", day=day, invoice=f"2026-05-R{day:02}", merchant="測試飲料店",
+                                  district="臺北市大安區", name=f"測試茶{day}", quantity=1, amount=50, category=1)
+                             for day in range(1, 4)])
+            session.commit()
+
+    def test_it_stores_the_profile_worked_out_from_the_items(self):
+        self.add_amy_with_items()
+        run_recompute(self.engine, fake_backends(), CONTEXT, 1)
+        with Session(self.engine) as session:
+            profile = session.get(Profile, 1)
+        self.assertEqual((profile.item_count, profile.vector, json.loads(profile.areas)), (3, None, ["臺北市大安區"]))
+
+    def test_an_account_deleted_meanwhile_is_skipped_quietly(self):
+        with self.assertNoLogs("src.api.jobs", level="ERROR"):
+            run_recompute(self.engine, fake_backends(), CONTEXT, 42)
+        with Session(self.engine) as session:
+            self.assertEqual(session.exec(select(Profile)).all(), [])
+
+    def test_an_account_deleted_while_it_runs_ends_it_quietly(self):
+        self.add_amy_with_items()
+        history = profiles.history
+
+        def delete_the_account_meanwhile(session, backends, user_id):
+            answer = history(session, backends, user_id)
+            with Session(self.engine) as other:
+                accounts.delete_account(other, user_id)
+                other.commit()
+            return answer
+        worker = jobs.Worker(lambda job_id: None)
+        with mock.patch.object(profiles, "history", side_effect=delete_the_account_meanwhile), \
+                self.assertNoLogs("src.api.jobs", level="ERROR"):
+            worker.call("recompute for user 1", partial(run_recompute, self.engine, fake_backends(), CONTEXT, 1))
+            worker.queue.join()
+        self.assertEqual((table(self.engine, User), table(self.engine, Profile)), ([], []))
+
+    def test_a_constraint_that_fails_while_the_account_is_there_is_raised(self):
+        self.add_amy_with_items()
+        failure = IntegrityError("INSERT INTO profiles", None, sqlite3.IntegrityError("CHECK constraint failed"))
+        with mock.patch.object(profiles, "recompute", side_effect=failure), self.assertRaises(IntegrityError):
+            run_recompute(self.engine, fake_backends(), CONTEXT, 1)
+
+
 class CacheTests(unittest.TestCase):
     def test_a_name_another_upload_stored_meanwhile_is_no_error(self):
         engine = make_engine(MEMORY)
@@ -326,6 +429,37 @@ class StartUpTests(unittest.TestCase):
             jobs = session.exec(select(Job).order_by(Job.id)).all()
         self.assertEqual([job.status for job in jobs], ["failed", "failed", "done"])
         self.assertEqual(jobs[0].message, "服務重新啟動，請重新上傳")
+
+    def test_every_real_users_profile_is_worked_out_again_at_start_up(self):
+        """The recompute queued after a month was deleted lived only in the stopped server's queue, so a profile may
+        still be the one from before the deletion."""
+        def profile_of(client, user_id):
+            with Session(client.app.state.engine) as session:
+                profile = session.get(Profile, user_id)
+                return profile.vector, profile.areas, profile.item_count
+        stale = {"vector": json.dumps([0.5] * 18), "areas": json.dumps(["臺北市信義區"]), "item_count": 30}
+        with tempfile.TemporaryDirectory() as folder:
+            settings = Settings(jwt_secret=SECRET, database_url="sqlite:///" + (Path(folder) / "app.db").as_posix())
+            first = TestClient(create_app(settings, fake_backends()))
+            try:
+                register(first)  # user 1
+                upload(first, login(first), invoice_csv(MAY))
+                worked_out = profile_of(first, 1)
+                with Session(first.app.state.engine) as session:
+                    session.add(User(username="demo_001", display_name="Mia", is_demo=True, persona="咖啡上班族"))
+                    session.commit()  # user 2, whose profile the seed stored
+                    session.merge(Profile(user_id=1, **stale))
+                    session.merge(Profile(user_id=2, **stale))
+                    session.commit()
+            finally:
+                first.app.state.engine.dispose()  # Windows cannot delete a file that is still open
+            second = TestClient(create_app(settings, fake_backends()))
+            try:
+                drain(second)
+                self.assertEqual(profile_of(second, 1), worked_out)
+                self.assertEqual(profile_of(second, 2), (stale["vector"], stale["areas"], stale["item_count"]))
+            finally:
+                second.app.state.engine.dispose()
 
 
 if __name__ == "__main__":

@@ -143,6 +143,8 @@ class AdapterTests(unittest.TestCase):
     def test_recorded_qwen_response_replays_without_gpu(self):
         from pathlib import Path
         recorded = json.loads((Path(__file__).parent / "fixtures/qwen-attributes-recorded.json").read_text(encoding="utf-8"))
+        self.assertEqual(recorded.get("validation_scope"), "wire_format_only")
+        self.assertIn("legacy", recorded.get("version_note", ""))
         names = [item["name"] for item in json.loads(recorded["request"]["messages"][1]["content"])]
         with patch.object(self.client, "_request", return_value=recorded["response"]):
             answers = check_describe(self, self.client.describe_items, names)
@@ -175,3 +177,78 @@ class AdapterTests(unittest.TestCase):
                 self.assertEqual(batch.describe_items(["示範奶茶"], ask_model=False), [None])
                 self.assertNotEqual(single.model_version, batch.model_version)
                 self.assertTrue(batch.model_version.endswith(":batch3"))
+
+    def test_unresponsive_local_socket_stops_after_one_timeout(self):
+        received = []
+        release = threading.Event()
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(handler):
+                received.append(handler.path)
+                release.wait(3)  # accept the connection but never send a response
+            def log_message(*args): pass
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            client = attributes.AttributeDescriber(server_url=f"http://127.0.0.1:{server.server_port}", timeout=0.05)
+            names = [f"示範逾時品項{i}" for i in range(5)]
+            self.assertEqual(client.describe_items(names), [None] * len(names))
+            self.assertEqual(len(received), 1)
+        finally:
+            release.set()
+            server.shutdown()
+            server.server_close()
+            thread.join(3)
+
+    def test_transport_failure_keeps_success_and_cache_but_stops_remaining_requests(self):
+        import http.client
+        for error in (OSError(), http.client.HTTPException()):
+            client = attributes.AttributeDescriber()
+            with patch.object(client, "_request", return_value=self.answer([wire()])):
+                known = client.describe_items(["示範既有品項"])[0]
+            with patch.object(client, "_request", side_effect=[self.answer([wire()]), error,
+                              self.answer([wire()])]) as request:
+                result = client.describe_items(["示範既有品項", "示範新一", "示範新二", "示範新三"])
+            self.assertEqual(request.call_count, 2)
+            self.assertEqual(result[0], known)
+            self.assertIsNotNone(result[1])
+            self.assertEqual(result[2:], [None, None])
+
+    def test_bad_single_prediction_does_not_block_next_name(self):
+        client = attributes.AttributeDescriber()
+        with patch.object(client, "_request", side_effect=[ValueError(), self.answer([wire()])]) as request:
+            result = client.describe_items(["示範壞回應", "示範好回應"])
+        self.assertEqual(request.call_count, 2)
+        self.assertIsNone(result[0])
+        self.assertIsNotNone(result[1])
+
+    def test_all_cache_hits_return_without_waiting_for_inference(self):
+        with patch.object(self.client, "_request", return_value=self.answer([wire()])):
+            known = self.client.describe_items(["示範奶茶"])
+        finished = threading.Event()
+        results = []
+        def cached():
+            results.extend(self.client.describe_items(["示範奶茶"]))
+            finished.set()
+        self.client._lock.acquire()
+        thread = threading.Thread(target=cached)
+        thread.start()
+        try:
+            self.assertTrue(finished.wait(0.3))
+        finally:
+            self.client._lock.release()
+            thread.join(3)
+        self.assertEqual(results, known)
+
+    def test_bounded_lru_keeps_recent_hits_and_returns_all_batch_results(self):
+        client = attributes.AttributeDescriber(max_cache_size=2)
+        with patch.object(client, "_request", return_value=self.answer([wire()])):
+            answers = client.describe_items(["示範甲", "示範乙", "示範丙", "示範甲"])
+            self.assertTrue(all(answer is not None for answer in answers))
+            self.assertEqual(answers[0], answers[3])
+            self.assertEqual(len(client.cache), 2)
+            self.assertIsNone(client.describe_items(["示範甲"], ask_model=False)[0])
+            client.describe_items(["示範乙"], ask_model=False)
+            client.describe_items(["示範丁"])
+        self.assertIsNotNone(client.describe_items(["示範乙"], ask_model=False)[0])
+        self.assertIsNone(client.describe_items(["示範丙"], ask_model=False)[0])

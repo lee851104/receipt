@@ -180,5 +180,7 @@
       "predicted_per_token_ms": 12.553536585365855,
       "predicted_per_second": 79.65882707234381
     }
-  }
+  },
+  "validation_scope": "wire_format_only",
+  "version_note": "Recorded with the legacy prompt and batch size 3; retained to test decoding and contract shape only, not current MODEL_VERSION accuracy or inference parity."
 }

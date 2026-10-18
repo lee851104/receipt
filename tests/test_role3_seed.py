@@ -11,6 +11,7 @@ from unittest.mock import patch
 from sqlmodel import Session, select
 
 from src.api import profiles, seed
+from src.ml.attributes import MODEL_VERSION
 from src.api.db import MEMORY, init_db, make_engine
 from src.api.tables import Item, ItemCache, Job, Profile, User
 from src.receipt.personas import build_personas
@@ -61,7 +62,7 @@ class SeedPopulationTests(unittest.TestCase):
             jobs = session.exec(select(Job)).all()
             self.assertEqual(len(jobs), 600)
             self.assertTrue(all(j.status == "done" and j.done == j.total for j in jobs))
-            backend = fake_backends(describe_items=lambda *a, **kw: self.fail("Recompute asked a model"))
+            backend = fake_backends(attributes="qwen", attributes_version=MODEL_VERSION, describe_items=lambda *a, **kw: self.fail("Recompute asked a model"))
             reviewed = {r["name"]: r["attributes"] for r in RECORDS}
             for user, person in zip(users, people, strict=True):
                 previous = session.get(Profile, user.id)
@@ -114,11 +115,12 @@ class SeedPopulationTests(unittest.TestCase):
 
     def test_invalid_or_incomplete_synthetic_cache_fails_before_database_changes(self):
         self.assertTrue(callable(getattr(seed, "seed_demo_population", None)), "Seed must populate items and profiles")
-        for invalid in ("source", "review", "fields", "duplicate", "missing", "changed_values", "missing_confirmation"):
+        for invalid in ("source", "review", "fields", "duplicate", "missing", "changed_values", "missing_confirmation", "old_model"):
             self.engine = make_engine(MEMORY)
             init_db(self.engine)
             self.addCleanup(self.engine.dispose)
             records = copy.deepcopy(RECORDS)
+            if invalid == "old_model": records[0]["model_version"] = "old-synthetic-version"
             if invalid == "source": records[0]["source"] = "real"
             if invalid == "review": records[0]["human_confirmed"] = False
             if invalid == "fields": records[0]["attributes"].pop("food")
@@ -133,20 +135,21 @@ class SeedPopulationTests(unittest.TestCase):
                     self.seed(cache_path=path)
                 self.assertEqual(self.snapshot(), {"users": [], "items": [], "profiles": [], "cache": []})
 
-    def test_cache_is_loaded_for_the_selected_backend_and_other_models_stay_untouched(self):
+    def test_cache_uses_qwen_version_and_other_models_stay_untouched(self):
         with Session(self.engine) as session:
             session.add(ItemCache(name=RECORDS[0]["name"], model="unrelated-test-model", fields="{}"))
             session.commit()
-        self.seed(attribute_model="qwen")
+        self.seed()
         with Session(self.engine) as session:
-            cache = session.exec(select(ItemCache).where(ItemCache.model == "qwen")).all()
+            cache = session.exec(select(ItemCache).where(ItemCache.model == MODEL_VERSION)).all()
             self.assertEqual(len(cache), 107)
             self.assertEqual(session.get(ItemCache, (RECORDS[0]["name"], "unrelated-test-model")).fields, "{}")
             self.assertTrue(all(p.vector is not None for p in session.exec(select(Profile))))
 
     def test_seeded_demo_matches_are_nonempty_and_never_include_general_accounts(self):
         self.assertTrue(callable(getattr(seed, "seed_demo_population", None)), "Seed must populate items and profiles")
-        with make_client(demo_mode=True) as client:
+        with make_client(demo_mode=True, attributes="qwen", attributes_version=MODEL_VERSION,
+                         describe_items=lambda *a, **k: self.fail("No live model")) as client:
             engine = client.app.state.engine
             seed.seed_demo_population(engine, self.people, CONTEXT)
             register(client, username="test_general", display_name="測試一般帳號")
@@ -177,7 +180,7 @@ class SeedPopulationTests(unittest.TestCase):
     def test_conflicting_cache_and_unfinished_jobs_are_not_overwritten(self):
         self.seed(self.people[:1])
         with Session(self.engine) as session:
-            entry = session.get(ItemCache, (RECORDS[0]["name"], "fake"))
+            entry = session.get(ItemCache, (RECORDS[0]["name"], MODEL_VERSION))
             entry.fields = "{}"
             session.add(entry)
             session.commit()
@@ -186,7 +189,7 @@ class SeedPopulationTests(unittest.TestCase):
             self.seed()
         self.assertEqual(self.snapshot(), before)
         with Session(self.engine) as session:
-            entry = session.get(ItemCache, (RECORDS[0]["name"], "fake"))
+            entry = session.get(ItemCache, (RECORDS[0]["name"], MODEL_VERSION))
             entry.fields = json.dumps(RECORDS[0]["attributes"], ensure_ascii=False)
             session.add(entry)
             session.add(Job(user_id=before["users"][0][0], month="2026-05", status="running"))
@@ -199,7 +202,7 @@ class SeedPopulationTests(unittest.TestCase):
     def test_command_entrypoint_populates_profiles_without_reading_env_files(self):
         from src.api.settings import Settings
         from tests.api_support import SECRET
-        settings = Settings(jwt_secret=SECRET, database_url=MEMORY)
+        settings = Settings(jwt_secret=SECRET, database_url=MEMORY, attributes_model="fake")
         with patch.object(seed, "load_dotenv"), \
              patch.object(seed.Settings, "from_env", return_value=settings), \
              patch.object(seed, "make_engine", return_value=self.engine), \
@@ -208,6 +211,7 @@ class SeedPopulationTests(unittest.TestCase):
             seed.main()
         generate.assert_called_once_with(CONTEXT["calendar"], total=300)
         self.assertEqual(len(self.snapshot()["profiles"]), len(self.people))
+        self.assertEqual({r[1] for r in self.snapshot()["cache"]}, {MODEL_VERSION})
 
     def test_failed_seed_job_can_be_retried(self):
         from src.api.jobs import update
@@ -224,3 +228,68 @@ class SeedPopulationTests(unittest.TestCase):
         self.assertEqual(result["profiles"], 3)
         with Session(self.engine) as session:
             self.assertTrue(all(j.status == "done" for j in session.exec(select(Job))))
+
+    def test_complete_current_population_skips_jobs_and_database_writes(self):
+        from sqlalchemy import event
+        self.seed()
+        statements = []
+        def track(conn, cursor, statement, parameters, context, many):
+            if statement.lstrip().split()[0].upper() in ("INSERT", "UPDATE", "DELETE"):
+                statements.append(statement)
+        event.listen(self.engine, "before_cursor_execute", track)
+        try:
+            with patch.object(seed, "process", side_effect=AssertionError("Complete seed must skip processing")):
+                result = self.seed()
+        finally:
+            event.remove(self.engine, "before_cursor_execute", track)
+        self.assertEqual(statements, [])
+        self.assertEqual(result["skipped"], True)
+        self.assertEqual(result["added_users"], 0)
+
+    def test_incomplete_or_stale_population_is_repaired_instead_of_skipped(self):
+        for fault in ("item", "item_value", "profile", "profile_value", "area", "cache", "old_version", "job"):
+            with self.subTest(fault=fault):
+                engine = make_engine(MEMORY)
+                init_db(engine)
+                try:
+                    seed.seed_demo_population(engine, self.people[:1], CONTEXT)
+                    with Session(engine) as session:
+                        item = session.exec(select(Item)).first()
+                        profile = session.exec(select(Profile)).first()
+                        if fault == "item": session.delete(item)
+                        if fault == "item_value":
+                            item.amount += 1
+                            session.add(item)
+                        if fault == "profile": session.delete(profile)
+                        if fault == "profile_value":
+                            profile.vector = "[0]"
+                            session.add(profile)
+                        if fault == "area":
+                            profile.areas = "[]"
+                            session.add(profile)
+                        if fault == "cache":
+                            session.delete(session.get(ItemCache, (item.name, MODEL_VERSION)))
+                        if fault == "old_version":
+                            for entry in session.exec(select(ItemCache)).all():
+                                entry.model = "old-synthetic-version"
+                                session.add(entry)
+                        if fault == "job":
+                            session.delete(session.exec(select(Job)).first())
+                        session.commit()
+                    with patch.object(seed, "process", wraps=seed.process) as process:
+                        result = seed.seed_demo_population(engine, self.people[:1], CONTEXT)
+                    self.assertFalse(result["skipped"])
+                    self.assertEqual(process.call_count, 2)
+                    with patch.object(seed, "process", side_effect=AssertionError("Repair should be complete")):
+                        self.assertTrue(seed.seed_demo_population(engine, self.people[:1], CONTEXT)["skipped"])
+                finally:
+                    engine.dispose()
+
+    def test_complete_population_with_too_few_items_keeps_null_vector_and_skips(self):
+        people = copy.deepcopy(self.people[:1])
+        people[0]["rows"] = people[0]["rows"][:1]
+        self.seed(people)
+        with Session(self.engine) as session:
+            self.assertIsNone(session.exec(select(Profile)).one().vector)
+        with patch.object(seed, "process", side_effect=AssertionError("A valid null vector is complete")):
+            self.assertTrue(self.seed(people)["skipped"])

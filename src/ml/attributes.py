@@ -1,7 +1,10 @@
 """Local Qwen adapter. Database persistence belongs to the API's item_cache pipeline.
 
 AttributeDescriber is callable and accepts an optional shared mapping keyed by
-(model_version, name). Cache-only reads never wait for model inference.
+(model_version, name), bounded to 4096 LRU entries by default (also for an injected mapping).
+Cache-only reads and fully cached calls never wait for model inference. Only local HTTP
+hosts are accepted: localhost, 127.0.0.1, ::1 and host.docker.internal. Use a loopback
+tunnel for a separately hosted local model; arbitrary remote endpoints are not enabled.
 """
 import hashlib
 import http.client
@@ -19,6 +22,7 @@ from .fields import FIELDS
 PROMPT = Path(__file__).with_name("attribute-prompt.txt").read_text(encoding="utf-8")
 MODEL_VERSION = "qwen3-4b:2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e:" + hashlib.sha256(PROMPT.encode()).hexdigest() + ":guards-v1:input-v2:batch1"
 BOOLEAN_FIELDS = tuple(key for key in FIELDS if key not in ("sugar", "fun", "species"))
+_CACHE_LOCK = threading.Lock()  # also serializes adapters sharing an injected mapping
 FUN = {"movie": "電影", "singing": "唱歌", "show": "展演", "game": "遊樂"}
 
 
@@ -62,7 +66,7 @@ def decode(value, name):
 
 
 class AttributeDescriber:
-    def __init__(self, server_url="http://127.0.0.1:8080", model_version=MODEL_VERSION, *, cache=None, timeout=60, batch_size=1):
+    def __init__(self, server_url="http://127.0.0.1:8080", model_version=MODEL_VERSION, *, cache=None, timeout=60, batch_size=1, max_cache_size=4096):
         parsed = urlsplit(server_url)
         if (parsed.scheme != "http" or parsed.hostname not in ("localhost", "127.0.0.1", "::1", "host.docker.internal")
                 or parsed.username or parsed.password or parsed.path not in ("", "/") or parsed.query or parsed.fragment):
@@ -72,12 +76,17 @@ class AttributeDescriber:
             raise ValueError("timeout must be positive")
         if type(batch_size) is not int or not 1 <= batch_size <= 3:
             raise ValueError("batch_size must be between 1 and 3")
+        if type(max_cache_size) is not int or max_cache_size < 1:
+            raise ValueError("max_cache_size must be a positive integer")
+        self.max_cache_size = max_cache_size
         self.batch_size = batch_size
         self.timeout = timeout
         # Batch context changes predictions, including when a caller names a custom model.
         self.model_version = re.sub(r":batch[0-9]+$", "", model_version) + f":batch{batch_size}"
         self.cache = cache if cache is not None else {}
         self._lock = threading.Lock()
+        with _CACHE_LOCK:
+            self._trim_cache()
 
     def _request(self, payload):
         # Direct connection ignores environment proxies; redirects are rejected.
@@ -95,20 +104,42 @@ class AttributeDescriber:
         finally:
             connection.close()
 
+    def _trim_cache(self):
+        # Mapping insertion order is LRU order. Call only while holding _CACHE_LOCK.
+        while len(self.cache) > self.max_cache_size:
+            del self.cache[next(iter(self.cache))]
+
     def _cached(self, name):
-        result = self.cache.get((self.model_version, name))
-        return dict(result) if result is not None else None
+        key = (self.model_version, name)
+        with _CACHE_LOCK:
+            result = self.cache.pop(key, None)
+            if result is not None:
+                self.cache[key] = result
+            return dict(result) if result is not None else None
+
+    def _remember(self, name, result):
+        with _CACHE_LOCK:
+            key = (self.model_version, name)
+            self.cache.pop(key, None)
+            self.cache[key] = result
+            self._trim_cache()
 
     def describe_items(self, names, ask_model=True):
         names = list(names)
         if not names:
             return []
-        if not ask_model:
-            return [self._cached(name) for name in names]
+        answers = {name: self._cached(name) for name in dict.fromkeys(names)}
+        if not ask_model or all(answer is not None for answer in answers.values()):
+            return [dict(answers[name]) if answers[name] is not None else None for name in names]
         # Queue model requests; the timeout bounds HTTP, not time waiting for a peer.
         self._lock.acquire()
         try:
-            missing = list(dict.fromkeys(name for name in names if self._cached(name) is None))
+            # Another call may have filled a miss while we waited; retain this call's hits
+            # even if the bounded cache evicts them before inference finishes.
+            for name, answer in answers.items():
+                if answer is None:
+                    answers[name] = self._cached(name)
+            missing = [name for name, answer in answers.items() if answer is None]
             for start in range(0, len(missing), self.batch_size):
                 batch = missing[start:start + self.batch_size]
                 ids = [f"i{i}" for i in range(len(batch))]
@@ -133,13 +164,16 @@ class AttributeDescriber:
                     if set(by_id) != set(ids):
                         raise ValueError("missing or duplicate IDs")
                     results = [decode(by_id[ident], name) for ident, name in zip(ids, batch)]
-                except (OSError, http.client.HTTPException, ValueError, KeyError, IndexError, TypeError):
-                    continue  # failures remain retryable, never cached as negative answers
+                except (OSError, http.client.HTTPException):
+                    break  # unavailable transport: do not multiply a timeout by the number of names
+                except (ValueError, KeyError, IndexError, TypeError):
+                    continue  # a bad prediction does not block other names; retry on a later call
                 for name, result in zip(batch, results):
-                    self.cache[(self.model_version, name)] = result
+                    answers[name] = result
+                    self._remember(name, result)
         finally:
             self._lock.release()
-        return [self._cached(name) for name in names]
+        return [dict(answers[name]) if answers[name] is not None else None for name in names]
 
     __call__ = describe_items
 

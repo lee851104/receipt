@@ -10,6 +10,11 @@ def now():
     return datetime.now(timezone.utc)
 
 
+def new_token_key():
+    """A fresh random key for an account's tokens."""
+    return secrets.token_hex(8)
+
+
 class User(SQLModel, table=True):
     __tablename__ = "users"
     id: int | None = Field(default=None, primary_key=True)
@@ -20,7 +25,7 @@ class User(SQLModel, table=True):
     persona: str | None = None        # the fictional type, such as 咖啡上班族; None for real people
     # Goes into every token next to the id. SQLite reuses the id of a deleted user, and a fresh database starts
     # the ids again, but a new account gets a new key, so an old token never works for it.
-    token_key: str = Field(default_factory=lambda: secrets.token_hex(8))
+    token_key: str = Field(default_factory=new_token_key)
 
 
 class Job(SQLModel, table=True):
@@ -57,10 +62,11 @@ class Item(SQLModel, table=True):
 
 
 class ItemCache(SQLModel, table=True):
-    """What an attribute model answered for a product name, so the name is judged once per model."""
+    """What an attribute model answered for a product name, so the name is judged once per model version
+    (Backends.attributes_version)."""
     __tablename__ = "item_cache"
     name: str = Field(primary_key=True)
-    model: str = Field(primary_key=True)  # which attribute model answered, such as fake or qwen
+    model: str = Field(primary_key=True)  # the attribute model's version: "fake", or role 3's MODEL_VERSION
     fields: str                           # the 23 fields as JSON; null means unknown, never false
 
 

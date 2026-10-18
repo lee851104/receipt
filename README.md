@@ -62,6 +62,14 @@ py -3.12 -m venv .venv
 
 接著雙擊 start.bat；它會在沒有 .env 時從 `.env.example` 建立設定與隨機密鑰（屬性模型為 `qwen`）、放入 300 位示範帳號和他們的購買紀錄與 profile（完整時跳過；上一次被中斷留下的示範工作會先標成失敗再補完），然後開啟 http://127.0.0.1:8000/web/。示範帳號放不進去時只印一行「示範帳號沒有更新：…；繼續啟動伺服器」；設定寫錯時伺服器自己會用一行訊息停下來。保持啟動視窗開啟，停止按 Ctrl+C；已有 .env 不會覆蓋。不要使用 uv sync（pyproject.toml 未列服務套件）。start.bat 固定使用 127.0.0.1:8000；這個埠被別的程式占用時，先關掉那個程式，或改用上面的手動指令並換一個 `--port`。
 
+**示範上傳（10/18 補上）**：start.bat 預設的分類模型是 `fake`，它只認得少數字（茶、咖啡、餅乾、雞蛋、衛生紙…），真實發票的品名大多會被歸到 10「待確認」而不計入，新帳號就會顯示資料不足。示範時可以先產生一份虛構的電子發票 CSV 再從設定上傳：
+
+```powershell
+.venv/Scripts/python.exe -m scripts.make_demo_upload --month 2026-06
+```
+
+它寫出 `demo-upload-2026-06.csv`（40 行、品名都是審核過的「示範…」名稱，不進 git），上傳後月報就有內容，也配得到示範帳號；換 `--month` 可以多產生幾個月。要分類自己真實的發票，請改用下面的 BERT。
+
 要在虛擬環境用真的 BERT：另外安裝 `requirements-docker.txt`（CPU 版 torch、transformers），把已驗證的推論包放在 `models/category`（或 `CATEGORY_MODEL_DIR` 指的資料夾），再把 .env 的 `CATEGORY_MODEL` 改成 `bert`。start.bat 和 uvicorn 不會下載模型。
 
 若偏好 uv，可用以下方式建立環境並安裝相同依賴：

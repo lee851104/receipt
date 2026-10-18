@@ -658,7 +658,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 - `months` 由存起來的品項當場整理，上傳一被接受就有了；`ready`、`item_count`、`areas`、`traits` 是任務最後存起來的 profile，任務結束才變。`months` 不是空的不代表 profile 做好了，要先問任務到 `done`。任務 `failed` 時，`months` 已經是新上傳的月份，profile 還是上一次成功的結果，請使用者重新上傳
 - `ready` 為 true 才有品味向量（有效品項至少 `min_items` 個）。false 時 18 筆 `traits` 的 `value` 全是 `null`，畫面可以用 `item_count` 和 `min_items` 顯示「還差幾個品項」。`ready` 為 true 時，個別格子還是可能是 `null`（那一格資料不夠），畫面要畫得出「沒有資料」
 - `item_count` 是有效品項數（略過的明細和類別 10 待確認的品項不算）：金額大於 0、類別不是 10，同一張發票上同一個品名只算一次，所以不能拿 `months` 的列數自己數（10/16 補上）。`months` 裡的品項照樣包含類別 10，`provisional` 一律是 `false`，畫面用 `category` 是不是 10 顯示「待確認」
-- `pending_attributes` 是屬性模型還沒判斷過的不重複品名數，大於 0 時可以提示「有 N 個品名還在分析」。現在用假模型，任務結束後是 0，換上真的 Qwen、沒有 GPU 時新品名才會算進去
+- `pending_attributes` 是屬性模型還沒判斷過的不重複品名數。**大於 0 時畫面要顯示一行小提示**（例如「有 N 個品名還在分析」），等於 0 時什麼都不顯示（10/18 改寫：原本寫「可以提示」；item-attributes 規格的情境要求「我的品味」顯示待分析品名數，沒有 GPU 時這是使用者理解格子為什麼沒有資料的唯一線索）。現在用假模型，任務結束後是 0，換上真的 Qwen、沒有 GPU 時新品名才會算進去
 - 還沒上傳過的人和假用戶（`is_demo`，假用戶的資料要等 seed 擴充，任務 4.7）：`ready` 為 false、`item_count` 為 0、`months` 為 `{}`，不是錯誤
 - `configs/calendar-2026.json` 只列了 2026 年 3–4 月的補假，其他月份只算週末，所以沒有連假的期間 `holiday` 格是 `null`（見 5.6 最後一點）
 

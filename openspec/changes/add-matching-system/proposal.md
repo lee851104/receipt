@@ -16,7 +16,7 @@
 - 新增評估：三個分類模型的比較表（測試集只放真實品名）、配對驗證、LLM 屬性的人工複核
 - 新增帳號管理：查看與修改個人資料、修改密碼、刪除帳號（連同所有資料）、刪除單一月份資料、登出
 - 新增無 GPU 模式和一鍵啟動，沒有顯示卡的組員也能跑完整 demo
-- 新增 Docker：`docker compose up` 一個指令就能用無 GPU 模式啟動；分類模型公開在 Hugging Face，第一次啟動時自動下載
+- 新增 Docker：`docker compose up` 一個指令就能用無 GPU 模式啟動（預設用假模型，不下載任何東西）；真的分類模型不公開，放在受保護的 Hugging Face 來源，有憑證時第一次啟動才下載，沒有憑證時分類器是 `unavailable`，其餘服務照常啟動（10/18 改寫：原本的計畫是公開權重，使用者在 2026-10-17 改成受保護的政策）
 - 新增 GitHub Actions，每次 push 都跑全部測試，模型用假替身
 - v2 網頁放在 `src/web_v2/`，從現有網頁複製過去再改成向 API 要資料，由同一個服務在 `/web/` 提供；GitHub Pages 上的 v1（根目錄 `invoice-insights.html`）和它的建置來源 `src/web/` 凍結不動
 
@@ -43,7 +43,7 @@
 ## Impact
 
 - **新程式：** `src/api/`（FastAPI、資料庫、登入、背景任務）、`src/ml/`（模型介面與假替身）、`src/web_v2/`（v2 網頁：從 `src/web/` 複製要用的頁面改成向 API 要資料，並新增登入、上傳和計算過程畫面）、`datasets/synthetic/`（假品名、假用戶資料，可進 git）、`.github/workflows/`、`Dockerfile`、`docker-compose.yml`、`.dockerignore`
-- **外部服務：** 分類模型公開在 Hugging Face 的模型庫，以固定版本下載
+- **外部服務：** 分類模型放在 Hugging Face 上受保護（不公開）的模型庫，帶憑證以固定的 revision 和 SHA-256 下載；匿名存取會被拒絕（401）。憑證不進 git，Docker 以唯讀 secret 提供。原本「公開在 Hugging Face」的方案已被取代，理由見 design D7（10/18 改寫）
 - **修改現有程式：**
   - `src/receipt/invoices.py` 的解析改成略過作廢發票、低於 10 元或有小數金額的明細，小數數量當成 1（現在遇到這些會直接報錯）
   - `src/receipt/attributes.py` 的屬性來源改由模型提供，`channel_of` 保留
@@ -52,5 +52,5 @@
 - **不能變動：** 根目錄 `invoice-insights.html`（GitHub Pages v1）、`src/web/`（v1 報告的建置來源，不提供也不為 v2 修改）、現有 159 個測試的行為
 - **新套件：** `fastapi`、`uvicorn`、`sqlmodel`、`python-multipart`、`pyjwt`、`pwdlib[argon2]`、`python-dotenv`，測試用 `httpx2`；BERT 上線時再加 CPU 版 `torch`、`transformers`。另外需要 llama.cpp 的 `llama-server` 執行檔（放在 `runtime/`，不進 git）
 - **硬體：** 選型和訓練用 RTX 4060 8G；其他組員的電腦用無 GPU 模式
-- **隱私：** 真實發票、真實品名與標註、模型檔都不進 git；真實品名只用本機模型處理。分類模型的權重會公開在 Hugging Face，但訓練資料不公開
+- **隱私：** 真實發票、真實品名與標註、模型檔都不進 git；真實品名只用本機模型處理。分類模型的權重也不公開：放在受保護的 Hugging Face 來源，只有帶憑證的人下載得到，訓練資料同樣不公開（10/18 改寫：原本的計畫是公開權重）
 - **參考文件：** `docs/team/overview.md`（27 項決定、第 5 節 API 規格、角色分工、時程）；`docs/superpowers/plans/2026-10-14-api-skeleton.md`（角色 1 第 1 週的實作計畫）

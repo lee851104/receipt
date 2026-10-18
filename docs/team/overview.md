@@ -109,7 +109,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 
 預設套件：`fastapi`、`uvicorn`、`sqlmodel`、`python-multipart`、`pyjwt`、`pwdlib[argon2]`（密碼雜湊）、`scikit-learn`、`torch`、`transformers`。Qwen 用 llama.cpp 的 `llama-server`，後端用 HTTP 呼叫它。Python 統一用 3.12。
 
-**Docker（10/15 補上）：** 根目錄的 `Dockerfile` 和 `docker-compose.yml` 用無 GPU 模式包起整個服務。執行 `docker compose up` 後：`CATEGORY_MODEL=bert` 又設了 repo 和 revision 時，第一次啟動會從 Hugging Face 下載固定版本的分類模型（compose 的 `CATEGORY_MODEL` 預設是 `fake`，不下載；而且真的 BERT 還沒接上，下載了 `bert` 也是 `unavailable`，10/16 改寫；10/18 補上：說的是分類模型，屬性模型的預設已經是 `qwen`）；`DEMO_MODE=1` 時，每次啟動都會匯入 300 位假用戶和他們的購買紀錄、profile，資料已經完整就跳過（10/18 改寫：原本只在資料庫是空的時匯入 40 位假用戶）。資料庫和模型放在 volume 裡，重建容器也不會不見。容器裡不跑 Qwen；容器預設連到主機上的 llama-server（`http://host.docker.internal:8080`），要連別的位址設 `DOCKER_LLAMA_SERVER_URL`（10/16 改寫：容器不用 `.env` 的 `LLAMA_SERVER_URL`）。compose 會把 `ATTRIBUTES_MODEL` 傳進容器（預設 `qwen`，10/18 改寫：10/16 的預設是 `fake`，因為當時角色 3 的 `src/ml/attributes.py` 還沒合併）：容器透過那個位址向主機的 llama-server 問新品名，連不到時 `models.attributes` 顯示 `cache_only`，只用快取裡的答案（10/16 補上）；位址只從 `Settings` 來，`qwen` 只接受 `http://` 的 `localhost`、`127.0.0.1`、`[::1]`、`host.docker.internal`（沒有路徑和密碼），其他位址讓伺服器啟動時用一行訊息停下來（10/18 補上）；設成 `fake` 時那個位址只改變 `/api/health` 的 `gpu_mode`，假用戶的屬性都是待分析，因為 `fake` 讀不到 seed 放進去的答案（10/18 補上）。組員開發時仍以虛擬環境為主，Docker 是給面試官和乾淨環境驗證用的。（10/16 補上）埠只開在主機的 `127.0.0.1`（`DEMO_MODE=1` 時任何連得到伺服器的人都能用假用戶登入）；`JWT_SECRET` 沒設時，用資料 volume 裡的 `/data/jwt-secret`，第一次啟動時產生；映像檔只 COPY `configs/`、`src/` 和 `datasets/synthetic/attribute-cache.jsonl`（審核過的虛構答案，10/18 改寫），不含 `data/`、`rawdata/`、CSV 和 `.env`。下載分類模型只發生在 `CATEGORY_MODEL=bert`、模型資料夾沒有 `config.json`，而且設了 `CATEGORY_MODEL_REPO` 和 `CATEGORY_MODEL_REVISION` 的時候，而且只在容器裡（`python -m src.api.container`）；`start.bat` 和直接跑 `uvicorn` 都不下載，`huggingface_hub` 只裝在 `requirements-docker.txt`。`docker-compose.yml` 會讀專案根目錄的 `.env` 來填 `CATEGORY_MODEL`、`ATTRIBUTES_MODEL`（10/16 補上）、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`（也可以從執行 `docker compose` 的環境變數給），但 `LLAMA_SERVER_URL` 不用 `.env` 的，因為 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己。
+**Docker（10/15 補上）：** 根目錄的 `Dockerfile` 和 `docker-compose.yml` 用無 GPU 模式包起整個服務。執行 `docker compose up` 後：`CATEGORY_MODEL=bert`、`CATEGORY_MODEL_REPO_TYPE=space`，而且設了 repo、完整 revision、SHA256 和本機憑證時，第一次啟動會從受保護的 Hugging Face 來源下載已驗證的 BERT（compose 的 `CATEGORY_MODEL` 預設是 `fake`，不下載；屬性模型的預設是 `qwen`；10/18 改寫：角色 2 的 BERT 已接上，在 `role-1/integration` 合併）；`DEMO_MODE=1` 時，每次啟動都會匯入 300 位假用戶和他們的購買紀錄、profile，資料已經完整就跳過（10/18 改寫：原本只在資料庫是空的時匯入 40 位假用戶）。資料庫和模型放在 volume 裡，重建容器也不會不見。容器裡不跑 Qwen；容器預設連到主機上的 llama-server（`http://host.docker.internal:8080`），要連別的位址設 `DOCKER_LLAMA_SERVER_URL`（10/16 改寫：容器不用 `.env` 的 `LLAMA_SERVER_URL`）。compose 會把 `ATTRIBUTES_MODEL` 傳進容器（預設 `qwen`，10/18 改寫：10/16 的預設是 `fake`，因為當時角色 3 的 `src/ml/attributes.py` 還沒合併）：容器透過那個位址向主機的 llama-server 問新品名，連不到時 `models.attributes` 顯示 `cache_only`，只用快取裡的答案（10/16 補上）；位址只從 `Settings` 來，`qwen` 只接受 `http://` 的 `localhost`、`127.0.0.1`、`[::1]`、`host.docker.internal`（沒有路徑和密碼），其他位址讓伺服器啟動時用一行訊息停下來（10/18 補上）；設成 `fake` 時那個位址只改變 `/api/health` 的 `gpu_mode`，假用戶的屬性都是待分析，因為 `fake` 讀不到 seed 放進去的答案（10/18 補上）。組員開發時仍以虛擬環境為主，Docker 是給面試官和乾淨環境驗證用的。（10/16 補上）埠只開在主機的 `127.0.0.1`（`DEMO_MODE=1` 時任何連得到伺服器的人都能用假用戶登入）；`JWT_SECRET` 沒設時，用資料 volume 裡的 `/data/jwt-secret`，第一次啟動時產生；映像檔只 COPY `configs/`、`src/` 和 `datasets/synthetic/attribute-cache.jsonl`（審核過的虛構答案，10/18 改寫），不含 `data/`、`rawdata/`、CSV 和 `.env`。遠端下載只發生在 BERT 已設定 Space 來源、而且目的模型資料夾還不存在時；已有的模型先核對 manifest 和 hash，不對的資料夾不會被覆寫（10/18 改寫，角色 2），而且只在容器裡（`python -m src.api.container`）；`start.bat` 和直接跑 `uvicorn` 都不下載，`huggingface_hub` 只裝在 `requirements-docker.txt`。`docker-compose.yml` 會讀專案根目錄的 `.env` 來填 `CATEGORY_MODEL`、`ATTRIBUTES_MODEL`（10/16 補上）、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`、`CATEGORY_MODEL_REPO_TYPE`、`CATEGORY_MODEL_SHA256`（10/18 補上後兩個；也可以從執行 `docker compose` 的環境變數給），但 `LLAMA_SERVER_URL` 不用 `.env` 的，因為 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己。
 
 ## 5. API 規格（2026-10-14 定案）
 
@@ -331,14 +331,16 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 | `DEMO_MODE` | 0 | 1 = 開放 `demo-users` 和 `demo-login` |
 | `DATABASE_URL` | `sqlite:///data/app.db` | 放在 `/data/` 底下，不會進 git。相對路徑一律從 repo 根目錄算起，不管在哪個資料夾啟動。只接受 `sqlite:///…`（檔案）和 `sqlite://`（記憶體，測試用），錯誤訊息不會印出設定的值 |
 | `LLAMA_SERVER_URL` | `http://127.0.0.1:8080` | Qwen 的 llama-server。10/18 補上：這是位址的唯一來源（`ATTRIBUTES_MODEL=qwen` 時用它建 `AttributeDescriber`，不再另外讀環境變數）；`qwen` 只接受 `http://` 開頭、主機是 `localhost`、`127.0.0.1`、`[::1]` 或 `host.docker.internal`、沒有路徑和密碼的位址，其他的讓伺服器啟動時用一行訊息停下來（不印位址本身）；Docker 容器改用 `DOCKER_LLAMA_SERVER_URL` |
-| `CATEGORY_MODEL` | fake | `fake` 和 `bert` 可以設；`bert` 在真模型接上（任務 2.15）之前一律是 `unavailable`，模型資料夾裡已經有模型也一樣（10/16 補上） |
+| `CATEGORY_MODEL` | fake | fake / bert。bert從CATEGORY_MODEL_DIR載入一次；完整性、標籤或分類head檢查失敗時unavailable，分類回503；fake不需ML套件（10/18 改寫，角色 2） |
 | `ATTRIBUTES_MODEL` | fake | fake / qwen。`Settings` 的預設是 `fake`（沒設就是 `fake`）；`docker-compose.yml` 和 `.env.example` 的預設是 `qwen`（10/18 改寫），已經有的 `.env` 照舊，要自己改。角色 3 的 `src/ml/attributes.py` 已經合併在 `role-1/role3-integration`；`qwen` 沒有 `llama-server` 回答時是 `cache_only`，只用快取裡的答案；`fake` 讀不到 seed 放進去的答案，假用戶的屬性都是待分析 |
 | `CATEGORY_MIN_PROB` | 0.5 | 低於這個機率的品名歸到 10 待確認 |
-| `CATEGORY_MODEL_DIR` | `models/category` | `CATEGORY_MODEL=bert` 時讀模型的資料夾（`/models/` 不進 git）；`start.bat` 和 `uvicorn` 只讀這個資料夾，不下載。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`（10/16 補上） |
-| `CATEGORY_MODEL_REPO` | 空 | Hugging Face 上公開的分類模型庫；只有 Docker 容器（`python -m src.api.container`）會在 `CATEGORY_MODEL=bert`、資料夾裡沒有模型時從這裡下載，`start.bat`／`launch` 和直接跑 `uvicorn` 都不下載（`huggingface_hub` 只裝在 `requirements-docker.txt`）。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`，沒設的話伺服器啟動時停下來（10/16 補上） |
-| `CATEGORY_MODEL_REVISION` | 空 | 要下載的固定版本（commit），和 `CATEGORY_MODEL_REPO` 一起設定；同樣只有容器會用它下載。10/15 補上。設了 `CATEGORY_MODEL_REPO` 就一定要設 `CATEGORY_MODEL_REVISION`（10/16 補上） |
+| `CATEGORY_MODEL_DIR` | `models/category` | 已驗證BERT推論包；start.bat／uvicorn只讀取，不下載。Docker為/models/category。無repo時允許純本機載入 |
+| `CATEGORY_MODEL_REPO` | 空 | 受保護HF Space；BERT遠端來源必須同設TYPE=space、完整revision與SHA256。僅正式容器入口自動下載；下載失敗時模型unavailable，其餘服務仍啟動 |
+| `CATEGORY_MODEL_REVISION` | 空 | Space的40位小寫十六進位commit；禁止main等可變名稱 |
+| `CATEGORY_MODEL_REPO_TYPE` | model | 無repo的本機相容預設；BERT指定repo時必須為space，type=model整庫下載會在Settings明確拒絕 |
+| `CATEGORY_MODEL_SHA256` | 空 | Space必填64位小寫SHA256；與manifest及下載權重核對，本機載入有設定時也核對 |
 
-設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。伺服器只能開**一個行程**：不要加 `--workers`，也不要兩個伺服器共用同一個資料庫，因為啟動時會把還沒做完的任務標成 failed，「一次只跑一個任務」的背景執行緒也只管得到同一個行程裡的任務。能啟動的值：`CATEGORY_MODEL` 是 `fake` 或 `bert`，`ATTRIBUTES_MODEL` 是 `fake` 或 `qwen`；設成別的值（包括還沒接上的 `tfidf`、`embedding`）同樣會停下來。`CATEGORY_MODEL=bert` 能啟動，但模型一律是 `unavailable`；`ATTRIBUTES_MODEL=qwen` 時，`LLAMA_SERVER_URL` 不是 `http://` 的本機位址（`localhost`、`127.0.0.1`、`[::1]`、`host.docker.internal`，沒有路徑和密碼）的話，伺服器用一行訊息停下來（10/18 改寫：原本是「要有角色 3 的 `src/ml/attributes.py`，沒有時用一行訊息停下來」，10/16 改寫；模組缺失時仍然會用一行訊息停下來）。
+設定留空等於用預設值。密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不在清單裡時，伺服器啟動時停下來，用一行訊息指出是哪個變數。伺服器只能開**一個行程**：不要加 `--workers`，也不要兩個伺服器共用同一個資料庫，因為啟動時會把還沒做完的任務標成 failed，「一次只跑一個任務」的背景執行緒也只管得到同一個行程裡的任務。能啟動的值：`CATEGORY_MODEL` 是 `fake` 或 `bert`，`ATTRIBUTES_MODEL` 是 `fake` 或 `qwen`；設成別的值（包括還沒接上的 `tfidf`、`embedding`）同樣會停下來。`CATEGORY_MODEL=bert` 會載入已驗證的模型，載入失敗時才是 `unavailable`（10/18 改寫，角色 2）；`ATTRIBUTES_MODEL=qwen` 時，`LLAMA_SERVER_URL` 不是 `http://` 的本機位址（`localhost`、`127.0.0.1`、`[::1]`、`host.docker.internal`，沒有路徑和密碼）的話，伺服器用一行訊息停下來（10/18 改寫：原本是「要有角色 3 的 `src/ml/attributes.py`，沒有時用一行訊息停下來」，10/16 改寫；模組缺失時仍然會用一行訊息停下來）。
 
 ### 5.11 帳號管理（2026-10-15 補上）
 
@@ -378,7 +380,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 ```python
 # src/ml/category.py
 def classify(names: list[str]) -> list[dict]:
-    """每個品名回傳 {"category": 0–9, "probs": [10 個機率]}。"""
+    """輸入為非空白品名字串；每筆回傳 {"category": 0–9, "probs": [10 個機率]}。"""
 
 # src/ml/attributes.py
 def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None]:
@@ -387,11 +389,13 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
     ask_model=False 時只查快取、不呼叫 Qwen（給即時分類框用）。"""
 ```
 
+`classify`接收list[str]，每個字串strip後必須非空；空list回[]。BERT保留ValueError防呆，上傳略過空白明細由角色1處理。
+
 `src/ml/fakes.py` 提供同樣介面的假替身，回傳固定結果。後端和 CI 一開始全部用假替身，模型好了再換成真的。
 
 回傳值一律用一般的 Python 型別（numpy 的結果先 `.tolist()`），否則 API 會回 500。在自己的測試裡呼叫 `tests/model_contract.py` 的 `check_classify(self, classify)` 和 `check_describe(self, describe_items)`，就能確認格式對不對。`probs` 不要四捨五入（至少保留 4 位小數），檢查允許的加總誤差是 0.001。
 
-`src/ml/attributes.py` 也要有 `MODEL_VERSION`（字串；換模型或 prompt 就要變）。後端用它當屬性快取（`item_cache.model`）的鍵，換了版本，舊版本的答案就不再使用；fake 模式的鍵照舊是 `"fake"`（10/16 補上）。`src/ml/category.py` 建議提供 `load(model_dir) -> classify`，`classify` 的格式同上，後端在啟動時用 `CATEGORY_MODEL_DIR` 載入一次（角色 1 的提議，等角色 2 回覆，10/16 補上）。
+`src/ml/attributes.py` 也要有 `MODEL_VERSION`（字串；換模型或 prompt 就要變）。後端用它當屬性快取（`item_cache.model`）的鍵，換了版本，舊版本的答案就不再使用；fake 模式的鍵照舊是 `"fake"`（10/16 補上）。`src/ml/category.py` 已提供 `load(model_dir) -> classify`，後端在啟動時用 `CATEGORY_MODEL_DIR` 載入一次；BERT逐批取鎖，批次間釋放，不保證作業系統鎖排程公平或即時請求延遲上限。
 
 `describe_items` 連不到 llama-server 時回 `None`，不要丟例外；呼叫 Qwen 要設 timeout。兩個函式會被不同的執行緒同時呼叫（FastAPI 用執行緒跑 `def` 路由），PyTorch 模型和 tokenizer 要自己加鎖。
 
@@ -412,7 +416,7 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
 ### 角色 2：分類模型
 
 - **負責：** 生成假品名、分配真實品名的複核、TF-IDF / embedding / BERT 三個模型的訓練與比較
-- **交出：** `src/ml/category.py` 的 `classify()`；比較表（macro-F1、準確率、模型大小、速度）；混淆矩陣；概念說明的「迴歸」段落；第 3 週把 BERT 模型公開到 Hugging Face（固定版本，附模型卡）
+- **交出：** `src/ml/category.py` 的 `classify()`；比較表（macro-F1、準確率、模型大小、速度）；混淆矩陣；概念說明的「迴歸」段落；BERT維持受保護Hugging Face來源（固定revision與SHA256，附模型說明；10/18依使用者決定更新）
 - **先讀：** `experiments/category-models/README.md`、`RESULTS.md`、`RESULTS-B.md`、`LABELING.md`、`docs/category-models-brief.md`、`configs/report.json`
 - **每週：**
   1. 稀少類別生成假品名，每類補到至少 50 個，存成 `datasets/synthetic/item-names.jsonl`（`name`、`category`、`source="synthetic"`）；整理真實品名測試集（只留在本機）
@@ -598,6 +602,16 @@ $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-r
 ```
 
 - 工作區為 `codex/role-3/attributes` worktree；共用主資料夾 Python 與 llama.cpp，不升級共用套件。本角色此次只修改自身檔案與 `src/receipt/` 新增的外部屬性邏輯。
+### 13.14 角色 2 分類介面與受保護下載交付（2026-10-18 複核修正；角色 2 分支原本編為 13.11，整合時改號）
+
+角色2已合入role-1/models d1ed44a，提供category.load(model_dir)->classify及category_backend接線；CPU離線載入，批次16、逐批鎖保護。非空白輸入契約見第6節，空白明細略過由角色1的followups處理，不在角色2重複修改。模型不完整或載入失敗時unavailable，不隨機猜測。
+
+選定bert-next25-20261016-v3；受保護來源lee851104/receipt-model-lab，固定revision 29b655b96b4ced268bb0c3994e901c72dfd65420，SHA256 16997425a9b36629469d60f506d52c2771bab1e6f3a3ea1465c2c0a316fa3e79。本機載入可以保留REPO/REVISION空值；Docker遠端必須TYPE=space及完整REPO/REVISION/SHA，BERT的type=model整庫下載明確拒絕。token以runtime唯讀secret傳入，建議只授予此Space的fine-grained讀取權限，不放.env/Git/image；預設fake與純本機模式不強迫登入。
+
+76263e6已記錄乾淨Linux image、新volume認證下載、真Compose secret、虛構HTTP與移除token/network none的新容器驗收；不是Qwen/300人seed/前端或主分支端到端驗收。舊image只代表當時產品8750154，修正後版本的重新驗證見classification-review-fixes.md。本輪不讀原test；8bf1722曾依使用者授權完成保留集比較，見classification-real25-holdout.md。
+
+角色1整合時請保留雙方overview/concepts內容，design/proposal受保護來源替換文字見docs/results/classification-review-fixes.md；角色1已認領該兩檔，角色2不代改。角色2修正需Claude複核，不能把既有送審或勾選當作合併完成。
+
 ### 13.10 角色 1 轉告（2026-10-16，第 3 週第七批，分支 `role-1/models`）
 
 任務 2.15 能做的部分做完了：`ATTRIBUTES_MODEL=qwen` 接上角色 3 的 `describe_items`，`CATEGORY_MODEL=bert` 還在等角色 2。
@@ -641,7 +655,7 @@ $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-r
 
 **給角色 2**
 - 交出 BERT（任務 3.6）時：把 CPU 版的 `torch`、`transformers` 加進 `requirements-docker.txt`（用 PyTorch 的 CPU index），模型存成 `save_pretrained` 的格式（資料夾裡要有 `config.json`）。`CATEGORY_MODEL=bert` 在接上之前一律回報 `unavailable`
-- 公開模型（任務 3.9）後，把 repo 和 revision 給角色 1，填進 `.env.example` 和 `docker-compose.yml` 的預設值
+- 原10/16的公開模型計畫已由受保護來源政策取代（任務3.9；10/18更正）：把repo、完整revision與SHA256交給角色1，採CATEGORY_MODEL_REPO_TYPE=space及runtime唯讀secret；預設fake與空repo保留，真BERT按第13.14節（角色 2 分支原本的 13.11）顯式設定
 
 **給角色 3**
 - 容器啟動時，資料庫是空的而且 `DEMO_MODE=1` 才匯入假用戶（`container.seed_if_empty`，用的是 `seed.seed_demo_users`）。任務 4.7 擴充 seed 之後，請讓容器也走同一個函式，品項和 profile 才會一起進去（10/18 完成：`container.seed_if_empty` 換成 `container.seed_demo`，demo 模式下每次啟動都呼叫角色 3 的 `seed_demo_population`，300 位假用戶連同品項和 profile，完整的就跳過，見 13.13）

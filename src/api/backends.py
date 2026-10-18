@@ -61,18 +61,20 @@ def unavailable_classify(names):
 
 def category_backend(settings):
     """(name, classify) for CATEGORY_MODEL: the fake, or for bert "unavailable" while the model or src/ml/category.py
-    is missing, so the server still starts and the health check says why classifying fails."""
+    cannot load, so the server still starts and reports unavailable."""
     if settings.category_model == "fake":
         return "fake", fakes.classify
     if settings.category_model == "bert":
-        if not (model_dir(settings) / "config.json").exists():
-            log.warning("CATEGORY_MODEL=bert but %s holds no model: the category model is unavailable", model_dir(settings))
-        # The same relative form `from ..ml import fakes` uses above, so it names the module the package would import.
-        elif importlib.util.find_spec("..ml.category", __package__) is None:
-            log.warning("CATEGORY_MODEL=bert but src/ml/category.py is not there yet: the category model is unavailable")
-        else:
-            log.warning("the BERT model is there, but plugging it in is task 2.15: the category model is unavailable")
-        return "unavailable", unavailable_classify
+        try:
+            from ..ml.category import load, digest
+            if settings.category_model_sha256 and digest(model_dir(settings)/"model.safetensors") != settings.category_model_sha256:
+                raise ValueError("category_model_pin_mismatch")
+            classify = load(model_dir(settings))
+        except Exception:
+            # Third-party exception text may expose local paths or private values.
+            log.warning("CATEGORY_MODEL=bert could not load its verified local bundle; the category model is unavailable")
+            return "unavailable", unavailable_classify
+        return "bert", classify
     raise ValueError(f"CATEGORY_MODEL={settings.category_model} does not work yet; use fake or bert")
 
 

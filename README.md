@@ -252,3 +252,8 @@ python scripts/build_report.py --private
 品味相似度是兩人 17 項品味特質的餘弦相似度（Cosine Similarity），範圍 −100%～+100%，寫在上方的大字與連線圖中間。圖中間的光越亮，代表分數離 0 越遠（綠光是合拍、橘光是相反）；中間每條線加減的分數越多，線就越亮。
 
 本機 `file:` 連結不能讓朋友直接開啟你的電腦檔案。示範時直接傳送 `invoice-insights.html` 即可；對方下載後可離線操作報告與比較畫面，再把你的完整連結貼進比較畫面。線上示範也使用同一個整合檔案。
+
+
+## 角色2 CPU BERT 接入（2026-10-17）
+
+角色2分支已接上選定的25%合成BERT；CATEGORY_MODEL=bert搭配可信完整模型目錄，失敗時unavailable。安裝requirements.txt及requirements-docker.txt；公開/Protected政策、白名單安裝與實際驗收詳見[分類服務交付](docs/results/classification-service.md)。原測試集封存，現有服務與主工作目錄未自動切換。

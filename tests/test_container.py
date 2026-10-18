@@ -315,7 +315,7 @@ class MainTests(unittest.TestCase):
     clean-up, seeding or server (each replaced by a recorder). os.environ is restored afterwards."""
     SETTINGS = ("JWT_SECRET", "JWT_EXPIRE_MINUTES", "DEMO_MODE", "DATABASE_URL", "LLAMA_SERVER_URL", "CATEGORY_MODEL",
                 "ATTRIBUTES_MODEL", "CATEGORY_MIN_PROB", "CATEGORY_MODEL_DIR", "CATEGORY_MODEL_REPO",
-                "CATEGORY_MODEL_REVISION")
+                "CATEGORY_MODEL_REVISION", "CATEGORY_MODEL_REPO_TYPE", "CATEGORY_MODEL_SHA256")
 
     def setUp(self):
         self.data = Path(tempfile.mkdtemp())
@@ -324,7 +324,8 @@ class MainTests(unittest.TestCase):
         self.summary = {"users": 300, "added_users": 300, "skipped": False}  # what the recorder says the seed did
         self.env = {"DEMO_MODE": "1", "DATABASE_URL": "sqlite://", "CATEGORY_MODEL": "bert",
                     "CATEGORY_MODEL_DIR": str(self.data / "category"), "CATEGORY_MODEL_REPO": "someone/receipt-bert",
-                    "CATEGORY_MODEL_REVISION": "abc123"}
+                    "CATEGORY_MODEL_REVISION": "a" * 40, "CATEGORY_MODEL_REPO_TYPE": "space",
+                    "CATEGORY_MODEL_SHA256": "b" * 64}
         for patch in (mock.patch.object(container, "DATA", self.data),
                       mock.patch.object(container, "ensure_category_model", side_effect=self.ensure),
                       mock.patch.object(container, "fail_unfinished", side_effect=self.fail_unfinished),

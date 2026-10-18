@@ -14,6 +14,8 @@ services:
       ATTRIBUTES_MODEL: ${ATTRIBUTES_MODEL:-qwen}
       CATEGORY_MODEL_REPO: ${CATEGORY_MODEL_REPO:-}
       CATEGORY_MODEL_REVISION: ${CATEGORY_MODEL_REVISION:-}
+      CATEGORY_MODEL_REPO_TYPE: ${CATEGORY_MODEL_REPO_TYPE:-model}
+      CATEGORY_MODEL_SHA256: ${CATEGORY_MODEL_SHA256:-}
       # Its own variable, not LLAMA_SERVER_URL: compose reads the root .env, which start.bat makes with 127.0.0.1:8080,
       # and inside the container that address is the container itself.
       LLAMA_SERVER_URL: ${DOCKER_LLAMA_SERVER_URL:-http://host.docker.internal:8080}

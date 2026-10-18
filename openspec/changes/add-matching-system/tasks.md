@@ -29,15 +29,15 @@
 
 ## 3. 角色 2：分類模型
 
-- [ ] 3.1 用 AI 生成稀少類別的假品名，每類至少 50 個，存成 `datasets/synthetic/item-names.jsonl`（`name`、`category`、`source="synthetic"`）；用腳本確認各類的數量，並掃描確認沒有任何真實品名
-- [ ] 3.2 在本機切分訓練集和測試集，測試集只放人工確認過的真實品名；切分檢查腳本確認測試集裡沒有假品名
-- [ ] 3.3 和角色 3 合作，讓 Qwen 預標真實品名，再由 4 人分工複核；確認每個真實品名都已標示為人工確認
-- [ ] 3.4 用新資料重跑 A（TF-IDF）和 B（embedding）兩個基準，產出和 `experiments/category-models/RESULTS-B.md` 同樣格式的結果
-- [ ] 3.5 在 4060（或 Colab）上微調 `bert-base-chinese`，保存模型和訓練紀錄；確認模型可以重新載入，並對測試集跑完預測
-- [ ] 3.6 用 BERT 實作 `src/ml/category.classify`，`CATEGORY_MODEL=bert` 時從 `CATEGORY_MODEL_DIR` 載入，並把 CPU 版的 `torch`、`transformers` 加進服務的套件清單；測試沒有模型檔時健康檢查顯示 `unavailable` 而不是猜一個類別，並記下用 CPU 分類 1000 個品名的時間
-- [ ] 3.7 依 model-evaluation 規格產出三個模型的比較表和混淆矩陣（同一份測試集；測試資料少於 5 筆的類別不計分並列出），寫成 `docs/results/classification.md`；掃描確認裡面沒有任何真實品名
-- [ ] 3.8 在 `docs/team/concepts.md` 寫「邏輯迴歸」段落，用 1–2 個假品名說明從向量到機率的過程
-- [ ] 3.9 第 3 週把 BERT 模型公開到 Hugging Face：固定一個 revision，模型卡寫明訓練資料包含真實品名但不公開；公開前掃描模型卡和設定檔，確認沒有任何真實品名；把 `CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION` 寫進 `.env.example`，並確認一台全新的電腦啟動後，健康檢查顯示 `bert`
+- [x] 3.1 用 AI 生成稀少類別的假品名，每類至少 50 個，存成 `datasets/synthetic/item-names.jsonl`（`name`、`category`、`source="synthetic"`）；用腳本確認各類的數量，並掃描確認沒有任何真實品名
+- [x] 3.2 在本機切分訓練集和測試集，測試集只放人工確認過的真實品名；切分檢查腳本確認測試集裡沒有假品名
+- [x] 3.3 已依使用者後續人工確認名單納入資料，排除無法辨識/待處理項；取代原四人分工流程。保留人工確認來源與評估非盲測限制；本輪不重新讀取標註或test。
+- [x] 3.4 用新資料重跑 A（TF-IDF）和 B（embedding）兩個基準，產出和 `experiments/category-models/RESULTS-B.md` 同樣格式的結果
+- [x] 3.5 在 4060（或 Colab）上微調 `bert-base-chinese`，保存模型和訓練紀錄；確認模型可以重新載入，並對測試集跑完預測
+- [x] 3.6 （2026-10-17角色2分支整合/驗收通過，主產品尚待合併）用 BERT 實作 `src/ml/category.classify`，`CATEGORY_MODEL=bert` 時從 `CATEGORY_MODEL_DIR` 載入，並把 CPU 版的 `torch`、`transformers` 加進服務的套件清單；測試沒有模型檔時健康檢查顯示 `unavailable` 而不是猜一個類別，並記下用 CPU 分類 1000 個品名的時間
+- [x] 3.7 （既有同7筆保留集彙總重建，原test本輪未讀；57筆reference隱私audit命中0）依 model-evaluation 規格產出三個模型的比較表和混淆矩陣（同一份測試集；測試資料少於 5 筆的類別不計分並列出），寫成 `docs/results/classification.md`；掃描確認裡面沒有任何真實品名
+- [x] 3.8 在 `docs/team/concepts.md` 寫「邏輯迴歸」段落，用 1–2 個假品名說明從向量到機率的過程
+- [x] 3.9 （2026-10-17角色2分支已驗收，待Claude審核/主分支整合）依使用者要求以受保護HF來源取代原公開權重方案；固定revision/SHA的認證下載、新volume Docker/Compose唯讀secret啟動、虛構HTTP分類/上傳/profile及去憑證斷網新容器啟動均通過，匿名來源401、無憑證新volume unavailable/503。未公開模型、未動原test；詳見docs/results/classification-remote.md。
 
 ## 4. 角色 3：LLM 屬性與假用戶
 

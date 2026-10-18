@@ -3,10 +3,114 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>消費配對系統 v2</title>
+<meta name="color-scheme" content="dark">
+<title>消費配對系統 v2｜從日常，看見品味</title>
+<link rel="stylesheet" href="./styles.css?v=20261017-space1">
+<script defer src="./api.js"></script>
+<script defer src="./flow.js"></script>
+<script defer src="./view-adapters.js"></script>
+<script defer src="./workspace-flow.js?v=20261017-space1"></script>
+<script defer src="./explanation.js"></script>
+<script defer src="./account-flow.js"></script>
+<script defer src="./account-ui.js"></script>
+<script defer src="./workspace-ui.js?v=20261017-space1"></script>
+<script defer src="./app.js?v=20261017-space1"></script>
 </head>
 <body>
-<h1>消費配對系統 v2</h1>
-<p>網頁還在建置中（角色 4）。API 文件在 <a href="/docs">/docs</a>，健康檢查在 <a href="/api/health">/api/health</a>。</p>
+<a class="skip-link" href="#main">跳到主要內容</a>
+<header>
+  <a class="brand" href="/web/" aria-label="消費配對系統首頁"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>消費配對<span class="edition">TASTE LINK / V2</span></a>
+  <div class="header-actions"><span id="service-status" class="service-status" role="status">連線中</span><div id="settings-menu" class="settings-menu" hidden>
+    <button id="settings-toggle" class="quiet" type="button" aria-expanded="false" aria-controls="settings-options">設定 <span aria-hidden="true">⌄</span></button>
+    <div id="settings-options" class="settings-options" hidden>
+      <span id="identity-label" class="menu-identity"></span>
+      <button type="button" data-workspace="upload">上傳檔案<span>匯入發票 CSV</span></button>
+      <button id="refresh-profile" type="button">重新載入月報<span>更新目前月份資料</span></button><button type="button" data-workspace="settings">帳號設定<span>帳號、月份與資料管理</span></button>
+      <button id="switch-account" type="button" hidden>切換帳號</button>
+    </div>
+  </div></div>
+</header>
+<main id="main">
+  <div id="service-alert" class="service-alert" hidden><span id="service-error"></span><button id="retry-service" class="quiet" type="button">重新連線</button></div>
+  <section id="auth-view" class="auth-layout" aria-label="帳號登入與註冊">
+    <div class="intro">
+      <p class="eyebrow">EVERYDAY CHOICES, SHARED TASTES.</p>
+      <h1>你的日常，<br>藏著你的<em>品味。</em></h1>
+      <p class="subtitle">從一杯飲料、一頓午餐開始，<br>認識自己的消費習慣，也發現與他人的連結。</p>
+      <p class="intro-note">登入查看你的月報，從日常找到同好。</p>
+    </div>
+    <div class="auth-card">
+      <div class="auth-tabs" aria-label="選擇登入或註冊"><button id="login-tab" type="button" aria-pressed="true">登入</button><button id="register-tab" type="button" aria-pressed="false">建立帳號</button></div>
+      <h2 id="auth-title" tabindex="-1">歡迎回來</h2><p id="auth-subtitle" class="muted">登入後，開始探索你的日常選擇。</p>
+      <p id="auth-error" class="message error" role="alert" hidden></p><p id="auth-notice" class="message success" role="status" hidden></p>
+      <form id="login-form">
+        <label for="login-username">帳號</label><input id="login-username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="輸入帳號">
+        <label for="login-password">密碼</label><input id="login-password" name="password" type="password" autocomplete="current-password" required maxlength="512" placeholder="輸入密碼">
+        <button class="primary" type="submit">登入並開始</button>
+      </form>
+      <form id="register-form" hidden>
+        <label for="register-username">帳號</label><input id="register-username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="32" pattern="[A-Za-z0-9_]{3,32}" aria-describedby="username-help" placeholder="例如 taste_amy"><small id="username-help">3–32 個英數字或底線；不能以 demo_ 開頭。</small>
+        <label for="register-display">顯示名稱 <span class="optional">選填</span></label><input id="register-display" name="display_name" autocomplete="nickname" maxlength="20" placeholder="你希望大家怎麼稱呼你">
+        <label for="register-password">密碼</label><input id="register-password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" aria-describedby="password-help" placeholder="設定密碼"><small id="password-help">8–128 個字元。</small>
+        <button class="primary" type="submit">建立帳號</button>
+      </form>
+      <section id="demo-panel" class="demo-panel" aria-labelledby="demo-title" hidden>
+        <div class="divider"><span>或先體驗看看</span></div>
+        <label id="demo-title" for="demo-user">示範帳號 <span class="optional">虛構資料</span></label>
+        <form id="demo-form"><select id="demo-user" required aria-label="選擇示範帳號"><option value="">選擇一位示範使用者</option></select><button id="demo-submit" class="secondary" type="submit">進入體驗</button></form>
+        <p id="demo-note" class="small">不用密碼，先看看示範品味與月報。</p>
+      </section>
+    </div>
+  </section>
+  <section id="workspace-view" hidden aria-label="我的消費與品味">
+    <nav class="workspace-nav" aria-label="功能導覽">
+<button type="button" data-workspace="home" class="back-choice">← 返回選擇</button>
+</nav>
+<section id="home-panel" hidden aria-labelledby="home-title">
+<div class="entry-intro"><p class="eyebrow">YOUR TASTE, YOUR WAY</p><h1 id="home-title" tabindex="-1">今天，想怎麼探索？</h1></div>
+<div class="entry-choices">
+<button class="entry-card entry-self" type="button" data-entry="profile" aria-label="看自己的品味">
+<svg class="entry-art" viewBox="0 0 200 160" aria-hidden="true"><circle class="art-halo" cx="100" cy="80" r="67"/><path class="art-line" d="M67 31H133V130L122 124 111 130 100 124 89 130 78 124 67 130Z"/><path class="art-line" d="M82 53H118M82 66H107"/><path class="art-bar" d="M84 105V91M100 105V81M116 105V73"/></svg>
+<span class="entry-copy"><strong>看自己的品味</strong><span>從每月消費，看見自己的日常。</span></span><span class="entry-arrow" aria-hidden="true">↗</span>
+</button>
+<button class="entry-card entry-connect" type="button" data-entry="matches" aria-label="跟陌生人配對品味">
+<svg class="entry-art" viewBox="0 0 200 160" aria-hidden="true"><circle class="art-halo" cx="100" cy="80" r="67"/><circle class="art-line art-pink" cx="70" cy="80" r="38"/><circle class="art-line art-blue" cx="130" cy="80" r="38"/><path class="art-bridge" d="M70 66H130M70 94H130"/><circle class="art-pink" cx="70" cy="66" r="5"/><circle class="art-blue" cx="130" cy="66" r="5"/><circle class="art-pink" cx="70" cy="94" r="5"/><circle class="art-blue" cx="130" cy="94" r="5"/></svg>
+<span class="entry-copy"><strong>跟陌生人<br>配對品味</strong><span>看看誰和你有相似的生活偏好。</span></span><span class="entry-arrow" aria-hidden="true">↗</span>
+</button>
+</div></section>
+<section id="upload-panel" hidden aria-labelledby="upload-title">
+<p class="eyebrow">02 / 發票變成線索</p><h1 id="upload-title" tabindex="-1">匯入一個月，<em>看見日常。</em></h1><p class="subtitle">選擇財政部電子發票 CSV，每份檔案只放一個月，最大 2 MB。</p>
+<div class="upload-layout"><section class="input-card"><form id="upload-form"><label for="invoice-file">發票 CSV</label><input id="invoice-file" type="file" accept=".csv,text/csv" required aria-describedby="upload-help"><p id="upload-help" class="small">重新上傳相同月份會取代該月舊資料。作廢、折扣、低於 10 元或小數金額明細不計入分析。</p><p id="upload-demo-note" class="message" hidden>示範帳號不能上傳；請切換成自己的帳號。</p><button id="upload-submit" class="primary" type="submit">上傳並分析</button></form></section>
+<section class="result-card" aria-label="上傳處理進度"><p class="eyebrow">PROGRESS / 處理進度</p><h2 id="upload-state">等待上傳</h2><p id="upload-message" role="status" aria-live="polite">選擇 CSV 後開始分析。</p><progress id="upload-progress" max="1" value="0" hidden aria-label="發票分析進度"></progress><p id="upload-count" class="small"></p><button id="retry-job" class="secondary" type="button" hidden>重新查詢進度</button><button id="open-profile" class="primary" type="button" hidden>查看月報</button></section></div>
+</section>
+<section id="profile-panel" hidden aria-labelledby="profile-title">
+<div class="section-header profile-header"><h1 id="profile-title" tabindex="-1">我的<em>月報</em></h1></div>
+<p id="profile-message" role="status" aria-live="polite"></p>
+<p id="profile-pending" class="small" role="status" aria-live="polite" hidden></p>
+<p id="model-note" class="small" hidden></p>
+<div id="profile-content" hidden>
+<p id="report-empty" class="small" hidden>尚未上傳任何月份。從右上角「設定 → 上傳檔案」匯入 CSV，就能查看你的月報。</p>
+<iframe id="report-frame" title="我的消費月報" referrerpolicy="no-referrer" hidden></iframe>
+</div>
+</section>
+<section id="matches-panel" hidden aria-labelledby="matches-title"><div id="match-browse"><div class="section-header"><div><p class="eyebrow">CONNECTIONS / 找到同好</p><h1 id="matches-title" tabindex="-1">從消費習慣，<em>找到合拍的人。</em></h1></div><button id="refresh-matches" class="quiet" type="button">重新查詢</button></div>
+<div class="match-controls"><div role="group" aria-label="配對類型"><button type="button" data-match-kind="similar" aria-pressed="true">相近</button><button type="button" data-match-kind="opposite" aria-pressed="false">互補</button></div><label for="match-scope">範圍 <select id="match-scope"><option value="all">不限</option><option value="district">同一區</option><option value="city">同縣市</option><option value="region">同地區</option></select></label></div>
+<p id="match-areas" class="small"></p><p id="match-status" role="status" aria-live="polite"></p><div id="match-list" class="match-list"></div></div><div id="match-result" hidden><div class="match-result-header"><button id="match-back" class="quiet" type="button">← 返回配對列表</button><h2 id="match-result-title" tabindex="-1">品味連線</h2></div><p id="network-status" role="status"></p><iframe id="network-frame" title="你與配對對象的品味關係圖" referrerpolicy="no-referrer" hidden></iframe><details id="explain-details" class="explain-details" hidden><summary>查看計算過程<span class="small">分數與 18 格計算明細</span></summary><section id="explain-panel" class="explain-panel" aria-labelledby="explain-title" hidden></section></details></div>
+</section>
+<section id="settings-panel" hidden aria-labelledby="settings-title">
+<div class="section-header"><div><p class="eyebrow">05 / 帳號與資料</p><h1 id="settings-title" tabindex="-1">你的帳號，<em>由你管理。</em></h1></div><button id="account-refresh" class="quiet" type="button">重新載入</button></div>
+<p id="account-loading" role="status"></p><p id="account-error" class="message error" role="alert" hidden></p><p id="account-notice" class="message success" role="status" hidden></p><p id="account-demo-note" class="model-note" hidden>示範帳號為唯讀，可以查看資料與登出。</p>
+<div id="account-content" hidden><div class="account-grid">
+<section class="input-card"><h2>顯示名稱</h2><p class="small">帳號：<span id="account-username"></span>（無法修改）</p><form id="account-name-form"><label for="account-name">大家看到的名稱</label><input id="account-name" required maxlength="20" autocomplete="nickname"><button id="account-name-submit" class="primary" type="submit">儲存名稱</button></form></section>
+<section class="input-card"><h2>修改密碼</h2><p class="small">修改成功後，本分頁保留登入；其他裝置需重新登入。</p><p id="password-upload-note" class="small" hidden>發票仍在處理或進度尚未確認，請完成或重新查詢進度後再修改密碼。</p><form id="account-password-form"><label for="current-password">目前密碼</label><input id="current-password" type="password" autocomplete="current-password" required maxlength="512"><label for="new-password">新密碼（8–128 字元）</label><input id="new-password" type="password" autocomplete="new-password" required minlength="8" maxlength="128"><button id="password-submit" class="primary" type="submit">更新密碼</button></form></section>
+<section class="input-card"><h2>已上傳月份</h2><p class="small">刪除後無法復原，品味與配對結果也會更新。</p><div id="account-months"></div></section>
+<section class="input-card account-danger"><h2>刪除帳號</h2><p class="small">永久移除帳號與所有發票資料，操作前需再輸入密碼。</p><button id="delete-account" class="secondary" type="button">刪除我的帳號</button></section>
+</div></div><div class="account-logout"><p class="small">登出會讓這個帳號在所有裝置上的登入失效。</p><button id="logout-submit" class="secondary" type="button">登出所有裝置</button></div>
+</section>
+<dialog id="account-confirm" aria-labelledby="confirm-title" aria-describedby="confirm-description"><form id="account-confirm-form"><h2 id="confirm-title"></h2><p id="confirm-description"></p><p id="confirm-error" class="message error" role="alert" hidden></p><div id="delete-password-row" hidden><label for="delete-password">帳號密碼</label><input id="delete-password" type="password" autocomplete="current-password" maxlength="512"></div><div class="confirm-actions"><button id="confirm-cancel" class="secondary" type="button">取消</button><button id="confirm-submit" class="primary" type="submit">確認刪除</button></div></form></dialog>
+  </section>
+  <noscript><p class="message error">請開啟 JavaScript，才能使用登入與月報功能。</p></noscript>
+</main>
+<footer><span>消費配對系統 v2</span><span>從消費，認識日常。</span></footer>
 </body>
 </html>

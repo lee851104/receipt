@@ -612,6 +612,72 @@ $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-r
 
 角色1整合時請保留雙方overview/concepts內容，design/proposal受保護來源替換文字見docs/results/classification-review-fixes.md；角色1已認領該兩檔，角色2不代改。角色2修正需Claude複核，不能把既有送審或勾選當作合併完成。
 
+### 13.12 角色 4 展示交付與審核修正（2026-10-18）
+
+- 本節更新下方角色 4 歷史紀錄的現況：登入為兩個選項；月報保留簡潔五屏，pending_attributes > 0 顯示「有 N 個品名待分析」，為 0／載入中／切換帳號時清除。沒有恢復舊的品味格子首頁。
+- 181adbf 已含角色 1 d1ed44a 的 Docker／CI，九幕合成 GIF、Docker 真 HTTP 與重建保留資料、GitHub 素材／連結／CI 在 10/17 驗收，5.9 已勾選；詳見 docs/results/role4-delivery.md。下方「Docker 尚未交付／5.9 未完成」均為當時紀錄，非目前狀態。
+- Claude 對 181adbf 的 README 提出必要修正：重排時移除的內容不只是重複段落。本次補回資料表變動的清空重建條件及後果、loopback 理由、模型與下載設定、uv／手動啟動；探針依實際 months 判斷示範月報，不固定預期空畫面；GIF 缺格檢查修正。
+- 角色 1 合併清單：README 的分支下載說明、181adbf 的 40 人／空月報與 fake 限制是版本快照；合併角色 2／3 後需依實際 loader／seed／secret 更新 README 和 5.10，不沿用此快照作整合版保證。角色 2／3 的 13.11 由各自負責；本節使用 13.12 避免占號。
+- 本次只在角色 4 原 worktree 修正，不合併角色 1 followups，不改其他角色認領程式。修正版待 Claude 複核，未合併 main；本輪驗證與限制追加於 docs/results/role4-delivery.md。
+
+### 角色 4 月報首頁（2026-10-17，取代下方舊版首頁說明）
+
+- 依使用者最新指示，移除「我的品味」18 格首頁，登入直接顯示「我的月報」；後端 traits 與配對關係圖契約不變。
+- 月報五屏為品項概覽、消費節奏、動態文字雲、日期分布、月份比較。首屏類別金額可點進同類品項排行，預設前六項並揭露其餘金額，可展開全部；原始明細預設收合。
+- 固定月份／章節導覽、整屏緩動轉場；超高內容保留原生捲動。文字雲保留出現次數與點選明細，新增柔光／慢速漂浮、暫停與減少動態偏好，離開畫面停止動畫。
+- 原角色4 worktree 的 fake 模型與隔離資料庫驗證完成，待 Claude 審核，未合併。驗證範圍及限制見 `docs/results/role4-report-home.md`。
+
+### 角色 4 整屏瀏覽（2026-10-16，後續使用者指示）
+
+- 本紀錄取代前回導覽中的分類入口：前端品名分類整頁、表單與事件已移除；舊 #classify 回到首頁。後端分類API／發票管線保留。
+- 第一屏完整18格品味，第二屏月報摘要；scroll snap與上下頁按鈕，完整一屏時一般滾輪可翻一頁，超高內容維持原生捲動。完整月報以可關閉閱讀視窗開啟，帶入所選月份。短高度／放大保留捲動，不裁切內容。
+- 維持原worktree；細節與本次驗證見 docs/results/role4-paged-home.md，待Claude審核。不是後端最新models分支的合併。
+
+### 角色 4 首頁與導覽調整（2026-10-16，依使用者指定）
+
+- 登入預設「我的品味與月報」，主要導覽只有首頁與找到同好。上傳檔案、帳號設定、品名分類與切換帳號集中右上角設定；無月份時提示設定 → 上傳檔案。
+- 選擇配對才呼叫 explain 取得圖與明細，先顯示品味關係圖；計算明細預設收合，點開才渲染。切換對象／篩選／身分會清除並收合舊明細。未改後端計算。
+- 本批以 docs/results/role4-home-navigation.md 的驗證為準，待 Claude 審核。歷史 GIF 尚未重錄；腳本已更新。5.9 的 Docker／GitHub 驗收依舊未完成。
+
+### 13.9 角色 4 假模型前後端整合（2026-10-16）
+
+- 原角色 4 worktree 合併角色 1 `324874d`，合併提交 `aef2d4c`；產品後端沿用交付版本，v1 未修改。
+- profile 的 `recomputing` 每兩秒輪詢，舊輪廓／月報／配對暫停顯示；完成更新配對。demo 登出文案改為此瀏覽器。圖形的 null 依存起來的 cells 區分重新計算中與資料不夠。
+- 已以 fake 模型與正式 API／worker／SQLite 驗證註冊、兩月上傳、月報、18 格、配對、計算、改名、改密碼、刪月份、登出、刪帳號；舊 token 失效與帳號刪除後移出配對均確認。
+- 5.8 教學數字透過真 explain HTTP 重現，6.3 帳號流程完成；5.9、6.1 的完整乾淨環境驗收仍保留未完成。真模型、300 人完整 seed、Docker／CI、GitHub 發布均未驗收。
+- 完整命令、真假 API 邊界與結果見 `docs/results/role4-integration.md`；產出待 Claude 審核，正式跨角色同步以唯一共用 `CODEX_CLAUDE_HANDOFF.md` 追加紀錄為準。
+
+### 13.7 角色 4 帳號設定與交付準備（2026-10-15）
+
+- 在原角色 4 worktree／`codex/role4-web-foundation` 完成 5.10 前端：帳號資料、改名、改密碼、刪月份確認、刪帳號密碼確認、所有裝置登出，demo 唯讀。上方「切換帳號」仍只清除本分頁登入；設定頁的「登出所有裝置」才呼叫 `/auth/logout`，服務失敗時不假稱登出成功。
+- 修改密碼用成功回傳的新 token 更新 session；密碼只存在送出中的請求，表單立即清空。輪替期間取消既有品味／配對／分類查詢並暫停導覽與新上傳，避免舊 token 的 401 搶先清除登入。上傳仍在執行，或查詢失敗但有待恢復 jobId 時，需先完成／重新查詢工作才能修改密碼。
+- 改名不延長 session 到期時間；改名／刪月份後清除舊品味、月報、配對與圖。刪除失敗保留資料，409 提示稍後重試；切換帳號、401、刪除或登出成功均清空設定頁與密碼對話框。
+- `docs/team/concepts.md` 已撰寫向量化、內積、餘弦、收縮項；`scripts/concepts_example.py` 用兩個虛構向量呼叫正式核心，重現內積 1.88、分母 2.29、+82%。5.8 仍待真正 explain API 重現，不勾選。
+- README 已區分 v1 原型與 v2，加入 `docs/assets/v2-contract-demo.gif`（9 幕虛構資料／模擬 API 展示）及重錄腳本；目前本機啟動方式可照做。Docker 檔案尚未交付，`docker compose up` 只標為後續操作，尚未驗證；本批未推送，因此新素材尚未在 GitHub 驗收。5.9 保持未勾選。
+- 驗證：JS 140、Python 213 通過；帳號／計算面板／既有流程三份瀏覽器驗證通過；OpenSpec strict 通過。獨立審查指出的三項密碼輪替／工作追蹤競態已修正並覆核。v1、後端及核心未修改，也沒有新增共用環境套件。
+- 給角色 1：本分支尚無帳號管理端點，設定頁 404 顯示服務尚未就緒，並保留登出錯誤。需要合併 2.5–2.9、容器後，再補真實 API、撤銷權杖、資料刪除與 Docker 端到端驗收。角色 4 目前正式完成 8／10 項，5.8／5.9 是驗收依賴待補。
+
+### 13.6 角色 4 計算過程面板（2026-10-15，5.7）
+
+- 同一個角色 4 worktree／`codex/role4-web-foundation`，在 `de7bb90` 之上完成 5.7；v1、後端與核心公式未修改。
+- 點選配對卡片後，以同一份 explain 回應呈現總百分比、內積、雙方加權長度、收縮項、分母、最終分數，以及 18 格的我的值／對方值／權重／乘積／貢獻；下方既有關係圖也使用同份回應。前端不重算分數或百分比。
+- 預設顯示至小數 6 位，極小非零值使用科學記號，可切換「完整精度」核對 API 原始數值。null 顯示「未知」或「不計入」，0 保留 0；資料不足時分別說明有效品項不足或共同雙向格不足。
+- 百分比與卡片不符時要求重新查詢；格式錯誤不顯示殘缺計算或關係圖。切換範圍、重新查詢、切換帳號、401 會移除舊面板與圖。格式錯誤提示會保留到資料更換，不受分類頁更新影響。
+- 驗證：`node --test "tests/*.test.cjs"` 132 項通過（含 5 項新增計算面板測試）；`python -m unittest discover -s tests` 212 項通過；OpenSpec strict 通過；v1、`src/api/`、`src/receipt/` 相對本批起點無差異。
+- `tests/web-v2-explanation-browser.cjs` 使用完整虛構 API，驗證 18 格／摘要完整精度、卡片與圖百分比、負分、兩種不可比較原因、錯誤提示持續性、篩選／401 清空與桌機 1440px／手機 390px 無溢出。既有 `tests/web-v2-browser.cjs` 上傳／月報／配對流程也通過。執行方式沿用第二批的 Playwright runtime 環境變數，不安裝新套件。
+- 獨立審查已重跑 19 項相關測試及瀏覽器測試，格式錯誤提示的回歸先失敗再修正通過，覆核無待修必要問題。
+- **整合限制仍在：** 本分支 `/me/profile`、`/matches`、`/matches/{id}/explain` 尚待角色 1 實作。產品不提供 fixture 假資料；本次是前端契約與畫面完成，未宣稱真實端到端完成。角色 4 目前 5.1–5.7 完成，剩 5.8 概念文件、5.9 README／展示素材、5.10 帳號設定。
+
+### 13.5 角色 4 第二批交付（2026-10-15）
+
+- 在 `codex/role4-web-foundation`／角色 4 worktree 接續第一批，合併角色 1 已提交的 `role-1/uploads`（8510bc1）後完成前端 5.4、5.5、5.6。尚未合併回 main。
+- 上傳 CSV 採 multipart，成功後每 2 秒讀工作進度，呈現 queued／running／done／failed、錯誤說明與完成入口；查詢中斷可重查同一 job，不自動重傳檔案。demo 禁止上傳。上傳完成會取消舊月報／配對／關係圖請求，避免晚回資料覆蓋。
+- 分類先顯示類別和機率，pending 每 2 秒額外重查最多 5 次；ready 顯示屬性，耗盡則顯示「稍後再查」，符合 OpenSpec 無 GPU 情境。第一批「不自動重查」的暫行行為已更新。
+- 月報、18 格品味、相近／互補、距離篩選及雙方關係圖已接 API 契約。月報與關係圖從 v1 複製並在 iframe 顯示，以目前身分的資料快照供給；切換身分／401 清空。配對百分比、排序、eligible／within、關係圖貢獻使用後端值。
+- 給角色 1：`/me/profile`、`/matches`、`/matches/{id}/explain` 尚未在此分支實作。前端不內嵌測試資料，404 顯示「服務尚未就緒」。這部分以虛構 API fixture 驗證，請後續做真實端到端整合。profile 目前契約只有 18 格，雙方完整圖使用 explain.network；5.7 逐格計算面板仍未完成。
+- 本機預覽仍是 `http://127.0.0.1:8001/web/`，啟動命令同第一批。因資料表變動，角色 4 `.env` 改指向被忽略的 `data/app-role4-week2.db`；保留第一批資料庫，重新 seed 40 位假用戶。使用 fake 模型，不需要 GPU，未改共享套件。
+- 驗證：Python 212、JS 127 全過；OpenSpec strict 通過；v1 原始碼與 HTML 無差異。真實本機 API 已走註冊、上傳完成、分類 pending→ready；假 API 已走上傳失敗、兩月月報、配對及關係圖；桌機／手機與 iframe 無溢出或 JS 例外。審查修正與測試詳見 `docs/superpowers/plans/2026-10-15-role4-upload-profile-matches.md`。
+- 下一批：5.7 計算過程、5.8 概念文件、5.9 README／錄影、5.10 帳號設定。全流程真模型／GPU、Docker、正式後端整合仍未驗證。
 ### 13.10 角色 1 轉告（2026-10-16，第 3 週第七批，分支 `role-1/models`）
 
 任務 2.15 能做的部分做完了：`ATTRIBUTES_MODEL=qwen` 接上角色 3 的 `describe_items`，`CATEGORY_MODEL=bert` 還在等角色 2。
@@ -800,3 +866,14 @@ $reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-r
 - 本機 API 在 `http://127.0.0.1:8000`，文件在 `/docs`。錯誤一律是 `{"detail": "<代碼>"}`；422 的 `detail` 是清單；程式出錯回 500 `internal_error`；401 時回登入畫面
 - 要不要顯示 demo 快速切換，看 `GET /api/health` 的 `demo_mode`；名單用 `GET /api/auth/demo-users`
 - 即時分類框：第 1 週 `attributes_status` 為 `pending` 時不會自己變成 `ready`，先顯示「待分析」
+
+### 13.4 角色 4 第一批交付（2026-10-15）
+
+- 分支 `codex/role4-web-foundation`，worktree：`C:\Users\User\.codex\worktrees\receipt-role4\receipt`。由角色 1 骨架 `cfbdd35` 起步；尚未合併回角色 1 或 main。
+- 已完成 5.1–5.3：`src/web_v2/` 的 API 客戶端、入口、登入／註冊、demo 切換。共用客戶端自動帶 bearer、401 清空身分與分類結果並回登入，422 與固定錯誤碼顯示中文。sessionStorage 只保留分頁 token、到期時間與顯示文字，不保存密碼。
+- 即時分類已完成第 1 週版本：類別、機率與 23 個屬性；`null` 顯示「未知」，和 `false`／0 分開。依 5.5、13.2 交接，pending 顯示「待分析」、不自動重查，因此 OpenSpec 5.5 保持未勾選；後端 2.4 完成後再補每 2 秒、最多 5 次的輪詢。
+- 給角色 1：這批沒有修改後端。後續需要上傳／工作、profile、matches、explain、帳號管理 API。「切換帳號」目前只清除本分頁身分；全裝置登出要等 `/api/auth/logout`，屬於 5.10。畫面會讀 health 的模型名稱並標示示範模型。
+- 本機啟動（在角色 4 worktree 執行）：`C:\Users\User\Desktop\AI_project\receipt\.venv\Scripts\python.exe -m uvicorn src.api.main:app --host 127.0.0.1 --port 8001`，入口 `http://127.0.0.1:8001/web/`。本 worktree 已獨立建立被忽略的 `.env` 和 `data/app.db`，放入 40 位虛構 demo 用戶；共享 Python 環境未新增套件。第一次在其他 checkout 啟動，仍照第 12 節設定環境與 seed。
+- 驗證：Python 154、JS 109（原有 82 + 新增 27）。真實本機 API／Chromium：註冊、錯誤密碼、登入、demo 切換、即時分類、無效 token 的 401、清除畫面；另以假 API 驗證 pending。桌機 1440px、手機 390px 無橫向溢出或 JavaScript 例外。模型仍是假替身，未驗證真實模型推論。
+- 審查修正：公開 health/demo 名單不因同時登入而遺失；取消登入時不讓舊 401 把註冊頁切回登入。都有失敗後通過的回歸測試，獨立審查覆核通過。
+- v1 的 `invoice-insights.html`、`src/web/` 皆無差異。未完成範圍：上傳／進度、月報與配對、計算過程、帳號設定、影片與概念文件。

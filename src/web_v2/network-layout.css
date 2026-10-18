@@ -1,0 +1,38 @@
+/* The overview is outside the drawing; only the parent workspace scrolls. */
+html,body{margin:0;padding:0;overflow:hidden}
+main{max-width:none;padding:0;margin:0}
+.graph-card{border-radius:12px;background:#141414;border-color:#2d2b2a}
+.toolbar{padding:3px 12px;gap:12px;justify-content:flex-end;align-items:start;border:0;min-height:32px}
+.toolbar .reset{font-size:10px;padding:2px 8px;min-height:26px;margin:0}
+.scope{display:none}
+.graph-help{font-size:11px;color:var(--muted);margin-right:auto;order:-1;padding:3px 0;max-width:70%}
+.graph-help>summary{width:fit-content}
+.graph-help .legend{padding:10px 0 2px;font-size:11px;gap:6px 14px}
+.canvas{padding:0 4px;height:var(--graph-height,380px)}
+.canvas>svg{height:100%;width:100%;overflow:visible}
+.detail{padding:8px 12px;min-height:0;font-size:11px}
+.comparison-overview{display:block;padding:10px 16px;margin:0 0 10px;background:#191817;border:1px solid #35302e;border-radius:10px}
+.comparison-overview .readout{display:grid;grid-template-columns:68px minmax(0,1fr);gap:16px;padding:0;align-items:center}
+.readout-number{font-size:11px;color:var(--pink);padding:0;margin:0;letter-spacing:1px}
+.readout>div{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px}
+.readout #summary,.readout small{grid-column:1/-1;margin:0}
+.readout #summary{font-size:13px}
+.readout p{font-size:13px;line-height:1.6}
+.readout .summary-case{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:baseline}
+.readout .summary-case+.summary-case{border-left:1px solid #ffffff18;padding-left:20px}
+.readout .summary-case strong{font-size:11px;white-space:nowrap;margin:0}
+.is-comparable #summary{display:none}
+.method{display:none}
+.views-note{padding:70px 20px}
+@media(min-width:641px){.person-name{font-size:22px}}
+@media(max-width:640px){
+ .canvas{height:auto;padding:0 5px}.canvas>svg{height:auto}
+ .toolbar{padding:5px 10px;gap:8px}.graph-help{max-width:65%}
+ .comparison-overview{padding:10px 12px;margin-bottom:8px}
+ .comparison-overview .readout{display:block}
+ .readout-number{margin-bottom:6px}
+ .readout>div{grid-template-columns:1fr;gap:6px}
+ .readout p,.readout #summary{font-size:12px}
+ .readout .summary-case+.summary-case{border:0;padding:0}
+ .detail .reset{margin-left:0}
+}

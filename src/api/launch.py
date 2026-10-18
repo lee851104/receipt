@@ -70,12 +70,15 @@ def seed_demo():
         init_db(engine)
         # Only the demo users' jobs, unlike the container (the only process on its volume, which fails every one):
         # another server may already be running on this database, and a real user's unfinished job there is alive.
-        # A demo user cannot upload or delete a month, so their unfinished job is what a stopped seed left, and the
-        # seed would refuse over it ("Stop unfinished demo jobs before seeding") until the server's own start-up.
+        # A demo user cannot upload or delete a month, so their unfinished job is a stopped seed's leftover, and the
+        # seed would refuse over it ("Stop unfinished demo jobs before seeding") until the server's own start-up. It
+        # may instead belong to a seed running right now in another start.bat window or a manual
+        # `python -m src.api.seed`, which this fails too; the damage is limited to fictional demo rows, which the
+        # next run's completeness check rewrites.
         fail_unfinished(engine, demo_only=True)
     finally:
         engine.dispose()
-    from . import seed  # reads .env itself, so only after ensure_env
+    from . import seed  # seed.main loads .env again on its own; importing it lazily keeps launch light
     seed.main()
 
 

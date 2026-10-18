@@ -252,4 +252,4 @@ Where the cover lives (matters for CI)
 
 仍然沒有紀錄的：service-runtime「沒有顯示卡的電腦」「乾淨的電腦」（要另一台電腦）、「連到主機的模型服務」（容器連主機的 llama-server：這台電腦的 llama-server 只開在 127.0.0.1，今天只在虛擬環境驗過 GPU 模式）、model-evaluation 只在 `experiments/` 測試裡的三個情境（CI 不跑）。
 
-另外發現：上傳兩個月份的 CSV 時，API 的 `message` 是英文的 `Expected one month per CSV`，網頁顯示「發票檔案格式不符。」後面接這句英文；規格要的是「一份檔案只能有一個月」這類訊息，待角色 1 改成中文（`src/receipt/invoices.py`）。
+另外：上傳兩個月份的 CSV 時，API 的 `message` 是英文的 `Expected one month per CSV`，網頁顯示「發票檔案格式不符。」後面接這句英文。這是 overview 13.3 給角色 4 的轉告（「400 `invalid_csv` 顯示 `message`（英文…）」）與第 5.4 節定下的做法，符合 web-app 規格「這類系統訊息」；要改成全中文得一起改契約、v1 的命令列訊息和測試，目前不改。

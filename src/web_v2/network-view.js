@@ -18,7 +18,8 @@ function keyFor(side){return side==='a'?leftKey:rightKey;}
 function hasBoth(){return leftKey!==null&&rightKey!==null;}
 function loadedSides(){return ['a','b'].filter(side=>keyFor(side)!==null);}
 function el(tag,attrs={},text){const n=document.createElementNS(svgNS,tag);for(const [k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;return n;}
-function clearSelection(){document.querySelector('.detail').hidden=true;$('selection-hint').hidden=false;$('reset').hidden=true;selected=null;if(!traitGraph)return;clearPins();hideHover();for(const item of [...traitGraph.links,...traitGraph.cells])item.el.style.opacity=String(item.base);for(const item of [...traitGraph.signals,...traitGraph.traits]){item.el.style.opacity='1';if(item.labelEl)item.labelEl.style.opacity='1';}$('detail').textContent='點一個訊號或特質，看看它怎麼一路連到分數。';}
+function announceSelection(){$('selection-live').textContent=$('detail').textContent;}
+function clearSelection(){$('selection-live').textContent='';document.querySelector('.detail').hidden=true;$('selection-hint').hidden=false;$('reset').hidden=true;selected=null;if(!traitGraph)return;clearPins();hideHover();for(const item of [...traitGraph.links,...traitGraph.cells])item.el.style.opacity=String(item.base);for(const item of [...traitGraph.signals,...traitGraph.traits]){item.el.style.opacity='1';if(item.labelEl)item.labelEl.style.opacity='1';}$('detail').textContent='點一個訊號或特質，看看它怎麼一路連到分數。';}
 function bind(group,callback){group.addEventListener('click',callback);group.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();callback();}});}
 function traitsOf(side){const key=keyFor(side);return key===null?null:profiles[key].traits||null;}
 function traitPair(){const a=traitsOf('a'),b=traitsOf('b');return a&&b?[a,b]:null;}
@@ -161,7 +162,7 @@ function selectSignal(id){
  const label=network.signals.find(signal=>signal.id===id).label,[left,right]=traitPair(),names=sideNames(),parts=traitGraph.graph.result.parts;
  for(const signal of traitGraph.signals)if(signal.id===id)pin(signal,label,true);
  $('detail').textContent=[TraitNetwork.signalSentence(network,left,names[0],id),TraitNetwork.signalSentence(network,right,names[1],id),
-  ...feeds.map(index=>TraitNetwork.cellSentence(network,index,left,right,names,parts?parts[index]:null))].join('\n');
+  ...feeds.map(index=>TraitNetwork.cellSentence(network,index,left,right,names,parts?parts[index]:null))].join('\n');announceSelection();
 }
 function selectTrait(index){
  showReadout(true);
@@ -169,7 +170,7 @@ function selectTrait(index){
  clearPins();selected='trait:'+index;lightTraits([index],null);
  for(const trait of traitGraph.traits)if(trait.index===index&&!trait.labelShown)pin(trait,trait.label);
  const [left,right]=traitPair(),parts=traitGraph.graph.result.parts;
- $('detail').textContent=TraitNetwork.cellSentence(network,index,left,right,sideNames(),parts?parts[index]:null);
+ $('detail').textContent=TraitNetwork.cellSentence(network,index,left,right,sideNames(),parts?parts[index]:null);announceSelection();
 }
 function draw(){
  prepareView();
@@ -191,7 +192,7 @@ if(network){
  const unlisted=network.signals.filter(signal=>signal.list_items===false).map(signal=>signal.label);
  $('trait-method-text').textContent='品味相似度是 '+TraitNetwork.traitCount(network.traits)+' 項品味特質（'+network.traits.length+' 格）的餘弦相似度，範圍 '+TraitSimilarity.signed(-1)+'～'+TraitSimilarity.signed(1)+'。';
  $('trait-graph-method').textContent='每項特質由幾個消費訊號加權而成，訊號線越粗，代表這個訊號推得越多；中間每條線是那一格對分數的加減，全部加起來就是品味相似度。點一個訊號，下方說明會列出最常買的品項（最多 3 個，×N 是整段期間的次數）；'+unlisted.join('、')+'這 '+unlisted.length+' 個訊號不列品項。';
-}$('reset').addEventListener('click',clearSelection);$('network').addEventListener('keydown',event=>{if(event.key==='Escape'){clearSelection();showReadout(false);}});matchMedia('(max-width:640px)').addEventListener('change',draw);
+}$('reset').addEventListener('click',clearSelection);matchMedia('(max-width:640px)').addEventListener('change',draw);
 // Respect the system preference until the user explicitly chooses for this session.
 const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
 let motionChoice=null;
@@ -225,7 +226,14 @@ const canvasObserver=new ResizeObserver(()=>{
  else if(previous?.startsWith('trait:'))selectTrait(Number(previous.slice(6)));
  showReadout(readoutOpen);
 });
-document.addEventListener('keydown',event=>{if(event.key==='Escape'){showReadout(false);$('insight-toggle').focus();}});
+document.addEventListener('keydown',event=>{
+ if(event.key!=='Escape')return;
+ if(event.target.closest('#network')){
+  clearSelection();showReadout(false);event.preventDefault();
+ }else if(event.target.closest('.insight-dock')&&!$('insight-content').hidden){
+  showReadout(false);$('insight-toggle').focus();event.preventDefault();
+ }
+});
 canvasObserver.observe(document.querySelector('.canvas'));
 window.addEventListener('pagehide',()=>canvasObserver.disconnect(),{once:true});
 

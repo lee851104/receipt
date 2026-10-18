@@ -27,6 +27,18 @@ const fixture=require('./web-v2-fixtures.cjs');
   const graph=page.frameLocator('#network-frame');
   await graph.locator('#network .t-score-number').waitFor();
   assert.equal(await graph.locator('#overall-score').count(),0);
+  assert(await graph.locator('#insight-toggle').evaluate(n=>!!(n.compareDocumentPosition(document.getElementById('network'))&Node.DOCUMENT_POSITION_FOLLOWING)),'readout precedes graph keyboard stops');
+  await graph.locator('.graph-help > summary').click();
+  await graph.locator('.graph-help > summary').press('Escape');
+  assert(await graph.locator('.graph-help > summary').evaluate(n=>n===document.activeElement),'Escape in legend preserves focus');
+  await graph.locator('.graph-help > summary').click();
+  const firstCell=graph.getByRole('button',{name:/這一格.*查看連線/}).first();
+  await firstCell.press('Enter');
+  assert.equal(await graph.locator('#selection-live').textContent(),await graph.locator('#detail').textContent());
+  assert(await graph.locator('#selection-live').evaluate(n=>!n.closest('[hidden]')),'live region stays outside collapsed readout');
+  await firstCell.press('Escape');
+  assert(await firstCell.evaluate(n=>n===document.activeElement),'Escape in graph preserves focused cell');
+  assert.equal(await graph.locator('#insight-toggle').getAttribute('aria-expanded'),'false');
   assert.equal(await page.locator('#explain-details').getAttribute('open'),null);
   for(const size of [{width:1440,height:1000},{width:1920,height:1080},{width:1366,height:768},{width:1024,height:640},{width:390,height:844},{width:320,height:568}]){
    await page.setViewportSize(size);

@@ -42,6 +42,12 @@
    const uploading=['sending','queued','running'].includes(state.upload.status);
    feedback.button($('upload-submit'),uploading,'處理中…','上傳並分析');
    $('upload-state').classList.toggle('status-loading',uploading);
+   // A terminal result is read wherever the user actually sees it. Polling errors
+   // are not terminal: keep the retry entry until the job's outcome is known.
+   if(enabled&&state.upload.jobId&&(
+    (current==='upload'&&['done','failed'].includes(state.upload.status))||
+    (current==='profile'&&state.upload.status==='done')))acknowledgedJob=state.upload.jobId;
+   if(state.upload.status==='sending'||!state.upload.jobId)acknowledgedJob=null;
    const finished=state.upload.jobId&&['done','failed','error'].includes(state.upload.status)&&state.upload.jobId!==acknowledgedJob;
    $('upload-background').hidden=(!uploading&&!finished)||current==='upload';
    feedback.button($('upload-background'),uploading);$('upload-background').textContent=state.upload.status==='done'?'分析完成，查看月報':!uploading?'查看處理結果':state.upload.status==='sending'?'檔案上傳中…':state.upload.status==='queued'?'檔案排隊中…':'檔案分析中…';
@@ -125,13 +131,14 @@
       $('explain-details').hidden=false;
      }
      if(network.data?.network){
-      startFrame('network',network.data,'network.html?v=20261018-ux1');
+      startFrame('network',network.data,'network.html?v=20261018-review2');
      }else if(network.data){networkRenderError='這份資料暫時無法繪製連線圖，可查看計算過程或重新查詢。';}
     }catch(error){networkRenderError=error.message;}
     lastNetwork=network.data;
    }
    $('network-status').textContent=network.status==='loading'?'載入品味關係圖…':network.message||networkRenderError;
    renderFeedback(state);
+   if(enabled&&current==='profile'&&profile.status==='idle'&&upload.status==='done')work.loadProfile();
    if(current==='matches'&&profile.status==='ready'&&matches.status==='idle')work.loadMatches(state.kind,state.scope);
   }
   // Same-origin child frames receive only current data, never credentials.
@@ -163,7 +170,7 @@
   }});
   $('profile-retry').addEventListener('click',()=>work.loadProfile());
   $('network-retry').addEventListener('click',()=>work.loadMatches(work.state().kind,work.state().scope));
-  $('upload-background').addEventListener('click',()=>{const upload=work.state().upload;if(upload.status==='done'){acknowledgedJob=upload.jobId;navigate('profile');}else navigate('upload');});
+  $('upload-background').addEventListener('click',()=>{const upload=work.state().upload;if(upload.status==='done')navigate('profile');else navigate('upload');});
   $('match-back').addEventListener('click',()=>{
    work.dismissNetwork();
    const card=[...$('match-list').children].find(n=>n.dataset.person===String(selectedCard));

@@ -2,6 +2,8 @@ const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const {go,openReport}=require('./web-v2-navigation.cjs');
 const fixture=require('./web-v2-fixtures.cjs');
+const base=process.env.RECEIPT_TEST_URL;
+if(!base)throw Error('Use tests/run_web_v2_live.py to provide RECEIPT_TEST_URL.');
 (async()=>{
  const browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{})});
  const page=await browser.newPage({viewport:{width:1366,height:768}});page.setDefaultTimeout(5000);
@@ -26,7 +28,7 @@ const fixture=require('./web-v2-fixtures.cjs');
  await page.route('**/report-overview.js?*',async route=>{if(failReport)await route.abort();else await route.continue();});
  await page.route('**/network-view.js?*',async route=>{await gates.get('network-script');await route.continue();});
  try{
-  const health=hold('/api/health');await page.goto((process.env.RECEIPT_TEST_URL||'http://127.0.0.1:8001')+'/web/');
+  const health=hold('/api/health');await page.goto(base+'/web/');
   assert.match(await page.locator('#auth-status').textContent(),/連線/);health();
   await page.locator('#register-tab').click();const register=hold('/api/auth/register');
   await page.locator('#register-username').fill('fictional_new');await page.locator('#register-password').fill('fictional-password');await page.locator('#register-submit').click();
@@ -77,8 +79,8 @@ const fixture=require('./web-v2-fixtures.cjs');
   assert(await page.locator('.brand').evaluate(n=>n.getBoundingClientRect().height<=n.closest('header').getBoundingClientRect().height),'brand remains within header');
   await page.screenshot({path:'runtime/role4-upload-background-mobile.png'});await page.locator('#upload-background').click();await page.setViewportSize({width:1366,height:768});
   jobState='running';job();await page.locator('#upload-state').filter({hasText:'分析中'}).waitFor();assert.equal(await page.locator('#upload-progress').evaluate(n=>n.value),5);
-  jobState='done';await page.locator('#upload-state').filter({hasText:'處理完成'}).waitFor();assert(await page.locator('#open-profile').isVisible());assert.equal(await page.locator('#upload-submit').getAttribute('aria-busy'),'false');
-  await page.locator('[data-workspace="home"]').click();await page.locator('#upload-background').filter({hasText:'分析完成'}).waitFor();await page.locator('#upload-background').click();await openReport(page);assert(await page.locator('#upload-background').isHidden());
+  await go(page,'home');jobState='done';await page.locator('#upload-state').filter({hasText:'處理完成'}).waitFor({state:'attached'});assert.equal(await page.locator('#open-profile').getAttribute('hidden'),null);assert.equal(await page.locator('#upload-submit').getAttribute('aria-busy'),'false');
+  await page.locator('#upload-background').filter({hasText:'分析完成'}).waitFor();await page.locator('#upload-background').click();await openReport(page);assert(await page.locator('#upload-background').isHidden());
   jobTotal=0;await go(page,'upload');await page.locator('#invoice-file').setInputFiles({name:'fictional-empty.csv',mimeType:'text/csv',buffer:Buffer.from('fictional,test')});await page.locator('#upload-submit').click();
   await page.locator('#upload-count').filter({hasText:'沒有需要分析的品項'}).waitFor();assert(await page.locator('#upload-progress').isHidden());
   await go(page,'settings');await page.locator('#account-content').waitFor();

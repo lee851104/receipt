@@ -33,21 +33,22 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 </head>
 <body>
 <main>
+<section class="insight-dock" aria-label="配對解讀與線段說明">
+<button id="insight-toggle" class="reset" type="button" aria-expanded="false" aria-controls="insight-content">綜合解讀與線段說明 ↑</button>
+<div id="insight-content" hidden>
+<section class="comparison-overview" aria-label="綜合解讀"><div class="readout"><span class="readout-number">綜合解讀</span><div><p id="summary"></p><p class="summary-case"><strong class="summary-best-label">臭味相投</strong><span id="summary-best"></span></p><p class="summary-case"><strong class="summary-worst-label">背道而馳</strong><span id="summary-worst"></span></p><small id="summary-note">這是消費偏好的相似指數，不代表同樣比例的喜好完全相同，也不是關係契合度。</small></div></div>
+</section>
+<section class="selection-readout" aria-label="線段說明"><div class="selection-heading"><span class="readout-number">線段說明</span><button class="reset" id="reset" type="button" hidden>顯示全部連線</button></div><p id="selection-hint">點選線段或圓點，在這裡查看說明與品項。</p><div class="detail" hidden><div class="detail-text" id="detail"></div></div></section>
+</div></section>
+<p id="selection-live" class="live" role="status" aria-live="polite" aria-atomic="true"></p>
 <section class="graph-card" aria-label="兩人的品味特質連線圖">
 <div class="toolbar"><button id="network-motion" class="reset" type="button" aria-pressed="false">播放動態效果</button><details class="graph-help"><summary>圖例與讀法</summary><div class="legend" id="trait-legend"><span class="legend-item">訊號線：實線往右端推、虛線往左端推</span><span class="legend-item positive-label">中間：綠線加分</span><span class="legend-item negative-label">橘虛線扣分</span><span class="legend-item">越粗影響越大</span><span class="legend-item">空心：資料不足</span><span class="legend-item">品項：點小點後顯示於線段說明</span><span class="legend-hint">點選查看連線，點空白處取消</span></div></details><div class="scope" id="scope" role="status" aria-live="polite"></div></div>
 
 <div class="canvas"><p class="views-note" id="views-note" hidden></p><svg id="network" viewBox="0 0 1200 570" role="group" aria-label="左側粉紅是你的資料，右側藍色是朋友的資料；可點選圓點或連線"></svg>
 </div>
 </section>
-<section class="insight-dock" aria-label="配對解讀與線段說明">
-<button id="insight-toggle" class="reset" type="button" aria-expanded="false" aria-controls="insight-content">綜合解讀與線段說明 ↑</button>
-<div id="insight-content" hidden>
-<section class="comparison-overview" aria-label="綜合解讀"><div class="readout"><span class="readout-number">綜合解讀</span><div><p id="summary"></p><p class="summary-case"><strong class="summary-best-label">臭味相投</strong><span id="summary-best"></span></p><p class="summary-case"><strong class="summary-worst-label">背道而馳</strong><span id="summary-worst"></span></p><small id="summary-note">這是消費偏好的相似指數，不代表同樣比例的喜好完全相同，也不是關係契合度。</small></div></div>
-</section>
-<section class="selection-readout" aria-label="線段說明"><div class="selection-heading"><span class="readout-number">線段說明</span><button class="reset" id="reset" type="button" hidden>顯示全部連線</button></div><p id="selection-hint">點選線段或圓點，在這裡查看說明與品項。</p><div class="detail" hidden><div class="detail-text" id="detail" role="status" aria-live="polite"></div></div></section>
-</div></section>
 <details class="method"><summary>資料來源與相似百分比怎麼算？</summary><div id="link-method" hidden><p id="link-method-text"></p></div><div id="trait-method" hidden><p id="trait-method-text"></p><p id="trait-graph-method"></p></div></details>
 </main>
 <noscript><p>請開啟 JavaScript 以查看點線圖。</p></noscript>
 
-<script src="legacy-similarity.js"></script><script src="legacy-match-filter.js"></script><script src="legacy-network.js?v=20261018-ux1"></script><script src="view-adapters.js"></script><script src="network-view.js?v=20261018-ux1"></script><script src="network-embed.js?v=20261018-ux1"></script></body></html>
+<script src="legacy-similarity.js"></script><script src="legacy-match-filter.js"></script><script src="legacy-network.js?v=20261018-ux1"></script><script src="view-adapters.js"></script><script src="network-view.js?v=20261018-review2"></script><script src="network-embed.js?v=20261018-ux1"></script></body></html>

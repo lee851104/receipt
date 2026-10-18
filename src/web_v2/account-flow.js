@@ -1,6 +1,6 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.ReceiptAccount=api;})(globalThis,function(){
  'use strict';
- const initial=()=>({status:'idle',profile:null,busy:false,rotating:false,error:'',notice:'',confirmation:null});
+ const initial=()=>({status:'idle',profile:null,busy:false,rotating:false,action:'',error:'',notice:'',confirmation:null});
  function createAccount({api,session,onChange=()=>{},onChanged=()=>{},onEnded=()=>{},canRotate=()=>true}){
   let data=initial(),controller;
   const emit=()=>onChange(data);
@@ -15,14 +15,15 @@
    if(data.busy)return;
    controller?.abort();const current=controller=new AbortController(),version=session.version();
    const active=()=>controller===current&&!current.signal.aborted&&session.version()===version;
-   data={...data,busy:true,rotating,error:'',notice:'',...(loading?{status:'loading'}:{})};emit();
+   const action=loading?'load':rotating?'password':options.method==='DELETE'?'delete':path==='/auth/logout'?'logout':'rename';
+   data={...data,busy:true,rotating,action,error:'',notice:'',...(loading?{status:'loading'}:{})};emit();
    try{
     const result=await api.request(path,{...options,signal:current.signal});
     if(!active())return;
-    data={...data,busy:false,rotating:false};const after=apply(result);emit();after?.();
+    data={...data,busy:false,rotating:false,action:''};const after=apply(result);emit();after?.();
    }catch(e){
     if(active()&&e.name!=='AbortError'){
-     data={...data,busy:false,rotating:false,...(loading?{status:'error'}:{}),error:e.status===404&&e.detail!=='month_not_found'?'帳號管理服務尚未就緒，請稍後再試。':e.message};emit();
+     data={...data,busy:false,rotating:false,action:'',...(loading?{status:'error'}:{}),error:e.status===404&&e.detail!=='month_not_found'?'帳號管理服務尚未就緒，請稍後再試。':e.message};emit();
     }
    }
   }

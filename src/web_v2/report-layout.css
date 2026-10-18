@@ -222,3 +222,8 @@ body>main{width:100%;max-width:1160px;margin-inline:auto}
  0%,100%{transform:translate3d(calc(var(--drift-x,7px)*-1),var(--drift-y,10px),var(--depth-z,0px)) rotate(-1deg);opacity:var(--depth-opacity,.85)}
  50%{transform:translate3d(var(--drift-x,7px),calc(var(--drift-y,10px)*-1),calc(var(--depth-z,0px) + 25px)) rotate(1deg);opacity:1}
 }
+
+/* On short screens the chapter tab already names this view; keep controls in view. */
+@container(max-height:340px){
+ #insights>.flow-heading{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+}

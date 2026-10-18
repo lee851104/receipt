@@ -4,11 +4,48 @@
  function createWorkspaceUI({api,session,onIdentityChange=()=>{},onEnded=()=>{}}){
   const $=id=>document.getElementById(id);
   let accountUI,credentialChange=false,resumeProfileAfterRotation=false;
-  let selectedCard=null,listScroll=0;
+  let selectedCard=null,listScroll=0,acknowledgedJob=null;
   let enabled=false,current='home',lastProfile=null,lastNetwork=null,networkRenderError='',sessionVersion=-1;
   const work=ReceiptWorkspace.createWorkspace({api,session,onChange:render});
   const make=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
-  function clearFrame(id){const frame=$(id);frame.hidden=true;frame.removeAttribute('src');}
+  const frames={report:{},network:{}};let frameSerial=0;
+  function clearFrame(id){const key=id==='report-frame'?'report':'network';clearTimeout(frames[key].timer);frames[key]={};const frame=$(id);frame.hidden=true;frame.removeAttribute('src');frame.style.visibility='';}
+  function finishFrame(key,payload,ticket,error=''){
+   const state=frames[key];
+   if(!state||state.payload!==payload||String(state.ticket)!==String(ticket)||!state.pending)return;
+   clearTimeout(state.timer);state.pending=false;state.error=error;
+   $(key+'-frame').style.visibility=error?'hidden':'';
+   renderFeedback(work.state());
+  }
+  function startFrame(key,payload,url){
+   const ticket=++frameSerial,state=frames[key]={payload,ticket,pending:true,error:''};
+   const frame=$(key+'-frame');frame.style.visibility='hidden';frame.src=url+'&view='+ticket;frame.hidden=false;
+   state.timer=setTimeout(()=>finishFrame(key,payload,ticket,'圖表載入時間較長，請重新載入。'),20000);
+   state.timer?.unref?.();
+  }
+  function renderFeedback(state){
+   const feedback=ReceiptFeedback,profileBusy=['loading','recomputing'].includes(state.profile.status)||!!frames.report.pending;
+   const profileText=state.profile.status==='loading'?'正在載入你的月報…':state.profile.status==='recomputing'?'正在更新品味資料，完成後會自動顯示。':frames.report.pending?'正在準備月報圖表…':state.profile.message||frames.report.error||'';
+   feedback.status($('profile-message'),profileText,profileBusy);$('profile-feedback').hidden=!profileText;
+   $('profile-retry').hidden=!(state.profile.status==='error'||frames.report.error);
+   feedback.region($('profile-content'),profileBusy);
+   feedback.button($('refresh-profile'),profileBusy);$('refresh-profile').disabled=credentialChange||profileBusy;
+   const matchBusy=state.matches.status==='loading'||['loading','recomputing'].includes(state.profile.status);
+   $('match-loading').hidden=!matchBusy;feedback.region($('match-list'),matchBusy);
+   $('match-status').classList.toggle('status-loading',matchBusy);
+   feedback.button($('refresh-matches'),matchBusy,'尋找中…','重新查詢');$('refresh-matches').disabled=credentialChange||matchBusy;
+   const networkBusy=state.network.status==='loading'||!!frames.network.pending;
+   const networkText=state.network.status==='loading'?'正在尋找你們的品味連結…':frames.network.pending?'正在繪製品味連線…':state.network.message||networkRenderError||frames.network.error||'';
+   feedback.status($('network-status'),networkText,networkBusy);$('network-feedback').hidden=!networkText;
+   $('network-retry').hidden=!(state.network.status==='error'||networkRenderError||frames.network.error);
+   feedback.region($('network-frame'),networkBusy);
+   const uploading=['sending','queued','running'].includes(state.upload.status);
+   feedback.button($('upload-submit'),uploading,'處理中…','上傳並分析');
+   $('upload-state').classList.toggle('status-loading',uploading);
+   const finished=state.upload.jobId&&['done','failed','error'].includes(state.upload.status)&&state.upload.jobId!==acknowledgedJob;
+   $('upload-background').hidden=(!uploading&&!finished)||current==='upload';
+   feedback.button($('upload-background'),uploading);$('upload-background').textContent=state.upload.status==='done'?'分析完成，查看月報':!uploading?'查看處理結果':state.upload.status==='sending'?'檔案上傳中…':state.upload.status==='queued'?'檔案排隊中…':'檔案分析中…';
+  }
   function closeSettings(restoreFocus=false){
    const wasOpen=!$('settings-options').hidden;
    $('settings-options').hidden=true;$('settings-toggle').setAttribute('aria-expanded','false');
@@ -27,6 +64,7 @@
    if(load && current==='settings' && accountUI.state().status==='idle')accountUI.load();
    if(load && current==='profile' && work.state().profile.status==='idle')work.loadProfile();
    if(load && current==='matches' && work.state().matches.status==='idle')work.loadMatches();
+   renderFeedback(work.state());
   }
   function render(state){
    for(const button of document.querySelectorAll('[data-workspace], [data-entry]'))button.disabled=credentialChange;
@@ -37,9 +75,9 @@
    $('upload-demo-note').hidden=!demo;$('upload-submit').disabled=running||demo||credentialChange;$('invoice-file').disabled=running||demo||credentialChange;
    $('upload-state').textContent=({idle:'等待上傳',sending:'上傳中',queued:'排隊中',running:'分析中',done:'處理完成',failed:'處理失敗',error:'暫時無法完成'})[upload.status];
    $('upload-message').textContent=upload.message||'選擇 CSV 後開始分析。';
-   $('upload-progress').hidden=!['queued','running','done'].includes(upload.status);
-   $('upload-progress').max=upload.total>0?upload.total:1;$('upload-progress').value=upload.done||0;
-   $('upload-count').textContent=upload.jobId?(upload.month||'')+' · '+(upload.done||0)+' / '+(upload.total||0)+' 個不重複品名':'';
+   $('upload-progress').hidden=!['queued','running','done'].includes(upload.status)||(upload.status==='done'&&upload.total<=0);
+   $('upload-progress').max=upload.total>0?upload.total:1;if(upload.total>0)$('upload-progress').value=upload.done||0;else $('upload-progress').removeAttribute('value');
+   $('upload-count').textContent=!upload.jobId?'':upload.total>0?(upload.month||'')+' · '+(upload.done||0)+' / '+upload.total+' 個不重複品名':upload.status==='done'?'沒有需要分析的品項。':['queued','running'].includes(upload.status)?'正在確認待分析筆數…':'';
    $('retry-job').hidden=upload.status!=='error'||!upload.jobId;$('open-profile').hidden=upload.status!=='done';
    const profile=state.profile;
    $('profile-message').textContent=profile.status==='loading'?'載入月報中…':profile.message;
@@ -51,7 +89,7 @@
     clearFrame('report-frame');
     const hasMonths=Object.keys(profile.data?.months||{}).length>0;
     $('report-empty').hidden=hasMonths;
-    if(hasMonths){$('report-frame').src='report.html?v=20261017-organic1';$('report-frame').hidden=false;}
+    if(hasMonths)startFrame('report',profile.data,'report.html?v=20261018-ux1');
     lastProfile=profile.data;
    }
    const matches=state.matches;
@@ -87,16 +125,18 @@
       $('explain-details').hidden=false;
      }
      if(network.data?.network){
-      $('network-frame').src='network.html?v=20261018-full1';$('network-frame').hidden=false;
-     }
+      startFrame('network',network.data,'network.html?v=20261018-ux1');
+     }else if(network.data){networkRenderError='這份資料暫時無法繪製連線圖，可查看計算過程或重新查詢。';}
     }catch(error){networkRenderError=error.message;}
     lastNetwork=network.data;
    }
    $('network-status').textContent=network.status==='loading'?'載入品味關係圖…':network.message||networkRenderError;
+   renderFeedback(state);
    if(current==='matches'&&profile.status==='ready'&&matches.status==='idle')work.loadMatches(state.kind,state.scope);
   }
   // Same-origin child frames receive only current data, never credentials.
   root.ReceiptV2Host={
+   viewReady:finishFrame,
    profile:()=>enabled&&session.get()?work.state().profile.data:null,
    network:()=>enabled&&session.get()?work.state().network.data:null,
    resizeNetwork(height,payload){
@@ -121,6 +161,9 @@
    onIdentityChange();
    if(kind==='month'||(kind==='password'&&resumeProfileAfterRotation)){resumeProfileAfterRotation=false;work.loadProfile();}
   }});
+  $('profile-retry').addEventListener('click',()=>work.loadProfile());
+  $('network-retry').addEventListener('click',()=>work.loadMatches(work.state().kind,work.state().scope));
+  $('upload-background').addEventListener('click',()=>{const upload=work.state().upload;if(upload.status==='done'){acknowledgedJob=upload.jobId;navigate('profile');}else navigate('upload');});
   $('match-back').addEventListener('click',()=>{
    work.dismissNetwork();
    const card=[...$('match-list').children].find(n=>n.dataset.person===String(selectedCard));

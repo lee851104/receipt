@@ -38,7 +38,7 @@ const fixture=require('./web-v2-fixtures.cjs');
      return {height:box.height,available:area.height,overflow:n.scrollWidth>n.clientWidth+1};
     });
     assert.equal(fit.overflow,false,JSON.stringify({size,id,fit}));
-    if(fit.height>fit.available+2)fitIssues.push({size,id,fit});
+    if(fit.height>fit.available+2){fitIssues.push({size,id,fit});await page.screenshot({path:'runtime/role4-ux-overflow-'+id+'.png'});console.log('CHAPTER OVERFLOW',await report.locator('#'+id).evaluate(n=>[...n.children].map(c=>({tag:c.tagName,cls:c.className,height:c.getBoundingClientRect().height}))));}
    }
   }
   assert.deepEqual(fitIssues,[]);

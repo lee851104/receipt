@@ -16,6 +16,11 @@
     $('register-tab').setAttribute('aria-pressed',String(state.view==='register'));
     $('auth-title').textContent=state.view==='register'?'建立你的帳號':'歡迎回來';
     $('auth-subtitle').textContent=state.view==='register'?'給日常的選擇，一個屬於你的起點。':'登入後，開始探索你的日常選擇。';
+    const feedback=ReceiptFeedback;
+    const signing=state.busy?(state.authAction==='register'?'正在建立帳號…':state.authAction==='demo'?'正在準備示範體驗…':'正在登入…'):'';
+    feedback.status($('auth-status'),signing||(state.healthLoading?(state.health?'正在準備登入選項…':'正在連線到服務…'):''),state.busy||state.healthLoading);
+    for(const [id,action,busyLabel,label] of [['login-submit','login','登入中…','登入並開始'],['register-submit','register','建立中…','建立帳號'],['demo-submit','demo','準備中…','進入體驗']])feedback.button($(id),state.busy&&state.authAction===action,busyLabel,label);
+    feedback.button($('retry-service'),state.healthLoading,'連線中…','重新連線');$('retry-service').disabled=state.healthLoading;
     message('auth-error',state.error);message('auth-notice',state.notice);
     for(const form of ['login-form','register-form','demo-form'])$(form).setAttribute('aria-busy',String(state.busy));
     for(const button of document.querySelectorAll('#login-form button, #register-form button, #demo-form button'))button.disabled=state.busy;
@@ -32,7 +37,7 @@
     }
     $('demo-submit').disabled=state.busy||state.demoUsers.length===0;
     $('service-status').textContent=state.health?'服務已連線':state.serviceError?'服務未連線':'連線中';
-    $('service-status').className='service-status'+(state.health?' connected':'');
+    $('service-status').className='service-status'+(state.health?' connected':'')+(state.healthLoading?' status-loading':'');
     $('service-alert').hidden=!state.serviceError;$('service-error').textContent=state.serviceError;
     $('identity-label').textContent=workspace?(session.get()?.label||'已登入'):'';
     const fake=state.health?.models?.category==='fake'||state.health?.models?.attributes==='fake';

@@ -209,6 +209,7 @@ $('network-motion').addEventListener('click',()=>{
 });
 motionPreference.addEventListener('change',()=>{if(motionChoice===null)setMotion(!motionPreference.matches);});
 draw();
+pageHost?.ReceiptV2Host?.viewReady?.('network',payload,new URLSearchParams(location.search).get('view'));
 // The host assigns available height after the first render. Reflow geometry only when
 // that space changes; selecting a line must leave both the canvas and viewBox stable.
 let graphSize='';
@@ -228,5 +229,5 @@ document.addEventListener('keydown',event=>{if(event.key==='Escape'){showReadout
 canvasObserver.observe(document.querySelector('.canvas'));
 window.addEventListener('pagehide',()=>canvasObserver.disconnect(),{once:true});
 
-}catch(error){const notice=document.createElement('p');notice.textContent='無法顯示關係圖，請回配對清單重新載入。';document.body.replaceChildren(notice);}
+}catch(error){window.parent.ReceiptV2Host?.viewReady?.('network',window.parent.ReceiptV2Host?.network(),new URLSearchParams(location.search).get('view'),'無法顯示關係圖，請重新查詢配對。');const notice=document.createElement('p');notice.textContent='無法顯示關係圖，請回配對清單重新載入。';document.body.replaceChildren(notice);}
 })();

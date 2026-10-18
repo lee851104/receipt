@@ -8,11 +8,16 @@
   function render(state){
    if(lastRotating!==state.rotating){lastRotating=state.rotating;onRotating(state.rotating);}
    const profile=state.profile,demo=profile?.is_demo||session.get()?.isDemo,blocked=state.busy||!profile||demo;
-   $('account-loading').textContent=state.rotating?'更新密碼中，請稍候…':state.status==='loading'?'載入帳號資料中…':'';
+   const feedback=ReceiptFeedback,labels={load:'正在載入帳號資料…',rename:'正在儲存名稱…',password:'正在更新密碼…',delete:'正在刪除資料，請稍候…',logout:'正在登出…'};
+   feedback.status($('account-loading'),state.busy?labels[state.action]||'處理中…':'',state.busy);
+   feedback.region($('account-content'),state.busy);
+   feedback.status($('confirm-progress'),state.busy&&state.confirmation?'正在刪除資料，請稍候…':'',state.busy);
+   for(const [id,action,busyLabel,label] of [['account-refresh','load','載入中…','重新載入'],['account-name-submit','rename','儲存中…','儲存名稱'],['password-submit','password','更新中…','更新密碼'],['confirm-submit','delete','刪除中…','確認刪除']])feedback.button($(id),state.busy&&state.action===action,busyLabel,label);
    $('account-error').textContent=state.error;$('account-error').hidden=!state.error;
    $('account-notice').textContent=state.notice;$('account-notice').hidden=!state.notice;
    $('account-content').hidden=!profile;$('account-demo-note').hidden=!demo;
-   $('logout-submit').textContent=demo?'登出此瀏覽器':'登出所有裝置';
+   feedback.button($('logout-submit'),state.busy&&state.action==='logout','登出中…',demo?'登出此瀏覽器':'登出所有裝置');
+   $('logout-note').textContent=demo?'只會登出這個瀏覽器，不影響其他示範體驗。':'登出會讓這個帳號在所有裝置上的登入失效。';
    $('account-refresh').disabled=state.busy;$('logout-submit').disabled=state.busy;
    $('account-name').disabled=blocked;$('account-name-submit').disabled=blocked;
    for(const id of ['current-password','new-password','password-submit'])$(id).disabled=blocked||processing;

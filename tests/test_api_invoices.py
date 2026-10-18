@@ -40,9 +40,16 @@ class UploadTests(unittest.TestCase):
         self.assertNotIn("測試路", str(items))
 
     def test_a_line_without_a_product_name_is_skipped_and_no_model_ever_sees_it(self):
-        # The real classifier refuses an empty name, which would fail the whole month's job.
-        asked = []
-        client = make_client(classify=lambda names: asked.extend(names) or fakes.classify(names))
+        # The real classifier refuses an empty name, which would fail the whole month's job. Both models are spied on:
+        # the category model (classify) and the attribute model (describe_items).
+        classified, described = [], []
+
+        def describe_items(names, ask_model=True):
+            described.extend(names)
+            return fakes.describe_items(names, ask_model)
+
+        client = make_client(classify=lambda names: classified.extend(names) or fakes.classify(names),
+                             describe_items=describe_items)
         register(client)
         headers = login(client)
         nameless = [["20260502", "開立已確認", "TEST-INV-1", "測試飲料店", "臺北市大安區測試路1號", "", "abc", 90],
@@ -52,7 +59,10 @@ class UploadTests(unittest.TestCase):
         self.assertEqual(client.get("/api/jobs/1", headers=headers).json()["status"], "done")
         with Session(client.app.state.engine) as session:
             self.assertEqual(sorted(item.name for item in session.exec(select(Item)).all()), ["滷肉飯", "衛生紙", "鮮奶茶"])
-        self.assertEqual(sorted(asked), ["滷肉飯", "衛生紙", "鮮奶茶"])
+        real_names = ["滷肉飯", "衛生紙", "鮮奶茶"]
+        self.assertEqual(sorted(classified), real_names)
+        # The attribute model is asked for the real names only (and was asked: the spy is not idle).
+        self.assertEqual(sorted(set(described)), real_names)
 
     def test_a_month_of_only_lines_without_a_product_name_is_400_and_creates_no_job(self):
         nameless = [["20260502", "開立已確認", "TEST-INV-1", "測試飲料店", "臺北市大安區測試路1號", " ", 1, 90]]

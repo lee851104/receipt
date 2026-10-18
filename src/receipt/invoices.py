@@ -32,8 +32,8 @@ def build_month(path, catalog, for_upload=False):
 
     An upload (for_upload=True) follows the invoice-ingestion rules: every required column must be there, voided
     invoices (a status starting with 作廢) are skipped, lines under MIN_AMOUNT or with a decimal amount are skipped,
-    so are lines whose product name is blank, and a decimal quantity (litres of fuel, weighed goods) counts as 1. Without it the v1 report reads exactly as
-    before."""
+    and so are lines whose product name is blank. A decimal quantity (litres of fuel, weighed goods) counts as 1.
+    Without for_upload the v1 report reads exactly as before."""
     rows, invoice_ids = [], {}
     month_key = None
     with path.open(encoding="utf-8-sig", newline="") as source:

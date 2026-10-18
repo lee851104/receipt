@@ -68,15 +68,16 @@ class DemoSeedRefusesTests(unittest.TestCase):
     """Demo users are optional: a seed that stops must not keep a person's own accounts and data from starting."""
 
     def launch(self, seed):
-        """What main did, in order, and what it printed, when the demo seed is the given function."""
-        calls, printed = [], io.StringIO()
+        """What main did, in order, and what it wrote to stdout and to stderr, when the demo seed is the given
+        function."""
+        calls, printed, complained = [], io.StringIO(), io.StringIO()
         with mock.patch.object(launch, "ensure_env", lambda path: calls.append("env") or False), \
                 mock.patch.object(launch, "seed_demo", seed), \
                 mock.patch.object(launch, "open_in_background", lambda: calls.append("open")), \
                 mock.patch("uvicorn.run", lambda app, **options: calls.append("serve")), \
-                contextlib.redirect_stdout(printed):
+                contextlib.redirect_stdout(printed), contextlib.redirect_stderr(complained):
             launch.main(Path(tempfile.mkdtemp()))
-        return calls, printed.getvalue()
+        return calls, printed.getvalue(), complained.getvalue()
 
     def seed_raising(self, error):
         def seed():
@@ -84,26 +85,41 @@ class DemoSeedRefusesTests(unittest.TestCase):
         return seed
 
     def test_a_seed_that_exits_with_a_message_prints_one_line_and_the_server_still_starts(self):
-        calls, printed = self.launch(self.seed_raising(SystemExit("error: demo_001 is 'x' in the database")))
+        calls, printed, complained = self.launch(self.seed_raising(SystemExit("error: demo_001 is 'x' in the database")))
         self.assertEqual(calls, ["env", "open", "serve"])
-        self.assertEqual(printed, "示範帳號沒有更新：error: demo_001 is 'x' in the database；伺服器照常啟動\n")
+        self.assertEqual(printed, "示範帳號沒有更新：error: demo_001 is 'x' in the database；繼續啟動伺服器\n")
+        self.assertEqual(complained, "")
 
     def test_a_seed_that_fails_otherwise_prints_its_type_and_message_and_the_server_still_starts(self):
-        calls, printed = self.launch(self.seed_raising(RuntimeError("a later seed broke")))
+        calls, printed, complained = self.launch(self.seed_raising(RuntimeError("a later seed broke")))
         self.assertEqual(calls, ["env", "open", "serve"])
-        self.assertEqual(printed, "示範帳號沒有更新：RuntimeError: a later seed broke；伺服器照常啟動\n")
+        self.assertEqual(printed, "示範帳號沒有更新：RuntimeError: a later seed broke；繼續啟動伺服器\n")
+        self.assertEqual(complained, "")
 
     def test_the_reason_is_one_short_line_without_a_traceback(self):
         reasons = [SystemExit(1), SystemExit(), RuntimeError(), ValueError("first\nsecond\n  third"),
                    SystemExit("error: " + "demo_001 is not who it should be; " * 40)]
         for error in reasons:
             with self.subTest(error=repr(error)[:40]):
-                _, printed = self.launch(self.seed_raising(error))
+                _, printed, complained = self.launch(self.seed_raising(error))
                 self.assertEqual(len(printed.splitlines()), 1)
-                self.assertTrue(printed.startswith("示範帳號沒有更新：") and printed.endswith("；伺服器照常啟動\n"))
+                self.assertTrue(printed.startswith("示範帳號沒有更新：") and printed.endswith("；繼續啟動伺服器\n"))
                 self.assertLess(len(printed), 300)
-                self.assertNotIn("Traceback", printed)
+                # A traceback goes to stderr, so look there as well as at what the warning says.
+                self.assertNotIn("Traceback", printed + complained)
+                self.assertEqual(complained, "")
         self.assertIn("ValueError: first second third；", self.launch(self.seed_raising(reasons[3]))[1])
+
+    def test_a_long_reason_keeps_its_beginning_and_the_instruction_at_its_end(self):
+        # seed_demo_users joins one clash per demo user and ends with what to do about it; the cut must not lose that.
+        clashes = "; ".join(f"demo_{number:03} is 'x' in the database but 'y' in the list" for number in range(1, 40))
+        instruction = "Delete the database file and run the seed again."
+        _, printed, _ = self.launch(self.seed_raising(SystemExit(f"error: {clashes}. {instruction}")))
+        self.assertEqual(len(printed.splitlines()), 1)
+        self.assertLess(len(printed), 300)
+        self.assertIn("示範帳號沒有更新：error: demo_001 is", printed)
+        self.assertIn(" … ", printed)
+        self.assertTrue(printed.endswith(f"{instruction}；繼續啟動伺服器\n"))
 
     def test_ctrl_c_during_the_seed_still_stops_the_launch(self):
         calls = []
@@ -116,8 +132,8 @@ class DemoSeedRefusesTests(unittest.TestCase):
         self.assertEqual(calls, [])
 
     def test_a_seed_that_works_prints_no_warning(self):
-        calls, printed = self.launch(lambda: None)
-        self.assertEqual((calls, printed), (["env", "open", "serve"], ""))
+        calls, printed, complained = self.launch(lambda: None)
+        self.assertEqual((calls, printed, complained), (["env", "open", "serve"], "", ""))
 
 
 if __name__ == "__main__":

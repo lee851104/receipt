@@ -1,5 +1,5 @@
 """What start.bat runs: a .env with a fresh secret when there is none, the demo users (when they cannot be put in, a
-one-line warning and the server starts anyway), the v2 pages opened in the browser once the server answers, and the
+one-line warning and the launch goes on), the v2 pages opened in the browser once the server answers, and the
 server itself on this computer only. Run from the repository root:
 
     .venv/Scripts/python.exe -m src.api.launch
@@ -62,13 +62,17 @@ def seed_demo():
 
 def reason_for(error, limit=160):
     """One short line on why a seed stopped: SystemExit's message (seed.main's "error: ..."), else the exception's
-    type and message. No traceback; a long message (one clash per demo user) is cut."""
+    type and message. No traceback. A long message (one clash per demo user) is cut in the middle: the seed ends it
+    with what to do ("Delete the database file and run the seed again."), which must not be lost."""
     if isinstance(error, SystemExit):
         text = error.code if isinstance(error.code, str) else "the seed stopped"
     else:
         text = f"{type(error).__name__}: {error}" if str(error) else type(error).__name__
     text = " ".join(text.split())
-    return text if len(text) <= limit else text[:limit - 1] + "…"
+    if len(text) <= limit:
+        return text
+    side = (limit - 3) // 2
+    return text[:side] + " … " + text[-side:]
 
 
 def main(root=ROOT):
@@ -80,7 +84,7 @@ def main(root=ROOT):
     try:
         seed_demo()
     except (SystemExit, Exception) as error:
-        print(f"示範帳號沒有更新：{reason_for(error)}；伺服器照常啟動")
+        print(f"示範帳號沒有更新：{reason_for(error)}；繼續啟動伺服器")
     open_in_background()
     import uvicorn
     uvicorn.run("src.api.main:app", host=HOST, port=PORT)

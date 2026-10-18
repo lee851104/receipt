@@ -23,6 +23,18 @@ class PageTests(unittest.TestCase):
         self.assertEqual(client.post("/api/nothing").status_code, 404)
         self.assertEqual(client.get("/docs").status_code, 200)
 
+    def test_the_docs_list_every_endpoint_overview_section_5_names(self):
+        # service-runtime 「打開文件頁」: /docs is drawn from this document, so every documented endpoint is in it.
+        paths = make_client(demo_mode=True).get("/openapi.json").json()["paths"]
+        listed = {(method.upper(), path) for path, operations in paths.items() for method in operations}
+        self.assertEqual(listed, {
+            ("POST", "/api/auth/register"), ("POST", "/api/auth/login"), ("POST", "/api/auth/logout"),
+            ("GET", "/api/auth/demo-users"), ("POST", "/api/auth/demo-login"), ("GET", "/api/health"),
+            ("POST", "/api/items/classify"), ("POST", "/api/invoices"), ("GET", "/api/jobs/{job_id}"),
+            ("GET", "/api/me"), ("PATCH", "/api/me"), ("DELETE", "/api/me"), ("POST", "/api/me/password"),
+            ("DELETE", "/api/me/months/{month}"), ("GET", "/api/me/profile"), ("GET", "/api/matches"),
+            ("GET", "/api/matches/{user_id}/explain")})
+
 
 if __name__ == "__main__":
     unittest.main()

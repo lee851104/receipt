@@ -1,0 +1,17 @@
+{
+  "invoice-insights.html": "512fd11735e70a625b80298bc621a58bdd5cd458b7243e368fcca9caa567c0e3",
+  "src/web/comparison-ui.js": "9f3f432609dd475f5086a9de3c92da95218efc2819ead9466b327b271d751dca",
+  "src/web/flow-navigation.js": "34e6121cd82284240d95cb6292f526331f14de5978c2898e1e8580f659717bf4",
+  "src/web/insights-ui.js": "27ef69fbb77607ad19a34588f56dd61d1269104ae8c7fe21986d92c195ac9ba9",
+  "src/web/invoice-insights.html": "bfd288537741b76d8ffe12d9213dda0661cf9e061084d3ceeaf4b79a7e26aae3",
+  "src/web/match-filter.js": "b17366e3474c548f5921df7bbb53ec5b87133c01eb3466f16e302417356f2757",
+  "src/web/match.html": "8a17c92917beb2f55b9fc04861113e141b6b3353f29165d267043afa81fcf37f",
+  "src/web/monthly-comparison.js": "4db25a374fffb565dd184f6886364cb4634bd1423dc05c38b778e4245e65932f",
+  "src/web/styles.css": "5d329f65697347aad4e2e0aace1d868af56e1653377477838f46fba3f86dd738",
+  "src/web/taste-comparison.html": "8f50a928acf830d328eb0ac5dd1390d07adc20d1d28724e1e8986f707ba17d25",
+  "src/web/taste-export.js": "6e6443f7728e66a3b3aebe45a7029761a0bb8d542947a87cbcd1f8f36489501f",
+  "src/web/taste-navigation.js": "69be0b7b2fa7214ba0cb2e9c9cb86ce4fa646ac86866f00e192b6d7789a2603b",
+  "src/web/taste-profile.js": "8b1a62c974e108aa3b4394b4f5e55c27fcc1b0f0db2c36cbb2ea14869280be59",
+  "src/web/trait-network.js": "1af7bf9338d444d3b3ae041584497582f805152ec9d0dbe42afbc0fe71ce2fd4",
+  "src/web/trait-similarity.js": "f807049ab0ab37bb7329f4c59c7345c8e87e7af09bb93256a2ad4373b55efdd8"
+}

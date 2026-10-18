@@ -1,5 +1,8 @@
 # 假品名屬性逐筆複核
 
+> 2026-10-18 隱私清理：2 筆名稱改為獨立合成名稱；表內對應的新名稱是歷史紀錄的替代標籤。屬性值未改，既有人工確認只涵蓋原先核准的屬性值，不代表使用者已逐筆審閱新名稱。
+> 本次未重新呼叫模型。以下模型輸出、差異數量及評估敘述屬於替換前的歷史實驗，不是新名稱的推論結果。逐筆 privacy_replacement 註記會隨重建保留。
+
 2026-10-15；107 筆全部為公開假品名。以下由助理逐欄複核，使用者已檢查並確認 107 筆。確認來源為使用者對 commit 0e98b71 檢查表的核准，逐筆綁定屬性內容雜湊。這是合成集參考答案，不是私人真人發票的盲標成績。
 
 舊模型與此複核有 53 筆／91 欄差異；新版實際重跑後仍有 46 筆／70 欄差異。有效快取採下表修正，原模型與新模型輸出都獨立保留。
@@ -69,7 +72,7 @@ model_version：`qwen3-4b:2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965
 | 38 | 示範無糖烏龍 | sugar=0.0, food, drink | 無 |
 | 39 | 示範無糖烏龍茶 | sugar=0.0, food, drink | 無 |
 | 40 | 示範無糖綠茶 | sugar=0.0, food, drink | 無 |
-| 41 | 示範無糖豆漿 | sugar=0.0, food, drink | 無 |
+| 41 | 示範原味無糖豆乳飲 | sugar=0.0, food, drink | 無 |
 | 42 | 示範無糖青茶 | sugar=0.0, food, drink | 無 |
 | 43 | 示範焦糖布丁 | food | drink: true → false |
 | 44 | 示範熱美式 | food, drink | 無 |
@@ -105,7 +108,7 @@ model_version：`qwen3-4b:2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965
 | 74 | 示範衛生紙 | daily | 無 |
 | 75 | 示範衛生紙箱 | bulk, daily | bulk: false → true |
 | 76 | 示範調酒 | alcohol, food, drink | 無 |
-| 77 | 示範豚骨拉麵 | food, meal | quick: true → false |
+| 77 | 示範香草燉菜餐盤 | food, meal | quick: true → false |
 | 78 | 示範豬肉片 | cooking, food, fresh | 無 |
 | 79 | 示範貓砂 | pet_supply, species=cat, daily | daily: false → true |
 | 80 | 示範貓罐頭 | pet_food, species=cat | 無 |

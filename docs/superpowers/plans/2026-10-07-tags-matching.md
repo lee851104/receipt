@@ -389,7 +389,7 @@ EOF
   {"brand": "85度C", "keywords": ["美食達人"]},
   {"brand": "屈臣氏", "keywords": ["屈臣氏"]},
   {"brand": "康是美", "keywords": ["統一生活事業"]},
-  {"brand": "寶雅", "keywords": ["寶雅國際"]},
+  {"brand": "寶雅", "keywords": ["示範雲杉生活館"]},
   {"brand": "無印良品", "keywords": ["無印良品"]},
   {"brand": "燦坤", "keywords": ["燦坤"]},
   {"brand": "全國電子", "keywords": ["全國電子"]},
@@ -503,7 +503,7 @@ class TagTests(unittest.TestCase):
         self.assertEqual(texts(few, "常消費地區"), [])
 
     def test_remote_sellers_do_not_count_as_places(self):
-        online = [row(f"O{i}", merchant="富邦媒體科技股份有限公司", district="臺北市內湖區") for i in range(3)]
+        online = [row(f"O{i}", merchant="示範星河網購", district="臺北市內湖區") for i in range(3)]
         profile = profile_of(online + [row(f"L{i}") for i in range(3)])
         self.assertEqual(profile["district_shares"], {"高雄市苓雅區": 1.0})
         self.assertEqual(texts(profile, "常消費地區"), ["高雄市苓雅區"])
@@ -1121,7 +1121,7 @@ TYPES = [
     {"label": "健身族", "areas": {"高雄市前鎮區": 5, "高雄市苓雅區": 5}, "habits": [
         (4, "示範運動館", ["示範重訓課", "示範健身月票"], (300, 600), (6, 8)),
         (0, "示範餐坊", ["示範雞肉餐盒", "示範蔬食沙拉"], (120, 160), (8, 10)),
-        (1, "示範超商", ["示範無糖豆漿", "示範乳清飲"], (35, 60), (8, 10)),
+        (1, "示範超商", ["示範原味無糖豆乳飲", "示範乳清飲"], (35, 60), (8, 10)),
         (3, "示範量販", ["示範雞肉分裝包"], (200, 300), (2, 3)),
     ]},
     {"label": "自己下廚", "areas": {"新北市板橋區": 7, "臺北市內湖區": 3}, "habits": [

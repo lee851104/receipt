@@ -24,6 +24,7 @@ def review_metadata(row, corrected):
     return {'reviewer': 'assistant', 'human_confirmed': confirmed,
             'review_status': ('human_corrected' if corrected else 'human_confirmed') if confirmed
                              else ('assistant_corrected' if corrected else 'assistant_reviewed'),
+            **({'privacy_replacement': dict(row['privacy_replacement'])} if row.get('privacy_replacement') else {}),
             **({'confirmation': dict(confirmation)} if confirmation else {})}
 
 
@@ -74,6 +75,11 @@ def main():
         diff = ', '.join(f"{key}: {json.dumps(d['model'],ensure_ascii=False)} → {json.dumps(d['reviewed'],ensure_ascii=False)}" for key,d in row['corrections'].items())
         lines.append(f"| {index} | {row['name']} | {positive or '無'} | {diff or '無'} |")
     lines += ['', '重建有效快取及此表：`python -m scripts.review_synthetic_cache`。重建只讀公開的模型輸出與逐筆複核，不重新推論、不讀取真人品名。']
+    replacements = sum(bool(row.get('privacy_replacement')) for row in result)
+    if replacements:
+        lines[2:2] = [
+            f"> 2026-10-18 隱私清理：{replacements} 筆名稱改為獨立合成名稱；表內對應的新名稱是歷史紀錄的替代標籤。屬性值未改，既有人工確認只涵蓋原先核准的屬性值，不代表使用者已逐筆審閱新名稱。",
+            "> 本次未重新呼叫模型。以下模型輸出、差異數量及評估敘述屬於替換前的歷史實驗，不是新名稱的推論結果。逐筆 privacy_replacement 註記會隨重建保留。", ""]
     (ROOT / 'docs/results/synthetic-cache-review.md').write_text('\n'.join(lines)+'\n', encoding='utf-8')
     print(json.dumps(stats))
 

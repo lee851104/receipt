@@ -63,3 +63,25 @@ class SyntheticCacheTests(unittest.TestCase):
             rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
             self.assertEqual(len(rows), 107)
             self.assertTrue(all(row.get("source") == "synthetic" for row in rows), path.name)
+
+
+class PrivacyReplacementProvenanceTests(unittest.TestCase):
+    def test_rebuild_preserves_label_replacement_provenance(self):
+        row = {"attributes": {"food": True}, "privacy_replacement": {
+            "scope": "synthetic_label_only", "model_rerun": False,
+            "attributes_changed": False}}
+        metadata = review_script.review_metadata(row, corrected=False)
+        self.assertEqual(metadata.get("privacy_replacement"), row["privacy_replacement"])
+        self.assertFalse(metadata["human_confirmed"])
+
+    def test_public_replacements_are_consistent_across_cache_archives(self):
+        replacement_names = {"示範原味無糖豆乳飲", "示範香草燉菜餐盤"}
+        for filename in ("attribute-review.jsonl", "attribute-cache.jsonl",
+                         "attribute-cache.model-v1.jsonl", "attribute-cache.model-v2.jsonl"):
+            rows = [json.loads(line) for line in (ROOT / "datasets/synthetic" / filename).read_text(encoding="utf-8").splitlines()]
+            replacements = [row for row in rows if row["name"] in replacement_names]
+            self.assertEqual(len(replacements), 2, filename)
+            for row in replacements:
+                self.assertIs(row["privacy_replacement"]["model_rerun"], False)
+                self.assertIs(row["privacy_replacement"]["attributes_changed"], False)
+                self.assertEqual(row["privacy_replacement"]["confirmation_scope"], "previously approved attribute values only")

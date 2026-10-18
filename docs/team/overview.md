@@ -63,7 +63,7 @@ clearance、sugar、quick、cooking、kitchen、sport_supply、sport_gear、car_
 | 15 | BERT | `bert-base-chinese`，在 4060 上訓練（4060 被占用時改用 Colab） |
 | 16 | 資料庫 | SQLite，相似度用 Python 算。README 註明人數擴大後再改用 pgvector，以及原因 |
 | 17 | 評估 | 分類比較表 + 配對驗證 + 抽 100 個品名人工複核 Qwen。**測試集只放真實品名** |
-| 18 | 公開範圍 | 程式碼公開。真實發票、真實品名與其標註、模型檔都不進 git。10/15 補充：BERT 模型權重第 3 週公開在 Hugging Face（固定版本），訓練資料不公開 |
+| 18 | 公開範圍 | 程式碼公開。真實發票、真實品名與其標註、模型檔都不進 git。10/15 補充的原決定：BERT 模型權重第 3 週公開在 Hugging Face（固定版本），訓練資料不公開；**10/17 改為（10/18 補上）：分類模型不公開**，使用者採保護政策，模型放在受保護的 Hugging Face 來源，以固定 revision 和 SHA-256 帶憑證下載（角色 2 的任務 3.9），訓練資料同樣不公開；憑證不進 git |
 | 19 | 測試 | GitHub Actions 每次 push 跑全部測試，模型用假替身 |
 | 20 | 概念說明 | 說明文件，加上配對頁的「計算過程」面板 |
 | 21 | 啟動 | Python 虛擬環境 + 一鍵啟動檔，另做無 GPU 模式。10/15 補充：另外提供 Docker（`docker compose up`，無 GPU 模式，自動下載模型、匯入假用戶），給面試官和乾淨環境驗證用 |
@@ -476,7 +476,7 @@ def describe_items(names: list[str], ask_model: bool = True) -> list[dict | None
 - 真實品名只能用本機模型處理，不可以貼到雲端 AI 或線上服務；假品名可以
 - 評估報告只放數字，逐筆結果留在本機
 - 配對時，對方會看到你每個訊號買最多次的品名（去掉地名後，見 5.8），但看不到店家、日期和每一筆的金額（連線圖的花費彙總值除外，見 5.8）
-- BERT 分類模型的權重會公開在 Hugging Face。模型卡要寫明訓練資料包含真實品名，但資料本身不公開
+- BERT 分類模型的權重不公開（10/18 補上）。原決定是公開在 Hugging Face，模型卡寫明訓練資料包含真實品名，但資料本身不公開；使用者在 2026-10-17 改採保護政策：模型放在受保護的 Hugging Face 來源，以固定 revision 和 SHA-256 帶憑證下載（角色 2 的任務 3.9），訓練資料同樣不公開，只有憑證不進 git（來源的名稱不是祕密，可以寫在文件和設定範例裡）
 
 ## 11. 評估要交出的東西
 
@@ -519,7 +519,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
    - 複製 `.env.example` 成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼：`.venv/Scripts/python.exe -c "import secrets; print(secrets.token_urlsafe(32))"`
    - 放入 demo 用戶：`.venv/Scripts/python.exe -m src.api.seed`（跑幾次都可以，只會補上還沒有的人；名單只能往後加，資料庫裡的帳號和名單對不上時會停下來並說明，這時刪掉 `data/app.db*` 再重來）
    - 啟動：`.venv/Scripts/python.exe -m uvicorn src.api.main:app --reload`，打開 `http://127.0.0.1:8000/docs`。v2 網頁在 `http://127.0.0.1:8000/web/`，角色 4 做好之前只有一個預留頁
-   - 或者直接雙擊 `start.bat`（沒有 `.env` 會自動建立）：它一次做完上面三項，建立 `.env`（含新的 `JWT_SECRET`）、放入 demo 用戶、啟動在 `http://127.0.0.1:8000` 並打開 `/web/`；已經有 `.env` 的人不受影響（10/16 補上）。demo 用戶放不進去時（`seed` 以 `error:` 停下，或出了別的錯），`start.bat` 只印一行「示範帳號沒有更新：原因；伺服器照常啟動」，然後照常打開瀏覽器、啟動伺服器；Ctrl+C 照常中止。設定錯誤時伺服器自己載入設定也會停下並說明（10/18 補上）
+   - 或者直接雙擊 `start.bat`（沒有 `.env` 會自動建立）：它一次做完上面三項，建立 `.env`（含新的 `JWT_SECRET`）、放入 demo 用戶、啟動在 `http://127.0.0.1:8000` 並打開 `/web/`；已經有 `.env` 的人不受影響（10/16 補上）。demo 用戶放不進去時（`seed` 以 `error:` 停下，或出了別的錯），`start.bat` 只印一行「示範帳號沒有更新：原因；繼續啟動伺服器」，然後繼續打開瀏覽器、啟動伺服器；Ctrl+C 照常中止。設定寫錯時（`seed` 就是因此以 `error:` 停下），伺服器自己載入設定會用同一個錯誤停下並說明，伺服器不會啟動（10/18 補上）
    - 改了 `.env` 要手動重啟伺服器（`--reload` 只看 `.py` 檔）
    - `src/api/tables.py` 多了新的資料表時不用動，伺服器或 seed 啟動時會自動建立；已經存在的資料表改了欄位或索引時，才要刪掉 `data/app.db*`（資料庫和它的 `-wal`、`-shm` 檔）再重新放入 demo 用戶
    - `DEMO_MODE=1` 時不要加 `--host 0.0.0.0`，啟動時會印出提醒
@@ -544,7 +544,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 **給角色 3**
 - 後端用 `src/ml/attributes.MODEL_VERSION` 當屬性快取（`item_cache.model`）的鍵，fake 模式照舊是 `"fake"`。你的 seed（任務 4.7）把 Qwen 的答案寫進 `item_cache` 時，`model` 欄位請用 `src.ml.attributes.MODEL_VERSION`（也就是 qwen 模式下後端用的鍵），不要用設定名稱 `qwen`，也不要用 `load_backends(settings).attributes_version`：預設 `ATTRIBUTES_MODEL=fake` 時它是 `"fake"`，Qwen 的答案會被記成假模型的答案
-- 合併之後 `Backends` 有一個必填的 `attributes_version`（屬性快取的鍵，沒有預設值）。你的 `src/api/seed.py` 自己建的 `Backends(...)`（第 152 行附近，現在只傳 `category`、`classify`、`attributes`、`describe_items`、`gpu_probe`）要多傳 `attributes_version=`，值和 seed 寫進 `item_cache.model` 的是同一個，也就是 `src.ml.attributes.MODEL_VERSION`，不是設定名稱。沒傳的話每次呼叫 seed 都會 `TypeError`（`python -m src.api.seed` 會直接出錯；`start.bat` 的 seed 比 uvicorn 先跑，10/18 起它接住這個錯誤，只印一行「示範帳號沒有更新」，伺服器照常啟動，但假用戶不會更新）
+- 合併之後 `Backends` 有一個必填的 `attributes_version`（屬性快取的鍵，沒有預設值）。你的 `src/api/seed.py` 自己建的 `Backends(...)`（第 152 行附近，現在只傳 `category`、`classify`、`attributes`、`describe_items`、`gpu_probe`）要多傳 `attributes_version=`，值和 seed 寫進 `item_cache.model` 的是同一個，也就是 `src.ml.attributes.MODEL_VERSION`，不是設定名稱。沒傳的話每次呼叫 seed 都會 `TypeError`（`python -m src.api.seed` 會直接出錯；`start.bat` 的 seed 比 uvicorn 先跑，10/18 起它接住這個錯誤，只印一行「示範帳號沒有更新」，繼續啟動伺服器，但假用戶不會更新）
 - 回覆你分支 13.7 的提議（seed 用目前後端的屬性模式當 `item_cache.model`，預設 `fake`，也可 `qwen`）：角色 1 維持 `MODEL_VERSION`，不照設定名稱。item-attributes 規格要求快取記錄是哪一個模型版本產生的（MUST），`fake`／`qwen` 這兩個名稱記不了版本，換了模型或 prompt 也不會讓舊答案失效；而且合併之後 demo 是在 qwen（沒有 GPU 時 `cache_only`）模式下讀這些答案，那時的鍵就是 `MODEL_VERSION`。所以 seed 不管 `ATTRIBUTES_MODEL` 設成什麼，都用 `MODEL_VERSION` 當鍵，包括查有沒有衝突答案的那個 `where`
 - 服務只有在 `ATTRIBUTES_MODEL=qwen` 時才讀得到上面那些答案（沒有 GPU 時顯示 `cache_only`）；預設的 `fake` 只讀 `model` 是 `"fake"` 的資料。所以你的分支合併之後，demo（`start.bat` 或 compose）要設 `ATTRIBUTES_MODEL=qwen`，才看得到 seed 放進去的屬性
 - 要在容器或 `start.bat` 用 qwen：你的分支合併進來之後，設 `ATTRIBUTES_MODEL=qwen`。容器預設就連主機的 `http://host.docker.internal:8080`，只有要用別的位址時才設 `DOCKER_LLAMA_SERVER_URL`。沒有 GPU 時健康檢查顯示 `cache_only`，只用快取裡的答案
@@ -556,7 +556,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 - 交出時請附 `tests/model_contract.check_classify` 的測試，並把 CPU 版 `torch`、`transformers` 加進 `requirements-docker.txt`（見 13.9）
 
 **給合併角色 3 分支的人（角色 1）**
-- 合併之後 `Backends.attributes_version` 是必填：角色 3 的 `src/api/seed.py` 自己建的 `Backends(...)`（第 152 行附近）沒有傳它，不補的話每次呼叫 seed 都會 `TypeError`（`python -m src.api.seed` 會直接出錯；`start.bat` 10/18 起只印一行「示範帳號沒有更新」，伺服器照常啟動，但假用戶不會更新）。其他要改的照下面的清單做
+- 合併之後 `Backends.attributes_version` 是必填：角色 3 的 `src/api/seed.py` 自己建的 `Backends(...)`（第 152 行附近）沒有傳它，不補的話每次呼叫 seed 都會 `TypeError`（`python -m src.api.seed` 會直接出錯；`start.bat` 10/18 起只印一行「示範帳號沒有更新」，繼續啟動伺服器，但假用戶不會更新）。其他要改的照下面的清單做
 
 **合併當天的清單（角色 1 負責）**
 1. 把預設換成 `ATTRIBUTES_MODEL=qwen`：`docker-compose.yml` 改成 `${ATTRIBUTES_MODEL:-qwen}`，`.env.example` 的值和註解也跟著改。原因是 seed 的答案以 `MODEL_VERSION` 為鍵，只有 qwen 的服務讀得到；沒有 GPU 時健康檢查顯示 `cache_only`，也就是 service-runtime 規格「無 GPU 模式」情境要的畫面。這兩處在合併之前維持 `fake`，因為沒有角色 3 的模組時，`qwen` 會讓伺服器停下來
@@ -575,7 +575,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 `start.bat`、GitHub Actions、`Dockerfile`／`docker-compose.yml` 都有了。這台電腦沒有 Docker，映像檔要等 push 之後在 CI 上建置才算驗證過。
 
 **給所有人**
-- 雙擊 `start.bat` 就能啟動：沒有 `.env` 會自動建立（含新的 `JWT_SECRET`），會放入假用戶並打開 `http://127.0.0.1:8000/web/`。已經有 `.env` 的人不受影響。假用戶放不進去時只印一行「示範帳號沒有更新」的警告，伺服器照常啟動（10/18 補上）
+- 雙擊 `start.bat` 就能啟動：沒有 `.env` 會自動建立（含新的 `JWT_SECRET`），會放入假用戶並打開 `http://127.0.0.1:8000/web/`。已經有 `.env` 的人不受影響。假用戶放不進去時只印一行「示範帳號沒有更新」的警告，繼續啟動伺服器；設定寫錯時伺服器自己會停下並說明（10/18 補上）
 - 用 Docker 時，容器連主機上 llama-server 的位址從 `DOCKER_LLAMA_SERVER_URL` 來（預設 `http://host.docker.internal:8080`），不看 `.env` 的 `LLAMA_SERVER_URL`；compose 會傳 `ATTRIBUTES_MODEL`（預設 `fake`，10/16 改寫：第七批接上），預設時這個位址只改變 `gpu_mode`，設成 `qwen` 要等角色 3 的程式合併（見 13.10）；`CATEGORY_MODEL`、`ATTRIBUTES_MODEL`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION` 從 shell 的環境變數或根目錄的 `.env` 來（compose 會讀它）
 - CI 在每次 push 和 PR 跑兩套測試（模型一律 fake），再建一次映像檔、檢查裡面沒有私人檔案，並用 `docker compose up` 啟動一次，確認健康檢查回報 demo 模式、假用戶名單不是空的。測試不要依賴 Windows 才有的行為
 

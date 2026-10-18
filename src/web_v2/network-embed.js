@@ -14,7 +14,12 @@
   const below=panel.querySelector('#explain-details > summary');
   const frameOffset=frame.getBoundingClientRect().top-panel.getBoundingClientRect().top+panel.scrollTop;
   const reserved=below?below.getBoundingClientRect().height+10:0;
-  const chrome=main.getBoundingClientRect().height-canvas.getBoundingClientRect().height;
+  const dock=main.querySelector('.insight-dock'),overview=main.querySelector('.comparison-overview');
+  const mobile=matchMedia('(max-width:640px)').matches;
+  // Selection can grow the outer page, never take height from the drawing.
+  // Only the always-present overview determines the desktop graph budget.
+  const extra=!mobile?Math.max(0,dock.getBoundingClientRect().height-overview.getBoundingClientRect().height):0;
+  const chrome=main.getBoundingClientRect().height-canvas.getBoundingClientRect().height-extra;
   const available=panel.clientHeight-frameOffset-parseFloat(panelStyle.paddingBottom)-reserved-chrome-4;
   main.style.setProperty('--graph-height',Math.max(220,Math.floor(available))+'px');
   const height=Math.ceil(main.getBoundingClientRect().height)+2;

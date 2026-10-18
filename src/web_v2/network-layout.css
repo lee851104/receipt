@@ -2,7 +2,7 @@
 html,body{margin:0;padding:0;overflow:hidden}
 main{max-width:none;padding:0;margin:0}
 .graph-card{border-radius:12px;background:#141414;border-color:#2d2b2a}
-.toolbar{padding:3px 12px;gap:12px;justify-content:flex-end;align-items:start;border:0;min-height:32px}
+.toolbar{padding:3px 12px;gap:12px;justify-content:flex-end;align-items:start;border:0;min-height:26px}
 .toolbar .reset{font-size:10px;padding:2px 8px;min-height:26px;margin:0}
 .scope{display:none}
 .graph-help{font-size:11px;color:var(--muted);margin-right:auto;order:-1;padding:3px 0;max-width:70%}
@@ -35,4 +35,24 @@ main{max-width:none;padding:0;margin:0}
  .readout p,.readout #summary{font-size:12px}
  .readout .summary-case+.summary-case{border:0;padding:0}
  .detail .reset{margin-left:0}
+}
+
+/* The graph keeps its full width; both readouts share the space below it. */
+.insight-dock{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;margin-top:8px;align-items:start}
+.insight-dock .comparison-overview{padding:8px 0;margin:0;border:0;border-radius:0;background:none}
+.insight-dock .readout{display:block}
+.insight-dock .readout>div{display:grid;grid-template-columns:1fr;gap:3px}
+.insight-dock .readout-number{display:block;margin:0 0 5px;font-size:11px}
+.insight-dock .readout p,.insight-dock .readout #summary{font-size:12px;line-height:1.5}
+.insight-dock .summary-case+.summary-case{border:0;padding:0}
+.selection-readout{padding:8px 0 8px 18px;border-left:1px solid #ffffff18;min-width:0}
+.selection-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:20px}
+.selection-heading .reset{font-size:10px;padding:0;min-height:20px;margin:0}
+.selection-heading .readout-number{margin:0}
+#selection-hint{margin:6px 0 0;color:var(--muted);font-size:12px;line-height:1.6}
+.selection-readout .detail{padding:0;margin-top:5px;display:block;border:0;min-height:0;background:none}
+.selection-readout .detail-text{font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+@media(max-width:640px){
+ .insight-dock{grid-template-columns:1fr;gap:4px;margin-top:6px;padding:0 6px}
+ .selection-readout{padding:8px 0;border-left:0;border-top:1px solid #ffffff18}
 }

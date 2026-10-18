@@ -85,7 +85,7 @@
       $('explain-details').hidden=false;
      }
      if(network.data?.network){
-      $('network-frame').src='network.html?v=20261017-space1';$('network-frame').hidden=false;
+      $('network-frame').src='network.html?v=20261018-stable1';$('network-frame').hidden=false;
      }
     }catch(error){networkRenderError=error.message;}
     lastNetwork=network.data;

@@ -59,7 +59,8 @@ function renderSummary(result,both){
 }
 // The taste network: signals fan out from each person's traits, and the middle lines are the score's cells.
 function drawTraits(svg,mobile,both){
- const graph=TraitNetwork.layout(network,both[0],both[1],mobile,apiResult),shape=TraitNetwork.SHAPES[mobile?'mobile':'desktop'],color={a:'#ff9aa7',b:'#9bbcff'},who=sideNames();
+ const canvas=document.querySelector('.canvas').getBoundingClientRect();
+ const graph=TraitNetwork.layout(network,both[0],both[1],mobile,apiResult,{width:svg.clientWidth,height:canvas.height}),shape=graph.shape,color={a:'#ff9aa7',b:'#9bbcff'},who=sideNames();
  // Purchases stay in the external readout; selecting never changes the drawing bounds.
  const overviewBox=mobile?TraitNetwork.viewBox(network,graph,both.map(person=>({...person,items:[]})),mobile):'0 0 '+graph.width+' '+graph.height;
  svg.setAttribute('viewBox',overviewBox);
@@ -205,6 +206,23 @@ $('network-motion').addEventListener('click',()=>{
 });
 motionPreference.addEventListener('change',()=>{if(motionChoice===null)setMotion(!motionPreference.matches);});
 draw();
+// The host assigns available height after the first render. Reflow geometry only when
+// that space changes; selecting a line must leave both the canvas and viewBox stable.
+let graphSize='';
+const canvasObserver=new ResizeObserver(()=>{
+ if(matchMedia('(max-width:640px)').matches)return;
+ const svg=$('network'),canvas=document.querySelector('.canvas');
+ if(!svg.clientWidth||!canvas.clientHeight)return;
+ const size=svg.clientWidth+':'+canvas.clientHeight;
+ if(size===graphSize)return;
+ graphSize=size;
+ const previous=selected;
+ draw();
+ if(previous?.startsWith('signal:'))selectSignal(previous.slice(7));
+ else if(previous?.startsWith('trait:'))selectTrait(Number(previous.slice(6)));
+});
+canvasObserver.observe(document.querySelector('.canvas'));
+window.addEventListener('pagehide',()=>canvasObserver.disconnect(),{once:true});
 
 }catch(error){const notice=document.createElement('p');notice.textContent='無法顯示關係圖，請回配對清單重新載入。';document.body.replaceChildren(notice);}
 })();

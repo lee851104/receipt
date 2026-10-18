@@ -134,8 +134,14 @@
   const fixed = number => number.toFixed(1);
 
   // Every dot and line of the graph for two people, from the trait order in data and each person's values.
-  function layout(data, left, right, mobile, result) {
-    const shape = mobile ? SHAPES.mobile : SHAPES.desktop;
+  function layout(data, left, right, mobile, result, viewport) {
+    // Use taller desktop space for the fan geometry, keeping glyphs and circles undistorted.
+    const base = SHAPES.desktop;
+    const height = !mobile && viewport && viewport.width > 0
+      ? Math.max(base.height, base.width * viewport.height / viewport.width) : base.height;
+    const shape = mobile ? SHAPES.mobile : { ...base, height,
+      centers: base.centers.map(([x]) => [x, height / 2]),
+      stretch: [base.stretch[0], base.stretch[1] * (height - 60) / (base.height - 60)] };
     const count = data.traits.length;
     // A signal sits beside the first trait that lists it; later traits only get another line.
     const home = new Map();
@@ -181,7 +187,7 @@
         : `M${fixed(a.x)} ${fixed(a.y)} C${fixed(middle)} ${fixed(a.y)} ${fixed(middle)} ${fixed(b.y)} ${fixed(b.x)} ${fixed(b.y)}`;
       cells.push({ trait: index, part, d });
     });
-    return { width: shape.width, height: shape.height, font: shape.font, sides, links, cells, result };
+    return { width: shape.width, height: shape.height, font: shape.font, shape, sides, links, cells, result };
   }
 
   // A purchase name the graph can fit: ten letters at most, cut with an ellipsis; the detail line keeps it whole.
@@ -252,7 +258,7 @@
   function scoreMark(graph, mobile) {
     const { result } = graph;
     if (!result || !result.comparable) return null;
-    const shape = mobile ? SHAPES.mobile : SHAPES.desktop, { mark } = shape, [[ax, ay], [bx, by]] = shape.centers;
+    const shape = graph.shape || (mobile ? SHAPES.mobile : SHAPES.desktop), { mark } = shape, [[ax, ay], [bx, by]] = shape.centers;
     const x = (ax + bx) / 2, y = (ay + by) / 2, points = result.percent;
     return { x, y, width: mark.width, height: mark.height, label: mark.label, number: mark.number, radii: mark.glow,
       labelY: y - mark.height / 2 + 24, numberY: y + mark.height / 2 - 16, text: (points > 0 ? '+' : points < 0 ? '−' : '') + Math.abs(points) + '%',

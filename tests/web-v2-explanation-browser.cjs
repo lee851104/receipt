@@ -28,12 +28,13 @@ const fixture=require('./web-v2-fixtures.cjs');
   await graph.locator('#network .t-score-number').waitFor();
   assert.equal(await graph.locator('#overall-score').count(),0);
   assert.equal(await page.locator('#explain-details').getAttribute('open'),null);
-  for(const size of [{width:1366,height:768},{width:1024,height:640},{width:390,height:844},{width:320,height:568}]){
+  for(const size of [{width:1440,height:1000},{width:1920,height:1080},{width:1366,height:768},{width:1024,height:640},{width:390,height:844},{width:320,height:568}]){
    await page.setViewportSize(size);
    await page.waitForFunction(()=>{
     const f=document.getElementById('network-frame'),d=f.contentDocument;
     return d&&parseFloat(d.querySelector('main').style.getPropertyValue('--graph-height'))>=220&&d.documentElement.scrollHeight<=f.clientHeight+2&&d.documentElement.scrollWidth<=f.clientWidth+1&&Math.abs(f.clientHeight-d.querySelector('main').getBoundingClientRect().height-2)<2&&(innerWidth<=640||document.querySelector('#explain-details > summary').getBoundingClientRect().bottom<=document.getElementById('matches-panel').getBoundingClientRect().bottom+1);
    });
+   await page.waitForTimeout(150); // Let host and graph ResizeObservers settle after viewport changes.
    const before=await graph.locator('#network').evaluate(n=>({box:n.getAttribute('viewBox'),height:n.getBoundingClientRect().height,scale:n.getScreenCTM().a}));
    await graph.getByRole('button',{name:/這一格.*查看連線/}).first().press('Enter');
    await graph.locator('#detail').waitFor();
@@ -62,11 +63,14 @@ const fixture=require('./web-v2-fixtures.cjs');
      const rects=labels.map(n=>n.getBoundingClientRect());
      const font=Math.min(...labels.map(n=>parseFloat(getComputedStyle(n).fontSize)*n.getScreenCTM().a));
      const nodes=[...svg.querySelectorAll('.t-trait')].map(n=>n.getBoundingClientRect());
-     return {font,spread:(Math.max(...nodes.map(n=>n.right))-Math.min(...nodes.map(n=>n.left)))/bounds.width,
+     const signals=[...svg.querySelectorAll('.t-signal')].map(n=>n.getBoundingClientRect());
+     return {font,vertical:(Math.max(...signals.map(n=>n.bottom))-Math.min(...signals.map(n=>n.top)))/bounds.height,spread:(Math.max(...nodes.map(n=>n.right))-Math.min(...nodes.map(n=>n.left)))/bounds.width,
       clipped:rects.some(r=>r.left<bounds.left||r.right>bounds.right||r.top<bounds.top||r.bottom>bounds.bottom)};
     });
     assert(layout.font>=(size.width>1200?15:11.5),JSON.stringify(layout));
     assert(layout.spread>.74,JSON.stringify(layout));
+    assert(layout.vertical>.82,'graph fills available height '+JSON.stringify({size,...layout}));
+    console.log('NETWORK FIT',JSON.stringify({size,...layout}));
     assert.equal(layout.clipped,false);
     const summary=await graph.locator('.comparison-overview').evaluate(n=>{
      const r=n.getBoundingClientRect(),c=document.querySelector('.canvas').getBoundingClientRect();
@@ -100,6 +104,7 @@ const fixture=require('./web-v2-fixtures.cjs');
   assert(await graph.locator('.selection-readout').isVisible());
   await graph.locator('#reset').click();
   assert.equal(await graph.locator('#network').getAttribute('viewBox'),overviewBox);
+  await page.screenshot({path:'runtime/role4-fill-desktop.png'});
   await page.locator('#match-back').click();
   assert(await page.locator('#match-browse').isVisible());
   assert.equal(await page.locator('.match-card').first().evaluate(n=>n===document.activeElement),true);

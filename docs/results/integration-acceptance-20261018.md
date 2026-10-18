@@ -17,7 +17,9 @@
 | GPU 模式（RTX 4060、Qwen3-4B） | 通過 | 6.2 |
 | `/docs` 與 overview 第 5 節 | 17 個路由完全一致 | 6.5 一部分 |
 | 隱私掃描 | 有完全相同的字串，**待使用者確認** | 6.6 |
-| 真的 BERT、GitHub CI、沒有 GPU 的電腦、乾淨電腦、組員照 README | 未做 | 2.10、2.11、2.14、2.15、6.1、6.4 |
+| GitHub CI（推送 4abaad8 後） | tests、docker 兩個 job 都成功；紀錄裡沒有下載模型 | 2.11（PR 還沒開）、2.12 |
+| 真的 BERT（受保護 Space） | 本機下載、`check_classify`、容器下載與無憑證重啟都通過 | 2.15 |
+| 沒有 GPU 的電腦、乾淨電腦、組員照 README | 未做 | 2.10、2.14、6.1、6.4 |
 
 ## 測試與 OpenSpec
 
@@ -83,9 +85,21 @@ RTX 4060，主資料夾 `runtime/llama-b11557-cuda/llama-server.exe`，模型 Qw
 
 完全相同的字串可能只是常見的通用品名或連鎖店名，也可能是真的外洩，Claude 不能看內容判斷。符合的字串和檔案寫在主資料夾的 `data/private/privacy-scan-20261018.json`（被 git 忽略，只給使用者自己看）。使用者確認之前，6.6 不打勾。
 
+## GitHub CI
+
+使用者同意後推送 `role-1/integration`（4abaad8，沒有開 PR）。CI run 39110711344：`tests` job（86 秒）Ran 562 tests OK（skipped=1）、Node pass 149；`docker` job（82 秒）建置映像檔、私人檔案檢查、compose 啟動並確認 `cache_only`、300 位示範帳號、第一位和最後一位 profile ready 且沒有待分析，全部成功。整份 log 只有安裝 `safetensors` 套件時出現模型相關字樣，沒有下載任何模型。
+
+## 真的 BERT（受保護的 Hugging Face Space）
+
+使用者同意用自己已登入的 Hugging Face 帳號下載。Claude 沒有打開或印出權杖。
+
+- **本機**：`python -m scripts.download_category_model --repo lee851104/receipt-model-lab --revision 29b655b96b4ced268bb0c3994e901c72dfd65420 --sha256 16997425… --destination models/category` → `downloaded`（53 秒，391 MB，逐檔核對 SHA-256；`models/` 被 git 忽略）
+- **後端接口**：用 `load_backends`（`CATEGORY_MODEL=bert`、固定 SHA）載入，`backends.category` 是 `bert`，`tests/model_contract.check_classify` 通過（鮮奶茶 → 1 飲品、滷肉飯 → 0 正餐、衛生紙 12 包 → 8 日用品）；1000 個虛構品名在 CPU 上 13.4 秒；SHA 設錯時是 `unavailable`
+- **Docker 下載**：`docker-compose.yml` 疊 `docker-compose.category.yml`（Space、revision、SHA、`HF_TOKEN_FILE` 指向本機的權杖檔，以唯讀 secret 掛進容器），獨立專案 `receipt-r1-bert`、127.0.0.1:8013：77 秒後 health 是 `category: bert`、`attributes: cache_only`；同一份 API 驗收腳本全部通過（BERT 把部分虛構品名放到待確認，每人計入 68 筆）；分類框對虛構品名的答案和本機一致
+- **無憑證重啟**：`down`（不加 `-v`）後只設 `CATEGORY_MODEL=bert` 和 SHA、不疊 category 設定也不掛權杖：9 秒後 health 仍是 `bert`，資料保留
+
 ## 沒有做、要等人或推送的
 
-- 真的 BERT（2.15 分類這一側）：要從受保護的 Hugging Face Space 下載，需要使用者的憑證與同意；這次分類一律是 fake
-- GitHub CI 綠燈（2.11、2.12）：要推送才會跑
+- 2.11 要的是 PR 上的綠燈（這次只推送，沒有開 PR）
 - 沒有 GPU 的電腦點兩下 start.bat（2.10、6.1）、只裝 Docker 的乾淨電腦（6.4，含模型自動下載）、組員照 README 從零啟動（2.14）
 - 6.5 的「每一個規格情境都有對應的測試或手動紀錄」另外整理

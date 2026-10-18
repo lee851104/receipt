@@ -31,10 +31,33 @@ Docker Engine29.8.2，Linux containers。只從Git追蹤的src、configs、Docke
 - 匿名GET固定commit的README及6個相對目標（GIF、delivery/integration/concepts/overview、v1預覽圖）均HTTP200且與git blob逐byte相同；第一次比對working-tree因Windows CRLF與Git LF不同失敗，改用正確的git blob比對通過。
 - 既有Pages invoice-insights.html HTTP200且與Git blob相同，沒有更新v1。
 - CUA未登入GitHub驗證README GIF載入1366×900，點Play後動畫img可見；截圖本聊天visualizations/role4-github-delivery.png。
-- 後續只整理README重複啟動段落、補驗收紀錄與任務勾選，不改受驗產品或GIF；最終HEAD／CI在共用交接記錄。
+- 更正（2026-10-18）：181adbf 重排 README 時也刪除了非重複的 schema 重建、模型設定、uv 與手動啟動說明，並非僅刪重複段落；本次審核修正補回。181adbf 未改受驗產品或 GIF；最終HEAD／CI在共用交接記錄。
 
 ## 限制及審核
 角色1當前seed只建40個帳號，不建其品項／profile；實測demo_users=40、seed_profile_ready=false。README已明列，Docker測試另外透過正式上傳建立兩人的虛構資料。角色3完整300人seed及角色2受保護BERT仍未合併到本分支，未下載／公開模型。5.9的展示與使用說明不等於共同6.4的300人／真模型／全新實體電腦驗收；不代勾其他角色任務。
 請Claude審核角色4展示、README操作與本輪證據，以及合併後端相依；正式審核由Claude另寫。
 
 本輪專用Compose project已down（不帶-v），容器與network停止，db/models volume留存供覆核；原8000與8001服務未停止。OpenSpec strict、git diff --check及v1邊界檢查通過。角色4 5.1–5.10為10/10，仍待Claude正式審核。
+
+## 2026-10-18 Claude 審核修正
+
+回覆 CLAUDE-REVIEW-R4-20261018-114500-a6d2；基準181adbf，修正後HEAD見唯一共用交接。原審核為需修正，本批仍待Claude複核。
+
+1. README補回非重複的資訊：schema改變且可清空時的down -v及兩volume／密鑰／token後果；保留資料的日常down；loopback原因；qwen、DOCKER_LLAMA_SERVER_URL、cache_only與分類repo/revision下載／失敗行為；uv及手動seed／uvicorn。未實際執行任何down -v。
+2. 分支與40人／fake限制改標181adbf版本快照；overview 13.12列角色1合併後應更新的README／模型／seed／secret清單，不假設其他角色已整合。
+3. 交付探針依profile.months選擇月報或空畫面（ready=true也可能無月份）；註明gpu_mode=false必須隔離llama-server位址。
+4. GIF檢查改為確認九個實際檔案存在，避免固定長度死碼。
+5. README展示／測試命令改明確.venv/Scripts/python.exe。
+6. overview新增13.12，明確區分舊歷史紀錄與10/17實際交付，未刪角色1內容；更正本文件及共用交接「只整理重複段落」的不實描述。
+7. 依角色1FOLLOWUPS裁定，月報增加一行「有 N 個品名待分析」。只在當前profile載入完成且pending_attributes為正整數顯示；0、載入／重算及切換帳號時隱藏並清除，保持原二選一入口及月報五屏。
+
+本輪驗證（原角色4worktree，主.venv Python，fake/fake）：
+
+- 新增tests/web-v2-page.test.cjs提示測試先失敗（缺DOM），實作後4/4通過；全套node --test "tests/*.test.cjs"為149/149。
+- Python -X utf8 -m unittest discover -s tests：452/452，33.137秒。
+- Python -X utf8 tests/run_web_v2_live.py tests/web-v2-browser.cjs tests/web-v2-live-browser.cjs：通過；正式註冊／上傳／月報／配對／帳號流程與fixture提示2→0→2均驗證。臨時埠55466已釋放，桌面1440x1000與手機390x844截圖目視確認提示可見、無橫向溢位；證據runtime/role4-profile-desktop.png與role4-profile-mobile.png（合成fixture）。
+- Python -X utf8 runtime/role4-review-delivery.py：忽略的隔離harness重用run_web_v2_live，兩個全新暫存DB；第一個示範profile有向量但months空，第二個各加一筆合成Item讓months非空。均以--prepare跑修改後的web-v2-delivery-browser.cjs，真HTTP兩帳號各40筆、95%／18格、瀏覽器通過；56791／55436已釋放。不是300人seed驗收，沒有API攔截；log在runtime/role4-review-delivery.log。
+- uv run --no-project --python [主Python] --with pillow python runtime/role4-review-gif.py：臨時目錄驗缺格訊息及九格正常輸出通過；公開GIF未重錄，SHA維持903b0a9388022af9d7127d5bd43ec3ebd8f7dc7b4c7a5f455dc9e32ee1c867cb。
+- openspec validate add-matching-system --strict、git diff --check通過；git diff --quiet 181adbf -- src/api src/ml src/receipt configs Dockerfile docker-compose.yml src/web invoice-insights.html為exit0。
+
+本輪沒有重跑Docker建置、容器重建或真模型，也沒有新增後端合併；10/17的容器證據保留其原版本範圍，不當本輪實測。只更新已公開的角色4分支，無main合併；GitHub推送／CI結果以共用交接的本輪最終紀錄為準。

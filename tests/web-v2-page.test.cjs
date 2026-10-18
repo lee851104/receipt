@@ -47,3 +47,18 @@ test('login error is Chinese, password is cleared and an API 401 clears prior re
   x.location.hash='#profile';x.events.hashchange();await tick();
   assert.equal(x.nodes['workspace-view'].hidden,true);assert.match(x.nodes['auth-error'].textContent,/失效/);
 });
+
+test('monthly report shows pending names only for a current loaded profile',async()=>{
+  let pending=3;
+  const x=page(p=>p.endsWith('/health')?[200,{demo_mode:true}]:p.endsWith('/demo-users')?[200,[{user_id:2,display_name:'示範'}]]:p.endsWith('/demo-login')?[200,{access_token:'abc',expires_in:3600}]:[200,{ready:false,item_count:0,min_items:20,pending_attributes:pending,months:{},traits:[]}]);
+  await tick();x.nodes['demo-user'].value='2';await x.nodes['demo-form'].fire('submit');
+  x.location.hash='#profile';x.events.hashchange();await tick();
+  assert.equal(x.nodes['profile-pending'].hidden,false);
+  assert.equal(x.nodes['profile-pending'].textContent,'有 3 個品名待分析');
+  pending=0;await x.nodes['refresh-profile'].fire('click');await tick();
+  assert.equal(x.nodes['profile-pending'].hidden,true);assert.equal(x.nodes['profile-pending'].textContent,'');
+  pending=2;await x.nodes['refresh-profile'].fire('click');await tick();
+  assert.equal(x.nodes['profile-pending'].hidden,false);
+  await x.nodes['switch-account'].fire('click');
+  assert.equal(x.nodes['profile-pending'].hidden,true);assert.equal(x.nodes['profile-pending'].textContent,'');
+});

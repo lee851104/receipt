@@ -23,12 +23,15 @@ function csv(){
  return '\ufeff'+header+'\r\n'+Array.from({length:40},(_,i)=>['202606'+String(i%28+1).padStart(2,'0'),'開立已確認','SYN-'+i,'虛構測試店','臺北市大安區測試路1號',items[i%4],1,60+i%7*10].join(',')).join('\r\n');
 }
 (async()=>{
+ // Set DOCKER_LLAMA_SERVER_URL=http://127.0.0.1:9 in the isolated acceptance environment.
+ // fake/fake alone does not guarantee gpu_mode=false when a host llama-server is reachable.
  const h=await api('/health');assert.equal(h.status,200);assert.equal(h.data.demo_mode,true);assert.equal(h.data.gpu_mode,false);assert.equal(h.data.models.category,'fake');assert.equal(h.data.models.attributes,'fake');
  const demos=await api('/auth/demo-users');assert(demos.data.length>0);
  const demo=await api('/auth/demo-login',{method:'POST',json:{user_id:demos.data[0].user_id}});
  assert.equal(demo.status,200);
  const demoProfile=await api('/me/profile',{token:demo.data.access_token});
- // Record the current seed limitation, do not invent a populated demo profile.
+ assert.equal(demoProfile.status,200);
+ // Readiness and month availability differ: a seeded vector may have no report rows.
  const seedReady=demoProfile.data.ready;
  const identities=[];
  for(const username of names){
@@ -62,7 +65,15 @@ function csv(){
   await go(page,'settings');await page.locator('#account-content').waitFor();
   await page.locator('#logout-submit').click();await page.locator('#auth-view').waitFor();
   await page.locator('#demo-user').selectOption(String(demos.data[0].user_id));await page.locator('#demo-submit').click();await page.locator('#home-panel').waitFor();
-  await go(page,'profile');await page.locator('#report-empty').waitFor();
+  await go(page,'profile');
+  const monthCount=Object.keys(demoProfile.data.months||{}).length;
+  if(monthCount){
+   await page.frameLocator('#report-frame').locator('#total').waitFor();
+   assert.equal(await page.frameLocator('#report-frame').locator('#insights-month option').count(),monthCount);
+   assert(await page.locator('#report-empty').isHidden());
+  }else{
+   await page.locator('#report-empty').waitFor();assert(await page.locator('#report-frame').isHidden());
+  }
   assert.deepEqual(errors,[]);
  }finally{await browser.close();}
  const output={phase:process.argv.includes('--prepare')?'prepare':'after-recreate',http:'real',models:h.data.models,gpu:false,demo_users:demos.data.length,seed_profile_ready:seedReady,synthetic_users:2,items_per_user:40,percent:peer.percent,cells:18,browser:'pass'};

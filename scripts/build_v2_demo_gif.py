@@ -8,7 +8,7 @@ manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
 if manifest != {"frames": 9, "fixture": True, "api": "mock", "viewport": {"width": 1366, "height": 900}}:
     raise SystemExit("Unexpected capture manifest; rerun capture_v2_demo.cjs.")
 paths = [folder / f"{index:02}.png" for index in range(9)]
-if len(paths) != 9:
+if any(not path.is_file() for path in paths):
     raise SystemExit("Expected exactly 9 fictional demo frames; run capture_v2_demo.cjs first.")
 frames = []
 for path in paths:

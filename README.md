@@ -14,7 +14,7 @@ FastAPI 在同一個服務提供網頁與 API，資料保存在本機 SQLite；v
 
 ### Docker 啟動（建議展示使用）
 
-目前交付在 codex/role4-web-foundation 分支，尚未合併 main；可從此分支頁面的 Code → Download ZIP 下載並解壓縮。先安裝並啟動 Docker Desktop（Linux containers），在**此分支的專案根目錄**執行：
+目前交付在 codex/role4-web-foundation 分支，尚未合併 main；可從此分支頁面的 Code → Download ZIP 下載並解壓縮。先安裝並啟動 Docker Desktop（Linux containers），在**專案根目錄**執行：
 
 ```powershell
 docker compose up --build -d
@@ -35,9 +35,21 @@ docker compose down
 docker compose up -d
 ```
 
-down 會停止容器並保留資料；再次 up 可恢復。帳號、發票與密鑰在 db volume，模型位置在 models volume。**不要加上 down -v，否則會刪除這個 Compose 專案的資料 volume。** 8000 若已被其他程式占用，可將 docker-compose.yml 的埠映射改成 127.0.0.1:8002:8000，並以 8002 開啟網頁。
+日常停止使用 `docker compose down`，再次 up 可恢復；需要保留展示資料時不要加 `-v`。帳號、發票與容器產生的簽章密鑰在 db volume，模型位置在 models volume。Compose 不會把主機或 .env 的 JWT_SECRET 傳入容器。
 
-**目前分支的範圍：** 自動建立 40 個唯讀示範帳號，但尚未合入角色 3 的完整消費 seed，因此這些帳號會顯示沒有月報／資料不足。要實際走流程，請註冊測試帳號並從設定上傳 CSV；配對需要其他已有足夠資料的帳號。本輪 Docker 驗收用兩位虛構帳號各上傳 40 筆，確認月報、配對、圖與計算，並重建容器確認資料仍在。完整 300 人與受保護真模型交付由其他角色整合，本分支不要直接設為 bert 或 qwen。這不等於全隊 6.4 驗收完成。
+拉取新程式後用 `docker compose up --build -d` 重建映像。若資料表欄位或索引改變，目前沒有自動資料庫遷移；可在**已備份需要保留的資料，並確認可清空這個展示環境**後，執行 `docker compose down -v`，再執行 `docker compose up --build -d`。這會刪除該專案的 **db 與 models 兩個 volume**，帳號、發票、簽章密鑰與下載模型全部重建，既有登入 token 失效；要保留舊資料時，先由維護者提供遷移方式，不能直接清空。
+
+埠維持綁定 `127.0.0.1`：DEMO_MODE=1 時任何連得到服務的人都能用示範帳號登入。 8000 若已被其他程式占用，可將 docker-compose.yml 的埠映射改成 127.0.0.1:8002:8000，並以 8002 開啟網頁。
+
+**已驗收版本（181adbf，2026-10-17）的範圍：** 自動建立 40 個唯讀示範帳號，但尚未合入角色 3 的完整消費 seed，因此這些帳號會顯示沒有月報／資料不足。要實際走流程，請註冊測試帳號並從設定上傳 CSV；配對需要其他已有足夠資料的帳號。本輪 Docker 驗收用兩位虛構帳號各上傳 40 筆，確認月報、配對、圖與計算，並重建容器確認資料仍在。完整 300 人與受保護真模型交付由其他角色整合，此版本展示請維持 fake/fake；真模型設定與程式相依見下節。這不等於全隊 6.4 驗收完成。
+
+### 模型設定與容器連線
+
+設定來源與完整契約見 [團隊總覽第 5.10 節](docs/team/overview.md#510-設定envrepo-只放-envexample)。以下描述已驗收的 181adbf；合併新模型版本後須同步更新說明。
+
+- `ATTRIBUTES_MODEL=qwen` 需要角色 3 的 `src/ml/attributes.py`，缺檔時服務以一行錯誤停止。容器預設連到主機的 `http://host.docker.internal:8080`；可用 `DOCKER_LLAMA_SERVER_URL` 覆寫。容器不用 .env 的 `LLAMA_SERVER_URL`，因為主機的 127.0.0.1 在容器內代表容器自身。連不到 llama-server 時，qwen 模式顯示 `cache_only`，只使用快取；fake 模式不會改為 qwen。health 的 `gpu_mode` 表示服務能否連到 llama-server，與 fake/qwen 設定分開。
+- `CATEGORY_MODEL`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION` 由 Compose 環境變數或根目錄 .env 讀取。bert 模式只有在模型資料夾未有模型，且指定 repo 與固定 revision 時，才由**容器入口**嘗試下載至 models volume；下載失敗服務仍啟動，分類器顯示 `unavailable`。Windows start.bat／launch／直接 uvicorn 不會下載。
+- 181adbf 尚無角色 2 BERT 載入器，就算下載完成仍為 unavailable；也尚無受保護來源的認證下載流程。後續真模型依專案政策使用受保護來源，不公開權重；請等待角色 2 的下載器、secret 設定與文件整合，不把上述舊入口視為已能載入受保護模型。
 
 ### Windows Python 啟動
 
@@ -51,6 +63,20 @@ py -3.12 -m venv .venv
 
 接著雙擊 start.bat；它會在沒有 .env 時建立設定與隨機密鑰、加入示範帳號，然後開啟 http://127.0.0.1:8000/web/。保持啟動視窗開啟，停止按 Ctrl+C；已有 .env 不會覆蓋。不要使用 uv sync（pyproject.toml 未列服務套件）。
 
+若偏好 uv，可用以下方式建立環境並安裝相同依賴：
+
+```powershell
+uv venv --python 3.12 .venv
+uv pip install --python .venv/Scripts/python.exe -r requirements.txt
+```
+
+手動啟動時，先把 .env.example 複製成 .env 並設定至少 32 字元的隨機 JWT_SECRET，再依序執行（僅一個 worker）：
+
+```powershell
+.venv/Scripts/python.exe -m src.api.seed
+.venv/Scripts/python.exe -m uvicorn src.api.main:app --host 127.0.0.1 --port 8000
+```
+
 若出現 No Python at，代表 .venv 指向的基底 Python 不可用，單純看到 Scripts/python.exe 檔案不表示環境可執行。先安裝或修復對應 Python 3.12，再建立新的虛擬環境；開發中的共用 .venv 不要直接刪除。Docker 方式不依賴這個環境。
 
 ### 重錄展示與驗證
@@ -58,8 +84,8 @@ py -3.12 -m venv .venv
 已有 Playwright／Chromium 的 Node 環境及 Python 服務依賴時：
 
 ```powershell
-python -X utf8 tests/run_web_v2_live.py scripts/capture_v2_demo.cjs
-python scripts/build_v2_demo_gif.py
+.venv/Scripts/python.exe -X utf8 tests/run_web_v2_live.py scripts/capture_v2_demo.cjs
+.venv/Scripts/python.exe scripts/build_v2_demo_gif.py
 ```
 
 第二行需要 Pillow（可在獨立工具環境安裝）。錄製服務使用臨時資料庫，結束自動關閉；腳本攔截全部 /api/ 請求，中間截圖與 manifest 留在被忽略的 runtime/，成品只有 docs/assets/v2-contract-demo.gif。可用 NODE_PATH、BROWSER_EXECUTABLE 指定既有 Playwright 與 Chromium。
@@ -67,8 +93,8 @@ python scripts/build_v2_demo_gif.py
 - [向量化、內積、餘弦與收縮項](docs/team/concepts.md)：兩位虛構人物的 +82% 範例，可由 explain API 重現。
 - [團隊總覽與 API 契約](docs/team/overview.md)。
 - [前後端整合紀錄](docs/results/role4-integration.md)；[本輪展示與 Docker 交付驗收](docs/results/role4-delivery.md)。
-- python -m unittest discover -s tests：後端與核心；node --test "tests/*.test.cjs"：前端與 v1。
-- python -X utf8 tests/run_web_v2_live.py：隔離 SQLite、fake 模型、真正 HTTP 與瀏覽器流程。
+- .venv/Scripts/python.exe -m unittest discover -s tests：後端與核心；node --test "tests/*.test.cjs"：前端與 v1。
+- .venv/Scripts/python.exe -X utf8 tests/run_web_v2_live.py：隔離 SQLite、fake 模型、真正 HTTP 與瀏覽器流程。
 - GitHub Actions 使用 Python 3.12／Node 24，執行測試、建置與檢查容器；不下載模型。
 
 產出待 Claude 審核；角色 4 分支驗收和合併 main 是不同階段。

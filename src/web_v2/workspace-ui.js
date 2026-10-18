@@ -43,6 +43,9 @@
    const profile=state.profile;
    $('profile-message').textContent=profile.status==='loading'?'載入月報中…':profile.message;
    $('profile-content').hidden=profile.status!=='ready';
+   const pending=profile.status==='ready'?profile.data?.pending_attributes:0;
+   $('profile-pending').hidden=!(Number.isInteger(pending)&&pending>0);
+   $('profile-pending').textContent=$('profile-pending').hidden?'':'有 '+pending+' 個品名待分析';
    if(profile.data!==lastProfile){
     clearFrame('report-frame');
     const hasMonths=Object.keys(profile.data?.months||{}).length>0;

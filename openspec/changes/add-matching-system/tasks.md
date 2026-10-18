@@ -41,15 +41,15 @@
 
 ## 4. 角色 3：LLM 屬性與假用戶
 
-- [ ] 4.1 在 4060 電腦上照 overview 第 12 節裝好 NVIDIA 驅動和 CUDA 版的 `llama-server`（放在 `runtime/`）；確認 `nvidia-smi` 看得到顯示卡，`llama-server.exe --list-devices` 看得到 `CUDA0`，對測試 prompt 有回應
-- [ ] 4.2 用 `experiments/receipt-attributes/` 的同一套評估，比較 Qwen3-4B 和約 5 GB 的候選模型，並更新選型紀錄；第 1 週結束還沒定案就用 Qwen3-4B
-- [ ] 4.3 實作 `src/ml/attributes.describe_items`（`ATTRIBUTES_MODEL=qwen`）：呼叫 `LLAMA_SERVER_URL`、套用 `bulk_rule` 和 `sugar_guard`、把 fun 對應成中文值、保留 `null`；用錄下來的回應做測試，不需要 GPU
-- [ ] 4.4 讓 `attributes.describe` 可以接收外部屬性，`channel_of` 照舊；現有測試照樣通過，另外新增外部屬性的測試（10/15：角色 1 已用 `attributes.from_model` 和 `signals`／`traits` 的 `attributes` 參數做完，在 `role-1/profiles`，見 design D6）
-- [ ] 4.5 在品味計算中加入甜度預設補位；測試沒寫甜度的手搖奶茶，屬性回傳的 `sugar` 是 `null`，但 sweet 格把它當成全糖（10/15：預設補位已在 `attributes.from_model` 裡，角色 1 做完，在 `role-1/profiles`）
-- [ ] 4.6 把 `personas.py` 擴充到約 300 人；測試 8 種類型的人數相差不超過 1 人、同一個種子產生的結果完全相同，而且 seed 之後 `/api/auth/demo-users` 列出約 300 人
-- [ ] 4.7 擴充 seed：假發票寫進 `items`，假品名的屬性結果存成 `datasets/synthetic/attribute-cache.jsonl` 並載入 `item_cache`，再走一般的管線算出品味向量；在無 GPU 模式下執行，確認每位假用戶都有品項紀錄，重新計算也得到相同的向量
-- [ ] 4.8 組織 4 人人工複核 100 個品名，產出 23 個欄位的 precision、recall、F1 和 `null` 比例，寫成 `docs/results/attributes.md`（只放彙總數字）；掃描確認裡面沒有任何真實品名
-- [ ] 4.9 訂出「相反類型」對照表，執行配對驗證（整體和 8 種類型各自的同類型命中率，以及相反類型命中率），寫成 `docs/results/matching.md`
+- [x] 4.1 在 4060 電腦上照 overview 第 12 節裝好 NVIDIA 驅動和 CUDA 版的 `llama-server`（放在 `runtime/`）；確認 `nvidia-smi` 看得到顯示卡，`llama-server.exe --list-devices` 看得到 `CUDA0`，對測試 prompt 有回應
+- [x] 4.2 用 `experiments/receipt-attributes/` 的同一套評估，比較 Qwen3-4B 和約 5 GB 的候選模型，並更新選型紀錄；第 1 週結束還沒定案就用 Qwen3-4B
+- [x] 4.3 實作 `src/ml/attributes.describe_items`（`ATTRIBUTES_MODEL=qwen`）：呼叫 `LLAMA_SERVER_URL`、套用 `bulk_rule` 和 `sugar_guard`、把 fun 對應成中文值、保留 `null`；用錄下來的回應做測試，不需要 GPU
+- [x] 4.4 讓品味計算透過 `attributes` 品名對照字典讀取模型屬性，`channel_of` 照舊；現有與模型屬性測試通過（由角色 1 的 `from_model` 實作，2026-10-15 使用者決定；見 design D6）
+- [x] 4.5 在品味計算中加入甜度預設補位；測試沒寫甜度的手搖奶茶，屬性回傳的 `sugar` 是 `null`，但 sweet 格把它當成全糖（由角色 1 的 `from_model` 實作，2026-10-15 使用者決定；待分析飲品也套用預設）
+- [x] 4.6 把 `personas.py` 擴充到約 300 人；測試 8 種類型的人數相差不超過 1 人、同一個種子產生的結果完全相同，而且 seed 之後 `/api/auth/demo-users` 列出約 300 人
+- [x] 4.7 擴充 seed：假發票寫進 `items`，假品名的屬性結果存成 `datasets/synthetic/attribute-cache.jsonl` 並載入 `item_cache`，再走一般的管線算出品味向量；在無 GPU 模式下執行，確認每位假用戶都有品項紀錄，重新計算也得到相同的向量（2026-10-16：300 人、21,316 筆品項、107 筆快取、300 份 profile；記憶體資料庫無 GPU 重算一致，demo 登入配對隔離已測；2026-10-18 審查修正：MODEL_VERSION 快取鍵、完整資料重跑不寫入，待 Claude 複核）
+- [x] 4.8 組織 4 人人工複核 100 個品名，產出 23 個欄位的 precision、recall、F1 和 `null` 比例，寫成 `docs/results/attributes.md`（只放彙總數字）；掃描確認裡面沒有任何真實品名（10/15 使用者改採本機模型預標後由本人審核，分四份各 25 筆；100 筆已由使用者逐筆看完並確認，保留 1 筆／1 欄修正；23 欄指標與隱私掃描完成）
+- [x] 4.9 訂出「相反類型」對照表，執行配對驗證（整體和 8 種類型各自的同類型命中率，以及相反類型命中率），寫成 `docs/results/matching.md`（2026-10-16：改共用角色 1 `matching.entries`／`pick`；門檻、排序與 API 一致）
 
 ## 5. 角色 4：前端與展示
 

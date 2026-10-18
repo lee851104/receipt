@@ -1,0 +1,9 @@
+{
+  "items_reviewed": 107,
+  "old_model_differing_items": 53,
+  "old_model_differing_fields": 91,
+  "new_model_differing_items": 46,
+  "new_model_differing_fields": 70,
+  "human_confirmed": 107,
+  "model_version": "qwen3-4b:2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e:5e86775fba0e8c8a2fe31adc0c3fc420cd37b5daa3a1538b214c3866c97511a9:guards-v1:input-v2:batch1"
+}

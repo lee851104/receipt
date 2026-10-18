@@ -1,0 +1,26 @@
+{
+  "status": "ready",
+  "items": 100,
+  "human_confirmed": 100,
+  "review_groups": [
+    {
+      "items": 25,
+      "confirmed": 25
+    },
+    {
+      "items": 25,
+      "confirmed": 25
+    },
+    {
+      "items": 25,
+      "confirmed": 25
+    },
+    {
+      "items": 25,
+      "confirmed": 25
+    }
+  ],
+  "predicted_items": 100,
+  "model_version": "qwen3-4b:2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e:5e86775fba0e8c8a2fe31adc0c3fc420cd37b5daa3a1538b214c3866c97511a9:guards-v1:input-v2:batch1",
+  "review_method": "model_assisted"
+}

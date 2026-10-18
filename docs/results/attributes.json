@@ -1,0 +1,258 @@
+{
+  "status": "ready",
+  "items": 100,
+  "human_confirmed": 100,
+  "review_groups": [
+    {
+      "items": 25,
+      "confirmed": 25
+    },
+    {
+      "items": 25,
+      "confirmed": 25
+    },
+    {
+      "items": 25,
+      "confirmed": 25
+    },
+    {
+      "items": 25,
+      "confirmed": 25
+    }
+  ],
+  "predicted_items": 100,
+  "model_version": "qwen3-4b:2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e:5e86775fba0e8c8a2fe31adc0c3fc420cd37b5daa3a1538b214c3866c97511a9:guards-v1:input-v2:batch1",
+  "review_method": "model_assisted",
+  "metrics": {
+    "clearance": {
+      "known_gold": 100,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "sugar": {
+      "known_gold": 3,
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.97
+    },
+    "quick": {
+      "known_gold": 100,
+      "tp": 9,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "cooking": {
+      "known_gold": 100,
+      "tp": 10,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "kitchen": {
+      "known_gold": 100,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "sport_supply": {
+      "known_gold": 100,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "null_ratio": 0.0
+    },
+    "sport_gear": {
+      "known_gold": 100,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "null_ratio": 0.0
+    },
+    "car_care": {
+      "known_gold": 100,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "bulk": {
+      "known_gold": 100,
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "home": {
+      "known_gold": 100,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "stationery": {
+      "known_gold": 99,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "null_ratio": 0.01
+    },
+    "fun": {
+      "known_gold": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "null_ratio": 1.0
+    },
+    "pet_food": {
+      "known_gold": 100,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "null_ratio": 0.0
+    },
+    "pet_supply": {
+      "known_gold": 100,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "species": {
+      "known_gold": 0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "null_ratio": 1.0
+    },
+    "alcohol": {
+      "known_gold": 100,
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "food": {
+      "known_gold": 100,
+      "tp": 75,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "meal": {
+      "known_gold": 100,
+      "tp": 21,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "drink": {
+      "known_gold": 100,
+      "tp": 28,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.9655172413793104,
+      "recall": 1.0,
+      "f1": 0.9824561403508771,
+      "null_ratio": 0.0
+    },
+    "fresh": {
+      "known_gold": 100,
+      "tp": 13,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "daily": {
+      "known_gold": 100,
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "tech": {
+      "known_gold": 100,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    },
+    "sport": {
+      "known_gold": 100,
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "null_ratio": 0.0
+    }
+  }
+}

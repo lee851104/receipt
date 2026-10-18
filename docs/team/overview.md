@@ -538,6 +538,36 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
+### 13.11 角色 3 接入與審查修正（2026-10-18 更新，來源：角色 3 worktree、Claude 審核 ab1d353 與使用者續作授權）
+
+**給角色 1**
+- 2026-10-18 修正驗證：Python 506 項中 505 通過；唯一失敗為角色 1 的 test_api_main 舊測試仍假設 Qwen 模組不存在，依 13.10 清單第 4 項由角色 1 更新。Node 82/82、OpenSpec strict、diff check 通過。新增 9 項回歸測試，先重現再修正（另調整既有版本鍵測試）。暫存 SQLite 的正式 seed 連跑兩次約 16.4／5.1 秒，第二次 skipped=true、600 個工作 ID 與 profile 時間不變；合法 null 向量也能跳過。配對報告與有效快取重建後 5 檔雜湊一致。內部程式複查已處理 null 向量問題，仍待 Claude 正式複核，未 push。
+- 2026-10-16 完成 4.7／4.9（來源：角色 3；合併 `role-1/matches` 的 `ee7f055`）：擴充 `src/api/seed.py`（非端點）。`seed_demo_population` 把合成 CSV 送進 `build_month(for_upload=True)`，重播假品名的既定類別，透過原有 `jobs.process` → `cache` → `profiles.recompute` 產生資料；不問 GPU，也不宣稱驗證真實分類模型。記憶體資料庫實測 300 人、21,316 筆品項、107 筆快取、600 個已完成月份工作與 300 份 profile，逐人重算及與核心向量比較一致。
+- 2026-10-18 修正（回覆 Claude 審核，合入固定 role-1/models 的 d1ed44a）：seed 不受 ATTRIBUTES_MODEL 設定影響，查衝突、寫入 item_cache.model、建立 Backends(attributes="qwen", attributes_version=MODEL_VERSION) 全部使用 src.ml.attributes.MODEL_VERSION。快取檔的版本必須完全相符，換模型／prompt 後應先更新並人工確認合成快取，不能把舊答案改標為新版本。107 筆含 46 筆人工修正，JSONL 保留模型原答及使用者確認雜湊，不宣稱全是原始模型答案。fake 模式不讀這些 Qwen 版本答案；展示服務應設 ATTRIBUTES_MODEL=qwen，無 GPU 時讀版本快取。
+- 完整且目前版本的 seed 會回 skipped=true，不寫資料、不新增工作；先核對全份版本快取、每位 demo 的品項內容與類別、完成月份工作、依目前規則算出的向量與生活圈。缺漏或過期仍走原管線重建，帳號／快取衝突及未完成工作照舊拒絕。只計筆數不足以證明完整。
+- Qwen 傳輸 OSError／HTTPException（含逾時）會停止該次呼叫後續請求；已成功或快取命中的答案保留，其餘回 None，下次仍可重試。單筆 JSON／欄位格式錯誤繼續下一筆。全快取命中不等推論鎖；記憶體 LRU 預設 4,096 筆，可由 max_cache_size 設定，淘汰不影響當次回傳結果。
+- 回覆 13.10 主機限制：保留本機模型邊界，只接受 HTTP 的 localhost、127.0.0.1、::1、host.docker.internal，不接受憑證、額外路徑、query 或 fragment；若用其他本機模型主機，先以本機隧道轉接到允許位址。DOCKER_LLAMA_SERVER_URL 也受此限制，health probe 成功不代表此 adapter 接受該位址。角色 1 後續請以 Settings 建立實例並在啟動時檢查，避免 probe 與推論來源不一致。
+- 舊錄製 fixture 明記 wire_format_only（舊 prompt、batch 3），只驗解析與格式；model-v2 的 107 筆補齊 source="synthetic"，不改模型預測。啟動器遇 seed 拒絕後繼續啟動、Docker 改接 300 人並 COPY 合成快取、qwen 預設與 test_api_main 舊模組缺失測試由角色 1 處理；本角色未修改這些端點／啟動／容器檔案。
+- 執行 seed 前先停止 API 服務。`python -m src.api.seed` 現在補齊完整假用戶，會保留原帳號 id／token，僅在資料缺漏或過期時重建指定假用戶的品項與工作；完整版本重跑直接跳過，不改其他帳號及其他模型鍵。帳號衝突、相同模型鍵的既有答案不同、或假用戶有未完成工作時會停止，不覆寫這些資料。舊版本只有 demo 帳號的資料庫可直接補齊。執行中若發生可捕捉錯誤，沿用 `jobs.mark_failed` 記錄失敗後重拋，下次 seed 可重建；硬中斷留下的未完成工作仍需先處理，不會自動抹除。此次驗證僅用暫存／記憶體資料庫，未讀或寫既有私人資料庫，未讀 data、rawdata、根目錄 CSV 或 .env。
+- 4.9 現在直接用 `matching.entries`／`pick`，以整數百分比判門檻，同分按顯示名稱再按 id；不篩距離。本次同類 P@5 100%、互相命中 91%；相反 P@5 由 10.67% 變 11.40%（160 → 171），互補名額 684 → 707，其他整體指標不變。API 測試確認 demo 的非空清單與計數只包含假用戶，一般帳號仍可看到假用戶；所有測試帳號及品項均為虛構。
+- 2.15：以 `AttributeDescriber(server_url=settings.llama_server_url)` 提供 `backends.describe_items`；`ATTRIBUTES_MODEL=qwen` 的正式啟用由角色 1 接入 `src/api/backends.py`。本次角色 3 只修改獲授權的 src/api/seed.py，未修改 API 端點或 backends.py。
+- 2026-10-15 使用者決定：接入以角色 1 的 `from_model` 為準；呼叫 `measure/explain/build_vector(rows, period, context, attributes={品名: 23 欄 dict 或 None})`，字典裡沒有的品名也算待分析；不傳 `attributes` 參數才走 v1。每列不再放屬性，也不再使用舊的 external 介面。7 個基本旗標只供儲存/API 回傳，現有訊號仍由類別決定；類別閘門、待分析飲品甜度預設、娛樂店家與未知寵物造訪依 13.5。
+- `ask_model=True` 會等同一實例的前一筆推論完成，不再因等鎖超過 60 秒而偽裝成待分析；60 秒僅限制單次 HTTP。角色 1 請由上傳背景工作呼叫，兩份上傳會排隊；即時查詢用 `ask_model=False`，不等推論鎖。預設函式的 `LLAMA_SERVER_URL` 僅在首次非空呼叫建立時檢查；無效會記錄一次不含網址／品名的錯誤並回全 `None`，修正設定後須重啟程序。直接建構實例仍會立即檢查設定。
+- `(model_version, name)` LRU mapping 是程序內快取，不是資料庫；持久化 `item_cache` 與版本清理由 2.3/2.4 負責。4.7 已接入既有後端管線，詳見本節上方的 seed 驗證紀錄。
+- 介面只有 names，merchant 固定空字串、quantity=1；品項數量的 bulk 補位只在計算副本。新版採單筆推論、輸入只去開頭「示範」、保留原名快取鍵；prompt hash 與 input-v2:batch1 已進 model_version。換版本須重算舊屬性，不能沿用舊版本 cache。
+- `build_personas(calendar, total=300)` 尾端擴充、保留原 40 人順序；v1 未指定 total 仍是 40 人。本次合併已確認 seed 入口仍為 `total=300`。
+- 107 筆假品名逐筆對照見 `docs/results/synthetic-cache-review.md`，舊／新模型輸出分存 `datasets/synthetic/attribute-cache.model-v1.jsonl`、`attribute-cache.model-v2.jsonl`；有效快取保留每欄 corrections。2026-10-15 使用者檢查並確認全部 107 筆：46 筆為 `human_corrected`、61 筆為 `human_confirmed`，保留助理準備與使用者確認的來源，並用屬性雜湊避免重建或後續修改誤用核准；此確認僅涵蓋公開假品名。配對數字見 `docs/results/matching.md`；seed 另驗證合成資料的解析／錄製分類答案／API／DB 管線，並不代表真實模型準確率。
+- 4.8（10/15 使用者續作要求）：100 筆真實品名已用新版模型全部重跑，舊 `predictions.jsonl` 與四份空白盲標檔保留。使用者改採「先由本機模型預標，再由本人審核」，所以新增稿標示 `review_method=model_assisted`，不宣稱獨立盲標。私人根目錄為主資料夾 `C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-review-20261015\`；新版預測為 `predictions-01cd0f32b598.jsonl`，待審稿與中文檢查表在 `assisted-01cd0f32b598\`。2026-10-15 使用者已確認 100/100 筆，保留 1 筆／1 欄人工修正；4.8 已完成，23 欄彙總見 `docs/results/attributes.md` 與 `attributes.json`。這批為使用者審核模型預標，並非四人獨立盲標；品名只准本機腳本處理，畫面只印彙總。
+- `scripts/predict_private_attributes.py` 可依目前版本產生私有預測，加 `--assisted` 產生四份各 25 筆待審稿；不覆寫既有預測或人工稿。`scripts/attribute_review.py` 檢查 ID/品名一致、23 欄型別、模型版本與全部 100 筆人工狀態，未完成就拒絕正式評分。布林以 true 為正例，三個列舉欄位用非 null 類別 micro 指標；gold=null 排除、模型 null 對已知正例計漏判，分母為零顯示 —。本批已通過人工確認門檻並產生完整指標；進度彙總見 `docs/results/attribute-review-status.json`。
+- 4.7 相依已解除：角色 1 的 2.3/2.4、profiles 與 matching 管線已合併，本節上方記錄 2026-10-16 完成的 seed 驗證。`total=300` 保留。
+- 已確認資料可在角色 3 worktree 執行下列命令重現 `docs/results/attributes.md` 與 JSON（未完成會回傳 exit 2，不寫正式報告）：
+
+```powershell
+$reviewRoot = 'C:\Users\User\Desktop\AI_project\receipt\data\private\attribute-review-20261015'
+& 'C:\Users\User\Desktop\AI_project\receipt\.venv\Scripts\python.exe' -m scripts.attribute_review --review-dir "$reviewRoot\assisted-01cd0f32b598" --predictions "$reviewRoot\predictions-01cd0f32b598.jsonl"
+```
+
+- 工作區為 `codex/role-3/attributes` worktree；共用主資料夾 Python 與 llama.cpp，不升級共用套件。本角色此次只修改自身檔案與 `src/receipt/` 新增的外部屬性邏輯。
 ### 13.10 角色 1 轉告（2026-10-16，第 3 週第七批，分支 `role-1/models`）
 
 任務 2.15 能做的部分做完了：`ATTRIBUTES_MODEL=qwen` 接上角色 3 的 `describe_items`，`CATEGORY_MODEL=bert` 還在等角色 2。

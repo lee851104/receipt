@@ -162,11 +162,15 @@ class Worker:
                 self.queue.task_done()
 
 
-def fail_unfinished(engine):
+def fail_unfinished(engine, *, demo_only=False):
     """At start-up nothing is running any more: jobs left queued or running by a stop are failed, to be uploaded
-    again."""
+    again. With demo_only, only the demo users' jobs: for a process that cannot tell whether another server is alive
+    on the same database and so must leave a real user's job alone."""
+    query = select(Job).where(col(Job.status).in_(UNFINISHED))
+    if demo_only:
+        query = query.join(User, col(User.id) == Job.user_id).where(col(User.is_demo).is_(True))
     with Session(engine) as session:
-        for job in session.exec(select(Job).where(col(Job.status).in_(UNFINISHED))).all():
+        for job in session.exec(query).all():
             job.status, job.message = "failed", "服務重新啟動，請重新上傳"
             session.add(job)
         session.commit()

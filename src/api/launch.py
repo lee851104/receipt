@@ -4,13 +4,18 @@ server itself on this computer only. Run from the repository root:
 
     .venv/Scripts/python.exe -m src.api.launch
 """
+import os
 import secrets
 import threading
 import time
 import urllib.request
 import webbrowser
 
-from .db import ROOT
+from dotenv import load_dotenv
+
+from .db import ROOT, init_db, make_engine
+from .jobs import fail_unfinished
+from .settings import Settings
 
 HOST, PORT = "127.0.0.1", 8000  # this computer only: DEMO_MODE lets anyone log in as a demo user
 PAGE = f"http://{HOST}:{PORT}/web/"
@@ -56,6 +61,20 @@ def open_in_background():
 
 
 def seed_demo():
+    """Free the demo job an interrupted seed left, then run role 3's seed, which refuses to run over one."""
+    # Settings and database exactly as seed.main finds them: the root .env never overrides a variable already set.
+    load_dotenv(ROOT / ".env")
+    settings = Settings.from_env(os.environ)  # a bad setting is a ValueError, which main() turns into one line
+    engine = make_engine(settings.database_url)
+    try:
+        init_db(engine)
+        # Only the demo users' jobs, unlike the container (the only process on its volume, which fails every one):
+        # another server may already be running on this database, and a real user's unfinished job there is alive.
+        # A demo user cannot upload or delete a month, so their unfinished job is what a stopped seed left, and the
+        # seed would refuse over it ("Stop unfinished demo jobs before seeding") until the server's own start-up.
+        fail_unfinished(engine, demo_only=True)
+    finally:
+        engine.dispose()
     from . import seed  # reads .env itself, so only after ensure_env
     seed.main()
 

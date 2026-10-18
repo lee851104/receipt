@@ -430,6 +430,43 @@ class StartUpTests(unittest.TestCase):
         self.assertEqual([job.status for job in jobs], ["failed", "failed", "done"])
         self.assertEqual(jobs[0].message, "服務重新啟動，請重新上傳")
 
+    def add_one_demo_and_one_real_user_with_jobs(self):
+        """Demo user 1 and real user 2, each with a running and a queued job, and a done job of the demo user's. The
+        jobs are in the order (1 running, 2 queued, 3 done) for the demo user, then (4 running, 5 queued) for the
+        real one."""
+        engine = make_engine(MEMORY)
+        init_db(engine)
+        with Session(engine) as session:
+            session.add_all([User(username="demo_001", display_name="Mia", is_demo=True, persona="咖啡上班族"),
+                             User(username="amy", display_name="Amy")])
+            session.commit()  # foreign keys are enforced, so the users must exist before their jobs
+            session.add_all([Job(user_id=1, month="2026-05", status="running"),
+                             Job(user_id=1, month="2026-06", status="queued"),
+                             Job(user_id=1, month="2026-07", status="done"),
+                             Job(user_id=2, month="2026-05", status="running"),
+                             Job(user_id=2, month="2026-06", status="queued")])
+            session.commit()
+        return engine
+
+    def test_demo_only_fails_the_demo_users_unfinished_jobs_and_leaves_real_users_alone(self):
+        """start.bat may share its database with a server already running: a real user's job there is alive, while a
+        demo user cannot upload, so a demo user's unfinished job is only what an interrupted seed left."""
+        engine = self.add_one_demo_and_one_real_user_with_jobs()
+        fail_unfinished(engine, demo_only=True)
+        with Session(engine) as session:
+            jobs = session.exec(select(Job).order_by(Job.id)).all()
+        self.assertEqual([job.status for job in jobs], ["failed", "failed", "done", "running", "queued"])
+        self.assertEqual([job.message for job in jobs[:2]], ["服務重新啟動，請重新上傳"] * 2)
+        # The rows it leaves keep the message they were made with (a Job's default).
+        self.assertEqual([job.message for job in jobs[2:]], ["排隊中"] * 3)
+
+    def test_without_demo_only_it_fails_every_users_unfinished_jobs_demo_or_real(self):
+        engine = self.add_one_demo_and_one_real_user_with_jobs()
+        fail_unfinished(engine)
+        with Session(engine) as session:
+            jobs = session.exec(select(Job).order_by(Job.id)).all()
+        self.assertEqual([job.status for job in jobs], ["failed", "failed", "done", "failed", "failed"])
+
     def test_every_real_users_profile_is_worked_out_again_at_start_up(self):
         """The recompute queued after a month was deleted lived only in the stopped server's queue, so a profile may
         still be the one from before the deletion."""

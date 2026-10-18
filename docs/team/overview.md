@@ -553,7 +553,7 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 - 審查後修正（10/18 補上）：第一次啟動被中斷。容器的 `main` 現在在 seed 之前先呼叫 `fail_unfinished`，把上次停止時留下的 queued／running 工作標成失敗。`create_app` 幾秒後也會做這件事，而且容器是這個 volume 上唯一的行程。以前在第一次（又長又沒有訊息的）seed 中途停下來，會留下一個 running 的 demo 工作。下一次的 seed 因為「Stop unfinished demo jobs before seeding」拒絕，假用戶要到第三次啟動才補完。現在下一次啟動就補完。
 - 審查後修正（10/18 補上）：訊息。seed 之前多一行 INFO，說明正在檢查假用戶。seed 沒有跳過時，摘要寫「purchases and profiles rewritten」，因為補修時「0 added」不代表沒有寫入。警告改用 `launch.reason_for`：維持一行，超過 160 字從中間截斷（留下最後的處理說明），空訊息也寫出例外類型。
 - seed 的訊息說「Delete the database file and run the seed again」時，在 Docker 裡指的是 `docker compose down -v`。它會一起刪掉所有帳號、容器產生的 `JWT_SECRET` 和下載的模型。（10/18 補上）
-- `start.bat` 的路徑沒有「先把未完成的工作標成失敗」這一步，這次沒有改：`launch.main` 先跑 seed，`create_app` 才標。所以第一次執行被中斷後，`start.bat` 也可能留下同樣的拒絕。（10/18 補上）
+- `start.bat` 的路徑沒有「先把未完成的工作標成失敗」這一步，這次沒有改：`launch.main` 先跑 seed，`create_app` 才標。所以第一次執行被中斷後，`start.bat` 也可能留下同樣的拒絕。（10/18 補上）（10/18 補上：`start.bat` 也會在 seed 之前把示範帳號留下的未完成工作改成 failed，只動示範帳號；見 `launch.seed_demo`）
 
 **驗證（本機，沒有 GPU、沒有 Docker）**
 - Python 全套 528 項通過（角色 3 合併後原本 506 項有 1 項失敗，就是 13.10 清單第 4 項的 `test_api_main` 子案例，現在換了觸發方式）。（10/18 補上：審查後修正新增 7 項測試，全套 535 項通過；中途沒有跑 Docker，第一次啟動被中斷的修復只用真的資料庫和 `fail_unfinished` 驗過，seed 的人口寫入換成記錄用的替身。）

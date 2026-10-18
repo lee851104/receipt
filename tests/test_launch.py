@@ -1,12 +1,18 @@
 """What start.bat runs: a .env when there is none, the demo users, the pages opened once the server answers."""
 import contextlib
 import io
+import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
+from sqlmodel import Session, select
+
 from src.api import launch
+from src.api.db import init_db, make_engine
+from src.api.tables import Job, User
 
 EXAMPLE = "# a comment\nJWT_SECRET=\nJWT_EXPIRE_MINUTES=1440\nDEMO_MODE=1\n"
 
@@ -62,6 +68,68 @@ class MainTests(unittest.TestCase):
                 mock.patch("uvicorn.run", lambda app, **options: calls.append(("serve", app, options))):
             launch.main(root)
         self.assertEqual(calls, ["env", "seed", "open", ("serve", "src.api.main:app", {"host": "127.0.0.1", "port": 8000})])
+
+
+class SeedDemoTests(unittest.TestCase):
+    """What seed_demo does before role 3's seed runs, on a scratch database file; the seed itself is a recorder."""
+
+    def setUp(self):
+        self.folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.folder)
+        self.url = "sqlite:///" + (self.folder / "app.db").as_posix()  # absolute, so the repository's data/ is untouched
+        self.environment = {"DATABASE_URL": self.url, "JWT_SECRET": "t" * 40, "DEMO_MODE": "1"}
+
+    def statuses(self):
+        """The job statuses in the database, by user name then month."""
+        engine = make_engine(self.url)
+        try:
+            with Session(engine) as session:
+                rows = session.exec(select(User.username, Job.month, Job.status)
+                                    .join(Job, Job.user_id == User.id).order_by(User.username, Job.month)).all()
+        finally:
+            engine.dispose()
+        return [tuple(row) for row in rows]
+
+    def seed_demo(self, seed):
+        """launch.seed_demo with the given function as the seed and the developer's own .env never read; the call
+        made to load it."""
+        with mock.patch.dict(os.environ, self.environment), \
+                mock.patch.object(launch, "load_dotenv") as load_dotenv, \
+                mock.patch("src.api.seed.main", seed):
+            launch.seed_demo()
+        return load_dotenv
+
+    def test_seed_demo_frees_a_demo_job_left_by_an_interrupted_seed_before_seeding(self):
+        # The database a stopped first seed leaves, next to a real user's running job (another server may own it).
+        engine = make_engine(self.url)
+        init_db(engine)
+        with Session(engine) as session:
+            session.add_all([User(username="demo_001", display_name="Mia", is_demo=True, persona="咖啡上班族"),
+                             User(username="amy", display_name="Amy")])
+            session.commit()  # foreign keys are enforced, so the users must exist before their jobs
+            session.add_all([Job(user_id=1, month="2026-05", status="running"),
+                             Job(user_id=2, month="2026-05", status="running")])
+            session.commit()
+        engine.dispose()
+        seen = []
+        load_dotenv = self.seed_demo(lambda: seen.append(self.statuses()))
+        # Read when the seed was called, not afterwards: the seed would refuse over the demo user's running job.
+        self.assertEqual(seen, [[("amy", "2026-05", "running"), ("demo_001", "2026-05", "failed")]])
+        # The root .env, as seed.main reads it; with its defaults, so a variable already set still wins.
+        load_dotenv.assert_called_once_with(launch.ROOT / ".env")
+
+    def test_seed_demo_works_on_a_database_that_does_not_exist_yet(self):
+        seen = []
+        self.seed_demo(lambda: seen.append(self.statuses()))
+        self.assertEqual(seen, [[]])
+
+    def test_a_bad_setting_stops_seed_demo_before_it_touches_the_database_or_seeds(self):
+        self.environment["JWT_SECRET"] = "short"
+        seen = []
+        with self.assertRaisesRegex(ValueError, "JWT_SECRET must be at least"):
+            self.seed_demo(lambda: seen.append("seeded"))
+        self.assertEqual(seen, [])
+        self.assertFalse((self.folder / "app.db").exists())
 
 
 class DemoSeedRefusesTests(unittest.TestCase):

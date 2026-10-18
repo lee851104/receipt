@@ -101,8 +101,10 @@ class _Classifier:
         normalized = [unicodedata.normalize("NFKC", name).strip() for name in names]
         try:
             answers = []
-            with self.lock, self.torch.inference_mode():
-                for start in range(0, len(normalized), self.batch_size):
+            # Release between batches so other requests can acquire the model lock.
+            # Lock fairness is implementation-dependent; this is not a latency guarantee.
+            for start in range(0, len(normalized), self.batch_size):
+                with self.lock, self.torch.inference_mode():
                     batch = normalized[start:start + self.batch_size]
                     tokens = self.tokenizer(batch, padding=True, truncation=True,
                                             max_length=self.max_length, return_tensors="pt")

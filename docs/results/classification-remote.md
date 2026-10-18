@@ -8,7 +8,7 @@
 
 模型為 `bert-next25-20261016-v3`；`model.safetensors` SHA256固定為 `16997425a9b36629469d60f506d52c2771bab1e6f3a3ea1465c2c0a316fa3e79`。明確設定 `CATEGORY_MODEL_REPO_TYPE=space`；不得把Space ID當作public model repo。
 
-使用者在本機 `hf auth login` 輸入Read token，輸入不經聊天。Docker以唯讀runtime secret檔案掛載到 `/run/secrets/hf_token`；程式只接收 `HF_TOKEN_FILE` 路徑，不把token值放在CLI參數、環境變數、build ARG、image或Git。下載器只讀models/manifest.json及BERT推論白名單，逐檔hash與完整模型驗證通過後才發布；不取TF-IDF詞彙、訓練資料或整個Space snapshot。
+使用者在本機 `hf auth login` 輸入token，輸入不經聊天；部署建議使用僅授予此Space讀取權限的fine-grained token。此前驗收使用使用者建立的Read token，未聲稱當時已限制到單一Space。Docker以唯讀runtime secret檔案掛載到 `/run/secrets/hf_token`；程式只接收 `HF_TOKEN_FILE` 路徑，不把token值放在CLI參數、環境變數、build ARG、image或Git。BERT設定repo且TYPE=model會在Settings拒絕；純本機無repo不受影響。下載器只讀models/manifest.json及BERT推論白名單，逐檔hash與完整模型驗證通過後才發布；不取TF-IDF詞彙、訓練資料或整個Space snapshot。
 
 官方介面：[HF下載指南](https://huggingface.co/docs/huggingface_hub/en/guides/download)、[Protected Spaces](https://huggingface.co/docs/hub/spaces-overview)。
 
@@ -76,7 +76,7 @@ docker compose --env-file PATH/empty.env -p PROJECT -f docker-compose.yml -f doc
 python -c "from pathlib import Path; import subprocess; subprocess.run(['docker','exec','-i','CONTAINER_NAME','python','-','bert'],input=Path('scripts/verify_category_http.py').read_bytes(),check=True)"
 ```
 
-範例依賴前述已建置image；沒有該image時應先以不含私人資料的context建置，不能把--no-build當成已驗證build。完整本機實跑命令由data/role2/check_compose_remote.py與run_docker_acceptance.py保留；這兩份為本機輔助腳本，Git交付的探針為scripts/verify_category_http.py。
+範例依賴前述已建置image；沒有該image時應先以不含私人資料的context建置，不能把--no-build當成已驗證build。完整本機實跑命令由data/role2/check_compose_remote.py與run_docker_acceptance.py保留；2026-10-18已將可攜版腳本提交到scripts/run_docker_acceptance.py、scripts/check_compose_remote.py及scripts/audit_remote_runtime.py；參數及新版驗證見classification-review-fixes.md。
 
 ## 證據與審核
 

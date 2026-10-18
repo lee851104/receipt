@@ -113,7 +113,7 @@ CPU成本是舊測量，不是本輪重測；RSS是整個程序峰值。A/B只�
 ## 解讀與目前版本
 
 舊TF-IDF錯1筆（零食甜點→正餐）；Embedding錯2筆（正餐→飲品、零食甜點→正餐）；BERT seed42/43在這7筆無錯，seed44錯1筆（零食甜點→生鮮）。樣本量不足以宣稱BERT穩定100%正確。
-後續使用者完成新增標註，排除無法辨識品項並封存原test。最新25%候選依開發CV選用：平均88.73%、跨seed樣本SD0.28pp。不能將本頁舊test分數套到新模型。
+後續使用者完成新增標註，排除無法辨識品項並封存原test。最新25%候選依開發CV選用：平均88.73%、跨seed樣本SD0.28pp。不能將本頁舊test分數套到新模型。2026-10-17已另依使用者授權比較固定50筆保留集，25%版42/50=84%、全真實版43/50=86%，見[classification-real25-holdout.md](classification-real25-holdout.md)；不是首次盲測，也未證明某方案有穩定優勢。本輪僅連結既有彙總，不重開test。
 目前模型見[classification-selected-model.md](classification-selected-model.md)，服務驗收見[classification-service.md](classification-service.md)，配方證據見[classification-multiseed-cv.md](classification-multiseed-cv.md)。本輪不為補新版本分數而重開test。
 少數類別、商品家族/來源群組仍不足；新增獨立評估資料與啟用測試須另行安排。
 

@@ -5,6 +5,8 @@ services:
     environment:
       CATEGORY_MODEL: bert
       CATEGORY_MODEL_REPO_TYPE: space
+      CATEGORY_MODEL_REPO: ${CATEGORY_MODEL_REPO:?Set the protected Space repository}
+      CATEGORY_MODEL_REVISION: ${CATEGORY_MODEL_REVISION:?Set the full immutable Space commit}
       CATEGORY_MODEL_SHA256: ${CATEGORY_MODEL_SHA256:?Set the verified model weight SHA256}
       HF_TOKEN_FILE: /run/secrets/hf_token
     secrets:

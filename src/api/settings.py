@@ -34,7 +34,7 @@ class Settings:
     attributes_model: str = "fake"
     category_min_prob: float = 0.5
     category_model_dir: str = "models/category"  # where CATEGORY_MODEL=bert reads its model; relative to the repo
-    category_model_repo: str = ""                # the public Hugging Face repo a missing model comes from
+    category_model_repo: str = ""                # the authenticated Space a missing model comes from
     category_model_revision: str = ""            # the fixed commit of that repo
 
     category_model_repo_type: str = "model"     # space uses protected demo manifest
@@ -71,6 +71,9 @@ class Settings:
             raise ValueError(f"CATEGORY_MODEL must be one of {', '.join(CATEGORY_MODELS)}; got {settings.category_model!r}")
         if settings.attributes_model not in ATTRIBUTE_MODELS:
             raise ValueError(f"ATTRIBUTES_MODEL must be one of {', '.join(ATTRIBUTE_MODELS)}; got {settings.attributes_model!r}")
+        if (settings.category_model == "bert" and settings.category_model_repo
+                and settings.category_model_repo_type == "model"):
+            raise ValueError("CATEGORY_MODEL=bert remote downloads require CATEGORY_MODEL_REPO_TYPE=space")
         if settings.category_model_repo and not settings.category_model_revision:
             raise ValueError("CATEGORY_MODEL_REVISION must name a fixed commit whenever CATEGORY_MODEL_REPO is set")
         if settings.category_model_repo_type not in ("model", "space"):

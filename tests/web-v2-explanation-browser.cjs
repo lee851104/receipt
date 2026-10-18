@@ -30,14 +30,19 @@ const fixture=require('./web-v2-fixtures.cjs');
   assert.equal(await page.locator('#explain-details').getAttribute('open'),null);
   for(const size of [{width:1440,height:1000},{width:1920,height:1080},{width:1366,height:768},{width:1024,height:640},{width:390,height:844},{width:320,height:568}]){
    await page.setViewportSize(size);
+   await page.waitForTimeout(150);
+   const frameBounds=await page.locator('#network-frame').boundingBox();
+   assert(frameBounds.x<1&&frameBounds.y<1&&Math.abs(frameBounds.width-size.width)<2&&Math.abs(frameBounds.height-size.height)<2,'network fills viewport '+JSON.stringify({size,frameBounds}));
    await page.waitForFunction(()=>{
     const f=document.getElementById('network-frame'),d=f.contentDocument;
-    return d&&parseFloat(d.querySelector('main').style.getPropertyValue('--graph-height'))>=220&&d.documentElement.scrollHeight<=f.clientHeight+2&&d.documentElement.scrollWidth<=f.clientWidth+1&&Math.abs(f.clientHeight-d.querySelector('main').getBoundingClientRect().height-2)<2&&(innerWidth<=640||document.querySelector('#explain-details > summary').getBoundingClientRect().bottom<=document.getElementById('matches-panel').getBoundingClientRect().bottom+1);
+    return d&&d.documentElement.scrollHeight<=f.clientHeight+2&&d.documentElement.scrollWidth<=f.clientWidth+1&&Math.abs(f.clientHeight-innerHeight)<2;
    });
    await page.waitForTimeout(150); // Let host and graph ResizeObservers settle after viewport changes.
+   assert.equal(await graph.locator('#insight-toggle').getAttribute('aria-expanded'),'false');
    const before=await graph.locator('#network').evaluate(n=>({box:n.getAttribute('viewBox'),height:n.getBoundingClientRect().height,scale:n.getScreenCTM().a}));
    await graph.getByRole('button',{name:/這一格.*查看連線/}).first().press('Enter');
    await graph.locator('#detail').waitFor();
+   assert.equal(await graph.locator('#insight-toggle').getAttribute('aria-expanded'),'true');
    await page.waitForTimeout(100);
    const after=await graph.locator('#network').evaluate(n=>({box:n.getAttribute('viewBox'),height:n.getBoundingClientRect().height,scale:n.getScreenCTM().a}));
    assert.equal(after.box,before.box);
@@ -52,7 +57,7 @@ const fixture=require('./web-v2-fixtures.cjs');
    assert.match(await graph.locator('#detail').textContent(),/×/);
    const noInnerScroll=await graph.locator('html').evaluate(n=>n.scrollHeight<=innerHeight+2&&n.scrollWidth<=innerWidth+1);
    assert(noInnerScroll,'selected text stays within outer scrolling surface');
-   if(size.width===1366||size.width===390)await page.screenshot({path:'runtime/role4-stable-selected-'+size.width+'.png',fullPage:true});
+   if(size.width===1366||size.width===390)await page.screenshot({path:'runtime/role4-full-selected-'+size.width+'.png',fullPage:true});
    await graph.locator('#reset').click();
    await page.waitForTimeout(100);
    if(size.width>640){
@@ -74,16 +79,28 @@ const fixture=require('./web-v2-fixtures.cjs');
     assert.equal(layout.clipped,false);
     const summary=await graph.locator('.comparison-overview').evaluate(n=>{
      const r=n.getBoundingClientRect(),c=document.querySelector('.canvas').getBoundingClientRect();
-     return {outside:!n.closest('.canvas'),below:r.top>=c.bottom};
+     return {outside:!n.closest('.canvas'),overlay:r.top<c.bottom};
     });
-    assert(summary.outside&&summary.below);
+    assert(summary.outside&&summary.overlay);
     const allFits=await page.locator('#explain-details > summary').evaluate(n=>n.getBoundingClientRect().bottom<=document.getElementById('matches-panel').getBoundingClientRect().bottom+1);
     assert(allFits,'collapsed calculation also fits '+JSON.stringify(size));
    }
+   await graph.locator('#insight-toggle').click();
+   assert.equal(await graph.locator('#insight-toggle').getAttribute('aria-expanded'),'false');
+   assert.equal(await graph.locator('#network').getAttribute('viewBox'),before.box);
+   const closed=await graph.locator('#network').evaluate(n=>({height:n.getBoundingClientRect().height,scale:n.getScreenCTM().a}));
+   assert(Math.abs(closed.height-before.height)<2&&Math.abs(closed.scale-before.scale)<.002,'closing readout preserves drawing');
+   assert(closed.height>size.height*.70,'graph uses most viewport height, including mobile');
+   await graph.locator('#insight-toggle').click();
+   await graph.locator('#insight-toggle').press('Escape');
+   assert.equal(await graph.locator('#insight-toggle').getAttribute('aria-expanded'),'false');
+   assert.equal(await page.locator('#matches-panel').evaluate(n=>n.scrollHeight>n.clientHeight),false);
+   await page.screenshot({path:'runtime/role4-full-'+size.width+'.png'});
   }
-  // Wheel over the embedded graph must reach the only scroll owner.
+  // The full-window graph stays fixed; only an explicitly opened readout scrolls.
   await graph.locator('.toolbar').hover();await page.mouse.wheel(0,240);
-  await page.waitForFunction(()=>document.getElementById('matches-panel').scrollTop>0);
+  await page.waitForTimeout(100);
+  assert.equal(await page.locator('#matches-panel').evaluate(n=>n.scrollTop),0);
   assert.equal(await graph.locator('html').evaluate(n=>n.scrollTop),0);
   await page.setViewportSize({width:1440,height:1000});
   await graph.locator('.graph-help > summary').click();
@@ -104,12 +121,17 @@ const fixture=require('./web-v2-fixtures.cjs');
   assert(await graph.locator('.selection-readout').isVisible());
   await graph.locator('#reset').click();
   assert.equal(await graph.locator('#network').getAttribute('viewBox'),overviewBox);
-  await page.screenshot({path:'runtime/role4-fill-desktop.png'});
+  await graph.locator('#insight-toggle').click();
+  await page.screenshot({path:'runtime/role4-full-desktop.png'});
   await page.locator('#match-back').click();
   assert(await page.locator('#match-browse').isVisible());
   assert.equal(await page.locator('.match-card').first().evaluate(n=>n===document.activeElement),true);
   await page.locator('.match-card').first().click();
+  await graph.locator('.t-score-number').waitFor();
+  await page.waitForTimeout(150);
+  const beforeCalculation=await graph.locator('#network').getAttribute('viewBox');
   await openCalculation(page);
+  assert.equal(await graph.locator('#network').getAttribute('viewBox'),beforeCalculation,'calculation overlays without resizing graph');
   assert.equal(await page.locator('#explain-percent').textContent(),await page.locator('.match-card strong').first().textContent());
   assert.equal(await page.locator('#explain-panel tbody tr').count(),18);
   await page.locator('#explain-precision').selectOption('full');
@@ -161,6 +183,6 @@ const fixture=require('./web-v2-fixtures.cjs');
   await page.locator('#match-result').waitFor();assert(await page.locator('#match-browse').isHidden());assert.equal(await page.locator('#matches-panel').evaluate(n=>n.scrollTop),0);
   status=401;explanation={detail:'not_authenticated'};await back();await page.locator('.match-card').first().click();
   await page.locator('#auth-view').waitFor({state:'visible'});assert.equal(await page.locator('#explain-panel').textContent(),'');assert.equal(await page.locator('#network-frame').getAttribute('src'),null);
-  assert.deepEqual(errors,[]);console.log('EXPLANATION PASS: 18 exact cells, summary, precision, card/graph percentage, negative scores, both insufficient-data reasons, invalid response, filter/401 cleanup, focused result, back/focus restoration, responsive single scroll, desktop/mobile.');
+  assert.deepEqual(errors,[]);console.log('EXPLANATION PASS: 18 exact cells, summary, precision, card/graph percentage, negative scores, both insufficient-data reasons, invalid response, filter/401 cleanup, focused result, back/focus restoration, full-window six sizes, collapsible readout, stable selection, desktop/mobile.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

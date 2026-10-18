@@ -6,6 +6,8 @@ const payload=pageHost?.ReceiptV2Host?.network();
 if(!payload)throw Error('請從配對清單開啟關係圖。');
 const {network,missing,result:apiResult}=ReceiptViewData.networkData(payload);
 const $=id=>document.getElementById(id),svgNS='http://www.w3.org/2000/svg';
+function showReadout(open){$('insight-content').hidden=!open;$('insight-toggle').setAttribute('aria-expanded',String(open));$('insight-toggle').textContent=open?'收起解讀 ↓':'綜合解讀與線段說明 ↑';}
+$('insight-toggle').addEventListener('click',()=>showReadout($('insight-content').hidden));
 let traitGraph=null,leftKey='me',rightKey='match',selected=null;
 const profiles={me:{name:'你',traits:missing.mine?null:TraitNetwork.validate(network.mine,network)},match:{name:payload.display_name,traits:missing.theirs?null:TraitNetwork.validate(network.theirs,network)}};
 const pair={left:{name:'你'},right:{name:payload.display_name}};
@@ -59,10 +61,9 @@ function renderSummary(result,both){
 }
 // The taste network: signals fan out from each person's traits, and the middle lines are the score's cells.
 function drawTraits(svg,mobile,both){
- const canvas=document.querySelector('.canvas').getBoundingClientRect();
- const graph=TraitNetwork.layout(network,both[0],both[1],mobile,apiResult,{width:svg.clientWidth,height:canvas.height}),shape=graph.shape,color={a:'#ff9aa7',b:'#9bbcff'},who=sideNames();
+ const graph=TraitNetwork.layout(network,both[0],both[1],mobile,apiResult,{width:svg.clientWidth,height:svg.clientHeight}),shape=graph.shape,color={a:'#ff9aa7',b:'#9bbcff'},who=sideNames();
  // Purchases stay in the external readout; selecting never changes the drawing bounds.
- const overviewBox=mobile?TraitNetwork.viewBox(network,graph,both.map(person=>({...person,items:[]})),mobile):'0 0 '+graph.width+' '+graph.height;
+ const overviewBox='0 0 '+graph.width+' '+graph.height;
  svg.setAttribute('viewBox',overviewBox);
  const names=el('g',{'aria-hidden':'true'});
  for(const side of ['a','b']){
@@ -152,6 +153,7 @@ function lightTraits(indexes,focus){
  for(const trait of traitGraph.traits){const on=lit.has(trait.index);trait.el.style.opacity=on?'1':'.2';if(trait.labelEl)trait.labelEl.style.opacity=on?'1':'.2';}
 }
 function selectSignal(id){
+ showReadout(true);
  document.querySelector('.detail').hidden=false;$('selection-hint').hidden=true;$('reset').hidden=false;
  clearPins();hideHover();selected='signal:'+id;
  const feeds=network.traits.map((trait,index)=>(trait.signals.includes(id)?index:-1)).filter(index=>index>=0);
@@ -162,6 +164,7 @@ function selectSignal(id){
   ...feeds.map(index=>TraitNetwork.cellSentence(network,index,left,right,names,parts?parts[index]:null))].join('\n');
 }
 function selectTrait(index){
+ showReadout(true);
  document.querySelector('.detail').hidden=false;$('selection-hint').hidden=true;$('reset').hidden=false;
  clearPins();selected='trait:'+index;lightTraits([index],null);
  for(const trait of traitGraph.traits)if(trait.index===index&&!trait.labelShown)pin(trait,trait.label);
@@ -188,7 +191,7 @@ if(network){
  const unlisted=network.signals.filter(signal=>signal.list_items===false).map(signal=>signal.label);
  $('trait-method-text').textContent='品味相似度是 '+TraitNetwork.traitCount(network.traits)+' 項品味特質（'+network.traits.length+' 格）的餘弦相似度，範圍 '+TraitSimilarity.signed(-1)+'～'+TraitSimilarity.signed(1)+'。';
  $('trait-graph-method').textContent='每項特質由幾個消費訊號加權而成，訊號線越粗，代表這個訊號推得越多；中間每條線是那一格對分數的加減，全部加起來就是品味相似度。點一個訊號，下方說明會列出最常買的品項（最多 3 個，×N 是整段期間的次數）；'+unlisted.join('、')+'這 '+unlisted.length+' 個訊號不列品項。';
-}$('reset').addEventListener('click',clearSelection);$('network').addEventListener('keydown',event=>{if(event.key==='Escape')clearSelection();});matchMedia('(max-width:640px)').addEventListener('change',draw);
+}$('reset').addEventListener('click',clearSelection);$('network').addEventListener('keydown',event=>{if(event.key==='Escape'){clearSelection();showReadout(false);}});matchMedia('(max-width:640px)').addEventListener('change',draw);
 // Respect the system preference until the user explicitly chooses for this session.
 const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
 let motionChoice=null;
@@ -210,17 +213,18 @@ draw();
 // that space changes; selecting a line must leave both the canvas and viewBox stable.
 let graphSize='';
 const canvasObserver=new ResizeObserver(()=>{
- if(matchMedia('(max-width:640px)').matches)return;
  const svg=$('network'),canvas=document.querySelector('.canvas');
  if(!svg.clientWidth||!canvas.clientHeight)return;
  const size=svg.clientWidth+':'+canvas.clientHeight;
  if(size===graphSize)return;
  graphSize=size;
- const previous=selected;
+ const previous=selected,readoutOpen=!$('insight-content').hidden;
  draw();
  if(previous?.startsWith('signal:'))selectSignal(previous.slice(7));
  else if(previous?.startsWith('trait:'))selectTrait(Number(previous.slice(6)));
+ showReadout(readoutOpen);
 });
+document.addEventListener('keydown',event=>{if(event.key==='Escape'){showReadout(false);$('insight-toggle').focus();}});
 canvasObserver.observe(document.querySelector('.canvas'));
 window.addEventListener('pagehide',()=>canvasObserver.disconnect(),{once:true});
 

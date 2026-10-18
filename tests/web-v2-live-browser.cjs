@@ -122,6 +122,8 @@ async function poll(read,check){
   await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await page.screenshot({path:'runtime/role4-live-matches-mobile.png',fullPage:true});
   console.log('LIVE uploads: two months -> 80 items -> direct monthly report -> matches / 18 explanation cells / real network; desktop/mobile.');
+  await page.locator('[data-workspace="home"]').click();
+  assert.equal(await page.locator('body').evaluate(n=>n.classList.contains('network-fullscreen')),false);
 
   await page.locator('#settings-toggle').click();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);

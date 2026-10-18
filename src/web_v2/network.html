@@ -29,7 +29,7 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 @keyframes taste-breathe{0%,100%{opacity:.42;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
 @keyframes taste-flow{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
 </style>
-<link rel="stylesheet" href="network-layout.css?v=20261018-fill1">
+<link rel="stylesheet" href="network-layout.css?v=20261018-full1">
 </head>
 <body>
 <main>
@@ -40,12 +40,14 @@ main{padding-top:24px}.intro{display:block;margin-bottom:18px}.intro h1{font-siz
 </div>
 </section>
 <section class="insight-dock" aria-label="配對解讀與線段說明">
+<button id="insight-toggle" class="reset" type="button" aria-expanded="false" aria-controls="insight-content">綜合解讀與線段說明 ↑</button>
+<div id="insight-content" hidden>
 <section class="comparison-overview" aria-label="綜合解讀"><div class="readout"><span class="readout-number">綜合解讀</span><div><p id="summary"></p><p class="summary-case"><strong class="summary-best-label">臭味相投</strong><span id="summary-best"></span></p><p class="summary-case"><strong class="summary-worst-label">背道而馳</strong><span id="summary-worst"></span></p><small id="summary-note">這是消費偏好的相似指數，不代表同樣比例的喜好完全相同，也不是關係契合度。</small></div></div>
 </section>
 <section class="selection-readout" aria-label="線段說明"><div class="selection-heading"><span class="readout-number">線段說明</span><button class="reset" id="reset" type="button" hidden>顯示全部連線</button></div><p id="selection-hint">點選線段或圓點，在這裡查看說明與品項。</p><div class="detail" hidden><div class="detail-text" id="detail" role="status" aria-live="polite"></div></div></section>
-</section>
+</div></section>
 <details class="method"><summary>資料來源與相似百分比怎麼算？</summary><div id="link-method" hidden><p id="link-method-text"></p></div><div id="trait-method" hidden><p id="trait-method-text"></p><p id="trait-graph-method"></p></div></details>
 </main>
 <noscript><p>請開啟 JavaScript 以查看點線圖。</p></noscript>
 
-<script src="legacy-similarity.js"></script><script src="legacy-match-filter.js"></script><script src="legacy-network.js?v=20261018-fill1"></script><script src="view-adapters.js"></script><script src="network-view.js?v=20261018-fill1"></script><script src="network-embed.js?v=20261018-fill1"></script></body></html>
+<script src="legacy-similarity.js"></script><script src="legacy-match-filter.js"></script><script src="legacy-network.js?v=20261018-full1"></script><script src="view-adapters.js"></script><script src="network-view.js?v=20261018-full1"></script><script src="network-embed.js?v=20261018-full1"></script></body></html>

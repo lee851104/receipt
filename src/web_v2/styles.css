@@ -229,3 +229,29 @@ body:has(#profile-panel[hidden]) #refresh-profile{display:none}
 #workspace-view>#matches-panel{padding-top:6px;padding-bottom:6px}
 #match-result .explain-details{margin-top:6px}
 #match-result .explain-details>summary{padding:6px 0}
+
+/* A selected match becomes a full-window canvas. Controls float above it. */
+body.network-fullscreen>header{display:none}
+body.network-fullscreen>main{max-width:none;width:100%;height:100dvh;padding:0}
+.network-fullscreen #workspace-view>#matches-panel{position:fixed;inset:0;width:100%;height:100dvh;padding:0;overflow:hidden;background:var(--paper);z-index:40}
+.network-fullscreen #match-result{position:relative;height:100%;width:100%}
+.network-fullscreen #match-result #network-frame{position:absolute;inset:0;width:100%;height:100%!important;border:0;margin:0}
+.network-fullscreen .match-result-header{position:absolute;top:12px;left:16px;z-index:3;margin:0}
+.network-fullscreen .match-result-header h2{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.network-fullscreen .match-result-header .quiet,.network-fullscreen .workspace-nav .back-choice{background:#171717e8;border:1px solid #ffffff26;border-radius:8px;padding:8px 12px;min-height:36px;font-size:11px;color:#ddd9d1}
+.network-fullscreen .workspace-nav{position:fixed;top:12px;left:152px;height:auto;width:auto;border:0;z-index:50}
+.network-fullscreen #network-status:not(:empty){position:absolute;top:45%;left:10%;right:10%;text-align:center;z-index:2}
+.network-fullscreen #match-result .explain-details{position:absolute;right:16px;bottom:14px;z-index:4;margin:0;border:1px solid #ffffff26;border-radius:9px;background:#171717f5;max-width:calc(100% - 32px)}
+.network-fullscreen #match-result .explain-details>summary{padding:8px 12px;font-size:11px}
+.network-fullscreen #match-result .explain-details>summary .small{display:none}
+.network-fullscreen #match-result .explain-details[open]{left:16px;top:64px;overflow:auto;overscroll-behavior:contain}
+.network-fullscreen #match-result .explain-details[open]>summary{position:sticky;top:0;background:#242020;z-index:1}
+.network-fullscreen #explain-panel{padding:18px}
+@media(max-width:640px){
+ .network-fullscreen .match-result-header{left:12px;top:10px}
+ .network-fullscreen .workspace-nav{left:12px;top:52px}
+ .network-fullscreen .match-result-header .quiet,.network-fullscreen .workspace-nav .back-choice{padding:6px 9px;min-height:32px;font-size:10px}
+ .network-fullscreen #match-result .explain-details{right:12px;bottom:12px}
+ .network-fullscreen #match-result .explain-details[open]{left:12px;top:98px}
+ .network-fullscreen #explain-panel{padding:10px}
+}

@@ -14,6 +14,7 @@
    $('settings-options').hidden=true;$('settings-toggle').setAttribute('aria-expanded','false');
    if(restoreFocus&&wasOpen)$('settings-toggle').focus();
   }
+  function syncNetworkScreen(){document.body.classList.toggle('network-fullscreen',enabled&&current==='matches'&&!$('match-result').hidden);}
   function navigate(page,load=true){
    if(!enabled)return;
    if(credentialChange)page='settings';
@@ -22,7 +23,7 @@
    for(const button of document.querySelectorAll('[data-workspace]')){
     if(button.dataset.workspace===current)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
    }
-   history.replaceState(null,'','#'+current);
+   history.replaceState(null,'','#'+current);syncNetworkScreen();
    if(load && current==='settings' && accountUI.state().status==='idle')accountUI.load();
    if(load && current==='profile' && work.state().profile.status==='idle')work.loadProfile();
    if(load && current==='matches' && work.state().matches.status==='idle')work.loadMatches();
@@ -68,6 +69,7 @@
    const network=state.network,showResult=network.status!=='idle';
    const enteringResult=showResult&&$('match-result').hidden;
    $('match-browse').hidden=showResult;$('match-result').hidden=!showResult;
+   syncNetworkScreen();
    $('matches-panel').setAttribute('aria-labelledby',showResult?'match-result-title':'matches-title');
    $('match-result-title').textContent=network.card?'你 × '+network.card.display_name:'品味連線';
    if(enteringResult&&current==='matches'){
@@ -85,7 +87,7 @@
       $('explain-details').hidden=false;
      }
      if(network.data?.network){
-      $('network-frame').src='network.html?v=20261018-fill1';$('network-frame').hidden=false;
+      $('network-frame').src='network.html?v=20261018-full1';$('network-frame').hidden=false;
      }
     }catch(error){networkRenderError=error.message;}
     lastNetwork=network.data;

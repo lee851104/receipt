@@ -56,3 +56,26 @@ main{max-width:none;padding:0;margin:0}
  .insight-dock{grid-template-columns:1fr;gap:4px;margin-top:6px;padding:0 6px}
  .selection-readout{padding:8px 0;border-left:0;border-top:1px solid #ffffff18}
 }
+
+/* Full-window stage: opening a readout never participates in graph sizing. */
+html,body,main{width:100%;height:100%;overflow:hidden}
+.graph-card{height:100dvh;border:0;border-radius:0;background:#101010;overflow:hidden}
+.canvas{height:100dvh;padding:58px 12px 50px}
+.canvas>svg{height:100%;width:100%}
+.toolbar{position:absolute;top:12px;right:16px;z-index:5;padding:0;min-height:36px;gap:8px;flex-wrap:nowrap}
+.toolbar .reset,.graph-help>summary,#insight-toggle{background:#171717e8;border:1px solid #ffffff26;border-radius:8px;padding:8px 12px;min-height:36px;font-size:11px}
+.graph-help{order:0;max-width:none;padding:0;margin:0;font-size:11px}
+.graph-help .legend{position:absolute;right:0;top:42px;width:min(420px,calc(100vw - 32px));padding:16px;background:#191919f5;border:1px solid #ffffff26;border-radius:12px;box-shadow:0 12px 40px #0008}
+.insight-dock{position:fixed;left:16px;bottom:14px;z-index:4;display:block;margin:0;padding:0}
+#insight-toggle{margin:0;color:#ef8588;min-height:36px}
+#insight-content{position:absolute;bottom:46px;left:0;width:min(820px,calc(100vw - 32px));max-height:40dvh;overflow:auto;overscroll-behavior:contain;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;background:#191919f5;border:1px solid #ffffff26;border-radius:14px;padding:14px 18px;box-shadow:0 12px 40px #0008;backdrop-filter:blur(16px)}
+.insight-dock .comparison-overview,.selection-readout{padding-top:0;padding-bottom:0}
+@media(max-width:640px){
+ .canvas{height:100dvh;padding:96px 8px 52px}.canvas>svg{height:100%}
+ .toolbar{top:10px;right:12px;gap:6px;flex-direction:column;align-items:end}
+ .toolbar .reset,.graph-help>summary,#insight-toggle{font-size:10px;padding:6px 9px;min-height:32px}
+ .graph-help .legend{top:78px}
+ .insight-dock{left:12px;bottom:12px;padding:0}
+ #insight-content{width:calc(100vw - 24px);bottom:44px;grid-template-columns:1fr;gap:12px;padding:14px;max-height:44dvh}
+ .selection-readout{padding:10px 0 0}
+}

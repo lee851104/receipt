@@ -102,7 +102,7 @@
     const [cx, cy] = shape.centers[side === 'a' ? 0 : 1];
     const [sx, sy] = shape.stretch;
     const out = d * Math.cos(e), across = d * Math.sin(e);
-    if (shape === SHAPES.mobile) return { x: cx - across * sx, y: side === 'a' ? cy - out * sy : cy + out * sy };
+    if (shape === SHAPES.mobile || shape.mobile) return { x: cx - across * sx, y: side === 'a' ? cy - out * sy : cy + out * sy };
     return { x: side === 'a' ? cx - out * sx : cx + out * sx, y: cy - across * sy };
   }
 
@@ -119,8 +119,8 @@
         const at = place(shape, side, trait.distance + step * shape.font * 1.2, trait.angle);
         let box;
         // Phones hang a label away from the middle of the fan, so moving it outwards never lands it on its own dot.
-        if (shape === SHAPES.mobile && trait.angle > 0) box = { x: at.x - trait.r - 4, y: at.y + shape.font * 0.35, anchor: 'end' };
-        else if (shape === SHAPES.mobile) box = { x: at.x + trait.r + 4, y: at.y + shape.font * 0.35, anchor: 'start' };
+        if ((shape === SHAPES.mobile || shape.mobile) && trait.angle > 0) box = { x: at.x - trait.r - 4, y: at.y + shape.font * 0.35, anchor: 'end' };
+        else if (shape === SHAPES.mobile || shape.mobile) box = { x: at.x + trait.r + 4, y: at.y + shape.font * 0.35, anchor: 'start' };
         else if (side === 'a') box = { x: at.x - trait.r - 4, y: at.y - 6, anchor: 'end' };
         else box = { x: at.x + trait.r + 4, y: at.y - 6, anchor: 'start' };
         const rect = labelRect(trait.label, shape.font, box.x, box.y, box.anchor);
@@ -135,11 +135,12 @@
 
   // Every dot and line of the graph for two people, from the trait order in data and each person's values.
   function layout(data, left, right, mobile, result, viewport) {
-    // Use taller desktop space for the fan geometry, keeping glyphs and circles undistorted.
-    const base = SHAPES.desktop;
-    const height = !mobile && viewport && viewport.width > 0
+    // Reposition geometry to fit the stage; never stretch text or circle shapes.
+    const base = mobile ? SHAPES.mobile : SHAPES.desktop;
+    const height = viewport && viewport.width > 0
       ? Math.max(base.height, base.width * viewport.height / viewport.width) : base.height;
-    const shape = mobile ? SHAPES.mobile : { ...base, height,
+    const shape = mobile ? { ...base, mobile: true, height,
+      centers: [[300, 290], [300, height - 290]] } : { ...base, height,
       centers: base.centers.map(([x]) => [x, height / 2]),
       stretch: [base.stretch[0], base.stretch[1] * (height - 60) / (base.height - 60)] };
     const count = data.traits.length;

@@ -288,3 +288,27 @@ button.is-loading{cursor:wait}
  #upload-background{font-size:9px;gap:5px;padding:5px 7px;white-space:nowrap}
  #upload-background.is-loading::before{width:12px;height:12px;flex-basis:12px}
 }
+
+/* Monthly library: compact controls stay visible while only the list scrolls. */
+.uploaded-entry{margin-top:18px}
+#months-dialog{width:min(600px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:26px;border:1px solid #51413f;border-radius:18px;background:var(--surface);color:var(--ink)}
+#months-dialog[open]{display:flex;flex-direction:column;gap:12px}
+#months-dialog::backdrop{background:#000b;backdrop-filter:blur(5px)}
+.months-header,.months-tools,.months-select,.months-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-shrink:0}
+.months-header h2{font-size:26px;margin:0}.months-header .eyebrow{margin:0 0 6px}
+#months-dialog p{margin:0}#months-dialog .quiet{width:auto;margin:0;white-space:nowrap}
+#months-content{min-height:0;display:flex;flex-direction:column}
+.months-select{padding:12px 0;border-bottom:1px solid var(--line)}
+#months-dialog label{display:flex;align-items:center;gap:14px;margin:0}
+#months-dialog input[type=checkbox]{width:18px;height:18px;margin:0;flex-shrink:0;accent-color:var(--accent)}
+.months-list{overflow:auto;min-height:0;overscroll-behavior:contain}
+#months-dialog .month-choice{padding:16px 12px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:8px}
+.month-choice:has(input:checked){background:#ef858812}.month-choice:hover{background:#ffffff05}
+.month-choice-info{display:grid;gap:4px;min-width:0}.month-choice-info strong{font-size:17px;font-weight:500}
+.month-failure{color:#ffb5a9;font-size:12px;overflow-wrap:anywhere}
+.months-empty{padding:32px 12px;color:var(--muted)}
+.months-actions{padding-top:16px;border-top:1px solid var(--line)}
+#months-delete-all{color:#ffb5a9}#months-delete{width:auto;margin:0;min-width:160px}
+#months-dialog .message{padding:10px 12px}
+#months-dialog :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:640px){#months-dialog{padding:18px;width:calc(100vw - 24px);max-height:calc(100dvh - 24px);gap:10px}.months-header h2{font-size:23px}.months-select{gap:8px;font-size:13px}.months-actions{gap:10px}#months-delete{min-width:0;flex:1}.month-choice-info strong{font-size:16px}}

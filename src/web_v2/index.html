@@ -5,16 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>消費配對系統 v2｜從日常，看見品味</title>
-<link rel="stylesheet" href="./styles.css?v=20261018-ux1">
+<link rel="stylesheet" href="./styles.css?v=20261018-months1">
 <script defer src="./feedback.js?v=20261018-ux1"></script>
 <script defer src="./api.js"></script>
 <script defer src="./flow.js?v=20261018-ux1"></script>
 <script defer src="./view-adapters.js"></script>
 <script defer src="./workspace-flow.js?v=20261017-space1"></script>
 <script defer src="./explanation.js"></script>
-<script defer src="./account-flow.js?v=20261018-ux1"></script>
-<script defer src="./account-ui.js?v=20261018-ux1"></script>
-<script defer src="./workspace-ui.js?v=20261018-review2"></script>
+<script defer src="./account-flow.js?v=20261018-months1"></script>
+<script defer src="./month-manager.js?v=20261018-months1"></script>
+<script defer src="./account-ui.js?v=20261018-months1"></script>
+<script defer src="./workspace-ui.js?v=20261018-months1"></script>
 <script defer src="./app.js?v=20261018-ux1"></script>
 </head>
 <body>
@@ -26,6 +27,7 @@
     <div id="settings-options" class="settings-options" hidden>
       <span id="identity-label" class="menu-identity"></span>
       <button type="button" data-workspace="upload">上傳檔案<span>匯入發票 CSV</span></button>
+      <button type="button" data-months-open>已上傳資料<span>查看月份、勾選刪除</span></button>
       <button id="refresh-profile" type="button">重新載入月報<span>更新目前月份資料</span></button><button type="button" data-workspace="settings">帳號設定<span>帳號、月份與資料管理</span></button>
       <button id="switch-account" type="button" hidden>切換帳號</button>
     </div>
@@ -81,6 +83,7 @@
 </div></section>
 <section id="upload-panel" hidden aria-labelledby="upload-title">
 <p class="eyebrow">02 / 發票變成線索</p><h1 id="upload-title" tabindex="-1">匯入一個月，<em>看見日常。</em></h1><p class="subtitle">選擇財政部電子發票 CSV，每份檔案只放一個月，最大 2 MB。</p>
+<button class="quiet uploaded-entry" type="button" data-months-open>已上傳資料 <span aria-hidden="true">↗</span></button>
 <div class="upload-layout"><section class="input-card"><form id="upload-form"><label for="invoice-file">發票 CSV</label><input id="invoice-file" type="file" accept=".csv,text/csv" required aria-describedby="upload-help"><p id="upload-help" class="small">重新上傳相同月份會取代該月舊資料。作廢、折扣、低於 10 元或小數金額明細不計入分析。</p><p id="upload-demo-note" class="message" hidden>示範帳號不能上傳；請切換成自己的帳號。</p><button id="upload-submit" class="primary" type="submit">上傳並分析</button></form></section>
 <section class="result-card" aria-label="上傳處理進度"><p class="eyebrow">PROGRESS / 處理進度</p><h2 id="upload-state">等待上傳</h2><p id="upload-message" role="status" aria-live="polite">選擇 CSV 後開始分析。</p><progress id="upload-progress" max="1" value="0" hidden aria-label="發票分析進度"></progress><p id="upload-count" class="small"></p><button id="retry-job" class="secondary" type="button" hidden>重新查詢進度</button><button id="open-profile" class="primary" type="button" hidden>查看月報</button></section></div>
 </section>
@@ -104,10 +107,21 @@
 <div id="account-content" hidden><div class="account-grid">
 <section class="input-card"><h2>顯示名稱</h2><p class="small">帳號：<span id="account-username"></span>（無法修改）</p><form id="account-name-form"><label for="account-name">大家看到的名稱</label><input id="account-name" required maxlength="20" autocomplete="nickname"><button id="account-name-submit" class="primary" type="submit">儲存名稱</button></form></section>
 <section class="input-card"><h2>修改密碼</h2><p class="small">修改成功後，本分頁保留登入；其他裝置需重新登入。</p><p id="password-upload-note" class="small" hidden>發票仍在處理或進度尚未確認，請完成或重新查詢進度後再修改密碼。</p><form id="account-password-form"><label for="current-password">目前密碼</label><input id="current-password" type="password" autocomplete="current-password" required maxlength="512"><label for="new-password">新密碼（8–128 字元）</label><input id="new-password" type="password" autocomplete="new-password" required minlength="8" maxlength="128"><button id="password-submit" class="primary" type="submit">更新密碼</button></form></section>
-<section class="input-card"><h2>已上傳月份</h2><p class="small">刪除後無法復原，品味與配對結果也會更新。</p><div id="account-months"></div></section>
+<section class="input-card"><h2>已上傳月份</h2><p class="small">刪除後無法復原，品味與配對結果也會更新。</p><button class="quiet" type="button" data-months-open>已上傳資料 · 多選管理</button><div id="account-months"></div></section>
 <section class="input-card account-danger"><h2>刪除帳號</h2><p class="small">永久移除帳號與所有發票資料，操作前需再輸入密碼。</p><button id="delete-account" class="secondary" type="button">刪除我的帳號</button></section>
 </div></div><div class="account-logout"><p id="logout-note" class="small">登出會讓這個帳號在所有裝置上的登入失效。</p><button id="logout-submit" class="secondary" type="button">登出所有裝置</button></div>
 </section>
+<dialog id="months-dialog" aria-labelledby="months-title" aria-describedby="months-description">
+<div class="months-header"><div><p class="eyebrow">YOUR DATA / 我的資料</p><h2 id="months-title" tabindex="-1">已上傳資料</h2></div><button id="months-close" class="quiet" type="button">關閉</button></div>
+<p id="months-description" class="small">依月份管理你的發票資料。刪除後，月報與配對結果會重新更新。</p>
+<p id="months-status" role="status" aria-live="polite"></p><p id="months-error" class="message error" role="alert" hidden></p>
+<p id="months-demo" class="model-note" hidden>示範帳號的資料僅供查看，無法刪除。</p>
+<div class="months-tools"><span id="months-total" class="small"></span><button id="months-refresh" class="quiet" type="button">重新載入</button></div>
+<div id="months-content" hidden><div class="months-select"><label><input id="months-all" type="checkbox"> 全選月份</label><span id="months-selected" class="small"></span></div>
+<p id="months-empty" class="months-empty" hidden>目前沒有已上傳的月份。上傳一份 CSV，就能在這裡管理。</p>
+<div id="months-list" class="months-list" aria-label="已上傳月份"></div></div>
+<div class="months-actions"><button id="months-delete-all" class="quiet" type="button">全部刪除</button><button id="months-delete" class="primary" type="button">刪除所選</button></div>
+</dialog>
 <dialog id="account-confirm" aria-labelledby="confirm-title" aria-describedby="confirm-description"><form id="account-confirm-form"><h2 id="confirm-title"></h2><p id="confirm-description"></p><p id="confirm-progress" role="status" aria-live="polite" hidden></p><p id="confirm-error" class="message error" role="alert" hidden></p><div id="delete-password-row" hidden><label for="delete-password">帳號密碼</label><input id="delete-password" type="password" autocomplete="current-password" maxlength="512"></div><div class="confirm-actions"><button id="confirm-cancel" class="secondary" type="button">取消</button><button id="confirm-submit" class="primary" type="submit">確認刪除</button></div></form></dialog>
   </section>
   <noscript><p class="message error">請開啟 JavaScript，才能使用登入與月報功能。</p></noscript>

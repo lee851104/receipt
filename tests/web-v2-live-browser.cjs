@@ -134,6 +134,26 @@ async function poll(read,check){
   await page.getByRole('button',{name:'刪除 2026-05',exact:true}).click();await page.locator('#confirm-submit').click();await page.locator('#account-confirm').waitFor({state:'hidden'});
   await go('profile');await page.locator('#profile-content').waitFor();await openReport(page);assert.equal(await page.frameLocator('#report-frame').locator('#insights-month option').count(),1);
   assert.deepEqual((await request('/me',{token:second})).data.months,['2026-06']);
+  // The multi-select dialog uses real DELETE endpoints and preserves the account.
+  await upload('2026-05');await upload('2026-07');
+  await go('profile');await openReport(page);
+  await page.locator('#settings-toggle').click();await page.locator('#settings-options [data-months-open]').click();
+  await page.getByRole('checkbox',{name:'選取 2026-05',exact:true}).check();
+  await page.getByRole('checkbox',{name:'選取 2026-06',exact:true}).check();
+  await page.locator('#months-delete').click();await page.locator('#confirm-submit').click();
+  await page.locator('#account-confirm').waitFor({state:'hidden'});
+  assert.deepEqual((await request('/me',{token:second})).data.months,['2026-07']);
+  await page.locator('#months-close').click();await openReport(page);
+  assert.deepEqual(await page.frameLocator('#report-frame').locator('#insights-month option').evaluateAll(nodes=>nodes.map(n=>n.value)),['2026-07']);
+  await page.locator('#settings-toggle').click();await page.locator('#settings-options [data-months-open]').click();
+  await page.locator('#months-content').waitFor();await page.locator('#months-delete-all').click();await page.locator('#confirm-submit').click();
+  await page.locator('#months-empty').waitFor();await page.locator('#months-close').click();await page.locator('#report-empty').waitFor();
+  assert.deepEqual((await request('/me',{token:second})).data.months,[]);
+  const emptyProfile=await poll(()=>request('/me/profile',{token:second}),r=>!r.data.recomputing);
+  assert.equal(emptyProfile.data.item_count,0);assert.equal(emptyProfile.data.ready,false);
+  await go('matches');await page.locator('#match-status').filter({hasText:'資料還不足'}).waitFor();assert.equal(await page.locator('.match-card').count(),0);
+  assert(!(await request('/matches',{token:peerToken})).data.people.some(p=>p.user_id===me.user_id));
+  console.log('LIVE months: multi-select removes two months, remaining July retained; delete all clears profile/matches while keeping account.');
   await go('settings');await page.locator('#account-name').fill('虛構更名');await page.locator('#account-name-submit').click();await page.locator('#account-notice').filter({hasText:'顯示名稱已更新'}).waitFor();
   await page.locator('#current-password').fill(password);await page.locator('#new-password').fill(nextPassword);await page.locator('#password-submit').click();await page.locator('#account-notice').filter({hasText:'密碼已更新'}).waitFor();
   assert.equal((await request('/me',{token:second})).status,401);

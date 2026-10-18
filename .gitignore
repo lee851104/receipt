@@ -41,3 +41,10 @@ Thumbs.db
 # Local report containing real purchases
 /invoice-insights-private.html
 /report-data.js
+# Generated report data is never committed from the web folders. The server would still hand such a file out
+# under /web/ while it sits in src/web_v2/, so keep it out of both folders altogether.
+/src/web/*-data.js
+/src/web_v2/*-data.js
+
+# Fictional v2 contract demo for README (no private data)
+!/docs/assets/v2-contract-demo.gif

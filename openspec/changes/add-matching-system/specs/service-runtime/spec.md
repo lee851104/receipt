@@ -25,11 +25,15 @@
 - **THEN** 容器以 GPU 模式運作，新品名的屬性可以被判斷
 
 ### Requirement: 從 Hugging Face 取得分類模型
-使用 BERT 分類模型、本機卻沒有模型時，服務 SHALL 在啟動時從 Hugging Face 下載設定中指定的模型庫和**固定版本**並保存；之後的啟動 SHALL 直接使用已保存的模型。下載失敗時，服務 SHALL 照常啟動，並在健康檢查中把分類模型標示為 `unavailable`。
+使用 BERT 分類模型、本機卻沒有已驗證的模型時，服務 SHALL 在啟動時帶憑證，從 Hugging Face 上受保護（不公開）的來源下載設定中指定的**固定版本**，核對 SHA-256 後保存；之後的啟動 SHALL 直接使用已保存的模型。本機也沒有已驗證的模型，而且沒有憑證、憑證無效或下載失敗時，服務 SHALL 照常啟動，並在健康檢查中把分類模型標示為 `unavailable`。預設的分類模型是 `fake`，它不下載任何東西。
 
 #### Scenario: 第一次啟動
-- **WHEN** 有網路、本機沒有分類模型時第一次啟動
+- **WHEN** 有網路和憑證、本機沒有已驗證的分類模型時第一次啟動
 - **THEN** 服務下載指定版本的模型，健康檢查顯示分類模型為 `bert`
+
+#### Scenario: 沒有憑證
+- **WHEN** 本機沒有已驗證的分類模型，也沒有提供下載用的憑證
+- **THEN** 服務不下載，照常啟動，健康檢查顯示分類模型為 `unavailable`，即時分類回應 503 `model_unavailable`，上傳的背景工作變成 `failed` 並說明分類模型無法使用
 
 #### Scenario: 第二次啟動
 - **WHEN** 服務在已經下載過模型的狀態下重新啟動
@@ -40,7 +44,7 @@
 - **THEN** 服務照常啟動，健康檢查顯示分類模型為 `unavailable`，即時分類回應 503 `model_unavailable`
 
 ### Requirement: 容器不含真實資料與密鑰
-Docker 映像檔 MUST NOT 包含真實發票、真實品名、私人設定或密鑰；密鑰 SHALL 在啟動時由環境變數或本機設定檔提供。資料庫和模型 SHALL 存放在容器外的儲存空間，重新建立容器後資料仍然存在。
+Docker 映像檔 MUST NOT 包含真實發票、真實品名、私人設定或密鑰；密鑰 SHALL 在啟動時由環境變數或本機設定檔提供；下載分類模型用的憑證 SHALL 以唯讀 secret 提供。資料庫和模型 SHALL 存放在容器外的儲存空間，重新建立容器後資料仍然存在。
 
 #### Scenario: 檢查映像檔
 - **WHEN** 列出映像檔裡的所有檔案
@@ -88,6 +92,32 @@ demo 模式下，服務以空的資料庫啟動時，SHALL 自動匯入約 300 �
 #### Scenario: 密鑰太短
 - **WHEN** `JWT_SECRET` 只有 16 個字元
 - **THEN** 服務不啟動，並說明密鑰至少要 32 個字元
+
+### Requirement: 設定寫錯時停止啟動
+設定留空 SHALL 等於預設值。數字寫錯或超出範圍、模型名稱不在允許的清單裡時，服務 MUST 拒絕啟動，並用一行訊息說明是哪個設定變數有問題，而不是印出程式錯誤的堆疊。
+
+#### Scenario: 數字寫錯
+- **WHEN** `JWT_EXPIRE_MINUTES` 是 `abc` 或 0，或 `CATEGORY_MIN_PROB` 是 1.5
+- **THEN** 服務不啟動，訊息裡有那個變數的名稱
+
+#### Scenario: 不認得的模型名稱
+- **WHEN** `CATEGORY_MODEL` 設成 `gpt`
+- **THEN** 服務不啟動，訊息裡有 `CATEGORY_MODEL` 和可以用的名稱
+
+#### Scenario: 留空
+- **WHEN** `.env` 裡的 `JWT_EXPIRE_MINUTES` 留空
+- **THEN** 服務使用預設的 1440 分鐘
+
+### Requirement: 錯誤一律回應 JSON
+API 自己產生的錯誤 SHALL 回應 `{"detail": "<錯誤代碼>"}`，可以另外附上說明 `message`。欄位格式不符的 422 MUST 保留 FastAPI 的 `detail` 清單格式，但不回傳被拒絕的輸入值；程式本身出錯時 MUST 回應 500 `{"detail": "internal_error"}`，細節只留在伺服器的紀錄裡。
+
+#### Scenario: 欄位格式不符
+- **WHEN** 請求的欄位格式不符，例如註冊的密碼太短
+- **THEN** 系統回應 422，`detail` 是清單，每項有 `type`、`loc`、`msg`，沒有被拒絕的輸入值
+
+#### Scenario: 程式出錯
+- **WHEN** 處理請求時程式丟出沒有預期的例外，例如模型當掉
+- **THEN** 系統回應 500 `{"detail": "internal_error"}`，回應裡沒有錯誤的細節
 
 ### Requirement: 自動測試不需要模型
 專案的自動測試 SHALL 在沒有顯示卡、沒有下載任何模型檔的環境中全部執行；每次 push 到 GitHub 時 SHALL 自動執行全部測試（包含現有的 Python 和 JS 測試），並建置一次 Docker 映像檔。

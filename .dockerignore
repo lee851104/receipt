@@ -1,0 +1,29 @@
+# Nothing private may reach the image (design D14); the Dockerfile copies only configs/, src/ and
+# datasets/synthetic/attribute-cache.jsonl (reviewed fictional answers) anyway.
+.git/
+.venv/
+rawdata/
+data/
+models/
+runtime/
+experiments/
+prototypes/
+**/*.csv
+**/*.tsv
+**/*.xls
+**/*.xlsx
+**/*.rar
+**/*.zip
+**/*.7z
+**/*.db
+.env
+.env.*
+**/.env
+**/.env.*
+# v1's build input is never served, and a developer's copy may hold generated report data
+src/web/
+**/*-data.js
+invoice-insights-private.html
+**/results/
+**/outputs/
+**/__pycache__/

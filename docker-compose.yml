@@ -1,0 +1,29 @@
+# docker compose up: the demo at http://127.0.0.1:8000/web/ and the API docs at /docs (design D14).
+# No GPU inside the container. A llama-server running on this computer is probed through host.docker.internal and
+# shows as gpu_mode on /api/health. ATTRIBUTES_MODEL=qwen (the default) reads the demo users' reviewed answers from the
+# cache and asks the computer's llama-server (through DOCKER_LLAMA_SERVER_URL) about new names; without one the health
+# check says cache_only.
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"  # this computer only: DEMO_MODE lets anyone log in as a demo user
+    environment:
+      DEMO_MODE: "1"
+      CATEGORY_MODEL: ${CATEGORY_MODEL:-fake}
+      ATTRIBUTES_MODEL: ${ATTRIBUTES_MODEL:-qwen}
+      CATEGORY_MODEL_REPO: ${CATEGORY_MODEL_REPO:-}
+      CATEGORY_MODEL_REVISION: ${CATEGORY_MODEL_REVISION:-}
+      CATEGORY_MODEL_REPO_TYPE: ${CATEGORY_MODEL_REPO_TYPE:-model}
+      CATEGORY_MODEL_SHA256: ${CATEGORY_MODEL_SHA256:-}
+      # Its own variable, not LLAMA_SERVER_URL: compose reads the root .env, which start.bat makes with 127.0.0.1:8080,
+      # and inside the container that address is the container itself.
+      LLAMA_SERVER_URL: ${DOCKER_LLAMA_SERVER_URL:-http://host.docker.internal:8080}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - db:/data
+      - models:/models
+volumes:
+  db:
+  models:

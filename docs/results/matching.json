@@ -1,0 +1,134 @@
+{
+  "overall": {
+    "users": 300,
+    "same_type_hits": 1500,
+    "similar_slots": 1500,
+    "opposite_type_hits": 171,
+    "opposite_slots": 707,
+    "same_type_precision_at_5": 1.0,
+    "opposite_type_precision_at_5": 0.114,
+    "same_type_user_hit_rate": 1.0,
+    "same_type_mutual_user_hit_rate": 0.91,
+    "opposite_type_user_hit_rate": 0.12666666666666668
+  },
+  "by_type": {
+    "省錢上班族": {
+      "users": 38,
+      "same_type_hits": 190,
+      "similar_slots": 190,
+      "opposite_type_hits": 0,
+      "opposite_slots": 70,
+      "same_type_precision_at_5": 1.0,
+      "opposite_type_precision_at_5": 0.0,
+      "same_type_user_hit_rate": 1.0,
+      "same_type_mutual_user_hit_rate": 0.9210526315789473,
+      "opposite_type_user_hit_rate": 0.0
+    },
+    "忙碌工程師": {
+      "users": 38,
+      "same_type_hits": 190,
+      "similar_slots": 190,
+      "opposite_type_hits": 171,
+      "opposite_slots": 171,
+      "same_type_precision_at_5": 1.0,
+      "opposite_type_precision_at_5": 0.9,
+      "same_type_user_hit_rate": 1.0,
+      "same_type_mutual_user_hit_rate": 0.8157894736842105,
+      "opposite_type_user_hit_rate": 1.0
+    },
+    "咖啡上班族": {
+      "users": 38,
+      "same_type_hits": 190,
+      "similar_slots": 190,
+      "opposite_type_hits": 0,
+      "opposite_slots": 54,
+      "same_type_precision_at_5": 1.0,
+      "opposite_type_precision_at_5": 0.0,
+      "same_type_user_hit_rate": 1.0,
+      "same_type_mutual_user_hit_rate": 0.8157894736842105,
+      "opposite_type_user_hit_rate": 0.0
+    },
+    "手搖學生": {
+      "users": 38,
+      "same_type_hits": 190,
+      "similar_slots": 190,
+      "opposite_type_hits": 0,
+      "opposite_slots": 132,
+      "same_type_precision_at_5": 1.0,
+      "opposite_type_precision_at_5": 0.0,
+      "same_type_user_hit_rate": 1.0,
+      "same_type_mutual_user_hit_rate": 0.9736842105263158,
+      "opposite_type_user_hit_rate": 0.0
+    },
+    "健身族": {
+      "users": 37,
+      "same_type_hits": 185,
+      "similar_slots": 185,
+      "opposite_type_hits": 0,
+      "opposite_slots": 0,
+      "same_type_precision_at_5": 1.0,
+      "opposite_type_precision_at_5": 0.0,
+      "same_type_user_hit_rate": 1.0,
+      "same_type_mutual_user_hit_rate": 0.972972972972973,
+      "opposite_type_user_hit_rate": 0.0
+    },
+    "家庭下廚": {
+      "users": 37,
+      "same_type_hits": 185,
+      "similar_slots": 185,
+      "opposite_type_hits": 0,
+      "opposite_slots": 185,
+      "same_type_precision_at_5": 1.0,
+      "opposite_type_precision_at_5": 0.0,
+      "same_type_user_hit_rate": 1.0,
+      "same_type_mutual_user_hit_rate": 0.9459459459459459,
+      "opposite_type_user_hit_rate": 0.0
+    },
+    "連假旅人": {
+      "users": 37,
+      "same_type_hits": 185,
+      "similar_slots": 185,
+      "opposite_type_hits": 0,
+      "opposite_slots": 94,
+      "same_type_precision_at_5": 1.0,
+      "opposite_type_precision_at_5": 0.0,
+      "same_type_user_hit_rate": 1.0,
+      "same_type_mutual_user_hit_rate": 0.8918918918918919,
+      "opposite_type_user_hit_rate": 0.0
+    },
+    "質感貓奴": {
+      "users": 37,
+      "same_type_hits": 185,
+      "similar_slots": 185,
+      "opposite_type_hits": 0,
+      "opposite_slots": 1,
+      "same_type_precision_at_5": 1.0,
+      "opposite_type_precision_at_5": 0.0,
+      "same_type_user_hit_rate": 1.0,
+      "same_type_mutual_user_hit_rate": 0.9459459459459459,
+      "opposite_type_user_hit_rate": 0.0
+    }
+  },
+  "source": "synthetic",
+  "population": 300,
+  "unique_items": 107,
+  "model_versions": [
+    "qwen3-4b:2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e:5e86775fba0e8c8a2fe31adc0c3fc420cd37b5daa3a1538b214c3866c97511a9:guards-v1:input-v2:batch1"
+  ],
+  "cache_review": {
+    "reviewed_items": 107,
+    "corrected_items": 46,
+    "corrected_fields": 70,
+    "human_confirmed_items": 107,
+    "statuses": [
+      "human_confirmed",
+      "human_corrected"
+    ]
+  },
+  "cache_revisions": [
+    "synthetic-review-20261015-v2"
+  ],
+  "calculation_note": "2026-10-16 改用 src/api/matching.py 的 entries／pick：門檻依畫面上的整數百分比，同分依顯示名稱字元碼、再依 user_id 排序。先前 32f7d02 使用原始分數門檻與生成順序；本次向量及屬性快取不變，配對指標差異來自後端的門檻與排序。",
+  "scope": "reviewed synthetic cache and recorded categories; shared API entries/pick; seed pipeline covered by synthetic integration tests; not live model accuracy",
+  "comparable_profiles": 300
+}

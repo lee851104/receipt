@@ -1,0 +1,106 @@
+# Every push and pull request: both test suites with the fake models (no GPU, no model download), then the Docker
+# image is built, checked for private files, and the compose demo is started once (design D11, D14).
+name: CI
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CATEGORY_MODEL: fake
+      ATTRIBUTES_MODEL: fake
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - run: python -m unittest discover -s tests
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: node --test "tests/*.test.cjs"
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t receipt-demo .
+      - name: The image holds no private files
+        run: |
+          docker run --rm --entrypoint sh receipt-demo -c '
+            for path in /app/rawdata /app/data /app/.env /app/models /app/src/web; do
+              if [ -e "$path" ]; then echo "found $path"; exit 1; fi
+            done
+            found=$(find /app \( -name "*.csv" -o -name "*.rar" -o -name "*.zip" -o -name "*.7z" -o -name ".env*" \) -print)
+            if [ -n "$found" ]; then echo "$found"; exit 1; fi'
+      - name: The compose demo starts, is in demo mode and gives its 300 demo users their profiles
+        run: |
+          docker compose up -d --build
+          ready=no
+          # The first start seeds 300 people (their purchases and profiles) before it serves: allow up to 3 minutes.
+          for attempt in $(seq 1 90); do
+            if curl -fsS --max-time 5 http://127.0.0.1:8000/api/health | grep -q '"demo_mode":true'; then
+              ready=yes
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != yes ]; then
+            echo "the demo never answered /api/health with demo_mode on"
+            docker compose logs
+            exit 1
+          fi
+          # No llama-server here and compose defaults to qwen, so the attribute model answers from its cache only; the
+          # demo users must still have their profiles, because the seed loaded the reviewed answers from the image.
+          if ! python3 - <<'EOF'
+          import json
+          import urllib.request
+
+          BASE = "http://127.0.0.1:8000"
+
+
+          def call(path, token=None, body=None):
+              headers = {} if body is None else {"Content-Type": "application/json"}
+              if token:
+                  headers["Authorization"] = "Bearer " + token
+              data = None if body is None else json.dumps(body).encode()
+              with urllib.request.urlopen(urllib.request.Request(BASE + path, data=data, headers=headers), timeout=30) as reply:
+                  return json.load(reply)
+
+
+          health = call("/api/health")
+          assert health["demo_mode"] is True, health
+          assert health["models"]["attributes"] == "cache_only", health
+          users = call("/api/auth/demo-users")
+          assert len(users) == 300, len(users)
+
+
+          def check_profile(which, user):
+              token = call("/api/auth/demo-login", body={"user_id": user["user_id"]})["access_token"]
+              profile = call("/api/me/profile", token)
+              assert profile["ready"] is True, (which, "ready", profile["ready"])
+              assert profile["pending_attributes"] == 0, (which, "pending_attributes", profile["pending_attributes"])
+
+
+          # The seed works in order, so one that died part-way has finished the first users and none of the last.
+          check_profile("first", users[0])
+          check_profile("last", users[-1])
+          print("300 demo users; the first and the last one's profile is ready with no attribute pending")
+          EOF
+          then
+            echo "the demo users or their profiles are not as expected"
+            docker compose logs
+            exit 1
+          fi
+      - name: Stop the demo and drop its volumes
+        if: always()
+        run: docker compose down -v

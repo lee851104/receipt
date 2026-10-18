@@ -26,13 +26,16 @@ class MainTests(unittest.TestCase):
         result = start()
         self.assertEqual((result.returncode, result.stdout.strip()), (0, "FastAPI"), result.stderr)
 
-    def test_a_model_that_is_not_there_yet_stops_it_in_one_line(self):
-        # Role 3's src/ml/attributes.py is merged now, so the qwen case hides it from the subprocess: the check that
-        # a missing module stops the server in one line must keep working for a checkout that lacks the file.
+    def test_a_model_that_cannot_run_stops_it_in_one_line(self):
+        # Role 3's src/ml/attributes.py is merged now, so the first qwen case hides it from the subprocess: the check
+        # that a missing module stops the server in one line must keep working for a checkout that lacks the file.
+        # The second one has the file but an address it would refuse, which must stop the app when it loads.
         for changes, message in (
                 ({"CATEGORY_MODEL": "tfidf"}, "error: CATEGORY_MODEL=tfidf does not work yet"),
                 ({"ATTRIBUTES_MODEL": "qwen", "missing_attributes": True},
-                 "error: ATTRIBUTES_MODEL=qwen needs src/ml/attributes.py")):
+                 "error: ATTRIBUTES_MODEL=qwen needs src/ml/attributes.py"),
+                ({"ATTRIBUTES_MODEL": "qwen", "LLAMA_SERVER_URL": "http://example.com:8080"},
+                 "error: ATTRIBUTES_MODEL=qwen needs LLAMA_SERVER_URL")):
             with self.subTest(changes=changes):
                 result = start(**changes)
                 self.assertEqual(result.returncode, 1, result.stderr)
@@ -40,7 +43,9 @@ class MainTests(unittest.TestCase):
                 self.assertTrue(result.stderr.startswith(message), result.stderr)
 
     def test_qwen_starts_now_that_role_3s_module_is_merged(self):
-        result = start(ATTRIBUTES_MODEL="qwen", LLAMA_SERVER_URL="http://127.0.0.1:8080")
+        # Port 9 has nothing listening: a real llama-server may run on 8080 here, and importing the app must not
+        # reach it anyway (the adapter only connects when it is asked about a name).
+        result = start(ATTRIBUTES_MODEL="qwen", LLAMA_SERVER_URL="http://127.0.0.1:9")
         self.assertEqual((result.returncode, result.stdout.strip()), (0, "FastAPI"), result.stderr)
 
     def test_bert_without_its_model_still_starts_and_says_so_in_one_line(self):

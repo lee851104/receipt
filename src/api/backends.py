@@ -78,8 +78,10 @@ def category_backend(settings):
 
 def attribute_backend(settings):
     """(name, cache key, describe_items) for ATTRIBUTES_MODEL: the fake, or role 3's Qwen (src/ml/attributes.py,
-    task 4.3), imported only when asked for. Its describe_items reads LLAMA_SERVER_URL from the environment itself,
-    the same variable Settings.llama_server_url comes from."""
+    task 4.3), imported only when asked for. Qwen gets an AttributeDescriber built from Settings.llama_server_url,
+    which is the address's only source (the module's own describe_items would read the environment again, and only
+    on its first call), so an address the adapter refuses stops the app as it loads. The cache key is the describer's
+    model_version: with the batch size of 1 used here, the MODEL_VERSION that role 3's seed writes its rows under."""
     if settings.attributes_model == "fake":
         return "fake", "fake", fakes.describe_items
     if settings.attributes_model == "qwen":
@@ -94,7 +96,13 @@ def attribute_backend(settings):
                 raise  # the file is there but a package it imports is not: that is the error to show
             raise ValueError("ATTRIBUTES_MODEL=qwen needs src/ml/attributes.py from role 3 (task 4.3): "
                              "merge its branch first, or use ATTRIBUTES_MODEL=fake") from None
-        return "qwen", attributes.MODEL_VERSION, attributes.describe_items
+        try:
+            describer = attributes.AttributeDescriber(server_url=settings.llama_server_url)
+        except ValueError:
+            # Not role 3's own message, and never the address: it may carry a password. The variable's name only.
+            raise ValueError("ATTRIBUTES_MODEL=qwen needs LLAMA_SERVER_URL (DOCKER_LLAMA_SERVER_URL in Docker) to be "
+                             "http:// on localhost, 127.0.0.1, [::1] or host.docker.internal, with no path or password") from None
+        return "qwen", describer.model_version, describer.describe_items
     raise ValueError(f"ATTRIBUTES_MODEL={settings.attributes_model} does not work; use fake or qwen")
 
 

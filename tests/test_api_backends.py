@@ -1,5 +1,6 @@
 """The server picks its models from the settings and probes the llama-server for GPU mode."""
 import dataclasses
+import json
 import os
 import socketserver
 import sys
@@ -12,6 +13,7 @@ from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from unittest import mock
+from urllib.parse import urlsplit
 
 from fastapi.testclient import TestClient
 
@@ -20,10 +22,13 @@ from src.api.app import create_app
 from src.api.backends import llama_probe, load_backends, model_dir
 from src.api.db import ROOT
 from src.api.settings import Settings
-from src.ml import fakes
+from src.ml import attributes, fakes
 from tests.model_contract import check_describe
 
 SECRET = "s" * 32
+# What the llama-server answers for one name, nothing known about it: role 3's adapter turns it into a full answer.
+ANSWER = {"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(
+    {"items": [{"id": "i0", "yes": [], "unknown": [], "sugar": None, "fun": None, "species": None}]})}}]}
 
 
 class Answer(BaseHTTPRequestHandler):
@@ -141,10 +146,23 @@ class BertBackendTests(unittest.TestCase):
 
 class QwenBackendTests(unittest.TestCase):
     def stand_in(self):
-        """A module shaped like role 3's src/ml/attributes.py, with nothing behind it."""
+        """A module shaped like role 3's src/ml/attributes.py, with nothing behind it: an AttributeDescriber that
+        remembers the address it was built with and, like role 3's, refuses one that is not local."""
         module = types.ModuleType("src.ml.attributes")
         module.MODEL_VERSION = "qwen-test:v1"
-        module.describe_items = lambda names, ask_model=True: [None] * len(names)
+
+        class AttributeDescriber:
+            model_version = "qwen-test:v1"
+
+            def __init__(self, server_url="http://127.0.0.1:8080"):
+                if urlsplit(server_url).hostname not in ("localhost", "127.0.0.1", "::1", "host.docker.internal"):
+                    raise ValueError("LLAMA_SERVER_URL must be a local HTTP server")
+                self.server_url = server_url
+
+            def describe_items(self, names, ask_model=True):
+                return [None] * len(names)
+
+        module.AttributeDescriber = AttributeDescriber
         return module
 
     def test_without_role_3s_module_qwen_stops_the_server_saying_to_merge_it(self):
@@ -173,11 +191,40 @@ class QwenBackendTests(unittest.TestCase):
 
     def test_with_the_module_qwen_answers_through_it_and_keys_the_cache_by_its_version(self):
         module = self.stand_in()
+        settings = Settings(jwt_secret=SECRET, attributes_model="qwen", llama_server_url="http://127.0.0.1:8123")
         with mock.patch.dict(sys.modules, {"src.ml.attributes": module}):
-            backends = load_backends(Settings(jwt_secret=SECRET, attributes_model="qwen"))
+            backends = load_backends(settings)
         self.assertEqual((backends.attributes, backends.attributes_version), ("qwen", "qwen-test:v1"))
-        self.assertIs(backends.describe_items, module.describe_items)
+        # Settings is the only source of the address: the describer was built from it, and answers through itself.
+        describer = backends.describe_items.__self__
+        self.assertIsInstance(describer, module.AttributeDescriber)
+        self.assertEqual(describer.server_url, settings.llama_server_url)
         check_describe(self, backends.describe_items)
+
+    def test_qwen_with_an_address_that_is_not_local_stops_without_showing_it(self):
+        # The real module decides which addresses are local; this checks what the backend does with its refusal.
+        for url in ("http://example.com:8080", "http://user:secret@127.0.0.1:8080", "http://127.0.0.1:8080/v1"):
+            with self.subTest(url=url):
+                settings = Settings(jwt_secret=SECRET, attributes_model="qwen", llama_server_url=url)
+                with self.assertRaisesRegex(ValueError, "ATTRIBUTES_MODEL=qwen needs LLAMA_SERVER_URL") as caught:
+                    load_backends(settings)
+                message = str(caught.exception)
+                for shown in ("secret", "example.com", "/v1", "\n", "must be a local HTTP server"):
+                    self.assertNotIn(shown, message)
+                self.assertTrue(caught.exception.__suppress_context__, "role 3's own message must not be chained on")
+        for url in ("http://localhost:8080", "http://[::1]:8080"):
+            with self.subTest(url=url):
+                backends = load_backends(Settings(jwt_secret=SECRET, attributes_model="qwen", llama_server_url=url))
+                self.assertEqual(backends.attributes, "qwen")
+
+    def test_the_real_module_keys_the_cache_the_way_the_seed_writes_it(self):
+        backends = load_backends(Settings(jwt_secret=SECRET, attributes_model="qwen"))
+        self.assertEqual(backends.attributes_version, attributes.MODEL_VERSION)
+        # Only _request would reach a llama-server (one may be running on this PC), so it answers instead.
+        with mock.patch.object(attributes.AttributeDescriber, "_request", return_value=ANSWER):
+            answers = check_describe(self, backends.describe_items)
+        self.assertEqual(len(answers), 3)
+        self.assertTrue(all(answer is not None for answer in answers), answers)
 
     def test_the_health_check_says_cache_only_without_the_gpu_and_qwen_with_it(self):
         module = self.stand_in()

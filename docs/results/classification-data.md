@@ -76,3 +76,28 @@ worktree 原切分目錄已移除；兩版位於主資料夾的 Git 忽略範圍
 | 合計 | 173 |
 
 公開 JSONL 可由生成器逐位元組重現；來源只依公開分類 brief 與常識。獨立審查確認子類覆蓋與配額，未發現實質缺陷；AI 編寫的來源註記已修正。隱私比對只使用 audit_synthetic.py 的彙總輸出，撞名 0。資料 prepare/check 及 git diff --check 通過；資料準備階段沒有訓練模型；後續 A/B 訓練另記於 classification-baselines.md，尚未 commit 或合併。
+
+## 2026-10-18：替換隱私掃描命中的3個合成名稱
+
+使用者授權只更換合成品名並重新檢查，先不重訓。基準角色2 commit `4c5bdb1`；更新 `synthetic_names.py` 並由生成器重新輸出 `item-names.jsonl`。3個新名稱根據公開brief、原子類與常識撰寫；舊命中名稱只由本機程式定位，未輸出到聊天或本報告。
+
+- 只替換3筆，其他597筆的品名／類別／來源不變。原子類分別為零食甜點的麵包、生鮮食材的肉蛋豆魚、交通的汽油柴油；三者皆維持描述式配額。
+- 仍為600筆、每類60筆、每類6子類、每子類10筆；每類發票式簡寫18筆（30%）。生成器輸出與提交的JSONL逐位元組一致。生成器按類別／正規化名稱排序，換名可能改變行號，因此用集合及候選清單原位置核對，不用JSONL行號判斷子類。
+- 重新從主資料夾根目錄及rawdata的14份CSV，在本機抽取「消費明細_品名」「賣方名稱」：去頭尾空白、至少4字、不以「示範」開頭，共833個原始字串，經audit_synthetic的正規化後為832個。參考詞庫只存被Git忽略的 `data/private/role2-collision-reference-20261018.json`。
+- 修正前：整筆合成品名正規化完全相同0筆；兩個公開檔案各含3個私人參考字串，合計6次檔案命中。也就是「相同字串出現在較長假品名裡」，不能寫成3筆完整品名完全相同。
+- 修正後：整筆完全相同0筆；兩個檔案的私人字串包含命中合計0。此結論僅涵蓋上述832個參考字串與這兩個檔案，不代表其他檔案、4字以下名稱或Git歷史也通過。
+
+本輪驗證於角色2worktree，以主資料夾 `data/role2/service-runtime-20261017/Scripts/python.exe -X utf8` 執行：
+
+```powershell
+python experiments/category-models/audit_synthetic.py --synthetic datasets/synthetic/item-names.jsonl --catalog C:/Users/User/Desktop/AI_project/receipt/data/private/role2-collision-reference-20261018.json --public-text datasets/synthetic/item-names.jsonl --public-text experiments/category-models/synthetic_names.py
+python -m unittest discover -s experiments/category-models -p test_synthetic_names.py
+python -m unittest discover -s experiments/category-models -p test_audit_synthetic.py
+python -m unittest discover -s experiments/category-models -p test_dataset_split.py
+```
+
+audit先exit1重現6次檔案命中，替換後exit0；三組測試分別5、4、11項，共20項通過。首次沙箱執行因Windows暫存目錄權限失敗，以正式權限重跑同一測試通過，未修改測試來繞過失敗。只執行資料工具相關測試，未重跑完整API／Docker驗收。
+
+可提交彙總及前後資料SHA256：[classification-synthetic-privacy-20261018.json](classification-synthetic-privacy-20261018.json)。既有訓練／驗證／測試切分、模型權重、模型manifest與歷史分數均未修改；本輪未讀原test、未重訓、未重新評分。舊實驗仍對應舊版合成資料；未來重訓須明確建立新版訓練資料與來源紀錄，不能將本次JSONL替換當成模型已更新。
+
+本輪不改寫Git歷史、不推送或合併。角色2新commit待Claude審核並納入整合分支，主目錄原掃描報告是歷史證據，保留不覆寫；其他角色命中與整體6.6仍需另行處理。

@@ -135,7 +135,6 @@
 {"name": "桂花寒天果凍", "category": 2, "source": "synthetic"}
 {"name": "梅粉甘薯條點心", "category": 2, "source": "synthetic"}
 {"name": "椒鹽蘇打餅乾", "category": 2, "source": "synthetic"}
-{"name": "椰蓉奶酥麵包", "category": 2, "source": "synthetic"}
 {"name": "檸檬優格冰棒", "category": 2, "source": "synthetic"}
 {"name": "檸檬冰棒4支", "category": 2, "source": "synthetic"}
 {"name": "檸檬塔2入", "category": 2, "source": "synthetic"}
@@ -161,6 +160,7 @@
 {"name": "草莓奶油瑞士捲", "category": 2, "source": "synthetic"}
 {"name": "草莓雪酪杯", "category": 2, "source": "synthetic"}
 {"name": "莓果雪酪杯S", "category": 2, "source": "synthetic"}
+{"name": "蔓越莓核桃歐式餐包", "category": 2, "source": "synthetic"}
 {"name": "蔓越莓貝果1入", "category": 2, "source": "synthetic"}
 {"name": "蔓越莓雪花酥", "category": 2, "source": "synthetic"}
 {"name": "藍莓燕麥餅乾", "category": 2, "source": "synthetic"}
@@ -187,6 +187,7 @@
 {"name": "冷凍白蝦仁", "category": 3, "source": "synthetic"}
 {"name": "冷凍花枝圈", "category": 3, "source": "synthetic"}
 {"name": "冷凍鱸魚片", "category": 3, "source": "synthetic"}
+{"name": "冷藏去骨雞腿切塊盒", "category": 3, "source": "synthetic"}
 {"name": "冷藏嫩豆腐一盒", "category": 3, "source": "synthetic"}
 {"name": "冷藏草莓一盒", "category": 3, "source": "synthetic"}
 {"name": "冷藏里肌豬肉片", "category": 3, "source": "synthetic"}
@@ -215,7 +216,6 @@
 {"name": "烘焙用杏仁粉", "category": 3, "source": "synthetic"}
 {"name": "烘焙用苦甜巧克力塊", "category": 3, "source": "synthetic"}
 {"name": "無鹽奶油200G", "category": 3, "source": "synthetic"}
-{"name": "生鮮去骨雞腿肉", "category": 3, "source": "synthetic"}
 {"name": "生鮮牛腱肉塊", "category": 3, "source": "synthetic"}
 {"name": "生鮮花椰菜一顆", "category": 3, "source": "synthetic"}
 {"name": "生鮮馬鈴薯袋", "category": 3, "source": "synthetic"}
@@ -361,7 +361,6 @@
 {"name": "95無鉛(自助)", "category": 6, "source": "synthetic"}
 {"name": "98汽油15公升", "category": 6, "source": "synthetic"}
 {"name": "EV充電20kWh", "category": 6, "source": "synthetic"}
-{"name": "九二無鉛汽油加油", "category": 6, "source": "synthetic"}
 {"name": "九五無鉛汽油加油", "category": 6, "source": "synthetic"}
 {"name": "九八無鉛汽油加油", "category": 6, "source": "synthetic"}
 {"name": "停車費2HR", "category": 6, "source": "synthetic"}
@@ -406,6 +405,7 @@
 {"name": "自行車一日租金", "category": 6, "source": "synthetic"}
 {"name": "計程車夜間車資", "category": 6, "source": "synthetic"}
 {"name": "路邊停車一小時", "category": 6, "source": "synthetic"}
+{"name": "車用98號無鉛燃油20公升", "category": 6, "source": "synthetic"}
 {"name": "車用柴油加油費", "category": 6, "source": "synthetic"}
 {"name": "輕軌單程B", "category": 6, "source": "synthetic"}
 {"name": "道路通行ETC", "category": 6, "source": "synthetic"}

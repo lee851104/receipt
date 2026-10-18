@@ -41,7 +41,7 @@ docker compose up -d
 
 埠維持綁定 `127.0.0.1`：DEMO_MODE=1 時任何連得到服務的人都能用示範帳號登入。 8000 若已被其他程式占用，可將 docker-compose.yml 的埠映射改成 127.0.0.1:8002:8000，並以 8002 開啟網頁。
 
-**示範帳號（10/18 整合版）：** `DEMO_MODE=1` 時，容器每次啟動都先放入 300 位唯讀示範帳號，連同他們的購買紀錄和品味向量（profile），做完才開始服務；資料已經完整就跳過。seed 本身在暫存資料庫量到第一次約 20 秒、跳過約 5 秒（沒有 Docker 的電腦上量的；容器啟動另見驗收紀錄）。舊 volume 裡只有舊映像檔放的 40 位空帳號時會補到 300 位。第一次啟動做到一半被中斷時，下一次啟動會先把留下的未完成工作標成失敗，再補完示範帳號。放不進去時（例如帳號和示範名單對不上）只記一行 `demo users not updated: ...`，伺服器照常啟動；`DEMO_MODE=0` 時什麼都不放。seed 的訊息說「Delete the database file and run the seed again」時，在 Docker 裡指的是 `docker compose down -v`，會一起刪掉所有帳號、簽章密鑰和下載的模型。示範帳號的屬性答案是審核過的虛構答案（`datasets/synthetic/attribute-cache.jsonl`，放在映像檔裡）；屬性模型版本（`MODEL_VERSION`）改了之後，要等角色 3 把這份答案重新審核成新版本，下一次啟動才會重放，在那之前每次啟動都會記那一行警告，示範品名顯示「待分析」。
+**示範帳號（10/18 整合版）：** `DEMO_MODE=1` 時，容器每次啟動都先放入 300 位唯讀示範帳號，連同他們的購買紀錄和品味向量（profile），做完才開始服務；資料已經完整就跳過。在開發電腦上，容器第一次啟動約 17 秒、之後約 6 秒就能用（見[整合驗收](docs/results/integration-acceptance-20261018.md)）。舊 volume 裡只有舊映像檔放的 40 位空帳號時會補到 300 位。第一次啟動做到一半被中斷時，下一次啟動會先把留下的未完成工作標成失敗，再補完示範帳號。放不進去時（例如帳號和示範名單對不上）只記一行 `demo users not updated: ...`，伺服器照常啟動；`DEMO_MODE=0` 時什麼都不放。seed 的訊息說「Delete the database file and run the seed again」時，在 Docker 裡指的是 `docker compose down -v`，會一起刪掉所有帳號、簽章密鑰和下載的模型。示範帳號的屬性答案是審核過的虛構答案（`datasets/synthetic/attribute-cache.jsonl`，放在映像檔裡）；屬性模型版本（`MODEL_VERSION`）改了之後，要等角色 3 把這份答案重新審核成新版本，下一次啟動才會重放，在那之前每次啟動都會記那一行警告，示範品名顯示「待分析」。
 
 ### 模型設定與容器連線
 

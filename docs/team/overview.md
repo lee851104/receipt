@@ -542,6 +542,16 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
+### 13.15 角色 1 轉告：整合與本機驗收（2026-10-18，分支 `role-1/integration`）
+
+- 角色 1 開了本機分支 `role-1/integration`（從 `role-1/role3-integration` 的 d9b26b3），合併角色 2 的 4c5bdb1（BERT 載入與受保護下載）和角色 4 的 5fcda91（v2 前端）；角色 3 的 6065c8c 已經在裡面。**還沒推送、不在 main。** 角色 2 的 8bf1722..4c5bdb1 依使用者 10/18 的指示先整合，Claude 的正式複核放在最後；在那之前不算角色 2 通過
+- 衝突只在文件：overview 保留每個角色的第 13 節段落，角色 2 分支的 13.11 改號為 13.14（角色 3 也用 13.11）；角色 4 的舊段落沿用它分支上的 13.5–13.9 編號，和角色 1 的同號段落並存，引用時請連同標題；README 用角色 4 的版面，把角色 1、2 最新的啟動、Docker 和模型設定搬進去（角色 4 13.12 的清單）；`docs/team/concepts.md` 先放角色 4 的配對說明，再放角色 2 的邏輯迴歸
+- start.bat 的 seed 中斷缺口已補（9b183cf、d9b26b3）：seed 之前只把示範帳號的未完成工作改成 failed
+- 本機驗收全部寫在 [`docs/results/integration-acceptance-20261018.md`](../results/integration-acceptance-20261018.md)：562 個 Python 測試、149 個前端測試、OpenSpec；映像檔沒有私人檔案；Docker 第一次 17 秒、重建 6 秒、資料保留、第一次中斷後下一次修好；API 與網頁（內建瀏覽器、Playwright）走完註冊、上傳、配對、計算過程、帳號管理；start.bat 流程；RTX 4060 上的 Qwen（6.2）；`/docs` 和第 5 節一致
+- 隱私掃描（6.6）找到 13 個追蹤檔案有和真實品名或店名完全相同的字串（其中 6 個只在「示範…」品名裡），使用者確認前不打勾；細節只在主資料夾被 git 忽略的 `data/private/privacy-scan-20261018.json`
+- 還沒做的：真的 BERT（要受保護 Space 的憑證，等使用者）、推送後的 CI（2.11、2.12）、沒有 GPU 的電腦（2.10、6.1）、乾淨電腦的 Docker（6.4）、組員照 README 從零啟動（2.14）
+- 角色 4 在 5fcda91 之後又有新提交（網路圖與 UX），還沒合進整合分支，等 Claude 複核
+
 ### 13.13 角色 1 轉告（2026-10-18，分支 `role-1/role3-integration`）
 
 角色 1 的待辦 B 做完了（任務 2.15 的屬性這一側、2.12 的 Docker 部分）：角色 3 的分支（`codex/role-3/attributes` 的 6065c8c，Claude 已複核通過）合併進 `role-1/role3-integration`（從 `role-1/followups` 的 783dfd4 開出），接線的三個提交在它上面。這個分支只在本機，**還沒有推送、不在 main、沒有 PR**；下面的「現在」都指這個分支。13.12 是角色 4 在自己的分支上用的編號，所以這一則用 13.13。

@@ -32,7 +32,7 @@ def build_month(path, catalog, for_upload=False):
 
     An upload (for_upload=True) follows the invoice-ingestion rules: every required column must be there, voided
     invoices (a status starting with 作廢) are skipped, lines under MIN_AMOUNT or with a decimal amount are skipped,
-    and a decimal quantity (litres of fuel, weighed goods) counts as 1. Without it the v1 report reads exactly as
+    so are lines whose product name is blank, and a decimal quantity (litres of fuel, weighed goods) counts as 1. Without it the v1 report reads exactly as
     before."""
     rows, invoice_ids = [], {}
     month_key = None
@@ -68,6 +68,10 @@ def build_month(path, catalog, for_upload=False):
                 # The amount decides first, so a skipped line's quantity is never read and cannot spoil the upload.
                 amount = whole(row["消費明細_金額"], "消費明細_金額", line)
                 if amount is None or amount < MIN_AMOUNT:
+                    continue
+                # A line with no name is skipped the same way: nothing can be said about it, and the real category
+                # model refuses an empty name, which would fail the whole month's job.
+                if not row["消費明細_品名"].strip():
                     continue
                 quantity = whole(row["消費明細_數量"], "消費明細_數量", line)
                 if quantity is None:

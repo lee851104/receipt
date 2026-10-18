@@ -84,6 +84,33 @@ class ReportDataTests(unittest.TestCase):
         self.assertEqual([(row["name"], row["amount"]) for row in month["rows"]], [("測試餐盒", 240), ("測試十元", 10)])
         self.assertEqual([row["invoice"] for row in month["rows"]], ["2026-05-R01", "2026-05-R02"])
 
+    def test_an_upload_skips_a_line_without_a_product_name_and_never_reads_its_quantity(self):
+        # A name is blank when nothing is left after strip(): empty, spaces, a tab, the wide space of CJK text.
+        wide_space = chr(0x3000)
+        self.write_rows([
+            ["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, 120],
+            ["20260502", "開立已確認", "A1", "測試商店", "", "abc", 80],
+            ["20260503", "開立已確認", "A2", "測試商店", "   ", "", 90],
+            ["20260503", "開立已確認", "A2", "測試商店", f" \t{wide_space} ", "30.5", 10],
+            ["20260504", "開立已確認", "A3", "測試商店", "測試餐盒", 1, 150],
+        ])
+        _, month = build_month(self.path, self.catalog, for_upload=True)
+        # The blank-named lines are neither counted nor analysed, and a quantity that is no number does not fail the
+        # upload. A2 holds only blank-named lines, so it gets no code and A3 is R02.
+        self.assertEqual([(row["name"], row["amount"], row["invoice"]) for row in month["rows"]],
+                         [("測試餐盒", 120, "2026-05-R01"), ("測試餐盒", 150, "2026-05-R02")])
+
+    def test_an_upload_keeps_a_line_whose_name_is_only_padded_with_spaces(self):
+        self.write_rows([["20260502", "開立已確認", "A1", "測試商店", "  測試餐盒 ", 1, 120]])
+        _, month = build_month(self.path, self.catalog, for_upload=True)
+        self.assertEqual([row["name"] for row in month["rows"]], ["測試餐盒"])
+
+    def test_the_v1_reading_keeps_a_line_without_a_product_name(self):
+        self.write_rows([["20260502", "開立已確認", "A1", "測試商店", "測試餐盒", 1, 120],
+                         ["20260502", "開立已確認", "A1", "測試商店", "  ", 1, 80]])
+        _, month = build_month(self.path, self.catalog)
+        self.assertEqual([(row["name"], row["amount"]) for row in month["rows"]], [("測試餐盒", 120), ("", 80)])
+
     def test_an_upload_counts_a_decimal_quantity_as_one_and_reads_whole_numbers_written_with_a_point(self):
         self.write_rows([["20260502", "開立已確認", "A1", "測試加油站", "測試汽油", "30.5", 900],
                          ["20260502", "開立已確認", "A1", "測試加油站", "測試洗車", "2.0", "240.0"]])
@@ -150,6 +177,12 @@ class ReportDataTests(unittest.TestCase):
     def test_an_upload_of_only_skipped_lines_has_no_records(self):
         self.write_rows([["20260502", "作廢已確認", "A1", "測試商店", "測試餐盒", 1, 120],
                          ["20260502", "開立已確認", "A2", "測試商店", "測試折扣", 1, -5]])
+        with self.assertRaisesRegex(ValueError, "No invoice records"):
+            build_month(self.path, self.catalog, for_upload=True)
+
+    def test_an_upload_of_only_lines_without_a_product_name_has_no_records(self):
+        self.write_rows([["20260502", "開立已確認", "A1", "測試商店", "", 1, 120],
+                         ["20260503", "開立已確認", "A2", "測試商店", "   ", "abc", 80]])
         with self.assertRaisesRegex(ValueError, "No invoice records"):
             build_month(self.path, self.catalog, for_upload=True)
 

@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 from src.api.routes import invoices
 from src.api.seed import seed_demo_users
 from src.api.tables import Item, Job
+from src.ml import fakes
 from tests.api_support import COLUMNS, MAY, invoice_csv, login, make_client, register, upload
 
 
@@ -37,6 +38,28 @@ class UploadTests(unittest.TestCase):
         self.assertEqual({item.district for item in items}, {"臺北市大安區", "臺北市信義區"})
         self.assertNotIn("TEST-INV", str(items))
         self.assertNotIn("測試路", str(items))
+
+    def test_a_line_without_a_product_name_is_skipped_and_no_model_ever_sees_it(self):
+        # The real classifier refuses an empty name, which would fail the whole month's job.
+        asked = []
+        client = make_client(classify=lambda names: asked.extend(names) or fakes.classify(names))
+        register(client)
+        headers = login(client)
+        nameless = [["20260502", "開立已確認", "TEST-INV-1", "測試飲料店", "臺北市大安區測試路1號", "", "abc", 90],
+                    ["20260504", "開立已確認", "TEST-INV-5", "測試超市", "臺北市信義區測試路2號", "   ", 1, 90]]
+        response = upload(client, headers, invoice_csv([*MAY, *nameless]))
+        self.assertEqual((response.status_code, response.json()), (202, {"job_id": 1, "month": "2026-05", "rows": 3}))
+        self.assertEqual(client.get("/api/jobs/1", headers=headers).json()["status"], "done")
+        with Session(client.app.state.engine) as session:
+            self.assertEqual(sorted(item.name for item in session.exec(select(Item)).all()), ["滷肉飯", "衛生紙", "鮮奶茶"])
+        self.assertEqual(sorted(asked), ["滷肉飯", "衛生紙", "鮮奶茶"])
+
+    def test_a_month_of_only_lines_without_a_product_name_is_400_and_creates_no_job(self):
+        nameless = [["20260502", "開立已確認", "TEST-INV-1", "測試飲料店", "臺北市大安區測試路1號", " ", 1, 90]]
+        response = upload(self.client, self.headers, invoice_csv(nameless))
+        self.assertEqual((response.status_code, response.json()["detail"]), (400, "invalid_csv"))
+        self.assertIn("No invoice records", response.json()["message"])
+        self.assertEqual(self.rows(Job), [])
 
     def test_uploading_a_month_again_replaces_it(self):
         upload(self.client, self.headers, invoice_csv(MAY))

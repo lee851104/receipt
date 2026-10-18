@@ -81,7 +81,9 @@ class Settings:
         if settings.category_model_sha256 and not re.fullmatch(r"[0-9a-f]{64}", settings.category_model_sha256):
             raise ValueError("CATEGORY_MODEL_SHA256 must be a lowercase SHA256")
         if settings.category_model_repo_type == "space":
-            if not settings.category_model_repo or not re.fullmatch(r"[0-9a-f]{40}",settings.category_model_revision):
+            if not settings.category_model_repo:
+                raise ValueError("CATEGORY_MODEL_REPO must name the protected Space whenever CATEGORY_MODEL_REPO_TYPE=space")
+            if not re.fullmatch(r"[0-9a-f]{40}", settings.category_model_revision):
                 raise ValueError("CATEGORY_MODEL_REVISION must be a full commit for a Space")
             if not settings.category_model_sha256:
                 raise ValueError("CATEGORY_MODEL_SHA256 is required for a Space")

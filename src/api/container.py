@@ -1,14 +1,14 @@
-"""What the Docker container runs (design D14): the secret, the category model when one is to be downloaded, the
-jobs a stop left unfinished (failed, so the seed does not refuse over them), the 300 demo users with their purchases
-and profiles (the seed runs on every start and writes nothing once they are complete), then the server on all of the
-container's interfaces (docker-compose.yml publishes the port on the host's 127.0.0.1 only).
+"""What the Docker container runs (design D14): the secret, the category model when one is to be downloaded from the
+protected Space (the only place the container downloads from; a public model repo is refused, see
+ensure_category_model), the jobs a stop left unfinished (failed, so the seed does not refuse over them), the 300 demo
+users with their purchases and profiles (the seed runs on every start and writes nothing once they are complete), then
+the server on all of the container's interfaces (docker-compose.yml publishes the port on the host's 127.0.0.1 only).
 
     python -m src.api.container
 """
 import logging
 import os
 import secrets
-import shutil
 import sys
 from pathlib import Path
 
@@ -35,29 +35,21 @@ def jwt_secret(env, data_dir=None):
     return kept.read_text(encoding="utf-8").strip()
 
 
-def hub_download(repo_id, revision, local_dir):
-    from huggingface_hub import snapshot_download  # only the image installs it
-    snapshot_download(repo_id=repo_id, revision=revision, local_dir=local_dir)
+def ensure_category_model(settings):
+    """Get the category model into place before the server starts, and return what happened:
 
+    - "skipped": CATEGORY_MODEL is not bert, so no model folder is read.
+    - CATEGORY_MODEL_REPO_TYPE=space: the protected Space is the source. src/ml/category_remote.py downloads only the
+      files its manifest lists, checks each against the pinned SHA-256 and puts them in place whole or not at all; its
+      answer ("downloaded" or "present") is returned. A failure is one log line and "failed": the server starts anyway
+      and reports the model unavailable.
+    - "refused": a repo is set with CATEGORY_MODEL_REPO_TYPE=model. Settings.from_env already stops that at start-up,
+      so this is only a second line of defence for a Settings built without it; nothing is downloaded.
+    - "local": anything else. bert reads whatever verified bundle CATEGORY_MODEL_DIR holds, and
+      backends.category_backend decides between bert and unavailable when the app loads.
 
-def put_in_place(partial, folder):
-    """Move everything the download made into folder, replacing the entries of the same name and touching nothing
-    else. config.json goes last: it is what makes the folder a model, so a move that stops half way leaves none."""
-    for entry in sorted(partial.iterdir(), key=lambda path: path.name == "config.json"):
-        target = folder / entry.name
-        if target.is_dir() and not target.is_symlink():
-            shutil.rmtree(target)
-        elif target.exists() or target.is_symlink():
-            target.unlink()
-        shutil.move(str(entry), str(target))
-
-
-def ensure_category_model(settings, download=hub_download):
-    """Download the category model when CATEGORY_MODEL=bert and its folder holds none. It goes to a .partial folder
-    inside the model folder (so it is on the same filesystem even when a volume is mounted there) and is moved into
-    place with config.json last, so a failure leaves no half model and the next start tries again. Nothing else in
-    the model folder is ever deleted. A failure is one line in the log: the server starts anyway and reports the
-    model unavailable."""
+    The container downloads only from the protected Space. The flow that took a whole public model repo was dropped
+    on 2026-10-18 because Settings refuses it, so nothing here can reach a public repo."""
     if settings.category_model != "bert":
         return "skipped"
     if settings.category_model_repo_type == "space":
@@ -70,33 +62,12 @@ def ensure_category_model(settings, download=hub_download):
         except Exception:
             log.warning("protected category download failed; model availability will be checked at startup")
             return "failed"
-    folder = model_dir(settings)
-    if (folder / "config.json").exists():
-        return "present"
-    if not settings.category_model_repo:
-        log.warning("CATEGORY_MODEL=bert, no model in %s and no CATEGORY_MODEL_REPO to download it from", folder)
-        return "no_repo"
-    existed = folder.exists()
-    partial = folder / ".partial"
-    try:
-        shutil.rmtree(partial, ignore_errors=True)  # what an earlier crash left
-        partial.mkdir(parents=True)
-        download(settings.category_model_repo, settings.category_model_revision, str(partial))
-        if not (partial / "config.json").is_file():
-            raise ValueError("the repo holds no model: it has no config.json")
-        put_in_place(partial, folder)
-    except Exception as error:  # no network, a wrong repo or revision, a full disk: start without the model
-        shutil.rmtree(partial, ignore_errors=True)
-        if not existed:
-            try:
-                folder.rmdir()  # only when it is empty again
-            except OSError:
-                pass
-        log.warning("could not get the category model %s@%s: %s", settings.category_model_repo,
-                    settings.category_model_revision, " ".join(str(error).split()))
-        return "failed"
-    shutil.rmtree(partial, ignore_errors=True)  # empty now
-    return "downloaded"
+    if settings.category_model_repo:
+        # The repo, revision and anything else a public source carries stay out of the line.
+        log.warning("CATEGORY_MODEL_REPO is set without CATEGORY_MODEL_REPO_TYPE=space: "
+                    "nothing is downloaded and only a verified local model can be used")
+        return "refused"
+    return "local"
 
 
 def seed_demo(engine, demo_mode):

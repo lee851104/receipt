@@ -78,6 +78,28 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual((settings.category_model_repo, settings.category_model_revision, settings.category_model_dir),
                          ("someone/receipt-bert", "abc123", "/models/category"))
 
+    def test_a_space_without_a_repo_names_the_repo_not_the_revision(self):
+        # The revision and the checksum are fine here: the one thing missing is where the model comes from, and the
+        # message used to blame the revision.
+        env = {"JWT_SECRET": SECRET, "CATEGORY_MODEL_REPO_TYPE": "space", "CATEGORY_MODEL_REVISION": "a" * 40,
+               "CATEGORY_MODEL_SHA256": "b" * 64}
+        message = ("CATEGORY_MODEL_REPO must name the protected Space whenever CATEGORY_MODEL_REPO_TYPE=space")
+        for changes in ({}, {"CATEGORY_MODEL_REVISION": ""}, {"CATEGORY_MODEL_REPO": "  "}):
+            with self.subTest(changes=changes), self.assertRaises(ValueError) as caught:
+                Settings.from_env({**env, **changes})
+            self.assertEqual(str(caught.exception), message)
+
+    def test_a_space_with_a_repo_still_needs_a_full_commit_and_a_checksum(self):
+        env = {"JWT_SECRET": SECRET, "CATEGORY_MODEL_REPO_TYPE": "space", "CATEGORY_MODEL_REPO": "someone/receipt-bert",
+               "CATEGORY_MODEL_REVISION": "a" * 40, "CATEGORY_MODEL_SHA256": "b" * 64}
+        self.assertEqual(Settings.from_env(env).category_model_repo, "someone/receipt-bert")
+        for changes, message in (({"CATEGORY_MODEL_REVISION": "abc123"},
+                                  "CATEGORY_MODEL_REVISION must be a full commit for a Space"),
+                                 ({"CATEGORY_MODEL_SHA256": ""}, "CATEGORY_MODEL_SHA256 is required for a Space")):
+            with self.subTest(changes=changes), self.assertRaises(ValueError) as caught:
+                Settings.from_env({**env, **changes})
+            self.assertEqual(str(caught.exception), message)
+
     def test_the_secret_is_never_printed(self):
         self.assertNotIn(SECRET, repr(Settings.from_env({"JWT_SECRET": SECRET})))
 

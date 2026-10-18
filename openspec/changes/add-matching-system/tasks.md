@@ -71,7 +71,7 @@
 - [x] 6.3 帳號管理端到端：在網頁上註冊 → 上傳兩個月 → 刪除其中一個月 → 改顯示名稱 → 改密碼 → 登出 → 用新密碼登入 → 刪除帳號，確認每一步都和 user-account、web-app 規格一致，最後這個帳號無法登入、也不在任何人的配對清單裡（10/16：fake 模型、臨時 DB、真 HTTP／Chromium 全流程通過；待 Claude 審核）（10/18 整合版再驗：API 和 Playwright 網頁流程都通過，見 docs/results/integration-acceptance-20261018.md）
 - [ ] 6.4 Docker 端到端：在一台只裝了 Docker 的乾淨電腦上執行 `docker compose up`，確認模型自動下載、假用戶自動匯入，並用 demo 快速切換走完配對和計算過程；重建容器後資料仍在（10/18：這台開發電腦上的 Docker 驗收通過（示範帳號自動匯入、demo 快速切換、配對與計算過程、重建後資料仍在），見 docs/results/integration-acceptance-20261018.md；乾淨電腦與模型自動下載仍未做）
 - [ ] 6.5 執行 `openspec validate add-matching-system --strict` 並通過；確認每一個規格情境都有對應的自動測試或手動檢查紀錄，`/docs` 也和 overview 第 5 節一致（10/18：`openspec validate --strict` 通過；`/docs` 的 17 個路由和 overview 第 5 節一致；規格情境與測試的對照見 docs/results/scenario-coverage-20261018.md：179 個情境中 160 個有自動測試、18 個部分、1 個沒有（後者今天手動確認 v1 檔案未變）；沒有顯示卡的電腦、乾淨的電腦、容器連主機的模型服務仍沒有紀錄）
-- [ ] 6.6 隱私檢查：掃描 git 追蹤的所有檔案和 Docker 映像檔，確認找不到任何真實品名或店家名稱（10/18：掃描 git 追蹤的 411 個文字檔和映像檔 `/app` 的 89 個文字檔，找到 13 個追蹤檔案有和真實品名或店名完全相同的字串（其中 6 個只在「示範…」品名裡），等使用者確認是不是通用名稱，見 docs/results/integration-acceptance-20261018.md）
+- [x] 6.6 隱私檢查：掃描 git 追蹤的所有檔案和 Docker 映像檔，確認找不到任何真實品名或店家名稱（10/18：掃描 git 追蹤的 411 個文字檔和映像檔 `/app` 的 89 個文字檔，找到 13 個追蹤檔案有和真實品名或店名完全相同的字串（其中 6 個只在「示範…」品名裡），等使用者確認是不是通用名稱，見 docs/results/integration-acceptance-20261018.md）（10/18 晚上完成：使用者確認命中是隱私，角色 2（df82024）與 Codex 的清理（bb6774b）換成合成名稱；Claude 重掃 git 追蹤的 415 個文字檔與新映像檔 /app 都是 0。舊 Git 提交仍有原字串，沒有改寫歷史，見 docs/results/integration-acceptance-20261018.md）
 - [ ] 6.7 11/04 停止加功能：在 `main` 上打 `v2-feature-freeze` 標籤，之後的 PR 只能修錯誤
 
 ## Workflow follow-up

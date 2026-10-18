@@ -551,7 +551,8 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 - 本機驗收全部寫在 [`docs/results/integration-acceptance-20261018.md`](../results/integration-acceptance-20261018.md)：562 個 Python 測試、149 個前端測試、OpenSpec；映像檔沒有私人檔案；Docker 第一次 17 秒、重建 6 秒、資料保留、第一次中斷後下一次修好；API 與網頁（內建瀏覽器、Playwright）走完註冊、上傳、配對、計算過程、帳號管理；start.bat 流程；RTX 4060 上的 Qwen（6.2）；`/docs` 和第 5 節一致
 - 隱私掃描（6.6）找到 13 個追蹤檔案有和真實品名或店名完全相同的字串（其中 6 個只在「示範…」品名裡），使用者確認前不打勾；細節只在主資料夾被 git 忽略的 `data/private/privacy-scan-20261018.json`
 - 還沒做的：真的 BERT（要受保護 Space 的憑證，等使用者）、推送後的 CI（2.11、2.12）、沒有 GPU 的電腦（2.10、6.1）、乾淨電腦的 Docker（6.4）、組員照 README 從零啟動（2.14）
-- 角色 4 在 5fcda91 之後又有新提交（網路圖與 UX），還沒合進整合分支，等 Claude 複核
+- 角色 4 在 5fcda91 之後又有新提交（網路圖與 UX），還沒合進整合分支，等 Claude 複核（10/18 晚上更新：修正後的 a6f5591 複核通過，已合併 00491dd）
+- 10/18 晚上補上：隱私掃描的命中經使用者確認是隱私，角色 2 的 df82024（合併 f5eb6dd）與 Codex 的跨角色清理（bb6774b）換成合成名稱，重掃為 0，6.6 打勾；舊 Git 提交仍有原字串，要清除得另外改寫歷史。整合分支開了 PR #10 到 main
 
 ### 13.13 角色 1 轉告（2026-10-18，分支 `role-1/role3-integration`）
 

@@ -16,7 +16,7 @@
 | start.bat 的啟動流程（換埠、不開瀏覽器） | 通過 | 2.10 本機部分 |
 | GPU 模式（RTX 4060、Qwen3-4B） | 通過 | 6.2 |
 | `/docs` 與 overview 第 5 節 | 17 個路由完全一致 | 6.5 一部分 |
-| 隱私掃描 | 有完全相同的字串，**待使用者確認** | 6.6 |
+| 隱私掃描 | 第一次掃描有命中；使用者確認是隱私後換成合成名稱，重掃為 0（Git 歷史未改寫） | 6.6 |
 | GitHub CI（推送 4abaad8 後） | tests、docker 兩個 job 都成功；紀錄裡沒有下載模型 | 2.11（PR 還沒開）、2.12 |
 | 真的 BERT（受保護 Space） | 本機下載、`check_classify`、容器下載與無憑證重啟都通過 | 2.15 |
 | 沒有 GPU 的電腦、乾淨電腦、組員照 README | 未做 | 2.10、2.14、6.1、6.4 |
@@ -83,7 +83,9 @@ RTX 4060，主資料夾 `runtime/llama-b11557-cuda/llama-server.exe`，模型 Qw
 - git 追蹤的檔案：13 個檔案有符合的字串。其中 6 個只出現在「示範…」品名裡面（`datasets/synthetic/attribute-cache*.jsonl`、`attribute-review.jsonl`、`docs/results/synthetic-cache-review.md`、`src/receipt/personas.py`），另外 7 個：`configs/brands.json`（1）、`datasets/synthetic/item-names.jsonl`（3）、`experiments/category-models/synthetic_names.py`（3）、`docs/superpowers/plans/2026-10-07-tags-matching.md`（2）、`docs/superpowers/plans/2026-10-07-taste-traits.md`（1）、`docs/superpowers/specs/2026-10-07-tags-matching-design.md`（1）、`invoice-insights.html`（2）
 - 映像檔 `/app`：3 個檔案，`configs/brands.json`（1），其餘兩個只在「示範…」品名裡
 
-完全相同的字串可能只是常見的通用品名或連鎖店名，也可能是真的外洩，Claude 不能看內容判斷。符合的字串和檔案寫在主資料夾的 `data/private/privacy-scan-20261018.json`（被 git 忽略，只給使用者自己看）。使用者確認之前，6.6 不打勾。
+完全相同的字串可能只是常見的通用品名或連鎖店名，也可能是真的外洩，Claude 不能看內容判斷。符合的字串和檔案寫在主資料夾的 `data/private/privacy-scan-20261018.json`（被 git 忽略，只給使用者自己看）。
+
+**10/18 晚上的處理**：使用者確認這些命中是隱私。角色 2 把 3 個合成品名換掉（df82024，不重訓模型），Codex 依使用者授權把其餘 11 個檔案的命中換成獨立的合成名稱（店家規則、示範品名、v1 規劃文件、v1 網頁內嵌的示範資料、兩筆屬性快取名稱；快取的屬性值不變，`privacy_replacement` 寫明沒有重新呼叫模型），細節見 [privacy-cleanup-20261018.md](privacy-cleanup-20261018.md)。Claude 只看新增的行與掃描數字（刪掉的行含有舊字串，不看），用同一支腳本重掃：git 追蹤的 415 個文字檔、Codex 新建映像檔 `/app` 的 89 個文字檔都是 0；被換掉的店家規則原本就對到預設的「一般店家」，真實資料的通路判斷不變。**舊的 Git 提交（含已推送的分支與 PR）仍留著原來的字串**，要從歷史移除得另外改寫歷史並強制推送，這次沒有做。
 
 ## GitHub CI
 

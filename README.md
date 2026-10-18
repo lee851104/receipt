@@ -111,8 +111,8 @@ flowchart LR
    ```
 
 2. 雙擊 `start.bat`。它會：
-   - 沒有 `.env` 時，從 `.env.example` 自動建立，並填入新的 `JWT_SECRET`；已經有 `.env` 就照用，不會改它
-   - 放入假用戶（demo 用戶），跑幾次都可以。假用戶放不進去時（例如資料庫裡的帳號和假用戶名單對不上），它只印一行「示範帳號沒有更新」的警告，然後繼續啟動伺服器，你自己的帳號和資料不受影響；設定寫錯（例如 `JWT_SECRET` 太短）時，伺服器自己會用同一個錯誤訊息停下來，不會啟動
+   - 沒有 `.env` 時，從 `.env.example` 自動建立，並填入新的 `JWT_SECRET`；已經有 `.env` 就照用，不會改它（`.env.example` 的 `ATTRIBUTES_MODEL` 現在是 `qwen`；舊的 `.env` 如果寫 `fake`，要自己改成 `qwen`，才看得到假用戶的屬性）
+   - 放入 300 位假用戶（demo 用戶），連同他們的購買紀錄和品味向量（profile）；資料已經完整時會跳過，跑幾次都可以。假用戶放不進去時（例如資料庫裡的帳號和假用戶名單對不上），它只印一行「示範帳號沒有更新」的警告，然後繼續啟動伺服器，你自己的帳號和資料不受影響；設定寫錯（例如 `JWT_SECRET` 太短）時，伺服器自己會用同一個錯誤訊息停下來，不會啟動
    - 把伺服器啟動在 `http://127.0.0.1:8000`（只有這台電腦連得到），準備好之後自動打開 `http://127.0.0.1:8000/web/`；API 文件在 `http://127.0.0.1:8000/docs`
 
 手動的等價指令（要自己先把 `.env.example` 複製成 `.env`，`JWT_SECRET` 填一串至少 32 字元的亂碼）：
@@ -131,9 +131,10 @@ docker compose up
 - 打開 `http://127.0.0.1:8000/web/`（網頁）和 `http://127.0.0.1:8000/docs`（API 文件）。埠只開在這台電腦的 `127.0.0.1`，因為 `DEMO_MODE=1` 時，任何連得到伺服器的人都能用假用戶登入。
 - 資料庫和下載的模型放在 Docker 的 volume 裡，重建容器資料還在（`docker compose down` 不會刪 volume）。容器自己在資料 volume 裡產生並保存 `JWT_SECRET`（第一次啟動時產生）；compose 不會把環境變數或 `.env` 裡的 `JWT_SECRET` 傳進容器。
 - 拉了新的程式碼之後，用 `docker compose up --build` 重新建置映像檔（只打 `docker compose up` 會沿用舊的映像檔）。資料表的欄位或索引改過之後，用 `docker compose down -v`：它會刪掉兩個 volume，等於虛擬環境裡刪掉 `data/app.db*`；資料庫、容器產生的 `JWT_SECRET`（登入過的 token 全部失效）和下載的模型都會重來。
-- 容器沒有 GPU，屬性模型預設用假的：`docker-compose.yml` 會把 `ATTRIBUTES_MODEL` 傳進容器，預設是 `fake`，這時主機上有沒有開 `llama-server` 都一樣。設成 `qwen`（用 `docker compose` 的環境變數或根目錄的 `.env`）要等角色 3 的程式（`src/ml/attributes.py`）合併才能用，沒有它時容器會用一行訊息停下來。容器預設會去連主機的 `http://host.docker.internal:8080`，連得到時 `/api/health` 的 `gpu_mode` 是 `true`，連不到是 `false`（無 GPU 模式；`ATTRIBUTES_MODEL=qwen` 時 `models.attributes` 會是 `cache_only`，只用快取裡的答案）；要連別的位址，設 `DOCKER_LLAMA_SERVER_URL`，`ATTRIBUTES_MODEL` 是 `fake` 時它只會改變 `gpu_mode`。容器不用 `.env` 裡的 `LLAMA_SERVER_URL`，因為那是給虛擬環境用的 `http://127.0.0.1:8080`，在容器裡指的是容器自己。
+- 容器沒有 GPU，屬性模型預設是 `qwen`：`docker-compose.yml` 會把 `ATTRIBUTES_MODEL` 傳進容器，預設是 `qwen`（`.env.example` 也是）。假用戶的屬性答案是審核過的虛構答案，放在映像檔裡的 `datasets/synthetic/attribute-cache.jsonl`，`qwen` 會讀它，所以主機上沒有開 `llama-server` 時，`/api/health` 的 `models.attributes` 是 `cache_only`（只用快取裡的答案，新的品名標「待分析」），假用戶的品味向量仍然是完整的。容器預設會去連主機的 `http://host.docker.internal:8080`，連得到時 `gpu_mode` 是 `true`，連不到是 `false`（無 GPU 模式）；要連別的位址，設 `DOCKER_LLAMA_SERVER_URL`。這個位址只從設定來：容器不用 `.env` 裡的 `LLAMA_SERVER_URL`，因為那是給虛擬環境用的 `http://127.0.0.1:8080`，在容器裡指的是容器自己；`qwen` 只接受 `http://` 開頭、主機是 `localhost`、`127.0.0.1`、`[::1]` 或 `host.docker.internal`、沒有路徑和密碼的位址，其他位址會讓伺服器啟動時用一行 `error: ...` 停下來（訊息不印位址本身）。設成 `fake`（用 `docker compose` 的環境變數或根目錄的 `.env`）時，假用戶的品名都是「待分析」，因為 `fake` 讀不到那些答案，這時位址只會改變 `gpu_mode`。`start.bat` 不會改已經存在的 `.env`，裡面如果寫 `ATTRIBUTES_MODEL=fake`，要自己改成 `qwen`。
+- `DEMO_MODE=1` 時，容器每次啟動都會先放入 300 位假用戶，連同他們的購買紀錄和品味向量（profile），做完才開始服務：第一次約 20 秒（本機量到的），資料已經完整時約 5 秒就跳過；舊 volume 裡只有舊映像檔放的 40 位假用戶時會補到 300 位；屬性模型的版本（`MODEL_VERSION`）改過之後，下一次啟動會自動重放。放不進去時（例如帳號和假用戶名單對不上）只印一行 `demo users not updated: ...` 的警告，伺服器照常啟動；`DEMO_MODE=0` 時什麼都不放。
 - `CATEGORY_MODEL`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION` 從執行 `docker compose` 的環境變數，或專案根目錄的 `.env` 讀取（compose 會讀它）。`CATEGORY_MODEL` 預設是 `fake`。設成 `bert`，並同時設 `CATEGORY_MODEL_REPO`（Hugging Face 上受保護、不公開的來源，要憑證才下載得到；憑證的設定方式等角色 2 的分支合併後補上）和 `CATEGORY_MODEL_REVISION`（固定版本）時，第一次啟動會把分類模型下載到 volume；下載失敗時服務照樣啟動，`/api/health` 的 `models.category` 顯示 `unavailable`。只有容器會下載：`start.bat` 和直接跑 `uvicorn` 都不會（`huggingface_hub` 只裝在 `requirements-docker.txt`）。目前真的 BERT 還沒接上（任務 2.15），就算模型下載好了，`bert` 也一律顯示 `unavailable`，所以先用預設的 `fake`。
-- 映像檔只放 `configs/` 和 `src/`，不含 `data/`、`rawdata/`、CSV 和 `.env`。GitHub Actions 在每次 push 都會建置映像檔、檢查裡面沒有私人檔案，並用 `docker compose up` 啟動一次，確認 `/api/health` 回報 demo 模式、`/api/auth/demo-users` 列得出假用戶。
+- 映像檔只放 `configs/`、`src/` 和 `datasets/synthetic/attribute-cache.jsonl`（審核過的虛構答案，沒有真實品名），不含 `data/`、`rawdata/`、CSV 和 `.env`。GitHub Actions 在每次 push 都會建置映像檔、檢查裡面沒有私人檔案，並用 `docker compose up` 啟動一次，確認 `/api/health` 回報 demo 模式、`models.attributes` 是 `cache_only`、`/api/auth/demo-users` 列得出 300 位假用戶，而且用一位假用戶登入後，`/api/me/profile` 是 `ready`、`pending_attributes` 是 0。
 
 ### 為什麼沒有用 pgvector
 

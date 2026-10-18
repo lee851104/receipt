@@ -1,4 +1,5 @@
-# Nothing private may reach the image (design D14); the Dockerfile copies only configs/ and src/ anyway.
+# Nothing private may reach the image (design D14); the Dockerfile copies only configs/, src/ and
+# datasets/synthetic/attribute-cache.jsonl (reviewed fictional answers) anyway.
 .git/
 .venv/
 rawdata/

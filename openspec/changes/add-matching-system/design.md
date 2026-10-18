@@ -150,7 +150,7 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 
 ### D8a. 設定項目
 
-名稱和預設值見 overview 5.10：`JWT_SECRET`、`JWT_EXPIRE_MINUTES`、`DEMO_MODE`、`DATABASE_URL`、`LLAMA_SERVER_URL`、`CATEGORY_MODEL`、`ATTRIBUTES_MODEL`、`CATEGORY_MIN_PROB`，以及 10/15 為 Docker 補上的 `CATEGORY_MODEL_DIR`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`。由 `src/api/settings.py` 的 `Settings.from_env()` 讀取並檢查：留空等於預設值；密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不認得時，服務啟動時停下來，用一行訊息指出變數名稱。能啟動的值：`CATEGORY_MODEL` 是 `fake` 或 `bert`（`bert` 還沒接上，模型一律是 `unavailable`），`ATTRIBUTES_MODEL` 是 `fake` 或 `qwen`（`qwen` 要有角色 3 的 `src/ml/attributes.py`，沒有時用一行訊息停下來）；`backends.load_backends` 會擋下其他值（10/16 改寫）。
+名稱和預設值見 overview 5.10：`JWT_SECRET`、`JWT_EXPIRE_MINUTES`、`DEMO_MODE`、`DATABASE_URL`、`LLAMA_SERVER_URL`、`CATEGORY_MODEL`、`ATTRIBUTES_MODEL`、`CATEGORY_MIN_PROB`，以及 10/15 為 Docker 補上的 `CATEGORY_MODEL_DIR`、`CATEGORY_MODEL_REPO`、`CATEGORY_MODEL_REVISION`。由 `src/api/settings.py` 的 `Settings.from_env()` 讀取並檢查：留空等於預設值；密鑰短於 32 字元、數字寫錯或超出範圍、模型名稱不認得時，服務啟動時停下來，用一行訊息指出變數名稱。能啟動的值：`CATEGORY_MODEL` 是 `fake` 或 `bert`（`bert` 還沒接上，模型一律是 `unavailable`），`ATTRIBUTES_MODEL` 是 `fake` 或 `qwen`（`qwen` 要有角色 3 的 `src/ml/attributes.py`，沒有時用一行訊息停下來；10/18 改寫：角色 3 的模組已經合併在 `role-1/role3-integration`，`qwen` 用 `LLAMA_SERVER_URL` 建 `AttributeDescriber`，位址不是 `http://` 的 `localhost`、`127.0.0.1`、`[::1]` 或 `host.docker.internal`、或帶了路徑和密碼時，也用一行訊息停下來，不印位址）；`backends.load_backends` 會擋下其他值（10/16 改寫）。`Settings` 的預設值仍是 `fake`，`docker-compose.yml` 和 `.env.example` 的預設是 `qwen`（10/18 補上）。
 
 ### D9. 前端
 
@@ -176,7 +176,7 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 
 - Python 測試沿用 unittest（`python -m unittest discover -s tests`），JS 測試用 `node --test "tests/*.test.cjs"`
 - API 測試用 Starlette 的 TestClient（需要 `httpx2`）加上記憶體 SQLite，模型一律用 `src/ml/fakes.py`（`CATEGORY_MODEL=fake`、`ATTRIBUTES_MODEL=fake`），不需要 GPU
-- GitHub Actions 在 push 和 PR 時，用 Python 3.12 和 Node 24 執行全部測試，再執行一次 `docker build`、檢查映像檔裡沒有私人檔案，並用 `docker compose up` 啟動一次，確認健康檢查回報 demo 模式、假用戶名單不是空的（compose 預設是 `fake`，不下載模型）
+- GitHub Actions 在 push 和 PR 時，用 Python 3.12 和 Node 24 執行全部測試，再執行一次 `docker build`、檢查映像檔裡沒有私人檔案，並用 `docker compose up` 啟動一次，確認健康檢查回報 demo 模式、假用戶名單不是空的（compose 的 `CATEGORY_MODEL` 預設是 `fake`，不下載模型；10/18 補上：`ATTRIBUTES_MODEL` 預設是 `qwen`，沒有 `llama-server` 時健康檢查是 `cache_only`，CI 也確認假用戶有 300 位、登入後 `/api/me/profile` 是 `ready` 而且 `pending_attributes` 是 0）
 
 - 替代方案：改用 pytest。否決，因為現有 77 個測試和第 1 週計畫都是 unittest，不需要多一套工具。
 
@@ -205,10 +205,10 @@ API 路徑只用模型的答案，加上不需要模型的事實和店家規則�
 - 啟動流程：
   1. 讀設定（`JWT_SECRET` 沒設時用資料 volume 裡的 `/data/jwt-secret`，第一次啟動時產生）（10/16 補上）
   2. `CATEGORY_MODEL=bert` 而且 `CATEGORY_MODEL_DIR`（在模型 volume 裡）沒有模型時，用 `huggingface_hub` 下載 `CATEGORY_MODEL_REPO` 在 `CATEGORY_MODEL_REVISION` 的版本（只有容器下載；`start.bat` 和直接跑 `uvicorn` 都不下載）（下載到暫存資料夾，完整之後才改名；失敗時服務照樣啟動，健康檢查顯示 `unavailable`）（10/16 補上）。模型來源是受保護的（見 D7）：下載要憑證，Docker 以唯讀 secret 提供，憑證不寫進映像檔和 git；本機也沒有已驗證的模型、又沒有憑證時不下載，分類器是 `unavailable`，服務照常啟動。認證下載、SHA-256 核對和 secret 的實作在角色 2 的 `codex/role-2/category-models`（任務 3.9），合併後再把設定名稱補進 overview 5.10（10/18 改寫）
-  3. 資料庫是空的且 `DEMO_MODE=1` 時，執行和 `python -m src.api.seed` 相同的匯入
+  3. `DEMO_MODE=1` 時，執行角色 3 的 `seed_demo_population`（`python -m src.api.seed` 用的同一個函式）：300 位假用戶連同品項和 profile，每次啟動都跑，資料已經完整就跳過，過期（例如 `MODEL_VERSION` 改了）就重放；放不進去時印一行 `demo users not updated: ...` 警告，伺服器照樣啟動（10/18 改寫：原本是資料庫是空的才匯入 40 位假用戶）
   4. 用 uvicorn 啟動 `src.api.main:app`
-- 容器預設是無 GPU 模式；容器的 `LLAMA_SERVER_URL` 預設是 `http://host.docker.internal:8080`，主機上有開 `llama-server` 時就連得到，要連別的位址設 `DOCKER_LLAMA_SERVER_URL`；compose 會把 `ATTRIBUTES_MODEL` 傳進容器（預設 `fake`，10/16 改寫），預設時這個位址只改變 `gpu_mode`；設成 `qwen` 要等角色 3 的 `src/ml/attributes.py`（任務 4.3）合併，沒有時容器用一行訊息停下來，有了之後容器就透過這個位址向主機的 llama-server 問新品名。不直接用 `.env` 的 `LLAMA_SERVER_URL`：compose 會讀根目錄的 `.env`，而 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己（10/16 補上）
-- `.dockerignore` 排除 `.git/`、`.venv/`、`rawdata/`、`data/`、`models/`、`runtime/`、`experiments/`、`prototypes/`、`*.csv`／`*.tsv`／`*.xls`／`*.xlsx`、壓縮檔（`rar`、`zip`、`7z`）、資料庫檔 `*.db`、任何資料夾裡的 `.env` 和 `.env.*`、`results/`、`outputs/`、`src/web/`、`*-data.js`、`invoice-insights-private.html`、`__pycache__/`；映像檔只 COPY `configs/` 和 `src/`，所以即使 `.dockerignore` 漏了什麼，根目錄的私人檔案也進不去（10/16 補上）
+- 容器預設是無 GPU 模式；容器的 `LLAMA_SERVER_URL` 預設是 `http://host.docker.internal:8080`，主機上有開 `llama-server` 時就連得到，要連別的位址設 `DOCKER_LLAMA_SERVER_URL`；compose 會把 `ATTRIBUTES_MODEL` 傳進容器（預設 `qwen`，10/18 改寫：角色 3 的 `src/ml/attributes.py`（任務 4.3）已經合併在 `role-1/role3-integration`，10/16 的預設是 `fake`），容器就透過這個位址向主機的 llama-server 問新品名，連不到時健康檢查是 `cache_only`，只用快取裡的答案；設成 `fake` 時這個位址只改變 `gpu_mode`，假用戶的屬性都是待分析。位址只從 `Settings` 來，`qwen` 只接受本機位址，其他的讓伺服器啟動時用一行訊息停下來（10/18 補上）。不直接用 `.env` 的 `LLAMA_SERVER_URL`：compose 會讀根目錄的 `.env`，而 `start.bat` 建立的 `.env` 寫的是 `http://127.0.0.1:8080`，在容器裡指的是容器自己（10/16 補上）
+- `.dockerignore` 排除 `.git/`、`.venv/`、`rawdata/`、`data/`、`models/`、`runtime/`、`experiments/`、`prototypes/`、`*.csv`／`*.tsv`／`*.xls`／`*.xlsx`、壓縮檔（`rar`、`zip`、`7z`）、資料庫檔 `*.db`、任何資料夾裡的 `.env` 和 `.env.*`、`results/`、`outputs/`、`src/web/`、`*-data.js`、`invoice-insights-private.html`、`__pycache__/`；映像檔只 COPY `configs/`、`src/` 和 `datasets/synthetic/attribute-cache.jsonl`（審核過的虛構答案，沒有真實品名；10/18 改寫），所以即使 `.dockerignore` 漏了什麼，根目錄的私人檔案也進不去（10/16 補上）
 - 組員開發時仍以 `start.bat` 為主；Docker 是給面試官和「乾淨環境驗證」用的
 
 - 替代方案：不做 Docker。否決，因為面試官用一個指令就能跑起來，是作品集很重要的一環。

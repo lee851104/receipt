@@ -60,4 +60,6 @@ Docker Engine29.8.2，Linux containers。只從Git追蹤的src、configs、Docke
 - uv run --no-project --python [主Python] --with pillow python runtime/role4-review-gif.py：臨時目錄驗缺格訊息及九格正常輸出通過；公開GIF未重錄，SHA維持903b0a9388022af9d7127d5bd43ec3ebd8f7dc7b4c7a5f455dc9e32ee1c867cb。
 - openspec validate add-matching-system --strict、git diff --check通過；git diff --quiet 181adbf -- src/api src/ml src/receipt configs Dockerfile docker-compose.yml src/web invoice-insights.html為exit0。
 
-本輪沒有重跑Docker建置、容器重建或真模型，也沒有新增後端合併；10/17的容器證據保留其原版本範圍，不當本輪實測。只更新已公開的角色4分支，無main合併；GitHub推送／CI結果以共用交接的本輪最終紀錄為準。
+本輪本機沒有重跑Docker建置、容器重建或真模型，也沒有新增後端合併；10/17的容器證據保留其原版本範圍，不當本輪實測。只更新已公開的角色4分支，無main合併；GitHub推送／CI結果以共用交接的本輪最終紀錄為準。
+
+修正產品提交1c7b732d2aba465f82acc5ad19416ba1105e30be已推送原分支；[本次GitHub CI](https://github.com/lee851104/receipt/actions/runs/39095334870) tests（47秒）與docker（25秒）皆成功，gh run watch --exit-status回0。這包含遠端映像建置／檔案檢查／Compose啟動，不包含本機重建保留資料或真模型驗收。後續提交僅補此證據與本機／遠端措辭。

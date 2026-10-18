@@ -38,9 +38,14 @@ class DockerFileTests(unittest.TestCase):
         self.assertIn("LLAMA_SERVER_URL: ${DOCKER_LLAMA_SERVER_URL:-http://host.docker.internal:8080}", text)
         self.assertNotIn("${LLAMA_SERVER_URL", text)
 
-    def test_compose_passes_the_attribute_model_choice_with_the_fake_as_default(self):
+    def test_compose_passes_the_attribute_model_choice_with_qwen_as_default(self):
         text = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
-        self.assertIn("ATTRIBUTES_MODEL: ${ATTRIBUTES_MODEL:-fake}", text)
+        self.assertIn("ATTRIBUTES_MODEL: ${ATTRIBUTES_MODEL:-qwen}", text)
+
+    def test_the_example_settings_make_qwen_the_demo_attribute_model(self):
+        lines = (ROOT / ".env.example").read_text(encoding="utf-8").splitlines()
+        self.assertIn("ATTRIBUTES_MODEL=qwen", lines)
+        self.assertIn("LLAMA_SERVER_URL=http://127.0.0.1:8080", lines)
 
 
 class WorkflowTests(unittest.TestCase):

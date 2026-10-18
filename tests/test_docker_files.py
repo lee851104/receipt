@@ -11,7 +11,8 @@ class DockerFileTests(unittest.TestCase):
         lines = [line.split() for line in (ROOT / "Dockerfile").read_text(encoding="utf-8").splitlines()]
         copies = [words[1:] for words in lines if words and words[0] == "COPY"]
         self.assertEqual(copies, [["requirements.txt", "requirements-docker.txt", "./"], ["configs", "./configs"],
-                                  ["src", "./src"]])
+                                  ["src", "./src"],
+                                  ["datasets/synthetic/attribute-cache.jsonl", "./datasets/synthetic/attribute-cache.jsonl"]])
         self.assertIn(["FROM", "python:3.12-slim"], lines)
         self.assertIn('CMD ["python", "-m", "src.api.container"]', (ROOT / "Dockerfile").read_text(encoding="utf-8"))
 
@@ -65,6 +66,15 @@ class WorkflowTests(unittest.TestCase):
             with self.subTest(needed=needed):
                 self.assertIn(needed, text)
         self.assertNotIn("docker run -d", text)
+
+    def test_ci_checks_the_demo_has_its_profiles_in_cache_only_mode(self):
+        # No llama-server in CI and compose defaults to qwen: the health check says cache_only, and the demo users
+        # still have their profiles because the seed reads the reviewed answers from the cache file in the image.
+        text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        for needed in ("cache_only", "/api/auth/demo-login", "/api/me/profile", "pending_attributes", "== 300",
+                       "seq 1 90"):  # the first start seeds 300 people before it serves, so the wait is longer
+            with self.subTest(needed=needed):
+                self.assertIn(needed, text)
 
     def test_ci_always_tears_the_demo_down_and_cannot_hang_or_write(self):
         text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")

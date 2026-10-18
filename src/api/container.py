@@ -1,6 +1,7 @@
 """What the Docker container runs (design D14): the secret, the category model when one is to be downloaded, the
-demo users on an empty database, then the server on all of the container's interfaces (docker-compose.yml publishes
-the port on the host's 127.0.0.1 only).
+300 demo users with their purchases and profiles (the seed runs on every start and writes nothing once they are
+complete), then the server on all of the container's interfaces (docker-compose.yml publishes the port on the host's
+127.0.0.1 only).
 
     python -m src.api.container
 """
@@ -11,12 +12,9 @@ import shutil
 import sys
 from pathlib import Path
 
-from sqlmodel import Session, select
-
 from .backends import model_dir
 from .db import ROOT, init_db, make_engine
 from .settings import Settings
-from .tables import User
 
 DATA = Path("/data")  # the database volume
 log = logging.getLogger(__name__)
@@ -90,17 +88,25 @@ def ensure_category_model(settings, download=hub_download):
     return "downloaded"
 
 
-def seed_if_empty(engine, demo_mode):
-    """The demo users, only in demo mode and only into a database nobody is in yet; how many were added."""
+def seed_demo(engine, demo_mode):
+    """Role 3's demo population (300 fictional users with their purchases, the reviewed attribute answers and the
+    profiles) in demo mode only; the seed's summary, or None when demo mode is off or the seed refused.
+
+    It runs on every start, not only into an empty database: the seed writes nothing when the population is already
+    complete and repairs a stale one (a new MODEL_VERSION, an older image's 40 bare demo users). A refusal (a username
+    held by someone else, a cached answer that differs, a demo job that never finished) must not keep the server from
+    starting, as in launch.main: it is one log line, and the server starts with the demo users it has."""
     if not demo_mode:
-        return 0
-    with Session(engine) as session:
-        if session.exec(select(User.id).limit(1)).first() is not None:
-            return 0
-    from ..receipt.personas import build_personas
-    from ..receipt.traits import load_context
-    from .seed import seed_demo_users
-    return seed_demo_users(engine, build_personas(load_context(ROOT)["calendar"]))
+        return None
+    try:
+        from ..receipt.personas import build_personas
+        from ..receipt.traits import load_context
+        from .seed import seed_demo_population
+        context = load_context(ROOT)
+        return seed_demo_population(engine, build_personas(context["calendar"], total=300), context)
+    except Exception as error:  # a clash, a differing cache, an unfinished job, a full disk: start anyway
+        log.warning("demo users not updated: %s", " ".join(str(error).split()))
+        return None
 
 
 def main():
@@ -113,9 +119,10 @@ def main():
     ensure_category_model(settings)
     engine = make_engine(settings.database_url)
     init_db(engine)
-    added = seed_if_empty(engine, settings.demo_mode)
-    if added:
-        log.info("added %d demo users", added)
+    summary = seed_demo(engine, settings.demo_mode)
+    if isinstance(summary, dict):
+        log.info("demo users: %d in all, %d added%s", summary["users"], summary["added_users"],
+                 " (already complete)" if summary["skipped"] else "")
     engine.dispose()
     import uvicorn
     uvicorn.run("src.api.main:app", host="0.0.0.0", port=8000)

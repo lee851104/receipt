@@ -10,9 +10,10 @@ from sqlalchemy import inspect
 from sqlmodel import Session, select
 
 from src.api import container
-from src.api.db import MEMORY, init_db, make_engine
+from src.api.db import MEMORY, ROOT, init_db, make_engine
 from src.api.settings import Settings
 from src.api.tables import User
+from src.receipt.traits import load_context
 
 
 class SecretTests(unittest.TestCase):
@@ -179,27 +180,57 @@ class CategoryModelTests(unittest.TestCase):
 
 
 class SeedTests(unittest.TestCase):
+    """container.seed_demo with role 3's seed replaced by a recorder: what it is called with and how a refusal is
+    reported. The seed itself (and a real run of it) is tested in tests/test_role3_seed.py."""
+    SUMMARY = {"users": 300, "added_users": 300, "skipped": False}
+
     def setUp(self):
         self.engine = make_engine(MEMORY)
         init_db(self.engine)
+        self.addCleanup(self.engine.dispose)
+        # Patched where the seed lives: container.seed_demo imports it when it runs, so the patch is what it finds.
+        patch = mock.patch("src.api.seed.seed_demo_population", return_value=dict(self.SUMMARY))
+        self.seed = patch.start()
+        self.addCleanup(patch.stop)
 
-    def users(self):
-        with Session(self.engine) as session:
-            return session.exec(select(User)).all()
+    def test_demo_mode_seeds_the_300_demo_users_with_the_current_context(self):
+        self.assertEqual(container.seed_demo(self.engine, demo_mode=True), self.SUMMARY)
+        self.seed.assert_called_once()
+        engine, people, context = self.seed.call_args.args
+        self.assertIs(engine, self.engine)
+        self.assertEqual(len(people), 300)
+        self.assertEqual(context["calendar"], load_context(ROOT)["calendar"])
+        self.assertEqual(self.seed.call_args.kwargs, {})  # the seed's own cache file
 
-    def test_an_empty_database_in_demo_mode_gets_the_demo_users(self):
-        self.assertGreater(container.seed_if_empty(self.engine, demo_mode=True), 0)
-        self.assertTrue(self.users())
-        self.assertTrue(all(user.is_demo for user in self.users()))
-
-    def test_a_database_with_anyone_in_it_or_demo_mode_off_is_left_alone(self):
-        self.assertEqual(container.seed_if_empty(self.engine, demo_mode=False), 0)
-        self.assertEqual(self.users(), [])
+    def test_a_database_with_people_in_it_is_still_seeded_in_demo_mode(self):
+        # Every start runs it: the seed skips a complete population and repairs a stale one (a new MODEL_VERSION, an
+        # older image's 40 bare demo users), so an occupied database is no reason to stay away.
         with Session(self.engine) as session:
             session.add(User(username="amy", display_name="Amy", password_hash="x"))
             session.commit()
-        self.assertEqual(container.seed_if_empty(self.engine, demo_mode=True), 0)
-        self.assertEqual([user.username for user in self.users()], ["amy"])
+        self.assertEqual(container.seed_demo(self.engine, demo_mode=True), self.SUMMARY)
+        self.seed.assert_called_once()
+
+    def test_demo_mode_off_seeds_nothing(self):
+        self.assertIsNone(container.seed_demo(self.engine, demo_mode=False))
+        self.seed.assert_not_called()
+
+    def test_a_seed_that_refuses_is_one_log_line_and_the_start_goes_on(self):
+        self.seed.side_effect = ValueError("first line\nsecond line")
+        with self.assertLogs("src.api.container", "WARNING") as logs:
+            self.assertIsNone(container.seed_demo(self.engine, demo_mode=True))
+        self.assertEqual(len(logs.records), 1)
+        message = logs.records[0].getMessage()
+        self.assertNotIn("\n", message)
+        self.assertIn("first line second line", message)
+
+    def test_a_seed_that_breaks_any_other_way_is_also_one_log_line_and_the_start_goes_on(self):
+        self.seed.side_effect = OSError("disk\nfull")
+        with self.assertLogs("src.api.container", "WARNING") as logs:
+            self.assertIsNone(container.seed_demo(self.engine, demo_mode=True))
+        self.assertEqual(len(logs.records), 1)
+        self.assertNotIn("\n", logs.records[0].getMessage())
+        self.assertIn("disk full", logs.records[0].getMessage())
 
 
 class MainTests(unittest.TestCase):
@@ -213,12 +244,13 @@ class MainTests(unittest.TestCase):
         self.data = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.data, ignore_errors=True)
         self.events = []
+        self.summary = {"users": 300, "added_users": 300, "skipped": False}  # what the recorder says the seed did
         self.env = {"DEMO_MODE": "1", "DATABASE_URL": "sqlite://", "CATEGORY_MODEL": "bert",
                     "CATEGORY_MODEL_DIR": str(self.data / "category"), "CATEGORY_MODEL_REPO": "someone/receipt-bert",
                     "CATEGORY_MODEL_REVISION": "abc123"}
         for patch in (mock.patch.object(container, "DATA", self.data),
                       mock.patch.object(container, "ensure_category_model", side_effect=self.ensure),
-                      mock.patch.object(container, "seed_if_empty", side_effect=self.seed),
+                      mock.patch.object(container, "seed_demo", side_effect=self.seed),
                       mock.patch.object(container.logging, "basicConfig"),
                       mock.patch("uvicorn.run", side_effect=self.serve)):
             patch.start()
@@ -230,7 +262,7 @@ class MainTests(unittest.TestCase):
 
     def seed(self, engine, demo_mode):
         self.events.append(("seed", demo_mode, inspect(engine).has_table("users")))
-        return 2
+        return self.summary
 
     def serve(self, app, **options):
         self.events.append(("serve", app, options, os.environ["JWT_SECRET"]))
@@ -255,6 +287,22 @@ class MainTests(unittest.TestCase):
         self.assertEqual([event[0] for event in self.events], ["model", "seed", "serve"])
         self.assertEqual(self.events[-1][3], "e" * 40)
         self.assertFalse((self.data / "jwt-secret").exists())
+
+    def test_what_the_seed_did_is_one_info_line(self):
+        with self.assertLogs("src.api.container", "INFO") as logs:
+            self.run_main()
+        self.assertEqual([record.getMessage() for record in logs.records], ["demo users: 300 in all, 300 added"])
+        self.summary = {"users": 300, "added_users": 0, "skipped": True}
+        with self.assertLogs("src.api.container", "INFO") as logs:
+            self.run_main()
+        self.assertEqual([record.getMessage() for record in logs.records],
+                         ["demo users: 300 in all, 0 added (already complete)"])
+
+    def test_a_seed_that_did_not_run_leaves_no_summary_line_and_the_server_still_starts(self):
+        self.summary = None  # demo mode off, or the seed refused (which seed_demo already logged as a warning)
+        with self.assertNoLogs("src.api.container", "INFO"):
+            self.run_main()
+        self.assertEqual([event[0] for event in self.events], ["model", "seed", "serve"])
 
     def test_a_bad_setting_stops_it_with_one_line_and_nothing_else_runs(self):
         for name, value in (("JWT_SECRET", "too short"), ("CATEGORY_MODEL", "nope"),

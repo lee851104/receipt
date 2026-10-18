@@ -42,11 +42,12 @@ jobs:
             done
             found=$(find /app \( -name "*.csv" -o -name "*.rar" -o -name "*.zip" -o -name "*.7z" -o -name ".env*" \) -print)
             if [ -n "$found" ]; then echo "$found"; exit 1; fi'
-      - name: The compose demo starts, is in demo mode and lists its demo users
+      - name: The compose demo starts, is in demo mode and gives its 300 demo users their profiles
         run: |
           docker compose up -d --build
           ready=no
-          for attempt in $(seq 1 30); do
+          # The first start seeds 300 people (their purchases and profiles) before it serves: allow up to 3 minutes.
+          for attempt in $(seq 1 90); do
             if curl -fsS --max-time 5 http://127.0.0.1:8000/api/health | grep -q '"demo_mode":true'; then
               ready=yes
               break
@@ -58,9 +59,37 @@ jobs:
             docker compose logs
             exit 1
           fi
-          if ! curl -fsS --max-time 5 http://127.0.0.1:8000/api/auth/demo-users \
-              | python3 -c "import json, sys; assert json.load(sys.stdin)"; then
-            echo "/api/auth/demo-users listed nobody"
+          # No llama-server here and compose defaults to qwen, so the attribute model answers from its cache only; the
+          # demo users must still have their profiles, because the seed loaded the reviewed answers from the image.
+          if ! python3 - <<'EOF'
+          import json
+          import urllib.request
+
+          BASE = "http://127.0.0.1:8000"
+
+
+          def call(path, token=None, body=None):
+              headers = {} if body is None else {"Content-Type": "application/json"}
+              if token:
+                  headers["Authorization"] = "Bearer " + token
+              data = None if body is None else json.dumps(body).encode()
+              with urllib.request.urlopen(urllib.request.Request(BASE + path, data=data, headers=headers), timeout=30) as reply:
+                  return json.load(reply)
+
+
+          health = call("/api/health")
+          assert health["demo_mode"] is True, health
+          assert health["models"]["attributes"] == "cache_only", health
+          users = call("/api/auth/demo-users")
+          assert len(users) == 300, len(users)
+          token = call("/api/auth/demo-login", body={"user_id": users[0]["user_id"]})["access_token"]
+          profile = call("/api/me/profile", token)
+          assert profile["ready"] is True, ("ready", profile["ready"])
+          assert profile["pending_attributes"] == 0, ("pending_attributes", profile["pending_attributes"])
+          print("300 demo users; the first one's profile is ready with no attribute pending")
+          EOF
+          then
+            echo "the demo users or their profiles are not as expected"
             docker compose logs
             exit 1
           fi

@@ -102,6 +102,18 @@ uv pip install --python .venv/Scripts/python.exe -r requirements.txt
 
 各角色分支的審核、本機整合（`role-1/integration`）和合併 main 是不同階段；目前狀態見團隊總覽第 13 節。
 
+## 靜態展示版（GitHub Pages）
+
+README 第 1 段的[線上試玩](https://lee851104.github.io/receipt/demo/)是 `demo/` 資料夾：`src/web_v2` 的複本，加上 8 位虛構示範帳號（每種人物類型的 B）預先錄好的 API 回應，不需要伺服器。`demo/static-demo-api.js` 在瀏覽器裡接住網頁的 `/api` 請求，從 `demo/static-demo-data.js` 回答；上傳、改名等寫入一律回「示範帳號唯讀」，和真的服務對示範帳號的回應相同。v1 的 `invoice-insights.html` 不受影響。
+
+前端或示範資料改了之後，先用 start.bat 啟動服務（示範帳號放好），再重建並提交整個 `demo/`：
+
+```powershell
+.venv/Scripts/python.exe -m scripts.build_static_demo
+```
+
+腳本只錄示範帳號，遇到不是示範帳號的回應會停下來、不寫檔。合併進 main 後 GitHub Pages 才會更新。
+
 ## 展示動圖的說明
 
 [九幕介面導覽動圖](assets/v2-contract-demo.gif)是 2026-10-17 新版九幕展示。畫面使用已提交的虛構資料，全部 API 回應由錄製腳本模擬；粉紅底標示展示狀態。這是介面導覽，不代表真模型或 300 人整合驗收。[展示與 Docker 驗收紀錄](results/role4-delivery.md) 另列真實 HTTP 驗證結果。

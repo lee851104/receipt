@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>品名分類・人工審核</title>
+<style>
+:root{font-family:system-ui,"Microsoft JhengHei",sans-serif;color:#24342e;background:#f4f6f3;font-size:15px}*{box-sizing:border-box}body{margin:0}header{padding:22px 28px 16px;background:#fff;border-bottom:1px solid #d7dfd9}h1{font-size:25px;margin:0 0 8px}p{line-height:1.7;margin:8px 0}.sub{color:#52665b}.controls{position:sticky;top:0;z-index:1;display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 28px;background:#eff4ef;border-bottom:1px solid #ccd8cf}button,input,select{font:inherit;padding:9px 11px;border:1px solid #bccbc1;border-radius:6px;background:white;color:#24342e}button{cursor:pointer}button.primary{background:#24563e;color:#fff;border-color:#24563e}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #ce981b;outline-offset:2px}#summary{font-weight:650;margin-left:auto}#notice{padding:10px 28px;background:#fff6dd;margin:0;min-height:42px}main{padding:0 28px 30px;overflow-x:auto}table{border-collapse:collapse;width:100%;background:white}th,td{padding:13px 12px;text-align:left;border-bottom:1px solid #e0e7e2;vertical-align:middle}th{font-size:13px;color:#53685c;background:#f6f8f5}td.name{min-width:240px;max-width:500px;overflow-wrap:anywhere;font-weight:550}.id{display:block;font-size:11px;font-weight:400;color:#68796e;margin-top:5px}.flags{font-size:12px;color:#8a591c;line-height:1.6}.prediction{font-size:13px;white-space:nowrap}.done{background:#eef8f0}input[type=checkbox]{width:19px;height:19px;vertical-align:middle;accent-color:#24563e}label.check{white-space:nowrap;cursor:pointer}select.category{min-width:130px}.empty{padding:30px;text-align:center;color:#65786c}footer{padding:0 28px 24px;color:#53685c;font-size:13px}@media(max-width:700px){header,.controls{padding:14px}main{padding:0 10px 20px}#summary{margin-left:0;width:100%}h1{font-size:22px}}
+</style>
+</head>
+<body>
+<header>
+<h1>品名分類・人工審核</h1>
+<p class="sub">本機 BERT 預標，TF-IDF 輔助比對。模型分數尚未校準，不代表正確率。請核對每個品名，再勾選「已確認」。</p>
+<p>不確定的品項請選「待決定」。若必須知道購買情境才能分類，請勾選「需背景」。運動裝備等尚未決定的分類先保留待決定。</p>
+<p class="sub">進度僅存在本頁記憶體；離開前請「儲存進度 HTML」，下次開啟儲存的檔案繼續。所有操作在本機執行。輸出檔請存回此審核資料夾。</p>
+</header>
+<div class="controls">
+<label>顯示 <select id="filter"><option value="pending">待審核</option><option value="priority">優先審核</option><option value="all">全部</option><option value="confirmed">已確認</option></select></label>
+<input id="search" type="search" placeholder="搜尋品名或 ID" aria-label="搜尋品名或 ID">
+<button id="save">儲存進度 HTML</button>
+<button class="primary" id="export">匯出已確認 JSONL</button>
+<span id="summary" aria-live="polite"></span>
+</div>
+<p id="notice" role="status">已依模型分歧與低分排序。修改類別會取消該筆的確認，需要重新勾選。</p>
+<main><table><thead><tr><th>品名／出現次數</th><th>模型建議</th><th>審核類別</th><th>背景</th><th>確認</th></tr></thead><tbody id="rows"></tbody></table><div class="empty" id="empty" hidden>此篩選下沒有品項。</div></main>
+<footer>0 正餐 · 1 飲品 · 2 零食甜點 · 3 生鮮食材 · 4 運動 · 5 其他服務 · 6 交通 · 7 住宿 · 8 日用品 · 9 電子產品</footer>
+<script id="review-data" type="application/json"><!--REVIEW_DATA--></script>
+<script>
+/*REVIEW_CORE*/
+const payload = JSON.parse(document.getElementById('review-data').textContent);
+const rows = payload.rows;
+const categories = payload.categories;
+const reasonLabels = {model_disagreement:'模型意見不同',low_score:'BERT 分數偏低',small_margin:'前兩類接近',tfidf_out_of_vocabulary:'TF-IDF 未見字詞'};
+let dirty = false;
+const byId = id => document.getElementById(id);
+const notify = message => {byId('notice').textContent = message;};
+function element(tag, text, className) {
+  const value = document.createElement(tag);
+  if (text !== undefined) value.textContent = text;
+  if (className) value.className = className;
+  return value;
+}
+function selectedCategory(row) {
+  // An explicit undecided selection (null) must survive saving/reopening.
+  return row.selection_made ? (row.category ?? 10) : row.suggested_category;
+}
+function refresh() {
+  const confirmed = ReviewCore.confirmedRows(rows).length;
+  byId('summary').textContent = `共 ${rows.length} 筆 · 已確認 ${confirmed} · 待審核 ${rows.length-confirmed}`;
+  const query = byId('search').value.trim().toLocaleLowerCase();
+  const filter = byId('filter').value;
+  const visible = rows.filter(row => {
+    const done = row.review_status === 'human_confirmed';
+    return (!query || row.name.toLocaleLowerCase().includes(query) || row.id.includes(query)) &&
+      (filter === 'all' || (filter === 'pending' && !done) || (filter === 'priority' && !done && row.review_reasons.length) || (filter === 'confirmed' && done));
+  });
+  byId('rows').replaceChildren();
+  for (const row of visible) {
+    const tr = element('tr', undefined, row.review_status === 'human_confirmed' ? 'done' : '');
+    const name = element('td', row.name, 'name');
+    name.append(element('span', `${row.occurrences} 次 · ${row.id}`, 'id'));
+    const predictions = element('td', undefined, 'prediction');
+    predictions.append(element('div', `BERT：${categories[row.suggested_category]} (${(100*row.bert_score).toFixed(1)} 分)`));
+    predictions.append(element('div', `TF-IDF：${categories[row.tfidf_category]}`));
+    predictions.append(element('div', row.review_reasons.map(r=>reasonLabels[r] || r).join('／'), 'flags'));
+    const cell = element('td');
+    const select = element('select', undefined, 'category');
+    select.setAttribute('aria-label', `審核類別 ${row.id}`);
+    [...categories, '待決定'].forEach((label, index) => {
+      const option = element('option', `${index} ${label}`); option.value=index; select.append(option);
+    });
+    select.value = selectedCategory(row);
+    select.addEventListener('change', () => {
+      row.selection_made = true; ReviewCore.choose(row, Number(select.value)); dirty = true; refresh();
+    });
+    cell.append(select);
+    const contextCell = element('td');
+    const contextLabel = element('label', undefined, 'check');
+    const context = element('input'); context.type='checkbox'; context.checked=row.name_only_context_needed;
+    context.addEventListener('change', () => {
+      row.name_only_context_needed=context.checked; row.review_status='model_pending'; dirty=true; refresh();
+    });
+    contextLabel.append(context, document.createTextNode(' 需背景')); contextCell.append(contextLabel);
+    const confirmCell = element('td');
+    const label = element('label', undefined, 'check');
+    const checkbox = element('input'); checkbox.type='checkbox'; checkbox.checked=row.review_status === 'human_confirmed';
+    checkbox.disabled=Number(select.value)===10;
+    checkbox.addEventListener('change', () => {
+      row.selection_made=true; ReviewCore.confirm(row, Number(select.value), checkbox.checked); dirty=true; refresh();
+    });
+    label.append(checkbox, document.createTextNode(' 已確認')); confirmCell.append(label);
+    tr.append(name, predictions, cell, contextCell, confirmCell); byId('rows').append(tr);
+  }
+  byId('empty').hidden=visible.length !== 0;
+}
+function download(name, content, mime) {
+  const url = URL.createObjectURL(new Blob([content], {type:mime}));
+  const link = element('a'); link.href=url; link.download=name; document.body.append(link); link.click(); link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 30000);
+}
+byId('save').addEventListener('click', () => {
+  const clone = document.documentElement.cloneNode(true);
+  clone.querySelector('#review-data').textContent=ReviewCore.safeJson(payload);
+  clone.querySelector('#rows').replaceChildren();
+  download(`review-progress-${payload.batch_id}.html`, '<!doctype html>\n'+clone.outerHTML, 'text/html;charset=utf-8');
+  dirty=false; notify('已送出進度 HTML 下載。請確認檔案已儲存，再關閉本頁；下次開啟該檔案繼續審核。');
+});
+byId('export').addEventListener('click', () => {
+  const confirmed=ReviewCore.confirmedRows(rows);
+  if (!confirmed.length) {notify('尚無已確認品項。請核對類別後，逐筆勾選「已確認」。');return;}
+  download(`labeled-items-${payload.batch_id}.jsonl`, confirmed.map(row=>JSON.stringify(row)).join('\n')+'\n', 'application/x-ndjson;charset=utf-8');
+  notify(`已送出 ${confirmed.length} 筆已確認標註下載；其餘 ${rows.length-confirmed.length} 筆未納入。若要保留待審核進度，請另存進度 HTML。`);
+});
+byId('filter').addEventListener('change', refresh);
+byId('search').addEventListener('input', refresh);
+window.addEventListener('beforeunload', event => {if(dirty){event.preventDefault();event.returnValue='';}});
+refresh();
+</script>
+</body></html>

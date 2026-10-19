@@ -1,0 +1,49 @@
+{
+  "category_catalog": "configs/item-categories.json",
+  "categories": [
+    {
+      "name": "正餐",
+      "color": "#df646b"
+    },
+    {
+      "name": "飲品",
+      "color": "#d9b078"
+    },
+    {
+      "name": "零食甜點",
+      "color": "#e79681"
+    },
+    {
+      "name": "生鮮食材",
+      "color": "#89b6ed"
+    },
+    {
+      "name": "運動",
+      "color": "#b2a0cf"
+    },
+    {
+      "name": "其他服務",
+      "color": "#a4b8a8"
+    },
+    {
+      "name": "交通",
+      "color": "#7fbfc5"
+    },
+    {
+      "name": "住宿",
+      "color": "#91a1d5"
+    },
+    {
+      "name": "日用品",
+      "color": "#b1bf83"
+    },
+    {
+      "name": "電子產品",
+      "color": "#c993b0"
+    },
+    {
+      "name": "待確認",
+      "color": "#b5b5b5"
+    }
+  ]
+}

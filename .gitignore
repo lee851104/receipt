@@ -1,0 +1,54 @@
+# Private source data and generated transaction-level records
+*.csv
+*.tsv
+*.xls
+*.xlsx
+/data/
+/models/
+/runtime/
+
+# Archives may bundle the private sources above (e.g. rawdata.rar)
+*.rar
+*.zip
+*.7z
+
+# Reference photos and screenshots
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.heic
+*.gif
+*.bmp
+
+# Local runtimes, caches, and secrets
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+node_modules/
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+
+# Public README preview
+!/readme_pic.jpg
+!/readme_pic1.png
+
+# Local report containing real purchases
+/invoice-insights-private.html
+/report-data.js
+# Generated report data is never committed from the web folders. The server would still hand such a file out
+# under /web/ while it sits in src/web_v2/, so keep it out of both folders altogether.
+/src/web/*-data.js
+/src/web_v2/*-data.js
+
+# Fictional v2 contract demo for README (no private data)
+!/docs/assets/v2-contract-demo.gif
+# README animation: five screens of the running demo as the fictional demo user 咖啡上班族 B (no private data)
+!/docs/assets/readme-demo.gif
+# README chart of the three classifiers' published numbers (scripts/build_model_chart.py)
+!/docs/assets/model-comparison.png

@@ -1,0 +1,68 @@
+{
+  "date": "2026-10-15",
+  "source": "synthetic",
+  "temperature": 0,
+  "seed": 42,
+  "model": "Qwen3-4B-Instruct-2507-Q4_K_M",
+  "quantity": 1,
+  "reviewer": "assistant",
+  "human_confirmed": false,
+  "variants": [
+    {
+      "variant": "baseline",
+      "items": 107,
+      "reviewed_checks": 15,
+      "wrong_checks": 15,
+      "items_differing_from_assistant_review": 53,
+      "fields_differing_from_assistant_review": 91
+    },
+    {
+      "variant": "no_prefix",
+      "items": 107,
+      "reviewed_checks": 15,
+      "wrong_checks": 10,
+      "items_differing_from_assistant_review": 47,
+      "fields_differing_from_assistant_review": 63
+    },
+    {
+      "variant": "merchant",
+      "items": 107,
+      "reviewed_checks": 15,
+      "wrong_checks": 13,
+      "items_differing_from_assistant_review": 52,
+      "fields_differing_from_assistant_review": 71
+    },
+    {
+      "variant": "both",
+      "items": 107,
+      "reviewed_checks": 15,
+      "wrong_checks": 10,
+      "items_differing_from_assistant_review": 51,
+      "fields_differing_from_assistant_review": 81
+    },
+    {
+      "variant": "single",
+      "items": 107,
+      "reviewed_checks": 15,
+      "wrong_checks": 7,
+      "items_differing_from_assistant_review": 52,
+      "fields_differing_from_assistant_review": 65
+    },
+    {
+      "variant": "single_no_prefix",
+      "items": 107,
+      "reviewed_checks": 15,
+      "wrong_checks": 7,
+      "items_differing_from_assistant_review": 47,
+      "fields_differing_from_assistant_review": 60
+    },
+    {
+      "variant": "single_no_prefix_v2",
+      "items": 107,
+      "reviewed_checks": 15,
+      "wrong_checks": 5,
+      "items_differing_from_assistant_review": 46,
+      "fields_differing_from_assistant_review": 63
+    }
+  ]
+}

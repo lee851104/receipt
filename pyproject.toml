@@ -1,0 +1,9 @@
+[project]
+name = "receipt-insights"
+version = "0.1.0"
+description = "Local invoice classification and standalone spending reports"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.uv]
+package = false

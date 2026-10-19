@@ -1,0 +1,211 @@
+{
+  "date": "2026-10-18",
+  "work_id": "R2-REVIEW-FIX-20261018",
+  "status": "implemented_pending_claude_review",
+  "original_test_accessed": false,
+  "gpu_used": false,
+  "real_item_names_accessed": false,
+  "full_suite": {
+    "run": 472,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 37.362
+  },
+  "ml_import_blocked_suite": {
+    "run": 472,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "seconds": 38.875
+  },
+  "source_manifest": {
+    "source_commit": "8bf17225d8864bf379b4c4cdced942c87cc45b12",
+    "working_tree_dirty": true,
+    "files": {
+      ".dockerignore": "6b4e5c99048256435caabfa6143f48c7e0bcfd2ed3a6ce5dff9357d134681c2a",
+      "Dockerfile": "38f0fc800b5e7098811269dafabc2edfae997b5630784c03451f8d9b9bfadee6",
+      "configs/attributes.json": "c564f73de0b541a1d74707f7deed31ca67a9f31979eff1087a7796311647ea39",
+      "configs/brands.json": "1f5ef113a1adf9eff292fc9baecc6322c6bb3d486efaf81d7c8456f7d69990e4",
+      "configs/calendar-2026.json": "06a8d9076f5aec6f56919e0b4b49960d4fba112df90a6c731cdc77e67e675a68",
+      "configs/item-categories.json": "ccb7ebb8c1a77141d47a5647c054c284dc9444bf14e09f2b8866acc69697237c",
+      "configs/regions.json": "acd1bb6746fd33b9894af005fa84882c76710a488b44b65b99f8aa146ae14794",
+      "configs/report.json": "ce65d2b5a80a358483f92bc83251ed103689419b358e16898c86b19b3420348d",
+      "configs/traits.json": "8d1eb1ac0188db86990cf8060a774cd1cef2a10cc6072fc8d2b62331a3c8de4d",
+      "requirements-docker.txt": "c76b2ae6f7926ff3b8b0d915ae398b182daeef13159abdd2625e6ef8869ae89a",
+      "requirements.txt": "37df13a09f79898e30240ec3235fe8c57ef45030d399cbd078350daa852645e2",
+      "src/api/__init__.py": "afc946f8beb51af84b4f12158a096a7472bf3c84930ea6833fcaf99f2b803c0d",
+      "src/api/accounts.py": "caa23f94d6bf7d4e4865bbd5876c7dc882eebec0ba52ec4ce480ae4363850095",
+      "src/api/app.py": "9f8bbe695d25698f2d6c019db8321deed428f15e59026d521d09db580f34e0f3",
+      "src/api/backends.py": "806dfdd7606337055ae2031c0c82890145d47422cc111e26d2cc5c1f5093af85",
+      "src/api/cache.py": "72908f91edcfe34b0d05cf549339575041b150f651a7b3f8112ff4c3df5bc77d",
+      "src/api/container.py": "73a8ecdea8a6933c369eba58cc7d5e4346061dbc561bc8b18c2815379dbb9ca3",
+      "src/api/db.py": "d0387cd6adb96d91078ca7e14d706c430f488291b8080e2da3d4d726afb0b70b",
+      "src/api/errors.py": "13807b877797eca6bbb5621889078a78604644af47fcc276c66a36137d8672c2",
+      "src/api/jobs.py": "2f2b7bb9a28f11fc8970fb6aca20221f0c0ffa7e7622746e5665d2ec38ce30d2",
+      "src/api/launch.py": "9645a7885d7831c06f7fa5d7d717e11c4d4daa437fc9a17259974602c4be4c6e",
+      "src/api/limits.py": "ec98004bf1a94ceab22467e64bb9b9168eb3e0ef64eca78dc099d65ba3f80b15",
+      "src/api/main.py": "a009f9d28dbbe43aa3988269f5d5374459e2c2717236a8035d2b9fec8c6586e3",
+      "src/api/matching.py": "ec81b949143bc6ec96111e9f170a400f785883c05c2ffc1b4aa3c295b0679cdc",
+      "src/api/profiles.py": "04c2d9b30a0c8013acaca524fac9a9236647118de08807db3e9d67b578987cc9",
+      "src/api/routes/__init__.py": "8a5196c99425334030b32674b09f1f4b03230b440567b5b8f0ade9ea6d6de347",
+      "src/api/routes/account.py": "b39ae149cd1bcf47b70688394d261f33c8c32d2e12ccca6b4e4a2d28f10f05f2",
+      "src/api/routes/auth.py": "b51980aeb484e9dd27ad16925918f84b5c79082cfa16bedec4b805d186fb4b53",
+      "src/api/routes/health.py": "2c9a3ac3bf832ab4719a55d208fdcecf3e8ecc4100e56989cede0e83d98c07c6",
+      "src/api/routes/invoices.py": "58319e7cfc115be337de436997a8739c4739b54c0aa0bacb7987fdcc0d5ce969",
+      "src/api/routes/items.py": "f6595fb182bf23f571bd07d3477f52662a87e6917fe1642ce6b8101529f8276f",
+      "src/api/routes/matches.py": "b96767726b62178981cc4636ccbc765a32a7a6f9aca5bb1133d2640c7f075c22",
+      "src/api/routes/me.py": "78ceb4d96aefc524ac65293a42c1b27c4b62c7a20a7ea90fe6a592f9e1490894",
+      "src/api/security.py": "8f03af33c1385e97272c0e87c0e39df93249d004d8037d7a78f96f6df795edd5",
+      "src/api/seed.py": "a78336c71b282931b4f576e80e8c62cdb1599dde2e7c58f256efcb0b34294ec6",
+      "src/api/settings.py": "4bfadb923fcdce0004608dcb6223f8c21443c88d768f3b9ec8aa08be48204cfd",
+      "src/api/tables.py": "4cc22891f0608ea4a90d26a3f4f03959cab0ceb2bbdbaa1e64542e82c4d4bca2",
+      "src/api/validation.py": "1840d01cc858bb696ba19aba950c2fb8a03d223348f3a68c955382455b66d012",
+      "src/ml/__init__.py": "be890f38d761f74bec5a43508cf2cd1440a961607cd65ddb530502c60e348568",
+      "src/ml/category.py": "83cfa046a05326bebb9b30f8c357b50ec1ccaec4e9d46f39be2bbff72412c7d3",
+      "src/ml/category_remote.py": "83a2db427b7a83e24788c25804229b4ee0a41caea47b6d86623b785bfc61aa57",
+      "src/ml/fakes.py": "ee8d6d61f9cfe3787f39fd079dbe051d0976830b31abed86f568cd5453fd717d",
+      "src/ml/fields.py": "9aad1dd65f2ff41e1ac03bdbe5661b8ce209c0beaafb242ee38d82bde61560b0",
+      "src/receipt/__init__.py": "a9eea6f7f744e8658444f0700f2d12cd699c973ed2ce8781b591dad402f965d4",
+      "src/receipt/address.py": "4495be5de0bd78df7cb8ac773c7b63dc9bb45404d5251a4610cd43d6f8476f22",
+      "src/receipt/attributes.py": "0ab64249e49a1bc9edc0647b08cf344b16dd0fcd382b1332fd95f5c476e06de4",
+      "src/receipt/build.py": "88b30b2121e80f3c0fdae25f4e062ecd64373f563be76cfd2d6d33bac8b8014d",
+      "src/receipt/demo.py": "71f411c79847a046f3a3f4ff210c5e2f55fdbd890646093b50f5c91b7110f83d",
+      "src/receipt/invoices.py": "8d4d0bcebc02144ce29756477630b83bc4517d217e21fc6d2ff1a231139648f0",
+      "src/receipt/items.py": "d084a7aa908d701726ac0e33159019e15117edcff9d2a772aec3f8eaef7c4646",
+      "src/receipt/personas.py": "17b865f8f1beaacc01bde20c967314712e724f310f313c1c2c3431d58a9adb30",
+      "src/receipt/places.py": "505ae7ba9895f2a88e95ff2030ddb98e599ed0f94133d270ea5d59c2abf0c3e6",
+      "src/receipt/signals.py": "936f641fc71cd5f8fe80f37738a4e047c8ff116b3eecae1721340723f14afd65",
+      "src/receipt/similarity.py": "63d8ecead41096d0f098ec920860969aa4047cfc74bf0850786e0f8109acbfc0",
+      "src/receipt/traits.py": "6ceaa85283d3b5e5dbc4eb8d6e98b0d3a9d384f70391cee381c6d275699c3f8d",
+      "src/web_v2/index.html": "e0a6862fa13ffced24472b810c9a7ca003c6d5f88b5ffca7ee3e553b1aeb5eb3"
+    },
+    "image": "receipt-role2-acceptance:review-20261018"
+  },
+  "docker": {
+    "noauth": {
+      "mode": "noauth",
+      "name": "receipt-r2-noauth-1792295910383124200",
+      "source_commit": "8bf17225d8864bf379b4c4cdced942c87cc45b12",
+      "original_test_accessed": false,
+      "image_id": "sha256:24fe4623f858449eb9900c841fcdaaa2936fa16ff09bcd61308ffe4fea3a4e13",
+      "http": {
+        "health": "unavailable",
+        "classify": 503,
+        "upload": 202,
+        "fictional_rows": 3,
+        "job": "failed"
+      },
+      "model_volume": {
+        "model_files": 0
+      },
+      "status": "passed"
+    },
+    "local": {
+      "mode": "local",
+      "name": "receipt-r2-local-1792295924396299400",
+      "source_commit": "8bf17225d8864bf379b4c4cdced942c87cc45b12",
+      "original_test_accessed": false,
+      "image_id": "sha256:24fe4623f858449eb9900c841fcdaaa2936fa16ff09bcd61308ffe4fea3a4e13",
+      "http": {
+        "health": "bert",
+        "classify": 200,
+        "upload": 202,
+        "fictional_rows": 3,
+        "job": "done",
+        "profile": 200
+      },
+      "model": {
+        "sha256": "16997425a9b36629469d60f506d52c2771bab1e6f3a3ea1465c2c0a316fa3e79",
+        "torch": "2.8.0+cpu",
+        "cuda_build": null
+      },
+      "offline_http": {
+        "health": "bert",
+        "classify": 200,
+        "upload": 202,
+        "fictional_rows": 3,
+        "job": "done",
+        "profile": 200
+      },
+      "offline_network": "none",
+      "offline_without_token_mount": true,
+      "status": "passed"
+    },
+    "remote": {
+      "mode": "remote",
+      "name": "receipt-r2-remote-1792295961549602500",
+      "source_commit": "8bf17225d8864bf379b4c4cdced942c87cc45b12",
+      "original_test_accessed": false,
+      "image_id": "sha256:24fe4623f858449eb9900c841fcdaaa2936fa16ff09bcd61308ffe4fea3a4e13",
+      "http": {
+        "health": "bert",
+        "classify": 200,
+        "upload": 202,
+        "fictional_rows": 3,
+        "job": "done",
+        "profile": 200
+      },
+      "model": {
+        "sha256": "16997425a9b36629469d60f506d52c2771bab1e6f3a3ea1465c2c0a316fa3e79",
+        "torch": "2.8.0+cpu",
+        "cuda_build": null
+      },
+      "offline_http": {
+        "health": "bert",
+        "classify": 200,
+        "upload": 202,
+        "fictional_rows": 3,
+        "job": "done",
+        "profile": 200
+      },
+      "offline_network": "none",
+      "offline_without_token_mount": true,
+      "status": "passed"
+    },
+    "compose": {
+      "project": "receipt-r2-compose-1792296031618029700",
+      "image": "receipt-role2-acceptance:review-20261018",
+      "source_commit": "8bf17225d8864bf379b4c4cdced942c87cc45b12",
+      "revision": "29b655b96b4ced268bb0c3994e901c72dfd65420",
+      "fresh_volumes_before_up": true,
+      "runtime_secret_readonly": true,
+      "http": {
+        "health": "bert",
+        "classify": 200,
+        "upload": 202,
+        "fictional_rows": 3,
+        "job": "done",
+        "profile": 200
+      },
+      "host_loopback_health": 200,
+      "model": {
+        "sha256": "16997425a9b36629469d60f506d52c2771bab1e6f3a3ea1465c2c0a316fa3e79",
+        "model_files": 7,
+        "hf_cache_token_exists": false
+      },
+      "status": "passed"
+    },
+    "runtime_audit": {
+      "containers_checked": 6,
+      "token_matches_logs_inspect_history": 0,
+      "running_acceptance_containers": 0,
+      "remote_volume": {
+        "files": 7,
+        "only_verified_inference_files": true
+      },
+      "status": "passed"
+    },
+    "config_and_source": {
+      "CATEGORY_MODEL_REPO_rejected": true,
+      "CATEGORY_MODEL_REVISION_rejected": true,
+      "image_source_files": 56,
+      "source_hashes_match_worktree": true
+    }
+  },
+  "not_implemented_review_suggestions": [
+    5,
+    7
+  ],
+  "integration": "not_merged"
+}

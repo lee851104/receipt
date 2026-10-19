@@ -163,6 +163,37 @@ def build_person(name, kind, member, code, rng, calendar):
     return {"name": name, "type": kind["label"], "rows": rows}
 
 
+def build_exploring_traveler(name, kind, member, code, rng, calendar):
+    """Six expanded travelers explore food shops, cook at home and travel on breaks.
+
+    Alternate modest and higher meal budgets. Each food purchase visits a new
+    fictional shop/stall; the variety supplies a habit missing in the original
+    population. All item names reuse reviewed synthetic answers.
+    """
+    habits = [
+        {"category": 0, "merchant": "示範旅途餐館",
+         "names": ["示範蔬食餐盒", "示範牛肉麵", "示範滷肉飯", "示範咖哩飯", "示範香草燉菜餐盤", "示範越南河粉", "示範石鍋拌飯", "示範鬆餅套餐"],
+         "amount": (85, 140) if member % 2 == 0 else (300, 400), "visits": (8, 8), "away": AWAY},
+        {"category": 3, "merchant": "示範旅途市場",
+         "names": ["示範雞胸肉", "示範地瓜", "示範花椰菜", "示範雞蛋", "示範豬肉片", "示範雞腿肉", "示範高麗菜", "示範洋蔥"],
+         "amount": (100, 200), "visits": (16, 16)},
+        {"category": 3, "merchant": "示範旅途市場", "names": ["示範醬油", "示範白米"],
+         "amount": (100, 200), "visits": (2, 2)},
+        {"category": 1, "merchant": "示範旅途茶屋",
+         "names": ["示範珍珠奶茶", "示範百香果茶", "示範黑糖珍珠鮮奶", "示範冬瓜青茶"],
+         "amount": (60, 100), "visits": (8, 8), "away": AWAY},
+        {"category": 7, "merchant": "示範旅宿", "names": ["示範旅店雙人房"],
+         "amount": (1800, 3200), "visits": (3, 3), "days": "long_weekend", "away": AWAY},
+        {"category": 6, "merchant": "示範高鐵", "names": ["示範高鐵車票"],
+         "amount": (700, 1500), "visits": (3, 3), "days": "long_weekend"},
+    ]
+    person = build_person(name, {**kind, "habits": habits}, 0, code, rng, calendar)
+    for index, row in enumerate(person["rows"], start=1):
+        if row["category"] in (0, 1, 3):
+            row["merchant"] += f"{index}號店"
+    return person
+
+
 def build_personas(calendar, per_type=5, seed=SEED, *, total=None):
     """Keep v1 defaults; v2 requests total=300 and appends after the original 40."""
     if total is not None and (type(total) is not int or total < 40 or per_type != 5):
@@ -182,6 +213,12 @@ def build_personas(calendar, per_type=5, seed=SEED, *, total=None):
             # dropping member-specific habits beyond the original five people.
             name = f"{kind['label']} {member + 1:02}"
             people.append(build_person(name, kind, member % 5, f"P{index + 1:02}", rng, calendar))
+            if kind["label"] == "連假旅人" and 5 <= member < 11:
+                # Consume the original RNG draws above, so the other 294 people
+                # (including the original 40) keep their exact receipt histories.
+                # Six members also retain five same-type peers for the demo.
+                people[-1] = build_exploring_traveler(name, kind, member, f"P{index + 1:02}",
+                                                     random.Random(seed + index), calendar)
     return people
 
 

@@ -262,3 +262,5 @@ Where the cover lives (matters for CI)
 - service-runtime「面試官第一次啟動」：`tests/test_demo_first_start.py` 用容器的 `seed_demo` 放入 300 位示範帳號，相近清單通過；**互補清單不符規格**：300 位中有 125 位（第一位「省錢上班族 A」也是）沒有 −10% 以下的人，互補清單是空的，所以那個測試標成 expectedFailure。要修得改角色 3 的示範人物（讓每一型都有相反的人）或配對門檻，待使用者與角色 3 決定
 
 - 2026-10-19 更新：角色 3 的 ce090cf 調整 6 位擴充的連假旅人後，300 位示範帳號的互補清單都有人（Claude 比對新舊 300 人，只有那 6 位的紀錄改變），`tests/test_demo_first_start.py` 已拿掉 expectedFailure 並通過；「面試官第一次啟動」改為有自動測試。仍沒有紀錄的只剩 service-runtime「乾淨的電腦」（任務 6.4）與「連到主機的模型服務」（容器連主機上的 llama-server）。
+
+- 2026-10-19 再更新：「乾淨的電腦」由使用者另一台電腦的從零驗收補上（[clean-start-acceptance-20261019.md](clean-start-acceptance-20261019.md)）；「連到主機的模型服務」在開發電腦用容器連主機上的 llama-server 驗過（integration-acceptance-20261018.md 最後一節）。179 個情境現在都有自動測試或手動檢查紀錄。

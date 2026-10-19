@@ -105,3 +105,12 @@ RTX 4060，主資料夾 `runtime/llama-b11557-cuda/llama-server.exe`，模型 Qw
 - 2.11 要的是 PR 上的綠燈（這次只推送，沒有開 PR）
 - 沒有 GPU 的電腦點兩下 start.bat（2.10、6.1）、只裝 Docker 的乾淨電腦（6.4，含模型自動下載）、組員照 README 從零啟動（2.14）
 - 6.5 的「每一個規格情境都有對應的測試或手動紀錄」另外整理
+
+## 容器連主機上的模型服務（2026-10-19 補上）
+
+main bd5c4c5，這台開發電腦（RTX 4060）。主機上開 llama-server（只綁 `127.0.0.1:8080`，Qwen3-4B Q4_K_M），用驗收專案 `receipt-r1-accept`（127.0.0.1:8010，預設設定，容器連 `http://host.docker.internal:8080`）重建映像並啟動：
+
+- Docker Desktop 的 `host.docker.internal` 由主機端代為連線，所以只綁 127.0.0.1 的 llama-server 也連得到，不用把它開放給外面
+- 21 秒後 health 是 `gpu_mode: true`、`models: {category: fake, attributes: qwen}`；啟動時 seed 依角色 3 的 ce090cf 重建了 6 位連假旅人（`300 in all, 0 added, purchases and profiles rewritten`）
+- 新帳號在分類框輸入新的虛構品名：`pending` → `ready`（23 欄中 21 欄有值）；上傳一個月（其中一個品名不在快取裡）後背景工作 done、profile ready、待分析 0
+- 這就是 service-runtime「連到主機的模型服務」：容器以 GPU 模式運作，新品名的屬性可以被判斷。用完已停止 llama-server 與容器，GPU 與 8080、8010 都已釋放

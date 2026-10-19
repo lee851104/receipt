@@ -50,3 +50,5 @@ Thumbs.db
 !/docs/assets/v2-contract-demo.gif
 # README animation: five screens of the running demo as the fictional demo user 咖啡上班族 B (no private data)
 !/docs/assets/readme-demo.gif
+# README chart of the three classifiers' published numbers (scripts/build_model_chart.py)
+!/docs/assets/model-comparison.png

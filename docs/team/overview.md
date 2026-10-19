@@ -1,7 +1,7 @@
 # 消費配對系統：團隊總覽
 
 > 給 4 位組員和各自的 AI 先讀的唯一一份文件。最後更新：2026-10-15。
-> 逐條需求、技術決定和任務清單在 OpenSpec 變更 `openspec/changes/add-matching-system/`。API 的路徑、欄位、錯誤代碼和設定名稱以本文件第 5 節為準，兩邊不一致時改 OpenSpec。
+> 逐條需求在 OpenSpec 正式規格 `openspec/specs/`（11 份）；技術決定和任務清單在已歸檔的變更 `openspec/changes/archive/2026-10-19-add-matching-system/`（10/19 歸檔）。API 的路徑、欄位、錯誤代碼和設定名稱以本文件第 5 節為準，兩邊不一致時改 OpenSpec。
 > 交給 AI 時可以這樣說：「先讀 `docs/team/overview.md`，我是角色 N，今天要做第 N 週的哪一項。」
 > 角色之間要轉告的事寫在第 13 節，開工前先看自己的那一段。
 

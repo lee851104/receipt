@@ -131,7 +131,7 @@ flowchart LR
 
 ### 為什麼沒有用 pgvector
 
-pgvector 是 PostgreSQL 的向量搜尋外掛。這個專題沒有用它，理由記在 `openspec/changes/add-matching-system/design.md` 的 D2：
+pgvector 是 PostgreSQL 的向量搜尋外掛。這個專題沒有用它，理由記在 `openspec/changes/archive/2026-10-19-add-matching-system/design.md` 的 D2：
 
 - 品味相似度不是單純的餘弦。`compare` 會略過其中一方沒有資料的格子，還要求至少 5 格雙方都有的雙向格才給分數；pgvector 內建的餘弦做不到這兩件事。
 - 用它就得多跑一個資料庫服務，每台開發電腦都要裝；SQLite 只有一個檔案。

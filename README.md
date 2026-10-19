@@ -14,7 +14,7 @@ FastAPI 在同一個服務提供網頁與 API，資料保存在本機 SQLite；v
 
 ### Docker 啟動（建議展示使用）
 
-v2 尚未合併 main（10/18：角色 1–4 的分支在本機分支 `role-1/integration` 整合，還沒有推送）。取得程式碼後，先安裝並啟動 Docker Desktop（Linux containers），在**專案根目錄**執行：
+v2 已合併到 main。用 `git clone https://github.com/lee851104/receipt.git` 取得程式碼後，先安裝並啟動 Docker Desktop（Linux containers），在**專案根目錄**執行：
 
 ```powershell
 docker compose up --build -d

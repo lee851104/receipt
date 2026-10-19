@@ -260,3 +260,5 @@ Where the cover lives (matters for CI)
 - service-runtime「不認得的模型名稱」：`tests/test_api_settings.py::test_the_message_lists_the_model_names_that_work`（訊息列出 fake, tfidf, embedding, bert 與 fake, qwen，而且只有一行）
 - web-app「建置 v2」：`tests/test_v1_unchanged.py`（`invoice-insights.html` 與 `src/web/` 的內容和檔案清單都要和 `tests/fixtures/v1-files.json` 一致；故意改 v1 時要同一個提交更新它）
 - service-runtime「面試官第一次啟動」：`tests/test_demo_first_start.py` 用容器的 `seed_demo` 放入 300 位示範帳號，相近清單通過；**互補清單不符規格**：300 位中有 125 位（第一位「省錢上班族 A」也是）沒有 −10% 以下的人，互補清單是空的，所以那個測試標成 expectedFailure。要修得改角色 3 的示範人物（讓每一型都有相反的人）或配對門檻，待使用者與角色 3 決定
+
+- 2026-10-19 更新：角色 3 的 ce090cf 調整 6 位擴充的連假旅人後，300 位示範帳號的互補清單都有人（Claude 比對新舊 300 人，只有那 6 位的紀錄改變），`tests/test_demo_first_start.py` 已拿掉 expectedFailure 並通過；「面試官第一次啟動」改為有自動測試。仍沒有紀錄的只剩 service-runtime「乾淨的電腦」（任務 6.4）與「連到主機的模型服務」（容器連主機上的 llama-server）。

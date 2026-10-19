@@ -18,7 +18,13 @@ def summarize_matches(people, matches, opposites):
             opposite_users += bool(other_hits)
             mutual_users += any(name in matches[other]["similar"] for other in hits)
         count = len(names)
-        return {"users": count, "same_type_hits": same, "similar_slots": similar_slots,
+        covered = {kind: sum(bool(matches[name][kind]) for name in names) for kind in ("similar", "opposite")}
+        return {"users": count,
+                "similar_users_with_matches": covered["similar"],
+                "opposite_users_with_matches": covered["opposite"],
+                "similar_list_coverage": covered["similar"] / count if count else None,
+                "opposite_list_coverage": covered["opposite"] / count if count else None,
+                "same_type_hits": same, "similar_slots": similar_slots,
                 "opposite_type_hits": opposite, "opposite_slots": opposite_slots,
                 "same_type_precision_at_5": same / (count * 5) if count else None,
                 "opposite_type_precision_at_5": opposite / (count * 5) if count else None,

@@ -40,11 +40,9 @@ class DemoFirstStartTests(unittest.TestCase):
                 self.assertTrue(people)
                 self.assertTrue({person["user_id"] for person in people} <= self.demo_ids)
 
-    @unittest.expectedFailure
     def test_every_demo_user_has_opposite_demo_users(self):
-        # Known gap (2026-10-18, handoff CLAUDE-R1-SCENARIO-GAP-20261018): 125 of the 300 demo users, the first one
-        # included, have nobody at -10 % or below, so their 互補 list is empty. Remove this decorator once role 3's
-        # population (or the threshold) gives every demo user an opposite list.
+        # This was a known gap until 2026-10-19 (125 of the 300 demo users had an empty 互補 list); role 3's ce090cf
+        # gave six expanded travellers different habits, so every demo user now has somebody at -10 % or below.
         for user in self.listed:
             with self.subTest(user=user["display_name"]):
                 self.assertTrue(self.people(user["user_id"], "opposite"))

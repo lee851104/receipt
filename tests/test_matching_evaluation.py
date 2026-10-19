@@ -16,3 +16,19 @@ class EvaluationTests(unittest.TestCase):
         self.assertEqual(total["opposite_type_hits"],2)
         self.assertAlmostEqual(total["opposite_type_precision_at_5"],2/15)
         self.assertEqual(result["by_type"]["A"]["users"],2)
+
+    def test_nonempty_lists_are_distinct_from_predefined_type_hits(self):
+        people = [{"name": "a", "type": "A"}, {"name": "b", "type": "A"}]
+        matches = {"a": {"similar": ["b"], "opposite": ["b"]},
+                   "b": {"similar": [], "opposite": []}}
+        total = summarize_matches(people, matches, {"A": "B"})["overall"]
+        self.assertEqual(total["opposite_type_hits"], 0)
+        for kind in ("similar", "opposite"):
+            self.assertEqual(total[f"{kind}_users_with_matches"], 1)
+            self.assertEqual(total[f"{kind}_list_coverage"], 0.5)
+
+    def test_empty_population_has_no_list_coverage(self):
+        total = summarize_matches([], {}, {})["overall"]
+        for kind in ("similar", "opposite"):
+            self.assertEqual(total[f"{kind}_users_with_matches"], 0)
+            self.assertIsNone(total[f"{kind}_list_coverage"])

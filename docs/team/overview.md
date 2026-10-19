@@ -543,6 +543,17 @@ git checkout feature/matching-system   # 合併進 main 之後改用 main
 
 要轉告別的角色的事寫在這裡，最新的放最上面，每則註明日期和來源。改到別人負責的檔案之前，也先在這裡寫一行。
 
+### 13.16 角色 3 補齊示範互補清單（2026-10-19，來源：使用者決定、共用交接 R3-OPPOSITE-LIST-20261019）
+
+**給角色 1**
+- 從 main `5c30459` 接續，分支 `codex/role-3/attributes`，待 Claude 審核後整合；本次不改後端、模型、配對門檻或排序。角色 1 的 `tests/test_demo_first_start.py` 僅依授權移除 `expectedFailure`。
+- 只調整 6 位擴充的「連假旅人 06–11」（`demo_047/055/063/071/079/087`）：探索不同食物店家／攤位、在家下廚、旅行喝甜飲，交錯平價與較高外食預算。300 人的名字、順序、帳號對應不變；另 294 人（含原始 40 人）的完整消費紀錄不變，v1 預設仍是原 40 人。
+- 接入仍用 `build_personas(calendar, total=300)` → `seed_demo_population`，或容器既有的 `container.seed_demo`。總品項 21,316 → 21,509；107 筆已確認屬性快取、MODEL_VERSION 與類別不變，無需 GPU 或重標品名。舊 demo 資料不符合新人物紀錄時，既有完整性檢查會讓 seed 重建 demo 品項／工作／profile；保留帳號身分，不需刪除資料庫。手動重跑前依 13.11 停止 API，尚未完成工作或快取衝突仍須先處理。
+- 記憶體資料庫沿用容器 seed，逐一登入全部 300 人：profile ready、pending_attributes=0，相近與互補清單都有 demo 對象，沿用整數 +30%／−10% 門檻。這是合成資料的 API 整合驗證；容器映像重建與 6.5 其餘驗收由角色 1 接續。
+- 配對驗證沿用正式 `entries`／`pick`：互補清單有人 175 → 300、空清單 125 → 0，名額 707 → 1,407；同類 P@5 維持 100%、互相命中維持 91%。預設相反類型 P@5 11.40% → 9.80%，用戶命中 12.67% → 12.33%；新增旅人會改變前五名，清單有人不等於命中預設類型。報告新增兩種清單的涵蓋人數／比例，分開呈現這些指標。
+- 人物習慣是為補齊示範情境而調整，不是獨立測試集，不能將清單涵蓋率當成真人配對品質。完整數字與重現指令見 `docs/results/matching.md`、`matching.json`。
+- 本次驗證：Python `-W error` 570/570（無 expected failure）、Node 153/153、OpenSpec strict、diff check 通過。舊基準 300 人在獨立記憶體資料庫升級後，300 組 id／username／display_name／token_key 全保留，只有 6 份向量改變，600 個月份工作保留正確數量，再次 seed 回 skipped=true。尚未 push、合併或在既有資料庫執行；由 Claude 審核後整合。
+
 ### 13.15 角色 1 轉告：整合與本機驗收（2026-10-18，分支 `role-1/integration`）
 
 - 角色 1 開了本機分支 `role-1/integration`（從 `role-1/role3-integration` 的 d9b26b3），合併角色 2 的 4c5bdb1（BERT 載入與受保護下載）和角色 4 的 5fcda91（v2 前端）；角色 3 的 6065c8c 已經在裡面。**還沒推送、不在 main。** 角色 2 的 8bf1722..4c5bdb1 依使用者 10/18 的指示先整合，Claude 的正式複核放在最後；在那之前不算角色 2 通過

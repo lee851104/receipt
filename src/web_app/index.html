@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#fbf6f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151113" media="(prefers-color-scheme: dark)">
+<meta name="description" content="上傳電子發票，AI 算出你的 18 項生活品味，找到真正合拍、或剛好互補的人。">
+<title>品味連線｜用發票找到合拍的人</title>
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./app.css?v=20261122i">
+<script defer src="./logic.js?v=20261122i"></script>
+<script defer src="./core.js?v=20261122i"></script>
+<script defer src="./viz.js?v=20261122i"></script>
+<script defer src="./shell.js?v=20261122i"></script>
+<script defer src="./views-start.js?v=20261122i"></script>
+<script defer src="./views-match.js?v=20261122i"></script>
+<script defer src="./views-chat.js?v=20261122i"></script>
+<script defer src="./views-me.js?v=20261122i"></script>
+</head>
+<body>
+<a class="skip-link" href="#screen" onclick="event.preventDefault();document.getElementById('screen')?.focus()">跳到主要內容</a>
+<div id="app" class="app">
+  <div id="view" class="view"><div class="loading boot" role="status"><span class="spinner" aria-hidden="true"></span>品味連線載入中…</div></div>
+</div>
+<div id="layers"></div>
+<div id="toasts" class="toasts"></div>
+<noscript><p class="noscript">請開啟 JavaScript 才能使用品味連線。</p></noscript>
+</body>
+</html>

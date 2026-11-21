@@ -146,6 +146,7 @@ Qwen 跑在獨立的 llama.cpp server（只有有 4060 的電腦開）
 | | | `DELETE /api/me` | 要 | 204 |
 | | | `DELETE /api/me/months/{month}` | 要 | 204 |
 | | | `POST /api/auth/logout` | 要 | 204 |
+| 10 | 交友 APP（2026-11-22 補上） | `/api/dating/...` 共 21 個端點 | 見 [docs/dating-app.md](../dating-app.md) 第 4 節 | |
 
 ### 5.3 帳號
 
@@ -361,7 +362,7 @@ API 回傳**別人**的品名時（目前只有 `explain` 的 `network.theirs.it
 - 新密碼不合格回 422，不回傳送出的值（10/16 補上）
 
 **`DELETE /api/me`**：JSON `{"password": "…"}`
-- 回傳 204。依序刪掉這個人的 `items`、`jobs`、`profiles`、`users`，再刪掉 `item_cache` 裡這個人用過、而且已經沒有任何 `items` 用到的品名。品名的屬性結果只存在後端的 `item_cache`（`describe_items` 最多只在記憶體裡留快取，不寫到磁碟），所以清掉這裡就清乾淨了（10/16 補上，見 13.3）
+- 回傳 204。先刪掉這個人在交友 APP 的一切（配對與其中所有訊息、雙向的喜歡／略過、封鎖、檢舉、照片、交友檔案，2026-11-22 補上），再依序刪掉這個人的 `items`、`jobs`、`profiles`、`users`，再刪掉 `item_cache` 裡這個人用過、而且已經沒有任何 `items` 用到的品名。品名的屬性結果只存在後端的 `item_cache`（`describe_items` 最多只在記憶體裡留快取，不寫到磁碟），所以清掉這裡就清乾淨了（10/16 補上，見 13.3）
 - 品名的屬性快取只刪「這個人的品項用過、刪完後已經沒有任何品項用到」的品名（每個屬性模型的答案都刪）。只在即時分類框查過、從沒上傳過的品名沒有記錄是誰查的，不會被刪（10/16 補上）
 - 錯誤：403 `wrong_password`、409 `job_in_progress`（還有 queued 或 running 的上傳任務，等它做完再刪；不然那個任務會在刪除之後又把品名寫進快取）（10/15 補上）
 

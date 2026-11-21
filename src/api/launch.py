@@ -1,5 +1,5 @@
 """What start.bat runs: a .env with a fresh secret when there is none, the demo users (when they cannot be put in, a
-one-line warning and the launch goes on), the v2 pages opened in the browser once the server answers, and the
+one-line warning and the launch goes on), the dating app opened in the browser once the server answers, and the
 server itself on this computer only. Run from the repository root:
 
     .venv/Scripts/python.exe -m src.api.launch
@@ -18,7 +18,7 @@ from .jobs import fail_unfinished
 from .settings import Settings
 
 HOST, PORT = "127.0.0.1", 8000  # this computer only: DEMO_MODE lets anyone log in as a demo user
-PAGE = f"http://{HOST}:{PORT}/web/"
+PAGE = f"http://{HOST}:{PORT}/app/"  # the dating app; the analysis pages stay at /web/
 HEALTH = f"http://{HOST}:{PORT}/api/health"
 
 

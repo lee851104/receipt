@@ -12,8 +12,9 @@ from .. import matching, profiles
 from ..db import SessionDep
 from ..errors import ApiError
 from ..security import UserDep
-from ..tables import Profile, User
+from ..tables import DatingProfile, Profile, User
 from ..validation import PathId
+from . import dating as dating_routes
 
 router = APIRouter(prefix="/api/matches")
 
@@ -41,7 +42,11 @@ def match_list(user: UserDep, request: Request, session: SessionDep,
              .where(col(User.id) != user.id, col(Profile.vector).is_not(None)))
     if user.is_demo:  # demo login needs no password, so a demo session must never reveal real people
         query = query.where(col(User.is_demo))
-    others = session.exec(query).all()
+    # Nobody who hid themselves on the dating app, and nobody blocked either way.
+    hidden = select(DatingProfile.user_id).where(col(DatingProfile.discoverable).is_(False))
+    query = query.where(col(User.id).not_in(hidden))
+    blocked = dating_routes.blocked(session, user.id)
+    others = [(other, stored) for other, stored in session.exec(query).all() if other.id not in blocked]
     people = [{"user_id": other.id, "display_name": other.display_name,
                "vector": profiles.stored_vector(stored, size), "areas": json.loads(stored.areas)}
               for other, stored in others]
@@ -55,8 +60,13 @@ def explain_match(user_id: PathId, user: UserDep, request: Request, session: Ses
     if user_id == user.id:
         raise ApiError(400, "self")
     other = session.get(User, user_id)
-    # A demo session never learns about real people: one answers exactly like an id nobody has.
-    if other is None or (user.is_demo and not other.is_demo):
+    # A demo session never learns about real people: one answers exactly like an id nobody has; nor does anyone learn
+    # about someone they blocked or who blocked them.
+    if other is None or (user.is_demo and not other.is_demo) or other.id in dating_routes.blocked(session, user.id):
+        raise ApiError(404, "not_found")
+    # Someone who paused being seen on the dating app is hidden here too, except from the people they matched.
+    hidden = session.get(DatingProfile, other.id)
+    if hidden is not None and not hidden.discoverable and dating_routes.match_between(session, user.id, other.id) is None:
         raise ApiError(404, "not_found")
     state = request.app.state
     settings = state.context["traits"]
@@ -75,5 +85,12 @@ def explain_match(user_id: PathId, user: UserDep, request: Request, session: Ses
             rows, period, attributes = profiles.history(session, state.backends, person)
             explained = explain_taste(rows, period, state.context, attributes)
         sides[side] = (vectors[side], explained)
+    network = matching.network(settings, sides)
+    # A real person on the dating app shows what they bought only to the people they matched with there; everyone
+    # else still sees their traits and how each signal pushed them, with no purchase listed.
+    private = (not other.is_demo and session.get(DatingProfile, other.id) is not None
+               and dating_routes.match_between(session, user.id, other.id) is None)
+    if private and network["theirs"]["items"] is not None:
+        network["theirs"]["items"] = [None if listed is None else [] for listed in network["theirs"]["items"]]
     return {"user_id": other.id, "display_name": other.display_name, "comparable": parts.pop("comparable"),
-            "reason": parts.pop("reason"), "cells": cells, **parts, "network": matching.network(settings, sides)}
+            "reason": parts.pop("reason"), "cells": cells, **parts, "purchases_hidden": private, "network": network}

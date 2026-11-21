@@ -1,0 +1,12 @@
+{
+  "name": "品味連線",
+  "short_name": "品味連線",
+  "description": "上傳電子發票，AI 算出你的生活品味，找到合拍或互補的人。",
+  "lang": "zh-Hant",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#fbf6f3",
+  "theme_color": "#ff4f7b",
+  "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
+}

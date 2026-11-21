@@ -33,7 +33,24 @@ class PageTests(unittest.TestCase):
             ("POST", "/api/items/classify"), ("POST", "/api/invoices"), ("GET", "/api/jobs/{job_id}"),
             ("GET", "/api/me"), ("PATCH", "/api/me"), ("DELETE", "/api/me"), ("POST", "/api/me/password"),
             ("DELETE", "/api/me/months/{month}"), ("GET", "/api/me/profile"), ("GET", "/api/matches"),
-            ("GET", "/api/matches/{user_id}/explain")})
+            ("GET", "/api/matches/{user_id}/explain"),
+            # The dating app, docs/dating-app.md section 4.
+            ("GET", "/api/dating/meta"), ("GET", "/api/dating/sample-invoices"), ("GET", "/api/dating/photos/{key}"),
+            ("GET", "/api/dating/me"), ("PATCH", "/api/dating/me"), ("PUT", "/api/dating/me/quiz"),
+            ("POST", "/api/dating/me/photo"), ("DELETE", "/api/dating/me/photo"), ("GET", "/api/dating/discover"),
+            ("POST", "/api/dating/swipes"), ("POST", "/api/dating/swipes/reset"), ("GET", "/api/dating/likes"),
+            ("GET", "/api/dating/people/{user_id}"), ("GET", "/api/dating/matches"),
+            ("GET", "/api/dating/matches/{match_id}"), ("DELETE", "/api/dating/matches/{match_id}"),
+            ("GET", "/api/dating/matches/{match_id}/messages"), ("POST", "/api/dating/matches/{match_id}/messages"),
+            ("POST", "/api/dating/blocks"), ("POST", "/api/dating/reports"), ("GET", "/api/dating/summary")})
+
+    def test_the_dating_app_is_served_and_is_the_home_page(self):
+        client = make_client()
+        page = client.get("/app/")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("text/html", page.headers["content-type"])
+        home = client.get("/", follow_redirects=False)
+        self.assertEqual((home.status_code, home.headers["location"]), (307, "/app/"))
 
 
 if __name__ == "__main__":
